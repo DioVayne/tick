@@ -36,3 +36,38 @@ accountApi.post('/logout-others', async (c) => {
   c.header('Set-Cookie', await sessionCookie(c.env, (await getUser(c.env.DB, id))!));
   return c.json({ ok: true });
 });
+
+accountApi.get('/', (c) => {
+  const { id, name, email, role } = c.get('user');
+  return c.json({ id, name, email, role });
+});
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+accountApi.patch('/', async (c) => {
+  const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new HttpError(400, 'err.invalid_json');
+  const sets: string[] = [];
+  const vals: string[] = [];
+  if (body.name !== undefined) {
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    if (!name || name.length > 60) throw new HttpError(400, 'err.invalid_name');
+    sets.push('name = ?'); vals.push(name);
+  }
+  if (body.email !== undefined) {
+    const email = typeof body.email === 'string' ? body.email.trim() : '';
+    if (email.length > 254 || !EMAIL_RE.test(email)) throw new HttpError(400, 'err.invalid_email');
+    sets.push('email = ?'); vals.push(email);
+  }
+  const id = c.get('user').id;
+  if (sets.length) {
+    try {
+      await c.env.DB.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, id).run();
+    } catch (e) {
+      if (/UNIQUE constraint failed/.test((e as Error).message)) throw new HttpError(409, 'err.email_taken');
+      throw e;
+    }
+  }
+  const { name, email, role } = (await getUser(c.env.DB, id))!;
+  return c.json({ id, name, email, role });
+});

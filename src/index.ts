@@ -15,6 +15,7 @@ import { inZone, localToUtcIso, type Zone } from './time';
 import { runReminders, sendToAll } from './push';
 import { settingsApi } from './settings-api';
 import { accountApi } from './account';
+import { usersApi } from './users-api';
 import { deviceApi, devicesApi } from './devices';
 import { exportApi, importApi } from './data';
 
@@ -157,6 +158,7 @@ app.route('/api/settings', settingsApi);
 app.route('/api/keys', keysApi);
 app.route('/api/pair', pairApi);
 app.route('/api/account', accountApi);
+app.route('/api/users', usersApi);
 app.route('/api/device', deviceApi);
 app.route('/api/devices', devicesApi);
 app.route('/api/export', exportApi);

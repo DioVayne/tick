@@ -40,3 +40,15 @@ export async function touchLastSeen(db: D1Database, user: User): Promise<void> {
     console.warn('last_seen bijwerken mislukt', e);
   }
 }
+
+/** Alles van één gebruiker wissen, in een volgorde die de verwijzingen respecteert; de aanroeper draait het als batch. */
+export function deleteUserStmts(db: D1Database, id: string): D1PreparedStatement[] {
+  return [
+    db.prepare('DELETE FROM devices WHERE key_id IN (SELECT id FROM api_keys WHERE user_id = ?)').bind(id),
+    ...['api_keys', 'pair_codes', 'push_subscriptions', 'tasks', 'places', 'user_settings']
+      .map((t) => db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(id)),
+    // Ook links die deze gebruiker zelf aanmaakte (created_by verwijst naar users).
+    db.prepare('DELETE FROM account_links WHERE user_id = ? OR created_by = ?').bind(id, id),
+    db.prepare('DELETE FROM users WHERE id = ?').bind(id),
+  ];
+}
