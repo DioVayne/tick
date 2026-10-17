@@ -56,7 +56,7 @@ describe('favoriete plekken', () => {
   it('404 bij een onbekend id', async () => {
     const id = crypto.randomUUID();
     expect((await patch(id, { name: 'Nergens' })).status).toBe(404);
-    expect(await json(await del(id))).toEqual({ ok: true });
+    expect((await del(id)).status).toBe(404);
   });
 
   it('een favoriet aanpassen of verwijderen verplaatst geen taken', async () => {
