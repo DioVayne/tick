@@ -11,6 +11,7 @@ def tickSetting = { String key -> project.findProperty(key) ?: tickProps.getProp
 def tickBase = tickSetting('tickBase')
 if (!tickBase) throw new GradleException('Set the address of your Tick: -PtickBase=https://your-tick.example or tickBase=... in android/tick.properties')
 def tickHost = new URI(tickBase).host
+def tickScheme = new URI(tickBase).scheme
 
 // Release-ondertekening, ook uit tick.properties (de keystore zelf hoort niet in git). Zonder deze vier werkt
 // assembleDebug gewoon en weigert assembleRelease met de melding hieronder.
@@ -26,11 +27,11 @@ android {
         applicationId tickSetting('tickPackage') ?: 'com.example.tick'
         minSdk 31
         targetSdk 36
-        versionCode 6
-        versionName '1.4.1'
+        versionCode 7
+        versionName '1.4.2'
         // Adres van de API; voor testen op de emulator: -PtickBase=http://localhost:8787 (met adb reverse)
         buildConfigField 'String', 'TICK_BASE', "\"${tickBase}\""
-        manifestPlaceholders = [tickHost: tickHost, tickBase: tickBase]
+        manifestPlaceholders = [tickHost: tickHost, tickScheme: tickScheme, tickBase: tickBase]
         // Digital Asset Links vanuit de app; de site verwijst terug via /.well-known/assetlinks.json
         resValue 'string', 'asset_statements',
             '[{\\"relation\\":[\\"delegate_permission/common.handle_all_urls\\"],' +
