@@ -1,5 +1,6 @@
 import { Hono, type Context } from 'hono';
 import { keysApi } from './keys';
+import { pairApi, redeem } from './pair';
 import { authorize, type Auth, clearCookie, passwordOk, sessionCookie } from './auth';
 import { assetLinks } from './assetlinks';
 import { loginAssets, loginPage } from './login';
@@ -103,6 +104,8 @@ app.post('/login', async (c) => {
   return c.json({ ok: true });
 });
 
+app.post('/api/pair/redeem', redeem);
+
 app.post('/logout', (c) => {
   c.header('Set-Cookie', clearCookie);
   return c.json({ ok: true });
@@ -130,6 +133,7 @@ app.use('*', async (c, next) => {
 
 app.route('/api/settings', settingsApi);
 app.route('/api/keys', keysApi);
+app.route('/api/pair', pairApi);
 app.route('/api/account', accountApi);
 app.route('/api/device', deviceApi);
 app.route('/api/devices', devicesApi);

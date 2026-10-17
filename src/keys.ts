@@ -18,6 +18,15 @@ export async function hashKey(key: string): Promise<string> {
   return [...digest].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** Maakt een sleutel aan en geeft hem eenmalig terug; alleen de hash komt in de database. */
+export async function createKey(db: D1Database, name: string, kind: 'full' | 'inbox') {
+  const key = newKey();
+  const row = { id: crypto.randomUUID(), name, kind, hint: key.slice(-4), created_at: new Date().toISOString() };
+  await db.prepare('INSERT INTO api_keys (id, name, kind, hash, hint, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(row.id, row.name, row.kind, await hashKey(key), row.hint, row.created_at).run();
+  return { ...row, key };
+}
+
 export const keysApi = new Hono<AppEnv>();
 keysApi.use('*', sessionOnly);
 
@@ -46,11 +55,7 @@ keysApi.post('/', async (c) => {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   if (!name || name.length > MAX_NAME) throw new HttpError(400, 'err.invalid_key_name');
   if (body.kind !== 'full' && body.kind !== 'inbox') throw new HttpError(400, 'err.invalid_key_kind');
-  const key = newKey();
-  const row = { id: crypto.randomUUID(), name, kind: body.kind, hint: key.slice(-4), created_at: new Date().toISOString() };
-  await c.env.DB.prepare('INSERT INTO api_keys (id, name, kind, hash, hint, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(row.id, row.name, row.kind, await hashKey(key), row.hint, row.created_at).run();
-  return c.json({ ...row, key }, 201);
+  return c.json(await createKey(c.env.DB, name, body.kind), 201);
 });
 
 keysApi.patch('/:id', async (c) => {
