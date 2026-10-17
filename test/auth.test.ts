@@ -20,6 +20,17 @@ describe('auth', () => {
     expect(res.headers.get('location')).toMatch(/\/login$/);
   });
 
+  it('stuurt een pagina zonder inlog door naar /login met next', async () => {
+    const res = await call('/?app=android&pair=1', { auth: null, headers: { accept: 'text/html' } });
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/login?next=%2F%3Fapp%3Dandroid%26pair%3D1');
+  });
+
+  it('zonder pad of query gewoon /login', async () => {
+    const res = await call('/', { auth: null, headers: { accept: 'text/html' } });
+    expect(res.headers.get('location')).toBe('/login');
+  });
+
   it('toont de loginpagina zonder inlog', async () => {
     const res = await call('/login', { auth: null });
     expect(res.status).toBe(200);

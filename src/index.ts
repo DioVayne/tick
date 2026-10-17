@@ -121,7 +121,11 @@ app.use('*', async (c, next) => {
     return;
   }
   const wantsPage = c.req.method === 'GET' && !c.req.path.startsWith('/api/') && c.req.header('accept')?.includes('text/html');
-  return wantsPage ? c.redirect('/login') : c.text('Unauthorized', 401);
+  if (!wantsPage) return c.text('Unauthorized', 401);
+  // Na het inloggen terug naar de opgevraagde pagina, met query (de Android-app opent /?app=android&pair=1).
+  const target = new URL(c.req.url);
+  const back = target.pathname + target.search;
+  return c.redirect(back === '/' ? '/login' : '/login?next=' + encodeURIComponent(back));
 });
 
 app.route('/api/settings', settingsApi);
