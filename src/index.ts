@@ -1,6 +1,7 @@
 import { Hono, type Context } from 'hono';
 import { keysApi } from './keys';
 import { authorize, type Auth, clearCookie, passwordOk, sessionCookie } from './auth';
+import { assetLinks } from './assetlinks';
 import { loginAssets, loginPage } from './login';
 import { badRequest, HttpError } from './errors';
 import { normLocale, translate } from '../public/i18n.js';
@@ -36,6 +37,8 @@ export type Env = {
   LOCALE?: string;
   /** applicationId van een eigen Android-build; zonder deze waarde probeert de PWA de app niet te wekken. */
   ANDROID_PACKAGE?: string;
+  /** SHA-256-vingerafdruk(ken) van de ondertekeningssleutel, gescheiden door komma's; nodig voor assetlinks.json. */
+  ANDROID_CERT_SHA256?: string;
 };
 
 export type TaskRow = {
@@ -83,6 +86,7 @@ async function asset(c: Context<AppEnv>) {
   return new Response(res.body, res);
 }
 
+app.get('/.well-known/assetlinks.json', (c) => c.json(assetLinks(c.env.ANDROID_PACKAGE, c.env.ANDROID_CERT_SHA256)));
 app.get('/login', (c) => c.html(loginPage(c.get('lang'))));
 for (const path of loginAssets) app.get(path, asset);
 
