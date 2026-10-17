@@ -162,7 +162,9 @@ async function enqueue(op) {
   state.pending++;
   changed();
   try {
-    await ownerReady; // niet in de outbox van de vorige gebruiker schrijven terwijl die nog gewist wordt
+    // Niet in de outbox van de vorige gebruiker schrijven terwijl die nog gewist wordt. Mislukte de controle, dan
+    // kan de outbox van een ander zijn: dan niet erin schrijven (sync speelt hem dan toch niet af).
+    if (!(await ownerReady)) return;
     await db.outboxAdd(op);
   } catch (e) {
     report(tr('store.save_failed', { reason: e.message }));
@@ -267,6 +269,26 @@ export const SETTINGS_CACHE = 'tick.settings-cache';
  */
 let ownerReady = Promise.resolve(true);
 
+const PUSH_TIMEOUT_MS = 2000;
+
+/**
+ * Meldt het push-abonnement van deze browser af, als dat er is. Faalt nooit en wacht hoogstens PUSH_TIMEOUT_MS
+ * (een service worker die niet klaar wordt, mag het opstarten niet ophouden). De push-dienst geeft daarna 410 en
+ * de server ruimt de rij op bij de volgende verzending.
+ */
+async function unsubscribePush() {
+  const sw = globalThis.navigator?.serviceWorker;
+  if (!sw) return;
+  let timer;
+  const work = (async () => {
+    const reg = await sw.ready;
+    const sub = await reg?.pushManager?.getSubscription();
+    await sub?.unsubscribe();
+  })().catch(() => {});
+  await Promise.race([work, new Promise((r) => { timer = setTimeout(r, PUSH_TIMEOUT_MS); })]);
+  clearTimeout(timer);
+}
+
 /**
  * De lokale kopie hoort bij één gebruiker. Hoort hij bij een ander (of bij niemand: een cache van vóór de accounts),
  * dan wissen we kopie, outbox en de cache van de instellingen, zodat een gedeelde browser niets van de vorige laat zien.
@@ -274,7 +296,12 @@ let ownerReady = Promise.resolve(true);
  * @param {string} userId
  */
 export async function ensureOwner(userId) {
-  if ((await db.kvGet('owner')) === userId) return false;
+  const previous = await db.kvGet('owner');
+  if (previous === userId) return false;
+  // Een sessie kan eindigen zonder de knop Uitloggen (cookie verlopen, elders uitgelogd, resetlink). Het push-abonnement
+  // van de browser hoort dan nog bij de vorige gebruiker: afmelden, anders krijgt deze browser diens herinneringen.
+  // Zonder vorige eigenaar (cache van vóór de accounts) niet, anders verliest elke browser na de update zijn meldingen.
+  if (previous) await unsubscribePush();
   await db.clearAll();
   try { localStorage.removeItem(SETTINGS_CACHE); } catch { /* geen opslag */ }
   await db.kvSet('owner', userId);

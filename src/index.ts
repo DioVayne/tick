@@ -93,7 +93,11 @@ async function asset(c: Context<AppEnv>) {
 }
 
 app.get('/.well-known/assetlinks.json', (c) => c.json(assetLinks(c.env.ANDROID_PACKAGE, c.env.ANDROID_CERT_SHA256)));
-app.get('/login', (c) => c.html(loginPage(c.get('lang'))));
+app.get('/login', async (c) => {
+  // De overgang: zolang de beheerder geen e-mailadres heeft, zegt de pagina dat het veld leeg mag (verraadt één bit).
+  const hint = !!(await c.env.DB.prepare("SELECT 1 FROM users WHERE role = 'admin' AND email IS NULL").first());
+  return c.html(loginPage(c.get('lang'), hint));
+});
 app.route('/', linkPages);
 for (const path of loginAssets) app.get(path, asset);
 
@@ -251,7 +255,7 @@ async function checkParent(db: D1Database, userId: string, v: unknown, self?: Ta
   if (!parent) throw new HttpError(400, 'err.parent_missing');
   if (parent.parent_id) throw new HttpError(400, 'err.subtask_no_children');
   if (self) {
-    const kids = await db.prepare('SELECT 1 FROM tasks WHERE parent_id = ? LIMIT 1').bind(self.id).first();
+    const kids = await db.prepare('SELECT 1 FROM tasks WHERE parent_id = ? AND user_id = ? LIMIT 1').bind(self.id, userId).first();
     if (kids) throw new HttpError(400, 'err.has_children');
   }
   return parent;
@@ -305,8 +309,8 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
   const ts = now();
   if (done) {
     const next = inZone(z, () => nextOccurrence(t.repeat_rule!, t.repeat_start!, Math.max(Date.now(), Date.parse(t.repeat_at!))));
-    const { results: kids } = await db.prepare('SELECT id, done_at FROM tasks WHERE parent_id = ? AND done = 1')
-      .bind(t.id).all<{ id: string; done_at: string | null }>();
+    const { results: kids } = await db.prepare('SELECT id, done_at FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 1')
+      .bind(t.id, t.user_id).all<{ id: string; done_at: string | null }>();
     // Elke stap overschrijft de stand: ongedaan maken draait altijd de laatste stap terug.
     const prev = JSON.stringify({
       remind_at: t.remind_at, repeat_at: t.repeat_at!, next, kids, at: ts, notified: t.notified, loc_notified: t.loc_notified,
@@ -315,8 +319,8 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
       db.prepare('UPDATE tasks SET remind_at = ?, repeat_at = ?, notified = 0, loc_notified = CASE WHEN loc_lat IS NULL THEN loc_notified ELSE 0 END, ' +
         'repeat_prev = ?, updated_at = ? WHERE id = ? AND done = 0 AND repeat_at = ?').bind(next, next, prev, ts, t.id, t.repeat_at),
       // Alleen als de parent hierboven echt is doorgeschoven (repeat_at en updated_at van deze stap).
-      db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE parent_id = ? AND done = 1 AND id IN (SELECT value FROM json_each(?)) ' +
-        'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_at = ? AND updated_at = ?)').bind(ts, t.id, JSON.stringify(kids.map((k) => k.id)), t.id, next, ts),
+      db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE parent_id = ? AND user_id = ? AND done = 1 AND id IN (SELECT value FROM json_each(?)) ' +
+        'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_at = ? AND updated_at = ?)').bind(ts, t.id, t.user_id, JSON.stringify(kids.map((k) => k.id)), t.id, next, ts),
     ]);
     return;
   }
@@ -324,8 +328,8 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
   if (!prev) return;
   await db.batch([
     // Eerst de subtaken, zolang repeat_prev nog als bewijs in de parent staat.
-    ...prev.kids.map((k) => db.prepare('UPDATE tasks SET done = 1, done_at = ?, updated_at = ? WHERE id = ? AND parent_id = ? AND done = 0 ' +
-      'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_prev = ?)').bind(k.done_at, ts, k.id, t.id, t.id, t.repeat_prev)),
+    ...prev.kids.map((k) => db.prepare('UPDATE tasks SET done = 1, done_at = ?, updated_at = ? WHERE id = ? AND parent_id = ? AND user_id = ? AND done = 0 ' +
+      'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_prev = ?)').bind(k.done_at, ts, k.id, t.id, t.user_id, t.id, t.repeat_prev)),
     db.prepare('UPDATE tasks SET remind_at = ?, repeat_at = ?, notified = ?, loc_notified = ?, repeat_prev = NULL, updated_at = ? WHERE id = ? AND repeat_prev = ?')
       .bind(prev.remind_at, prev.repeat_at, prev.notified, prev.loc_notified, ts, t.id, t.repeat_prev),
   ]);

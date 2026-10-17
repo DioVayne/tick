@@ -145,6 +145,8 @@ npm run deploy
 ```
 Open the app once online afterwards, so the service worker caches the new version.
 
+**Updating to the version with accounts:** everyone logs in once more afterwards. As administrator, leave the email field empty as long as you have not set an address (the login page says so), then add your address under **Settings → Account**. Android phones with app 1.3 pair themselves again after you log in inside the app; installing app 1.4 is better. The separate "Android" keys that app 1.3 left behind can be revoked under **Settings → Advanced → Keys**.
+
 ## Good to know
 - **More people on one Tick:** as administrator, add your email address first (**Settings → Account**). Then **Settings → Accounts → + Invite someone** shows a link; share it, for example through WhatsApp. It works once and is valid for 7 days. The other person chooses a name, email address and password there and has their own tasks, devices and settings. Lost password of another account: **Reset link** next to that account (once, valid for 1 hour). **Delete** erases all data of that account.
 - **Log out on other devices** (for example after losing a phone): **Settings → Account → Log out on other devices**. This device stays logged in. Keys for phones and automations keep working; revoke those under **Advanced → Keys**.

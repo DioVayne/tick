@@ -78,3 +78,25 @@ export async function createTask(body: Json): Promise<Task> {
 export async function openTasks(): Promise<Task[]> {
   return json<Task[]>(await call('/api/tasks'));
 }
+
+/**
+ * Doet tot 11 pogingen tot er een 429 komt en geeft alle antwoorden terug (de laatste is de 429).
+ * De limiter van miniflare telt in vaste vensters van een minuut, gelijk met de wandklok: valt de reeks over een
+ * minuutgrens, dan begint de telling opnieuw. Binnen één venster slagen er dus hoogstens `limit` pogingen vóór de
+ * eerste 429; ging er onderweg een minuutgrens voorbij, dan hoogstens twee vensters vol. Met 11 pogingen komt de
+ * 429 er in beide gevallen.
+ */
+export async function untilRateLimited(attempt: () => Promise<Response>, limit = 5): Promise<Response[]> {
+  const minute = () => Math.floor(Date.now() / 60_000);
+  const start = minute();
+  const out: Response[] = [];
+  for (let i = 0; i < 2 * limit + 1; i++) {
+    const res = await attempt();
+    out.push(res);
+    if (res.status === 429) break;
+  }
+  const allowed = minute() === start ? limit : 2 * limit;
+  if (out.at(-1)!.status !== 429) throw new Error(`geen 429 na ${out.length} pogingen: ${out.map((r) => r.status).join(',')}`);
+  if (out.length - 1 > allowed) throw new Error(`${out.length - 1} pogingen slaagden vóór de 429 (hoogstens ${allowed}): ${out.map((r) => r.status).join(',')}`);
+  return out;
+}

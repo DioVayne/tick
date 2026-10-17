@@ -63,6 +63,12 @@ If the JDK or the Android SDK is missing, say so and stop. Installing them is th
 ## Updating an existing instance
 Run `git pull`, `npm ci`, `npm run db:migrate`, then deploy after a yes, then check with `npx wrangler deployments list`.
 
+When the update brings accounts (from a version without `users`), tell the user afterwards:
+- everyone logs in once more;
+- the administrator leaves the email field empty as long as no address is set (the login page shows a hint), and then adds one under Settings › Account;
+- Android phones with app 1.3 pair themselves again after logging in inside the app; installing app 1.4 is better;
+- the separate "Android" keys from app 1.3 can be revoked under Settings › Advanced › Keys.
+
 ## Never
 - Commit `wrangler.jsonc`, `.dev.vars`, `android/tick.properties`, a keystore or any secret.
 - Delete a D1 database or a Worker without an explicit request from the user.

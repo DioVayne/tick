@@ -3,6 +3,8 @@ import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { hashKey } from '../src/keys';
 import { hashPassword } from '../src/password';
+import { loadUserPrefs } from '../src/prefs';
+import { login } from './helpers';
 
 const ADMIN = '00000000-0000-4000-8000-000000000001';
 const NOW = '2026-01-01T00:00:00.000Z';
@@ -48,8 +50,9 @@ describe('migratie naar accounts', () => {
       .toEqual({ timezone: 'Europe/London', reminder_time: '08:30', week_start: 'sun', fallback_webhook: 'https://hook.example/x' });
     expect(await db.prepare("SELECT value FROM settings WHERE key = 'default_locale'").first()).toEqual({ value: 'nl' });
     expect(await db.prepare("SELECT value FROM settings WHERE key = 'env_api_token_off'").first()).toEqual({ value: '1' });
-    // 0010: wat naar users en user_settings is verhuisd, staat niet meer in settings.
-    expect((await db.prepare("SELECT key FROM settings WHERE key IN ('password_hash', 'session_version', 'timezone', 'reminder_time', 'week_start', 'fallback_webhook')").all()).results).toEqual([]);
+    // De verhuisde rijen mogen in settings blijven staan (de oude Worker heeft ze nodig tot de deploy); de nieuwe code
+    // leest ze niet meer (test hieronder). Opruimen volgt in een latere migratie.
+    expect((await db.prepare("SELECT count(*) AS n FROM settings WHERE key IN ('password_hash', 'session_version', 'timezone', 'reminder_time', 'week_start', 'fallback_webhook')").first())).toEqual({ n: 6 });
   });
 
   it('plekken: dezelfde naam bij twee accounts mag, twee keer bij één account niet', async () => {
@@ -60,6 +63,27 @@ describe('migratie naar accounts', () => {
     await add('p2', 'b', 'thuis'); // 'Thuis' bestaat al bij de beheerder
     await expect(add('p3', 'b', 'THUIS')).rejects.toThrow(/UNIQUE/);
     await expect(add('p4', ADMIN, 'thuis')).rejects.toThrow(/UNIQUE/);
+  });
+
+  it('de oude rijen in settings worden genegeerd: geen oud wachtwoord, geen oude sessieversie, geen oude zone', async () => {
+    const db = env.DB;
+    const oldKeys = "('password_hash', 'session_version', 'timezone', 'reminder_time')";
+    await db.prepare("INSERT INTO settings (key, value) VALUES ('password_hash', ?), ('session_version', '9'), ('timezone', 'Asia/Tokyo'), ('reminder_time', '06:15') ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+      .bind(await hashPassword('oud-wachtwoord')).run();
+    try {
+      expect((await login('oud-wachtwoord')).status).toBe(401);
+      const ok = await login('test-wachtwoord'); // LOGIN_PASSWORD, want users.password_hash is leeg
+      expect(ok.status).toBe(200);
+      // De cookie draagt users.session_version, niet de 9 uit settings.
+      const { session_version } = (await db.prepare('SELECT session_version FROM users WHERE id = ?').bind(ADMIN).first<{ session_version: number }>())!;
+      expect(session_version).not.toBe(9);
+      expect(ok.headers.get('set-cookie')!.split(';')[0].split('.')[2]).toBe(String(session_version));
+      const prefs = await loadUserPrefs(env, { id: ADMIN, role: 'admin' });
+      expect(prefs.timeZone).not.toBe('Asia/Tokyo');
+      expect(prefs.reminderTime).not.toBe('06:15');
+    } finally {
+      await db.prepare(`DELETE FROM settings WHERE key IN ${oldKeys}`).run();
+    }
   });
 
   it('een verse database heeft ook de beheerder, zonder wachtwoord en e-mailadres', async () => {

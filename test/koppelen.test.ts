@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { hashKey } from '../src/keys';
-import { call, callAs, createUser, json, randomIp, session } from './helpers';
+import { call, callAs, createUser, json, randomIp, session, untilRateLimited } from './helpers';
 
 const pair = async (cookie: string) => json<{ id: string; code: string; expires_at: string }>(
   await call('/api/pair', { method: 'POST', auth: null, headers: { cookie } }));
@@ -63,10 +63,9 @@ describe('koppelcodes', () => {
   });
   it('te veel inwisselpogingen vanaf één IP geeft 429', async () => {
     const ip = randomIp();
-    const statuses: number[] = [];
-    for (let i = 0; i < 6; i++) statuses.push((await redeem('x', undefined, ip)).status);
-    expect(statuses.slice(0, 5)).toEqual([400, 400, 400, 400, 400]);
-    expect(statuses[5]).toBe(429);
+    const statuses = (await untilRateLimited(() => redeem('x', undefined, ip))).map((r) => r.status);
+    expect(statuses.at(-1)).toBe(429);
+    expect(statuses.slice(0, -1).every((s) => s === 400)).toBe(true);
   });
 });
 

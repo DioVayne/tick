@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { authorize, SESSION_DAYS } from '../src/auth';
 import { loadInstallPrefs } from '../src/prefs';
-import { ADMIN_ID, call, INBOX, json, login, randomIp, type Task } from './helpers';
+import { ADMIN_ID, call, INBOX, json, login, randomIp, type Task, untilRateLimited } from './helpers';
 
 const DAY = 86_400_000;
 
@@ -19,8 +19,9 @@ const withCookie = (cookie: string) => call('/api/tasks', { auth: null, headers:
 describe('rate limit op /login', () => {
   it('geeft na 5 pogingen per minuut een 429, per IP', async () => {
     const ip = randomIp();
-    for (let i = 0; i < 5; i++) expect((await login('test-wachtwoord', ip)).status).toBe(200);
-    const blocked = await login('test-wachtwoord', ip);
+    const res = await untilRateLimited(() => login('test-wachtwoord', ip));
+    expect(res.slice(0, -1).map((r) => r.status).every((s) => s === 200)).toBe(true);
+    const blocked = res.at(-1)!;
     expect(blocked.status).toBe(429);
     expect(blocked.headers.get('set-cookie')).toBeNull();
     // Een ander IP heeft er geen last van.

@@ -177,8 +177,18 @@ importApi.post('/ticktick', async (c) => {
   const rows = readTickTickText(text);
   if (!rows.length) throw new HttpError(400, 'err.ticktick_invalid');
   const userId = c.get('auth').userId;
-  const { tasks, skipped } = tickTickRows(rows, tickTickPrefix(c.get('user')));
+  const { tasks: rowsOut, skipped } = tickTickRows(rows, tickTickPrefix(c.get('user')));
   const db = c.env.DB;
+  // Een ouder die al bij een ander account bestaat (INSERT OR IGNORE laat hem daar staan), of die niet in dit bestand
+  // en niet bij jezelf staat: dan wordt het kind een gewone taak, anders hangt het onder de taak van een ander.
+  const inFile = new Set(rowsOut.map((t) => t.id));
+  const parentOwners = await ownersOf(db, 'tasks', [...new Set(rowsOut.map((t) => t.parent_id).filter((p): p is string => !!p))]);
+  const tasks = rowsOut.map((t) => {
+    if (!t.parent_id) return t;
+    const owner = parentOwners.get(t.parent_id);
+    const ok = owner === userId || (owner === undefined && inFile.has(t.parent_id));
+    return ok ? t : { ...t, parent_id: null };
+  });
   const stmts = tasks.map((t) => db.prepare(
     `INSERT OR IGNORE INTO tasks (id, user_id, title, description, list, parent_id, position, remind_at, notified, done, done_at, source, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 'import', ?, ?)`,

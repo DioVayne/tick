@@ -57,6 +57,21 @@ describe('TickTick-import', () => {
     expect(await get('ttA1')).toMatchObject({ user_id: ADMIN_ID });
   });
 
+  it('een kind waarvan de ouder-id al bij een ander account bestaat, krijgt parent_id null', async () => {
+    const b = await createUser();
+    expect((await callAs(b.cookie, '/api/import/ticktick', { method: 'POST', body: CSV })).status).toBe(200);
+    const theirs = `${b.id.slice(0, 8)}-A1`; // bij de beheerder wordt dit tt<b>-A1: de id van B's taak
+    const csv = [
+      HEADER.map(q).join(','),
+      row({ Title: 'Kaper-ouder', taskId: theirs, projectKind: 'TASK' }),
+      row({ Title: 'Kind', taskId: 'A9K', parentId: theirs, projectKind: 'TASK' }),
+    ].join('\n');
+    expect((await importCsv(csv)).status).toBe(200);
+    expect(await get('ttA9K')).toMatchObject({ user_id: ADMIN_ID, parent_id: null });
+    expect(await get(`tt${theirs}`)).toMatchObject({ user_id: b.id, title: 'Ouder, met komma' });
+    expect(await env.DB.prepare('SELECT count(*) AS n FROM tasks WHERE parent_id = ? AND user_id = ?').bind(`tt${theirs}`, ADMIN_ID).first()).toEqual({ n: 0 });
+  });
+
   it('weigert tekst zonder TickTick-kop en te grote bestanden', async () => {
     const res = await importCsv('a,b\n1,2');
     expect(res.status).toBe(400);
