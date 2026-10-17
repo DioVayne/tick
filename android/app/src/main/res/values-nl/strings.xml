@@ -5,8 +5,8 @@
     <string name="add">Nieuwe taak</string>
     <string name="done">Afvinken</string>
     <string name="widget_empty">Niets te doen</string>
-    <string name="widget_no_token">Open Tick en voer je sleutel in</string>
-    <string name="main_help">Plak hieronder de API-sleutel. Daarna kun je de widget toevoegen: houd een lege plek op je startscherm ingedrukt, kies Widgets en dan Tick.</string>
+    <string name="widget_no_token">Open Tick om deze telefoon te koppelen</string>
+    <string name="main_help">Normaal koppelt de app zichzelf als je in Tick inlogt. Alleen als dat niet lukt: plak hieronder een sleutel met volledige toegang (in Tick: Instellingen, Geavanceerd, Sleutels).</string>
     <string name="error_offline">geen verbinding</string>
     <string name="error_server">serverfout %s</string>
     <string name="sync_failed">Niet bijgewerkt: %s</string>
@@ -32,7 +32,6 @@
     <string name="main_save_test">Opslaan en testen</string>
     <string name="main_busy">Bezig...</string>
     <string name="widget_settings">Widget-instellingen</string>
-    <string name="main_open_web">Open Tick in de browser</string>
     <string name="main_connected">Verbonden. %d open taken. Voeg nu de widget toe via je startscherm (lang indrukken, dan Widgets, dan Tick).</string>
     <string name="failed">Mislukt: %s</string>
     <string name="quick_hint">Nieuwe taak...</string>
@@ -52,4 +51,11 @@
     <string name="error_no_key">Geen sleutel ingesteld</string>
     <string name="widget_refreshed">Bijgewerkt ✓</string>
     <string name="widget_synced_at">Bijgewerkt %s</string>
+    <string name="phone_title">Tick op deze telefoon</string>
+    <string name="pair_status_linked">Deze telefoon is gekoppeld aan Tick.</string>
+    <string name="pair_status_not_linked">Nog niet gekoppeld. Open Tick en log in: de app koppelt zichzelf.</string>
+    <string name="open_tick">Open Tick</string>
+    <string name="advanced_key">Geavanceerd: sleutel handmatig invullen</string>
+    <string name="pair_failed">Koppelen mislukt. Probeer het opnieuw in Tick.</string>
+    <string name="shortcut_phone_settings">Telefooninstellingen</string>
 </resources>

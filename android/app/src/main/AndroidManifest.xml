@@ -79,9 +79,34 @@
             </intent-filter>
         </service>
 
+        <!-- "Tick op deze telefoon": de instellingen van de app, ook via tick://settings vanuit de PWA -->
         <activity
             android:name=".MainActivity"
-            android:exported="true" />
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tick" android:host="settings" />
+            </intent-filter>
+        </activity>
+
+        <!-- tick://pair?code=...: de PWA geeft een eenmalige koppelcode; de app wisselt hem in voor een sleutel -->
+        <activity
+            android:name=".PairActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:noHistory="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
+            android:theme="@style/TranslucentTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tick" android:host="pair" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".QuickAddActivity"

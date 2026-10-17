@@ -5,8 +5,8 @@
     <string name="add">New task</string>
     <string name="done">Complete</string>
     <string name="widget_empty">Nothing to do</string>
-    <string name="widget_no_token">Open Tick and enter your key</string>
-    <string name="main_help">Paste the API key (API_TOKEN) below. Then add the widget: long-press an empty spot on your home screen, choose Widgets and then Tick.</string>
+    <string name="widget_no_token">Open Tick to link this phone</string>
+    <string name="main_help">Normally the app links itself when you sign in to Tick. Only if that does not work: paste a key with full access below (in Tick: Settings, Advanced, Keys).</string>
     <string name="error_offline">no connection</string>
     <string name="error_server">server error %s</string>
     <string name="sync_failed">Not updated: %s</string>
@@ -32,7 +32,6 @@
     <string name="main_save_test">Save and test</string>
     <string name="main_busy">Working…</string>
     <string name="widget_settings">Widget settings</string>
-    <string name="main_open_web">Open Tick in the browser</string>
     <string name="main_connected">Connected. %d open tasks. Now add the widget from your home screen (long-press, then Widgets, then Tick).</string>
     <string name="failed">Failed: %s</string>
     <string name="quick_hint">New task…</string>
@@ -52,4 +51,11 @@
     <string name="error_no_key">no API key set</string>
     <string name="widget_refreshed">Up to date ✓</string>
     <string name="widget_synced_at">Updated %s</string>
+    <string name="phone_title">Tick on this phone</string>
+    <string name="pair_status_linked">This phone is linked to Tick.</string>
+    <string name="pair_status_not_linked">Not linked yet. Open Tick and sign in: the app links itself.</string>
+    <string name="open_tick">Open Tick</string>
+    <string name="advanced_key">Advanced: enter the key manually</string>
+    <string name="pair_failed">Linking failed. Try again in Tick.</string>
+    <string name="shortcut_phone_settings">Phone settings</string>
 </resources>

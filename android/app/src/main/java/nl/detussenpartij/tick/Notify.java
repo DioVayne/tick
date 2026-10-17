@@ -65,6 +65,8 @@ final class Notify {
         int code = id.hashCode();
         // Eigen data-URI per taak, zodat de PendingIntents van verschillende taken elkaar niet overschrijven.
         Uri data = Uri.parse("tick://taak/" + Uri.encode(id));
+        // Openen loopt via WidgetClickActivity naar Launch.task (de taak in de TWA). Via die tussenstap bepaalt de app
+        // pas bij de tik of er pair=1 bij moet, en niet al toen de melding verscheen.
         PendingIntent open = PendingIntent.getActivity(c, code,
                 new Intent(c, WidgetClickActivity.class).setData(data)
                         .putExtra(ActionReceiver.EXTRA_ID, id)
