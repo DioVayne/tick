@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it } from 'vitest';
-import { setDefaultTime, setTimeZone, weekdayOrder } from '../public/repeat.js';
+import { weekdayOrder } from '../public/repeat.js';
 import { repeatColumns } from '../src/repeat';
 import { loadInstallPrefs, loadUserPrefs, userSettingStmt } from '../src/prefs';
 import { ADMIN_ID, call, INBOX, json, type Task } from './helpers';
@@ -38,14 +38,8 @@ describe('instellingen van de beheerder', () => {
   it('een ritme zonder reminder start op de ingestelde reminder-tijd', async () => {
     await setSetting('reminder_time', '07:30');
     const p = await loadPrefs();
-    setTimeZone(p.timeZone);
-    setDefaultTime(p.reminderTime);
-    try {
-      const start = String(repeatColumns('FREQ=DAILY', null).repeat_start);
-      expect(new Date(start).toLocaleTimeString('en-GB', { timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit' })).toBe('07:30');
-    } finally {
-      setDefaultTime('09:00');
-    }
+    const start = String(repeatColumns('FREQ=DAILY', null, p).repeat_start);
+    expect(new Date(start).toLocaleTimeString('en-GB', { timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit' })).toBe('07:30');
   });
   it('weekdayOrder', () => {
     expect(weekdayOrder('mon')).toEqual([0, 1, 2, 3, 4, 5, 6]);

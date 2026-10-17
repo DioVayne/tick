@@ -8,10 +8,10 @@ import { badRequest, HttpError } from './errors';
 import { normLocale, translate } from '../public/i18n.js';
 import { cleanLocation, cleanPlace, locColumns, locFromRow, type Place } from './location';
 import { repeatColumns, repeatFromRow, todayDefaultIso } from './repeat';
-import { nextOccurrence, setDefaultTime, setTimeZone } from '../public/repeat.js';
+import { nextOccurrence } from '../public/repeat.js';
 import { loadInstallPrefs, loadUserPrefs, requestLocale, type InstallPrefs, type Prefs } from './prefs';
 import { findLoginUser, getUser, touchLastSeen, type User } from './users';
-import { localToUtcIso } from './time';
+import { inZone, localToUtcIso, type Zone } from './time';
 import { runReminders, sendToAll } from './push';
 import { settingsApi } from './settings-api';
 import { accountApi } from './account';
@@ -136,10 +136,8 @@ app.use('*', async (c, next) => {
     c.set('auth', auth);
     c.set('user', user);
     const prefs: Prefs = { ...c.get('install'), ...await loadUserPrefs(c.env, user) };
+    // Tijdberekeningen krijgen prefs (timeZone, reminderTime) per aanroep mee; geen globale zone over een await.
     c.set('prefs', prefs);
-    // De rekenmodule is gedeeld met de PWA en kent (nog) alleen een globale tijdzone en standaardtijd: die van deze gebruiker.
-    setTimeZone(prefs.timeZone);
-    setDefaultTime(prefs.reminderTime);
     await next();
     // Geen verlenging als de route zelf al een sessiecookie zet (wachtwoord wijzigen, elders uitloggen): die heeft
     // de nieuwe versie, en een verlenging met de oude gebruiker zou hem overschrijven.
@@ -299,10 +297,10 @@ function undoable(t: TaskRow): RepeatPrev | null {
  * Heropenen draait dat terug zolang undoable() het toestaat. Beide in één batch; de WHERE op repeat_at/repeat_prev
  * zorgt dat een gelijktijdig verzoek niets half of dubbel doet.
  */
-async function rollRepeat(db: D1Database, t: TaskRow, done: boolean): Promise<void> {
+async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): Promise<void> {
   const ts = now();
   if (done) {
-    const next = nextOccurrence(t.repeat_rule!, t.repeat_start!, Math.max(Date.now(), Date.parse(t.repeat_at!)));
+    const next = inZone(z, () => nextOccurrence(t.repeat_rule!, t.repeat_start!, Math.max(Date.now(), Date.parse(t.repeat_at!))));
     const { results: kids } = await db.prepare('SELECT id, done_at FROM tasks WHERE parent_id = ? AND done = 1')
       .bind(t.id).all<{ id: string; done_at: string | null }>();
     // Elke stap overschrijft de stand: ongedaan maken draait altijd de laatste stap terug.
@@ -334,8 +332,8 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean): Promise<vo
  * heropenen zet precies die subtaken weer open, en een heropende subtaak opent ook haar parent.
  * Een open herhalende hoofdtaak gaat via rollRepeat.
  */
-async function setDone(db: D1Database, t: TaskRow, done: boolean): Promise<void> {
-  if (rolls(t)) return rollRepeat(db, t, done);
+async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone): Promise<void> {
+  if (rolls(t)) return rollRepeat(db, t, done, z);
   const ts = now();
   const stmts = [db.prepare('UPDATE tasks SET done = ?, done_at = ?, updated_at = ? WHERE id = ?').bind(done ? 1 : 0, done ? ts : null, ts, t.id)];
   if (done) {
@@ -352,10 +350,10 @@ async function setDone(db: D1Database, t: TaskRow, done: boolean): Promise<void>
   await db.batch(stmts);
 }
 
-function normRemind(v: unknown): string | null {
+function normRemind(v: unknown, z: Zone): string | null {
   if (v === null || v === undefined || v === '') return null;
   try {
-    return localToUtcIso(String(v));
+    return localToUtcIso(String(v), z);
   } catch (e) {
     throw badRequest(e, 'err.invalid_date', { value: String(v) });
   }
@@ -466,10 +464,10 @@ app.post('/api/tasks', async (c) => {
   if (existing) return c.json(asBool(existing), 200);
   // Een id dat bij een ander account hoort mag niets overschrijven en lekt niets.
   if (id && await c.env.DB.prepare('SELECT 1 FROM tasks WHERE id = ?').bind(id).first()) throw new HttpError(409, 'err.id_taken');
-  return c.json(await createTask(c.env, userId, b, 'app', id ?? undefined), 201);
+  return c.json(await createTask(c.env, userId, c.get('prefs'), b, 'app', id ?? undefined), 201);
 });
 
-async function createTask(env: Env, userId: string, b: Record<string, unknown>, source: string, id: string = crypto.randomUUID()) {
+async function createTask(env: Env, userId: string, z: Zone, b: Record<string, unknown>, source: string, id: string = crypto.randomUUID()) {
   const title = cleanTitle(b.title);
   const description = cleanDescription(b.description);
   const parent = await checkParent(env.DB, userId, b.parent_id);
@@ -477,8 +475,8 @@ async function createTask(env: Env, userId: string, b: Record<string, unknown>, 
   // Een ritme bepaalt de eerste reminder: die wordt `at`, ook als de body een andere remind_at had.
   const rule = typeof b.repeat === 'string' && !b.repeat.trim() ? null : b.repeat ?? null; // leeg = geen ritme
   if (rule !== null && parent) throw new HttpError(400, 'err.only_parents_repeat');
-  const remindIso = normRemind(b.remind_at);
-  const rep = repeatColumns(rule as string | null, remindIso);
+  const remindIso = normRemind(b.remind_at, z);
+  const rep = repeatColumns(rule as string | null, remindIso, z);
   const remindAt = (rep.repeat_at as string | null) ?? remindIso;
   const ts = now();
   const position = typeof b.position === 'number' && Number.isFinite(b.position) ? b.position : await newPosition(env.DB, userId, parent?.id ?? null);
@@ -500,6 +498,7 @@ app.patch('/api/tasks/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
   const userId = c.get('auth').userId;
+  const z = c.get('prefs');
   const b = await body(c);
   const t = await getTask(db, userId, id);
   if (!t) throw new HttpError(404, 'err.not_found');
@@ -524,19 +523,19 @@ app.patch('/api/tasks/:id', async (c) => {
   }
   // Ritme: instellen zet remind_at op de eerste keer; uitzetten, de reminder wissen of een subtaak worden wist het.
   // Alleen de reminder verzetten laat repeat_* staan. Elke wijziging van remind_at of repeat wist repeat_prev.
-  const newRemind = 'remind_at' in b ? normRemind(b.remind_at) : undefined;
+  const newRemind = 'remind_at' in b ? normRemind(b.remind_at, z) : undefined;
   const noRepeat = b.repeat === null || b.repeat === undefined || (typeof b.repeat === 'string' && !b.repeat.trim());
   const setRepeat = 'repeat' in b && !noRepeat && newRemind !== null;
   if (setRepeat && parentId) throw new HttpError(400, 'err.only_parents_repeat');
   if (setRepeat) {
-    const rep = repeatColumns(b.repeat as string, newRemind ?? t.remind_at ?? todayDefaultIso());
+    const rep = repeatColumns(b.repeat as string, newRemind ?? t.remind_at ?? todayDefaultIso(z), z);
     for (const [col, v] of Object.entries(rep)) set(col, v);
     set('remind_at', rep.repeat_at);
     set('notified', 0);
   } else {
     if (newRemind !== undefined) { set('remind_at', newRemind); set('notified', 0); }
     const clear = ('repeat' in b && noRepeat) || newRemind === null || ('parent_id' in b && parentId !== null);
-    if (clear) for (const [col, v] of Object.entries(repeatColumns(null, null))) set(col, v);
+    if (clear) for (const [col, v] of Object.entries(repeatColumns(null, null, z))) set(col, v);
     else if (newRemind !== undefined) set('repeat_prev', null);
   }
   // Elke nieuwe locatie telt weer als nog niet gemeld.
@@ -565,7 +564,7 @@ app.patch('/api/tasks/:id', async (c) => {
     // ongedaan maken (dat een eerdere stap bedoelde) de nieuwste stap niet terug.
     const sameAt = !('occurrence' in b) || Date.parse(String(b.occurrence)) === Date.parse(cur.repeat_at!);
     const act = rolls(cur) ? sameAt && (!!b.done || !!undoable(cur)) : !!b.done !== !!cur.done;
-    if (act) await setDone(db, cur, !!b.done);
+    if (act) await setDone(db, cur, !!b.done, z);
   }
   const updated = (await getTask(db, userId, id))!;
   if ('position' in b) await rebalanceIfNeeded(db, updated);
@@ -633,7 +632,7 @@ for (const [action, done] of [['done', true], ['reopen', false]] as const) {
     const t = await getTask(c.env.DB, c.get('auth').userId, c.req.param('id'));
     if (!t) throw new HttpError(404, 'err.not_found');
     // Een herhalende taak staat altijd open: /done schuift altijd door, /reopen draait terug als dat nog mag (setDone beslist).
-    if (rolls(t) || !!t.done !== done) await setDone(c.env.DB, t, done);
+    if (rolls(t) || !!t.done !== done) await setDone(c.env.DB, t, done, c.get('prefs'));
     return c.json({ ok: true });
   });
 }
@@ -657,7 +656,7 @@ app.post('/api/inbox', async (c) => {
   const title = b.title ?? b.titel;
   const description = b.notes ?? b.description ?? b.omschrijving ?? '';
   const remind = b.due ?? b.remind_at ?? b.datum ?? b.date ?? null; // een kale datum krijgt de reminder-tijd in localToUtcIso
-  return c.json(await createTask(c.env, c.get('auth').userId, { title, description, remind_at: remind, repeat: b.repeat, list: String(b.list ?? '').slice(0, MAX_LIST).trim() || 'Inbox' }, 'api'), 201);
+  return c.json(await createTask(c.env, c.get('auth').userId, c.get('prefs'), { title, description, remind_at: remind, repeat: b.repeat, list: String(b.list ?? '').slice(0, MAX_LIST).trim() || 'Inbox' }, 'api'), 201);
 });
 
 app.post('/api/push/subscribe', async (c) => {
@@ -766,7 +765,7 @@ export default {
   fetch: app.fetch,
   scheduled: (_e: ScheduledController, env: Env, ctx: ExecutionContext) => {
     ctx.waitUntil((async () => {
-      // runReminders zet per taak de zone van de eigenaar (de rekenmodule kent nog alleen een globale zone).
+      // runReminders leest per taak de instellingen van de eigenaar; er zit geen globale zone tussen.
       await runReminders(env, await loadInstallPrefs(env));
     })());
   },
