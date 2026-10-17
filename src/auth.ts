@@ -1,8 +1,8 @@
 import type { Env } from './index';
 import { hashKey } from './keys';
-import { verifyPassword } from './password';
+import { hashPassword, verifyPassword } from './password';
 import { setSetting, type Prefs } from './prefs';
-import { ADMIN_ID, type User } from './users';
+import { ADMIN_ID, getUser, type User } from './users';
 
 const enc = new TextEncoder();
 const DAY_MS = 86_400_000;
@@ -28,10 +28,24 @@ async function hmac(secret: string, msg: string): Promise<string> {
  */
 export async function passwordOk(env: Env, user: Pick<User, 'role' | 'password_hash'>, password: string): Promise<boolean> {
   if (user.password_hash) return verifyPassword(password, user.password_hash);
+  // Zonder hash toch één PBKDF2, zodat de responstijd niet verraadt welk account een hash heeft.
+  await dummyVerify(password);
   if (user.role !== 'admin' || !env.LOGIN_PASSWORD) return false; // fail closed
   // Vergelijk via hash zodat lengte niet uitlekt.
   const [a, b] = await Promise.all([hmac('pw', password), hmac('pw', env.LOGIN_PASSWORD)]);
   return safeEqual(a, b);
+}
+
+let dummyHash: Promise<string> | undefined;
+
+/**
+ * Controleert het wachtwoord tegen een vaste dummy-hash (één keer per isolate gemaakt) en geeft altijd false.
+ * Voor een onbekend e-mailadres: dan kost een poging even lang als bij een bestaand account.
+ */
+export async function dummyVerify(password: string): Promise<false> {
+  dummyHash ??= hashPassword('tick-dummy-wachtwoord');
+  await verifyPassword(password, await dummyHash);
+  return false;
 }
 
 /** Statement dat de sessieversie van een gebruiker ophoogt (voor een batch). */
@@ -60,7 +74,10 @@ export type Auth =
   | { kind: 'inbox'; keyId: string; userId: string }
   | { kind: 'session'; userId: string; renew: boolean };
 
-async function session(req: Request, env: Env): Promise<Auth | null> {
+/** Uitkomst van `authorize`; bij een sessie zit de al gelezen gebruiker erbij, zodat de middleware niet opnieuw leest. */
+export type Authorized = Auth & { user?: User };
+
+async function session(req: Request, env: Env): Promise<Authorized | null> {
   if (!env.SESSION_SECRET) return null;
   const token = req.headers.get('cookie')?.match(new RegExp(`(?:^|; )${COOKIE}=([^;]+)`))?.[1];
   if (!token) return null;
@@ -70,10 +87,10 @@ async function session(req: Request, env: Env): Promise<Auth | null> {
   const left = Number(exp) - Date.now();
   if (!(left > 0)) return null;
   if (!safeEqual(sig, await hmac(env.SESSION_SECRET, `${exp}.${userId}.${version}`))) return null;
-  const row = await env.DB.prepare('SELECT session_version FROM users WHERE id = ?').bind(userId).first<{ session_version: number }>();
-  if (!row || String(row.session_version) !== version) return null;
+  const user = await getUser(env.DB, userId);
+  if (!user || String(user.session_version) !== version) return null;
   // Sliding renewal: na de helft van de looptijd krijgt de browser een nieuwe cookie.
-  return { kind: 'session', userId, renew: left < (SESSION_DAYS * DAY_MS) / 2 };
+  return { kind: 'session', userId, renew: left < (SESSION_DAYS * DAY_MS) / 2, user };
 }
 
 const USED_EVERY_MS = 3_600_000;
@@ -106,7 +123,7 @@ async function touchEnv(env: Env, key: string, last: string | null): Promise<voi
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
 
-export async function authorize(req: Request, env: Env, prefs: Prefs): Promise<Auth | null> {
+export async function authorize(req: Request, env: Env, prefs: Prefs): Promise<Authorized | null> {
   // Alleen lokaal: op een echte host doet DEV_AUTH_BYPASS niets, ook als hij per ongeluk gezet is.
   if (env.DEV_AUTH_BYPASS === '1' && LOCAL_HOSTS.has(new URL(req.url).hostname)) return { kind: 'dev', userId: ADMIN_ID };
   const bearer = req.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];

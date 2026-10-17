@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it } from 'vitest';
-import { bumpSessionVersion, passwordOk } from '../src/auth';
+import { bumpSessionVersion, dummyVerify, passwordOk } from '../src/auth';
 import { hashPassword, verifyPassword } from '../src/password';
 import type { Env } from '../src/index';
 import type { User } from '../src/users';
@@ -90,6 +90,34 @@ describe('account', () => {
     await bumpSessionVersion(env.DB, ADMIN_ID);
     expect(await adminVersion()).toBe(before + 2);
     // terugzetten gebeurt in afterEach
+  });
+
+  it('een verlengbare sessie houdt na elders uitloggen en wachtwoord wijzigen de verse cookie', async () => {
+    // Nog 10 dagen geldig: de middleware wil verlengen, maar de route zet zelf al een cookie met de nieuwe versie.
+    const renewable = async () => {
+      const exp = Date.now() + 10 * 86_400_000;
+      const payload = `${exp}.${ADMIN_ID}.${await adminVersion()}`;
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey('raw', enc.encode('test-sessie-geheim'), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(payload)));
+      return `tick_session=${payload}.${[...sig].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
+    };
+    const lastCookie = (res: Response) => res.headers.getSetCookie().filter((h) => h.startsWith('tick_session=')).at(-1)!.split(';')[0];
+    expect((await tasks(await renewable())).headers.get('set-cookie')).toContain('tick_session='); // controle: hij verlengt wel
+
+    const out = await post('/api/account/logout-others', await renewable());
+    expect(out.status).toBe(200);
+    expect(out.headers.getSetCookie().filter((h) => h.startsWith('tick_session='))).toHaveLength(1);
+    expect((await tasks(lastCookie(out))).status).toBe(200);
+
+    const pw = await post('/api/account/password', await renewable(), { current: 'test-wachtwoord', next: 'nieuw-wachtwoord' });
+    expect(pw.status).toBe(200);
+    expect((await tasks(lastCookie(pw))).status).toBe(200);
+  });
+
+  it('dummyVerify geeft altijd false', async () => {
+    expect(await dummyVerify('tick-dummy-wachtwoord')).toBe(false);
+    expect(await dummyVerify('iets-anders')).toBe(false);
   });
 
   it('verifyPassword weigert een ander wachtwoord en een kapotte hash', async () => {

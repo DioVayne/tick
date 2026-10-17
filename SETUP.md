@@ -151,7 +151,7 @@ Open the app once online afterwards, so the service worker caches the new versio
   ```bash
   npx wrangler d1 execute DB --remote --command "UPDATE users SET password_hash = NULL WHERE role = 'admin'"
   ```
-  Then log in with the `LOGIN_PASSWORD` secret and an empty email address (or your email address if you had already set one; set a new secret a new one with `npx wrangler secret put LOGIN_PASSWORD` if you lost that too) and choose a new password in the app. Deleting the hash does not log out other sessions: use **Log out on other devices** afterwards (choosing a new password in the app also does that).
+  Then log in with the `LOGIN_PASSWORD` secret and an empty email address (or your email address if you had already set one; set a new one with `npx wrangler secret put LOGIN_PASSWORD` if you lost that too) and choose a new password in the app. Deleting the hash does not log out other sessions: use **Log out on other devices** afterwards (choosing a new password in the app also does that).
 - **Backup:** **Settings → Data → Download backup** gives a JSON file with your tasks and places. Restoring merges by id and never deletes anything. Settings, keys and the password are not in it.
 - **Time zone:** changing it in the app keeps the clock time of open reminders and repeats (9:00 stays 9:00).
 - **Quick add on Android** keeps its own default of 09:00 for a date without a time; it does not follow the reminder time you set in the app.

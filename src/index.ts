@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono';
 import { keysApi } from './keys';
 import { pairApi, redeem } from './pair';
-import { authorize, type Auth, clearCookie, passwordOk, sessionCookie } from './auth';
+import { authorize, type Auth, clearCookie, COOKIE, dummyVerify, passwordOk, sessionCookie } from './auth';
 import { assetLinks } from './assetlinks';
 import { loginAssets, loginPage } from './login';
 import { badRequest, HttpError } from './errors';
@@ -100,8 +100,10 @@ app.post('/login', async (c) => {
   const email = typeof body?.email === 'string' ? body.email.trim() : '';
   const password = typeof body?.password === 'string' ? body.password : '';
   const user = await findLoginUser(c.env.DB, email);
-  // Onbekend adres en fout wachtwoord geven dezelfde fout, zodat niet uitlekt welke adressen bestaan.
-  if (!user || !(await passwordOk(c.env, user, password))) {
+  // Onbekend adres en fout wachtwoord geven dezelfde fout, en ook zonder gebruiker volgt één PBKDF2 (dummyVerify):
+  // zo verraden melding noch responstijd welke adressen bestaan.
+  const ok = user ? await passwordOk(c.env, user, password) : await dummyVerify(password);
+  if (!user || !ok) {
     await new Promise((r) => setTimeout(r, 1500)); // rem op gokken
     throw new HttpError(401, 'err.login_failed');
   }
@@ -118,10 +120,11 @@ app.post('/logout', (c) => {
 });
 
 app.use('*', async (c, next) => {
-  const auth = await authorize(c.req.raw, c.env, c.get('prefs'));
-  if (auth) {
+  const found = await authorize(c.req.raw, c.env, c.get('prefs'));
+  if (found) {
+    const { user: known, ...auth } = found;
     // Een sleutel van een verwijderd account (of een cookie van een verdwenen gebruiker) geeft geen toegang.
-    const user = await getUser(c.env.DB, auth.userId);
+    const user = known ?? await getUser(c.env.DB, auth.userId);
     if (!user) return c.text('Unauthorized', 401);
     const isInbox = c.req.path === '/api/inbox';
     // Het inbox-token mag alleen taken in de inbox zetten, en de inbox is alleen voor het inbox-token.
@@ -131,7 +134,10 @@ app.use('*', async (c, next) => {
     c.set('auth', auth);
     c.set('user', user);
     await next();
-    if (auth.kind === 'session' && auth.renew) c.res.headers.append('Set-Cookie', await sessionCookie(c.env, user));
+    // Geen verlenging als de route zelf al een sessiecookie zet (wachtwoord wijzigen, elders uitloggen): die heeft
+    // de nieuwe versie, en een verlenging met de oude gebruiker zou hem overschrijven.
+    const fresh = c.res.headers.getSetCookie().some((h) => h.startsWith(`${COOKIE}=`));
+    if (auth.kind === 'session' && auth.renew && !fresh) c.res.headers.append('Set-Cookie', await sessionCookie(c.env, user));
     return;
   }
   const wantsPage = c.req.method === 'GET' && !c.req.path.startsWith('/api/') && c.req.header('accept')?.includes('text/html');
