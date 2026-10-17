@@ -2,13 +2,14 @@
 
 // App-shell voor offline gebruik. Network-first: online krijg je altijd de nieuwste versie (geen mix van oude en
 // nieuwe modules na een deploy), offline de laatst bewaarde. Verhoog de versie als de lijst hieronder verandert.
-const CACHE = 'tick-shell-v7';
+const CACHE = 'tick-shell-v8';
 const SHELL = [
   '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/push.js', '/style.css', '/sortable.min.js',
   '/markdown.js', '/lists.js', '/editor.js', '/sidebar.js', '/detail.js', '/listpicker.js', '/listmenu.js', '/dialog.js',
   '/repeat.js', '/i18n.js', '/config.js', '/settings.js', '/repeatpicker.js', '/places.js', '/map.js', '/leaflet.js', '/leaflet.css',
-  '/theme.js', '/settingsview.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
+  '/theme.js', '/settingsview.js', '/androidapp.js', '/applink.js', '/swclick.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
 ];
+importScripts('/swclick.js'); // zet self.tickClickTarget
 const NETWORK_TIMEOUT_MS = 4000;
 
 // De bestanden staan achter de inlog: een redirect naar /login mag nooit in de cache belanden.
@@ -85,8 +86,10 @@ self.addEventListener('notificationclick', (event) => {
   }
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
-      const w = wins[0];
-      return w ? w.focus() : self.clients.openWindow(url || '/');
+      const go = self.tickClickTarget({ taskId, url }, wins);
+      if (!go.focus) return self.clients.openWindow(go.open);
+      if (go.message) go.focus.postMessage(go.message);
+      return go.focus.focus();
     }),
   );
 });

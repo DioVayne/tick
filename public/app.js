@@ -1,4 +1,5 @@
 import './settings.js'; // eerst: taal en tijdzone
+import { initAndroidApp } from './androidapp.js';
 import { t } from './i18n.js';
 import { closeTask, detailReady, flushPending, selectTask } from './detail.js';
 import { openListMenu } from './listmenu.js';
@@ -48,6 +49,7 @@ document.addEventListener('keydown', (e) => {
 
 // ---------- start ----------
 const params = new URLSearchParams(location.search);
+initAndroidApp(params, { openDevices: () => openSettings() }); // haalt ?app en ?pair uit de adresbalk
 if (params.has('add')) $('#add-title').focus();
 const openTask = params.get('task');
 if (openTask) {
@@ -128,6 +130,13 @@ $('#newlist-input').addEventListener('keydown', (e) => {
 
 // De service worker cachet de app voor offline gebruik en ontvangt pushmeldingen.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => null);
+// Een tik op een melding terwijl Tick al open is: de service worker vraagt ons de taak te tonen.
+navigator.serviceWorker?.addEventListener('message', (e) => {
+  if (e.data?.type !== 'open-task' || !e.data.id) return;
+  if (isSettingsOpen()) hideSettings();
+  selectTask(e.data.id);
+  document.querySelector(`li.task[data-id="${CSS.escape(e.data.id)}"]`)?.scrollIntoView({ block: 'center' });
+});
 
 // Wachtende wijzigingen versturen zodra het weer kan.
 // Verborgen: getypte tekst meteen opslaan, de app kan zo worden afgesloten.

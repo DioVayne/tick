@@ -326,3 +326,6 @@ p.set-note { margin: 0 0 8px; }
 .set-secret code { flex: 1 1 180px; min-width: 0; padding: 8px; user-select: all; }
 .set-steps { margin: 0 0 16px; padding-left: 1.4em; color: var(--muted); line-height: 1.5; }
 .dialog .set-field { margin: 0 0 12px; }
+
+/* Balk onderin in de Android-app (koppelen, dubbele meldingen) */
+.appbar { position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 19; display: flex; align-items: center; gap: 12px; justify-content: space-between; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 16px rgba(0,0,0,.25); font-size: .875rem; }
