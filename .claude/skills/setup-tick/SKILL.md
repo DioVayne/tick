@@ -40,6 +40,7 @@ Walk the user through [SETUP.md](../../../SETUP.md) and do the work for them. SE
   npx wrangler d1 execute DB --remote --command "UPDATE users SET password_hash = NULL WHERE role = 'admin'"
   ```
   Then the administrator logs in with `LOGIN_PASSWORD` and an empty email address (or their email address if they had already set one), and chooses a new password in the app.
+- **Inviting someone else:** the administrator adds their own email address first (Settings › Account), then uses Settings › Accounts › "+ Invite someone" and shares the link (for example through WhatsApp; once, valid for 7 days). Someone who lost their password gets a "Reset link" next to their account (once, valid for 1 hour). Do not make accounts or links yourself.
 - **The user's copy of the secrets:** tell them which tokens they will need again (`API_TOKEN` for Android, `INBOX_TOKEN` for automations), and ask them to save those in their password manager. If they want the values shown, show them once.
 
 ## Checking

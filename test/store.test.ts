@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 // De Workers-runtime heeft geen IndexedDB: db.js valt dan terug op geheugen, en dat lezen we hier uit.
 import { nextOccurrence } from '../public/repeat.js';
 import * as db from '../public/db.js';
-import { deleteList, renameList, state, toggleDone, update } from '../public/store.js';
+import { deleteList, ensureOwner, renameList, state, toggleDone, update } from '../public/store.js';
 
 describe('store: lijst-ops', () => {
   it('een lijst die alleen in deze sessie bestaat, hernoemen of verwijderen geeft geen outbox-op', async () => {
@@ -83,5 +83,19 @@ describe('store: herhalende taken', () => {
     expect(t.repeat.at).toBe(nextOccurrence('FREQ=WEEKLY', start, Date.now() - 1));
     expect(t.remind_at).toBe(t.repeat.at);
     expect(t.notified).toBe(false);
+  });
+});
+
+describe('store: lokale gegevens per gebruiker', () => {
+  it('een andere gebruiker dan in de cache: cache en outbox eerst wissen', async () => {
+    await db.kvSet('owner', 'user-a'); await db.kvSet('open', [{ id: 'x' }]); await db.outboxAdd({ type: 'update', id: 'x', body: {} });
+    expect(await ensureOwner('user-b')).toBe(true);
+    expect(await db.kvGet('open')).toBeUndefined(); expect(await db.outboxAll()).toEqual([]); expect(await db.kvGet('owner')).toBe('user-b');
+    expect(await ensureOwner('user-b')).toBe(false);
+  });
+
+  it('een cache van vóór de update (zonder eigenaar) wordt gewist', async () => {
+    await db.clearAll(); await db.kvSet('open', [{ id: 'y' }]);
+    expect(await ensureOwner('user-a')).toBe(true); expect(await db.kvGet('open')).toBeUndefined();
   });
 });

@@ -250,8 +250,28 @@ export async function findDone(id) {
   }
 }
 
-/** Start: eerst de lokale kopie tonen (ook offline), dan verversen vanaf het netwerk. */
-export async function init() {
+export const SETTINGS_CACHE = 'tick.settings-cache';
+
+/**
+ * De lokale kopie hoort bij één gebruiker. Hoort hij bij een ander (of bij niemand: een cache van vóór de accounts),
+ * dan wissen we kopie, outbox en de cache van de instellingen, zodat een gedeelde browser niets van de vorige laat zien.
+ * Geeft true als er gewist is.
+ * @param {string} userId
+ */
+export async function ensureOwner(userId) {
+  if ((await db.kvGet('owner')) === userId) return false;
+  await db.clearAll();
+  try { localStorage.removeItem(SETTINGS_CACHE); } catch { /* geen opslag */ }
+  await db.kvSet('owner', userId);
+  return true;
+}
+
+/**
+ * Start: eerst de lokale kopie tonen (ook offline), dan verversen vanaf het netwerk.
+ * @param {string} userId de ingelogde gebruiker (CONFIG.userId)
+ */
+export async function init(userId) {
+  try { await ensureOwner(userId); } catch { /* geen lokale opslag */ }
   try {
     state.open = (await db.kvGet('open')) ?? [];
     state.serverLists = (await db.kvGet('lists')) ?? [];

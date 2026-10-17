@@ -10,9 +10,9 @@ import { setDefaultTime, setTimeZone, setWeekStart } from './repeat.js';
 import { $, el, render, toast } from './render.js';
 import CONFIG, { setLanguage } from './settings.js';
 import { closeDrawer } from './sidebar.js';
-import { load } from './store.js';
+import { SETTINGS_CACHE as CACHE_KEY, load } from './store.js';
+import { clearAll } from './db.js';
 
-const CACHE_KEY = 'tick.settings-cache';
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
 // Noodroute als het wachtwoord kwijt is (staat ook in SETUP.md); een commando, geen tekst om te vertalen.
@@ -29,6 +29,7 @@ const S = {
   loaded: false, // de eerste poging om de instellingen op te halen is klaar
   /** @type {ServiceWorkerRegistration | null} */ reg: null,
   /** @type {Record<string, HTMLElement>} */ parts: {},
+  /** @type {{ name: string, email: string | null } | null} */ account: null, // null: nog niet van de server
 };
 
 // ---------- kleine hulpjes ----------
@@ -223,6 +224,14 @@ async function fetchSettings() {
   S.loaded = true;
 }
 
+/** Naam en e-mailadres van de ingelogde gebruiker; offline blijft account null (de naam komt dan uit /config.js). */
+async function fetchAccount() {
+  try {
+    const a = await request('GET', '/api/account');
+    S.account = { name: a.name, email: a.email ?? null };
+  } catch { S.account = null; }
+}
+
 /** Toelichting bij een 🏠-veld: offline "Alleen online te wijzigen"; tijdens het laden niets. */
 const homeNote = (text = null) => (!S.online ? (S.loaded ? t('set.online_only') : null) : text);
 
@@ -248,6 +257,7 @@ async function save(patch, revert) {
 function paintHome() {
   paintLangTime();
   paintAccount();
+  paintUsers();
   paintData();
   paintAdvanced();
 }
@@ -494,7 +504,7 @@ function passwordForm() {
   const form = /** @type {HTMLFormElement} */ (el('form', { class: 'set-form', hidden: true },
     field(t('set.pw_current'), cur), field(t('set.pw_new'), next), field(t('set.pw_again'), again),
     el('div', {}, el('button', { type: 'submit', class: 'set-btn' }, t('set.save'))),
-    el('p', { class: 'set-note' }, t('set.pw_rescue'), ' ', el('code', {}, RESCUE))));
+    CONFIG.isAdmin ? el('p', { class: 'set-note' }, t('set.pw_rescue'), ' ', el('code', {}, RESCUE)) : null));
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (next.value.length < MIN_PASSWORD) { toast(t('err.password_short', { min: MIN_PASSWORD })); return; }
@@ -509,18 +519,55 @@ function passwordForm() {
   return form;
 }
 
+/**
+ * Uitloggen laat niets achter voor wie hierna in deze browser inlogt: eerst push afmelden (anders krijgt deze
+ * browser nog meldingen van dit account), dan de sessie, dan de lokale kopie, outbox en de cache van de instellingen.
+ */
 async function logout() {
+  try { await disablePush(S.reg ?? await getReg()); } catch { /* offline of al afgemeld: uitloggen gaat voor */ }
   try {
     const res = await fetch('/logout', { method: 'POST' });
     if (!res.ok) throw new Error(res.statusText);
-    location.href = '/login';
-  } catch (e) { toast(t('app.logout_failed', { reason: navigator.onLine === false ? t('app.you_are_offline') : e.message })); }
+  } catch (e) {
+    toast(t('app.logout_failed', { reason: navigator.onLine === false ? t('app.you_are_offline') : e.message }));
+    return;
+  }
+  try { await clearAll(); } catch { /* geen lokale opslag */ }
+  storeSet(CACHE_KEY, null);
+  location.href = '/login';
+}
+
+/** Naam en e-mailadres, met één knop Opslaan. */
+function profileForm(off) {
+  const a = S.account;
+  const name = /** @type {HTMLInputElement} */ (el('input', { type: 'text', maxlength: '60', autocomplete: 'name', required: true, disabled: off || !a }));
+  const email = /** @type {HTMLInputElement} */ (el('input', { type: 'email', maxlength: '254', autocomplete: 'email', disabled: off || !a }));
+  name.value = a?.name ?? CONFIG.userName ?? '';
+  email.value = a?.email ?? '';
+  const form = /** @type {HTMLFormElement} */ (el('form', { class: 'set-form' },
+    field(t('set.name'), name), field(t('set.email'), email),
+    el('div', {}, el('button', { type: 'submit', class: 'set-btn', disabled: off || !a }, t('set.save')))));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    // Een leeg e-mailadres sturen we niet mee: de server weigert dat, en de beheerder mag er (nog) geen hebben.
+    const patch = { name: name.value.trim(), ...(email.value.trim() ? { email: email.value.trim() } : {}) };
+    try {
+      const r = await request('PATCH', '/api/account', patch);
+      S.account = { name: r.name, email: r.email ?? null };
+      toast(t('set.saved'), 'ok');
+      paintAccount();
+      paintUsers();
+    } catch (err) { toast(t('set.save_failed', { reason: offlineText(err) })); }
+  });
+  return form;
 }
 
 function paintAccount() {
   const off = !S.online;
   const form = passwordForm();
   paint('account',
+    CONFIG.isAdmin && S.account && !S.account.email ? el('p', { class: 'hint' }, t('set.email_needed')) : null,
+    profileForm(off),
     row(t('set.password'), btn(t('set.change'), () => { form.hidden = !form.hidden; if (!form.hidden) form.querySelector('input')?.focus(); }, { disabled: off }),
       homeNote()),
     form,
@@ -534,6 +581,67 @@ function paintAccount() {
       } catch (e) { toast(offlineText(e)); }
     }, { disabled: off }), t('set.logout_others_note')),
     row(t('set.logout_here'), btn(t('ui.logout'), logout)));
+}
+
+// ---------- 👥 Accounts (alleen de beheerder) ----------
+
+/** Toont een eenmalige link (uitnodiging of reset) met Kopiëren en, waar het kan, Delen (bijvoorbeeld naar WhatsApp). */
+async function showLink(title, text, url) {
+  const share = typeof navigator.share === 'function'
+    ? el('div', {}, btn(t('set.share'), () => navigator.share({ url }).catch(() => { /* geannuleerd */ }), { kind: '' }))
+    : null;
+  await modal({
+    title,
+    body: [el('p', {}, text), secret(t('set.address'), url), share].filter(Boolean),
+    buttons: [{ label: t('set.done'), value: 'ok' }],
+  });
+}
+
+async function invite() {
+  try {
+    const { url } = await request('POST', '/api/users/invite', {});
+    await showLink(t('set.invite_title'), t('set.invite_text'), url);
+  } catch (e) { toast(offlineText(e)); }
+}
+
+async function resetLink(u) {
+  try {
+    const { url } = await request('POST', `/api/users/${encodeURIComponent(u.id)}/reset`, {});
+    await showLink(t('set.reset_title', { name: u.name }), t('set.reset_text', { name: u.name }), url);
+  } catch (e) { toast(offlineText(e)); }
+}
+
+async function deleteUser(u) {
+  const yes = await ask({ title: t('set.user_delete_title'), text: t('set.user_delete_text', { name: u.name }), buttons: [
+    { label: t('set.user_delete'), value: 'yes', kind: 'danger' }, { label: t('set.cancel'), value: null, kind: 'ghost' }] });
+  if (!yes) return;
+  try {
+    await request('DELETE', `/api/users/${encodeURIComponent(u.id)}`);
+    paintUsers();
+  } catch (e) { toast(offlineText(e)); }
+}
+
+function userRow(u) {
+  const me = u.id === CONFIG.userId;
+  const sub = [u.email, t('set.created', { date: fmtDate(u.created_at) }), u.last_seen ? t('set.seen', { when: ago(u.last_seen) }) : t('set.never_seen')]
+    .filter(Boolean).join(' · ');
+  const controls = [btn(t('set.reset_link'), () => resetLink(u)), me ? null : btn(t('set.user_delete'), () => deleteUser(u), { kind: 'danger' })].filter(Boolean);
+  return row(me ? `${u.name} (${t('set.you')})` : u.name, controls, sub);
+}
+
+async function paintUsers() {
+  if (!CONFIG.isAdmin || !S.parts.accounts) return;
+  const add = btn(t('set.invite'), invite, { kind: '', disabled: !S.online });
+  let rows;
+  try {
+    if (!S.loaded) return; // de instellingen tekenen dit opnieuw zodra ze er zijn
+    if (!S.online) throw new Offline(t('set.online_only'));
+    rows = (await request('GET', '/api/users')).map(userRow);
+  } catch (e) {
+    rows = [note(offlineText(e))];
+  }
+  if (!S.open) return;
+  paint('accounts', ...rows, row('', add));
 }
 
 // ---------- 💾 Gegevens ----------
@@ -633,7 +741,8 @@ function paintAdvanced() {
   const off = !S.online;
   const lang = select(t('set.default_lang'), [['en', t('set.lang_en')], ['nl', t('set.lang_nl')]], s.defaultLocale,
     (v) => save({ defaultLocale: v }, () => { lang.value = current().defaultLocale; }), off);
-  paint('advanced', row(t('set.default_lang'), lang, homeNote(t('set.default_lang_note'))));
+  // De standaardtaal geldt voor de hele installatie: alleen de beheerder.
+  paint('advanced', CONFIG.isAdmin ? row(t('set.default_lang'), lang, homeNote(t('set.default_lang_note'))) : null);
   paintWebhook();
   paintKeys();
 }
@@ -660,7 +769,8 @@ function paintWebhook() {
   }, { disabled: off || !(s.fallbackWebhook || s.fallbackFromEnv) });
   const offBtn = s.fallbackFromEnv ? btn(t('set.switch_off'), async () => { if (await save({ fallbackWebhook: '' })) paintWebhook(); }, { kind: 'danger', disabled: off }) : null;
   // Hier ingesteld (D1), ook "uit": Herstellen wist die rij, zodat het adres uit de installatie (als die er een heeft) weer geldt.
-  const own = !!s.fallbackOverride;
+  // Voor een lid stuurt de server altijd fallbackEnvSet: false; dan gaat het hier nooit over de installatie.
+  const own = !!s.fallbackOverride && !!s.fallbackEnvSet;
   const resetBtn = own ? btn(t('set.webhook_reset'), async () => { if (await save({ fallbackWebhook: null })) paintWebhook(); }, { disabled: off }) : null;
   paint('webhook',
     note(homeNote(s.fallbackFromEnv ? t('set.webhook_from_install_note') : t('set.webhook_note'))),
@@ -721,7 +831,7 @@ async function paintKeys() {
     rows = [
       ...r.keys.map((k) => row(`${k.name}`, btn(t('set.revoke'), () => revokeKey(k), { kind: 'danger' }),
         [kindLabel(k.kind), `…${k.hint}`, t('set.created', { date: fmtDate(k.created_at) }), lastUsed(k.last_used_at)].join(' · '))),
-      ...r.env.map((k) => el('div', {},
+      ...(CONFIG.isAdmin ? r.env : []).map((k) => el('div', {},
         row(t('set.env_key', { kind: kindLabel(k.kind) }), btn(k.off ? t('set.switch_on') : t('set.switch_off'), () => toggleEnv(k), { kind: k.off ? '' : 'danger' }),
           [k.off ? t('set.env_is_off') : lastUsed(k.last_used_at), t('set.env_remove')].join(' · ')),
         el('p', { class: 'set-note' }, el('code', {}, `npx wrangler secret delete ${ENV_SECRET[k.id] ?? ''}`)))),
@@ -745,6 +855,7 @@ function build() {
     block('🔔', t('set.notifications'), 'push'),
     block('📱', t('set.devices'), 'devices'),
     block('👤', t('set.account'), 'account'),
+    CONFIG.isAdmin ? block('👥', t('set.accounts'), 'accounts') : null,
     block('💾', t('set.data'), 'data'),
     advancedBlock());
   return root;
@@ -773,7 +884,7 @@ export function openSettings({ push = true } = {}) {
   paintHome(); // eerst met de laatst bekende waarden, uitgeschakeld
   paint('devices', note(t('set.loading')));
   const reg = getReg().then((r) => { S.reg = r; if (S.open) paintPush(); });
-  Promise.all([reg, fetchSettings()]).then(() => { if (S.open) { paintHome(); paintDevices(); } });
+  Promise.all([reg, fetchSettings(), fetchAccount()]).then(() => { if (S.open) { paintHome(); paintDevices(); } });
 }
 
 /** Verbergt de pagina zonder de geschiedenis te raken (voor popstate). */

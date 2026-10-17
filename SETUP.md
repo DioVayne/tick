@@ -40,7 +40,7 @@ Then fill in `vars` in `wrangler.jsonc`:
 | `TIMEZONE` | `Europe/London` | Starting value for your time zone ([list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)). Reminders without a time zone and repeating tasks use it. You can change it later in the app |
 | `ADMIN_CONTACT` | `mailto:you@example.com` | Contact for push services and OpenStreetMap's address search |
 
-`LOCALE`, `TIMEZONE` and `FALLBACK_WEBHOOK` are only starting values: once you choose something in the app, that choice wins over the config (and you can leave them out).
+`LOCALE`, `TIMEZONE` and `FALLBACK_WEBHOOK` are only starting values: once you choose something in the app, that choice wins over the config (and you can leave them out). `FALLBACK_WEBHOOK` from the config only applies to the administrator; other accounts set their own webhook in the app.
 
 **Own domain (optional):** for a domain that is on your Cloudflare account, set `"workers_dev": false` and add `"routes": [{ "pattern": "tick.example.com", "custom_domain": true }]`. Cloudflare creates the DNS record and the certificate on deploy.
 
@@ -65,7 +65,7 @@ The deploy prints your URL. Logging in does not work yet: that needs the secrets
 | `VAPID_PRIVATE_KEY` | required | The JSON from step 4 |
 | `API_TOKEN` | optional | Random; an old-style key for the Android app. Easier: connect the phone in the app (step 10) |
 | `INBOX_TOKEN` | optional | Random; an old-style key for automations. Easier: make an inbox key in the app (step 9) |
-| `FALLBACK_WEBHOOK` | optional | Starting value for the webhook that receives a reminder as JSON when push did not arrive; in the app you can replace it, switch it off, or reset to this value |
+| `FALLBACK_WEBHOOK` | optional | Starting value for the administrator's webhook that receives a reminder as JSON when push did not arrive; in the app you can replace it, switch it off, or reset to this value. It does not apply to other accounts |
 
 A random value:
 ```bash
@@ -146,6 +146,7 @@ npm run deploy
 Open the app once online afterwards, so the service worker caches the new version.
 
 ## Good to know
+- **More people on one Tick:** as administrator, add your email address first (**Settings → Account**). Then **Settings → Accounts → + Invite someone** shows a link; share it, for example through WhatsApp. It works once and is valid for 7 days. The other person chooses a name, email address and password there and has their own tasks, devices and settings. Lost password of another account: **Reset link** next to that account (once, valid for 1 hour). **Delete** erases all data of that account.
 - **Log out on other devices** (for example after losing a phone): **Settings → Account → Log out on other devices**. This device stays logged in. Keys for phones and automations keep working; revoke those under **Advanced → Keys**.
 - **Forgot your password?** A password you set in the app is stored as a hash in the database and overrides `LOGIN_PASSWORD`. For the administrator, go back to `LOGIN_PASSWORD` by deleting it:
   ```bash
