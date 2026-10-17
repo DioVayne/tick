@@ -66,9 +66,12 @@ linkPages.post('/invite/:code', async (c) => {
   const email = cleanEmail(body.email);
   const password = checkPassword(body.password);
   const db = c.env.DB;
+  const code = c.req.param('code');
+  // Eerst de link: zonder geldige link mag de route niet verraden of een e-mailadres al bestaat.
+  if (!(await linkValid(db, 'invite', code))) throw new HttpError(400, 'err.link_invalid');
   // Controleren vóór het verbruiken: een mislukte poging maakt de link niet op.
   if (await db.prepare('SELECT 1 FROM users WHERE email = ?').bind(email).first()) throw new HttpError(409, 'err.email_taken');
-  if (!(await consumeLink(db, 'invite', c.req.param('code')))) throw new HttpError(400, 'err.link_invalid');
+  if (!(await consumeLink(db, 'invite', code))) throw new HttpError(400, 'err.link_invalid');
   const id = crypto.randomUUID();
   try {
     await db.prepare("INSERT INTO users (id, name, email, password_hash, role, session_version, created_at) VALUES (?, ?, ?, ?, 'member', 1, ?)")

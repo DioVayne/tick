@@ -2,7 +2,8 @@ import { normLocale, translate } from '../public/i18n.js';
 import { MIN_PASSWORD } from './account';
 
 // Stijl en script staan in public/login.css en login.js: de CSP staat geen inline code toe.
-export function loginPage(locale: string | undefined): string {
+// emptyEmailHint: de beheerder heeft nog geen e-mailadres, dan zegt de pagina dat het veld leeg mag (de overgang).
+export function loginPage(locale: string | undefined, emptyEmailHint = false): string {
   const lang = normLocale(locale);
   const t = (key: string) => translate(lang, key);
   return `<!doctype html>
@@ -14,7 +15,7 @@ export function loginPage(locale: string | undefined): string {
 <form id="f"><h1>Tick</h1>
 <input type="email" id="email" placeholder="${t('login.email')}" autocomplete="username" autofocus>
 <input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="current-password" required>
-<button>${t('login.submit')}</button><p id="err" role="alert"></p></form>
+<button>${t('login.submit')}</button><p id="err" role="alert"></p>${emptyEmailHint ? `<p class="hint">${t('login.empty_email_hint')}</p>` : ''}</form>
 <script type="module" src="/login.js"></script></body></html>`;
 }
 

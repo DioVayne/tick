@@ -38,6 +38,13 @@ describe('inloggen met e-mailadres', () => {
     expect((await login('test-wachtwoord', randomIp(), '  dio@example.com ')).status).toBe(200);
   });
 
+  it('de inlogpagina toont de hint voor een leeg e-mailadres alleen zolang de beheerder er geen heeft', async () => {
+    const page = () => call('/login', { auth: null, headers: { 'accept-language': 'nl' } }).then((r) => r.text());
+    expect(await page()).toContain('Beheerder en nog geen e-mailadres ingesteld? Laat het e-mailveld leeg.');
+    await env.DB.prepare('UPDATE users SET email = ? WHERE id = ?').bind('beheer@example.com', ADMIN_ID).run();
+    expect(await page()).not.toContain('Beheerder en nog geen e-mailadres');
+  });
+
   it('een lid logt in met e-mailadres; onbekend adres en fout wachtwoord geven dezelfde fout', async () => {
     const b = await createUser({ password: 'lid-wachtwoord' });
     expect((await callAs(b.cookie, '/api/tasks')).status).toBe(200);

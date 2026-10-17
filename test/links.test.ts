@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
-import { BASE, call, callAs, createUser, json, login, randomIp, session } from './helpers';
+import { BASE, call, callAs, createUser, json, login, randomIp, session, untilRateLimited } from './helpers';
 import { translate } from '../public/i18n.js';
 
 const ip = () => ({ 'cf-connecting-ip': randomIp() });
@@ -68,6 +68,13 @@ describe('uitnodigings- en resetpagina\'s', () => {
     expect(await (await get('/reset/' + code)).text()).toContain(translate('en', 'link.invalid'));
   });
 
+  it('een verzonnen code met een bestaand e-mailadres geeft 400, niet 409: zonder geldige link valt er niets te raden', async () => {
+    const b = await createUser();
+    const res = await submit('/invite/verzonnen', { name: 'X', email: b.email, password: 'geheim123' });
+    expect(res.status).toBe(400);
+    expect((await json<{ error: string }>(res)).error).toBe(translate('en', 'err.link_invalid'));
+  });
+
   it('een onbekende code toont alleen de melding, zonder velden', async () => {
     const res = await get('/invite/verzonnen');
     expect(res.status).toBe(200);
@@ -78,8 +85,11 @@ describe('uitnodigings- en resetpagina\'s', () => {
 
   it('te veel pogingen vanaf één IP geeft 429, ook voor de pagina zelf', async () => {
     const from = randomIp();
-    for (let i = 0; i < 5; i++) await submit('/invite/verzonnen', { name: 'x', email: 'x@x.xx', password: 'geheim123' }, from);
-    expect((await submit('/invite/verzonnen', { name: 'x', email: 'x@x.xx', password: 'geheim123' }, from)).status).toBe(429);
-    expect((await call('/reset/verzonnen', { auth: null, headers: { 'cf-connecting-ip': from } })).status).toBe(429);
+    const posts = await untilRateLimited(() => submit('/invite/verzonnen', { name: 'x', email: 'x@x.xx', password: 'geheim123' }, from));
+    expect(posts.slice(0, -1).every((r) => r.status === 400)).toBe(true);
+    // De pagina zelf telt ook mee (eigen IP, zodat een minuutgrens hierboven niet meetelt).
+    const page = randomIp();
+    const pages = await untilRateLimited(() => call('/reset/verzonnen', { auth: null, headers: { 'cf-connecting-ip': page } }));
+    expect(pages.slice(0, -1).every((r) => r.status === 200)).toBe(true);
   });
 });

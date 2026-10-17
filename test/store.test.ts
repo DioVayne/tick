@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 // De Workers-runtime heeft geen IndexedDB: db.js valt dan terug op geheugen, en dat lezen we hier uit.
 import { nextOccurrence } from '../public/repeat.js';
 import * as db from '../public/db.js';
@@ -114,5 +114,46 @@ describe('store: lokale gegevens per gebruiker', () => {
     expect(await db.outboxAll()).toEqual([]);
     expect(state.open).toEqual([]);
     expect(await db.kvGet('owner')).toBe('user-z');
+  });
+});
+
+describe('store: push-abonnement bij een eigenaarwissel', () => {
+  // Stubt navigator.serviceWorker met een abonnement waarvan we unsubscribe tellen.
+  const stubPush = () => {
+    const unsubscribe = vi.fn(async () => true);
+    const subscription = { unsubscribe };
+    vi.stubGlobal('navigator', {
+      serviceWorker: { ready: Promise.resolve({ pushManager: { getSubscription: async () => subscription } }) },
+    });
+    return unsubscribe;
+  };
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('een wissel van user-a naar user-b meldt het push-abonnement van de browser af', async () => {
+    const unsubscribe = stubPush();
+    await db.clearAll(); await db.kvSet('owner', 'user-a');
+    expect(await ensureOwner('user-b')).toBe(true);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('zonder vorige eigenaar (cache van vóór de update) blijft het abonnement staan', async () => {
+    const unsubscribe = stubPush();
+    await db.clearAll();
+    expect(await ensureOwner('user-a')).toBe(true);
+    expect(unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it('dezelfde eigenaar: het abonnement blijft staan', async () => {
+    const unsubscribe = stubPush();
+    await db.clearAll(); await db.kvSet('owner', 'user-a');
+    expect(await ensureOwner('user-a')).toBe(false);
+    expect(unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it('een service worker die nooit klaar is, houdt de wissel niet tegen', async () => {
+    vi.stubGlobal('navigator', { serviceWorker: { ready: new Promise(() => {}) } });
+    await db.clearAll(); await db.kvSet('owner', 'user-a');
+    expect(await ensureOwner('user-b')).toBe(true);
+    expect(await db.kvGet('owner')).toBe('user-b');
   });
 });
