@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it } from 'vitest';
-import { call, createTask, json, openTasks, session } from './helpers';
+import { call, callAs, createTask, createUser, json, openTasks, session } from './helpers';
 
 type Backup = { app: string; version: number; exported_at: string; tasks: any[]; places: any[] };
 
@@ -121,5 +121,29 @@ describe('backup', () => {
     const r = (id: string) => env.DB.prepare('SELECT notified, loc_notified FROM tasks WHERE id = ?').bind(id).first<any>();
     expect(await r('bulk-past')).toEqual({ notified: 1, loc_notified: 0 });
     expect(await r('bulk-future')).toEqual({ notified: 0, loc_notified: 0 });
+  });
+});
+
+describe('backup per gebruiker', () => {
+  it('de export van B bevat niets van A', async () => {
+    const a = await track({ title: 'van A' }); const b = await createUser();
+    const backup = await json<Backup>(await callAs(b.cookie, '/api/export'));
+    expect(backup.tasks.map((t) => t.id)).not.toContain(a.id);
+  });
+  it('een backup van A, teruggezet door B, overschrijft niets van A', async () => {
+    const a = await track({ title: 'Origineel A' }); const b = await createUser();
+    const backup = await exportBackup();
+    backup.tasks = backup.tasks.map((t) => (t.id === a.id ? { ...t, title: 'Overschreven' } : t));
+    const r = await json<{ tasks: number; skipped: number }>(await callAs(b.cookie, '/api/import/backup', { method: 'POST', json: backup }));
+    expect(r.skipped).toBeGreaterThanOrEqual(1);
+    expect((await openTasks()).find((t) => t.id === a.id)!.title).toBe('Origineel A');
+    expect(await json<unknown[]>(await callAs(b.cookie, '/api/tasks'))).toEqual([]);
+  });
+  it('een subtaak die naar een taak van A wijst, wordt bij B een gewone taak', async () => {
+    const a = await track({ title: 'ouder van A' }); const b = await createUser();
+    const file = { app: 'tick', version: 1, exported_at: 'x', places: [], tasks: [{ id: 'orphan-b1', title: 'kind', position: 1, created_at: 'x', updated_at: 'x', parent_id: a.id }] };
+    await callAs(b.cookie, '/api/import/backup', { method: 'POST', json: file });
+    expect(await env.DB.prepare("SELECT parent_id, user_id FROM tasks WHERE id = 'orphan-b1'").first()).toEqual({ parent_id: null, user_id: b.id });
+    expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM tasks WHERE parent_id = ?').bind(a.id).first()).toEqual({ n: 0 });
   });
 });

@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parseCsv, readTickTickText } from '../public/ticktick.js';
-import { call, json, session } from './helpers';
+import { ADMIN_ID, call, callAs, createUser, json, session } from './helpers';
 
 const HEADER = [
   'Folder Name', 'List Name', 'Title', 'Kind', 'Tags', 'Content', 'Is Check list', 'Start Date', 'Due Date', 'Reminder',
@@ -26,7 +26,7 @@ const importCsv = async (text: string) =>
 const get = async (id: string) => env.DB.prepare('SELECT * FROM tasks WHERE id = ?').bind(id).first<any>();
 
 afterEach(async () => {
-  await env.DB.prepare("DELETE FROM tasks WHERE id LIKE 'ttA%'").run();
+  await env.DB.prepare("DELETE FROM tasks WHERE id LIKE 'ttA%' OR id LIKE 'tt%-A%'").run();
 });
 
 describe('TickTick-import', () => {
@@ -45,6 +45,16 @@ describe('TickTick-import', () => {
     await call('/api/tasks/ttA1', { method: 'PATCH', json: { title: 'Gewijzigd in Tick' } });
     expect(await json<any>(await importCsv(CSV))).toEqual({ added: 0, existing: 4, skipped: 1 });
     expect((await get('ttA1')).title).toBe('Gewijzigd in Tick');
+  });
+
+  it('een ander dan de beheerder krijgt eigen ids; dezelfde backup kan bij twee mensen', async () => {
+    const b = await createUser();
+    expect((await importCsv(CSV)).status).toBe(200);
+    const r = await json<{ added: number }>(await callAs(b.cookie, '/api/import/ticktick', { method: 'POST', body: CSV }));
+    expect(r.added).toBe(4);
+    const p = `tt${b.id.slice(0, 8)}-`;
+    expect(await get(`${p}A2`)).toMatchObject({ parent_id: `${p}A1`, user_id: b.id });
+    expect(await get('ttA1')).toMatchObject({ user_id: ADMIN_ID });
   });
 
   it('weigert tekst zonder TickTick-kop en te grote bestanden', async () => {
