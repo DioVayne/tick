@@ -130,7 +130,7 @@ describe('security headers', () => {
   it('de loginpagina heeft geen inline script of stijl', async () => {
     const html = await (await call('/login', { auth: null })).text();
     expect(html).not.toMatch(/<script>|<style|style=/);
-    expect(html).toContain('<script src="/login.js">');
+    expect(html).toContain('<script type="module" src="/login.js">');
   });
 
   it('login.css en login.js zijn zonder inlog te laden', async () => {

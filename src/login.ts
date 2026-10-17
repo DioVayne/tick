@@ -13,8 +13,8 @@ export function loginPage(locale: string | undefined): string {
 <form id="f"><h1>Tick</h1>
 <input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="current-password" autofocus required>
 <button>${t('login.submit')}</button><p id="err" role="alert"></p></form>
-<script src="/login.js"></script></body></html>`;
+<script type="module" src="/login.js"></script></body></html>`;
 }
 
 /** Bestanden die de loginpagina zonder inlog nodig heeft. */
-export const loginAssets = ['/login.css', '/login.js', '/theme.js'];
+export const loginAssets = ['/login.css', '/login.js', '/next.js', '/theme.js'];
