@@ -100,21 +100,39 @@ curl -X POST https://tick.example.com/api/inbox \
 `due` is a date (becomes 09:00 in your time zone), a local time (`2026-11-03T14:30`) or a time with a zone. `repeat` takes a rule such as `FREQ=WEEKLY;BYDAY=MO`.
 
 ## 10. Optional: Android app
-A widget with your task list, quick add, and location reminders (notify me when I arrive at or leave a place).
-1. Create `android/tick.properties` (not in git):
+The app opens your Tick full-screen (a Trusted Web Activity) and adds a widget with your task list, quick add, and location reminders (notify me when I arrive at or leave a place). Notifications of the web app show up as notifications of the app.
+1. Make your own signing key, once (from `android/`; `keytool` comes with the JDK). Choose a password and keep the file and the password safe: an update must be signed with the same key.
+   ```bash
+   keytool -genkeypair -v -keystore tick-release.jks -alias tick -keyalg RSA -keysize 2048 -validity 10000
+   ```
+   `*.jks` and `*.keystore` are in `.gitignore`.
+2. Create `android/tick.properties` (not in git):
    ```properties
    tickBase=https://tick.example.com
    tickPackage=com.yourname.tick
+   tickKeystore=tick-release.jks
+   tickKeystorePassword=your-keystore-password
+   tickKeyAlias=tick
+   tickKeyPassword=your-key-password
    ```
-   `tickPackage` must be a unique application id of your own.
-2. Build (from `android/`; on Windows `gradlew.bat`):
+   `tickPackage` must be a unique application id of your own. `tickKeystore` is relative to `android/` (or an absolute path). Without the four signing lines `assembleDebug` still works, but `assembleRelease` refuses.
+3. Build (from `android/`; on Windows `gradlew.bat`):
    ```bash
-   ./gradlew testDebugUnitTest assembleDebug
+   ./gradlew testDebugUnitTest assembleRelease
    ```
-   The APK is in the `tick-android-build` folder under your local app data (or the temp folder). For a release build use `assembleRelease` with your own signing.
-3. In the web app go to **Settings → Devices → Connect an Android phone**, give it a name and copy the key it shows (once). Install the APK, open the app, paste the key and tap **Save and test**. Add the widget from your home screen. Afterwards the phone shows up under Devices with its notification and location status (Android app 1.2 and newer). (Pasting an old `API_TOKEN` also still works.)
-4. For location reminders tap **Turn on location notifications** and choose **Allow all the time** in the permission screen.
-5. Add `"ANDROID_PACKAGE": "com.yourname.tick"` to `vars` in `wrangler.jsonc` and deploy again, so the web app can wake the Android app right after you set a place.
+   The APK is in the `tick-android-build` folder under your local app data (or the temp folder).
+4. Get the fingerprint of your key and copy the line after **SHA256**:
+   ```bash
+   keytool -list -v -keystore tick-release.jks -alias tick
+   ```
+5. Add `"ANDROID_PACKAGE": "com.yourname.tick"` and `"ANDROID_CERT_SHA256": "AA:BB:…"` (that fingerprint) to `vars` in `wrangler.jsonc` and deploy again. With both, `/.well-known/assetlinks.json` links the app to your domain, so it opens without an address bar, and the web app can wake the app right after you set a place.
+6. Install the APK and open the app. Log in; the app links itself to your Tick and turns on notifications. Add the widget from your home screen. Afterwards the phone shows up under **Settings → Devices** with its notification and location status.
+7. For location reminders turn on location notifications in the app and choose **Allow all the time** in the permission screen.
+
+Good to know:
+- You can share the APK with others who use the same Tick: it is signed with the same key, so it matches `ANDROID_CERT_SHA256`.
+- Installed Tick in Firefox as a web app before? Remove that installation, or turn off its notifications, or you get every notification twice.
+- The app needs Chrome (or another browser that supports Trusted Web Activities). Without one it opens with an address bar.
 
 ## Updating
 ```bash

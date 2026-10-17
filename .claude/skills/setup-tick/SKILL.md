@@ -44,9 +44,12 @@ Walk the user through [SETUP.md](../../../SETUP.md) and do the work for them. SE
 
 ## Android (only if wanted)
 Follow step 10 of SETUP.md:
-1. Write `android/tick.properties` with `tickBase` (their URL) and `tickPackage` (ask for a unique id, for example `com.<name>.tick`).
-2. Build with `gradlew testDebugUnitTest assembleDebug`.
-3. Add `ANDROID_PACKAGE` to `vars` in `wrangler.jsonc` and deploy again, after asking.
+1. Ask the user to make their own signing key with `keytool -genkeypair -v -keystore tick-release.jks -alias tick -keyalg RSA -keysize 2048 -validity 10000` (from `android/`). They choose the passwords; never invent or type them yourself.
+2. Write `android/tick.properties` with `tickBase` (their URL) and `tickPackage` (ask for a unique id, for example `com.<name>.tick`). The user adds the four signing lines themselves: `tickKeystore`, `tickKeystorePassword`, `tickKeyAlias`, `tickKeyPassword`.
+3. Build with `gradlew testDebugUnitTest assembleRelease`. Without the signing lines only `assembleDebug` works.
+4. Have the user run `keytool -list -v -keystore tick-release.jks -alias tick` and give you the **SHA256** line.
+5. Add `ANDROID_PACKAGE` and `ANDROID_CERT_SHA256` (that fingerprint) to `vars` in `wrangler.jsonc` and deploy again, after asking.
+6. Tell them: install the APK and open it; after logging in the app links itself. The same APK works for others on the same Tick (same key). Remove an old Firefox web-app install of Tick or turn off its notifications. Without Chrome (or another TWA browser) the app opens with an address bar.
 
 If the JDK or the Android SDK is missing, say so and stop. Installing them is the user's call.
 
@@ -54,5 +57,5 @@ If the JDK or the Android SDK is missing, say so and stop. Installing them is th
 Run `git pull`, `npm ci`, `npm run db:migrate`, then deploy after a yes, then check with `npx wrangler deployments list`.
 
 ## Never
-- Commit `wrangler.jsonc`, `.dev.vars`, `android/tick.properties` or any secret.
+- Commit `wrangler.jsonc`, `.dev.vars`, `android/tick.properties`, a keystore or any secret.
 - Delete a D1 database or a Worker without an explicit request from the user.

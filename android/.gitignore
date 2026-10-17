@@ -5,3 +5,6 @@ local.properties
 .idea
 
 tick.properties
+
+*.jks
+*.keystore
