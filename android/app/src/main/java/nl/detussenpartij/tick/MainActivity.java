@@ -149,7 +149,13 @@ public class MainActivity extends Activity {
         Button save = new Button(this);
         save.setText(R.string.main_save_test);
         save.setOnClickListener(v -> {
-            Prefs.setToken(this, token.getText().toString());
+            String entered = token.getText().toString().trim();
+            if (!entered.equals(Prefs.token(this))) {
+                // Een handmatige sleutel kan van iedereen zijn: gegevens van de vorige sleutel wissen.
+                Prefs.wipeAccountData(this);
+                Prefs.setUserId(this, "");
+            }
+            Prefs.setToken(this, entered);
             // Nieuwe of opnieuw gekoppelde sleutel: bij de volgende sync de apparaatstatus opnieuw melden.
             Prefs.setDeviceStatus(this, "", 0);
             result.setText(R.string.main_busy);

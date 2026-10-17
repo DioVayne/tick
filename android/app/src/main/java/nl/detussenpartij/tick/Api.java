@@ -2,6 +2,7 @@ package nl.detussenpartij.tick;
 
 import android.content.Context;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -35,6 +36,10 @@ final class Api {
             // De sleutel is ingetrokken of verwijderd: vergeten, zodat de widget "niet gekoppeld" toont en de PWA
             // bij de volgende start opnieuw koppelt (pair=1).
             Prefs.setToken(c, "");
+            Prefs.wipeAccountData(c);
+            Prefs.setUserId(c, "");
+            Geo.apply(c, new JSONArray(), true);
+            TaskWidgetProvider.updateAll(c);
             Prefs.setSyncError(c, c.getString(R.string.error_no_key));
         }
         if (res.code < 200 || res.code >= 300) throw new IOException("HTTP " + res.code);
@@ -46,15 +51,28 @@ final class Api {
         return httpCode == 401 && hasToken;
     }
 
+    /** Uitkomst van het koppelen: de sleutel en de user_id van wie hem heeft ("" als het antwoord er geen had). */
+    static final class Redeemed {
+        final String key;
+        final String userId;
+
+        Redeemed(String key, String userId) {
+            this.key = key;
+            this.userId = userId;
+        }
+    }
+
     /**
-     * Wisselt een koppelcode in voor een sleutel (POST /api/pair/redeem, zonder Authorization). Blokkeert: niet op de
-     * hoofdthread. Gooit een IOException bij een fout, of als de code ongeldig, verlopen of al gebruikt is (400).
+     * Wisselt een koppelcode in voor een sleutel (POST /api/pair/redeem, zonder Authorization). Een niet-lege oldKey
+     * gaat mee als old_key, zodat de server die intrekt. Blokkeert: niet op de hoofdthread. Gooit een IOException bij
+     * een fout, of als de code ongeldig, verlopen of al gebruikt is (400).
      */
-    static String redeem(Context c, String code, String name) throws IOException {
+    static Redeemed redeem(Context c, String code, String name, String oldKey) throws IOException {
         String body;
         try {
             JSONObject req = new JSONObject().put("code", code);
             if (name != null) req.put("name", name);
+            if (oldKey != null && !oldKey.isEmpty()) req.put("old_key", oldKey);
             body = req.toString();
         } catch (JSONException e) {
             throw new IOException(e);
@@ -62,13 +80,16 @@ final class Api {
         Response res = send("POST", "/api/pair/redeem", body, null, 10_000, 15_000);
         if (res.code < 200 || res.code >= 300) throw new IOException("HTTP " + res.code);
         String key;
+        String userId;
         try {
-            key = new JSONObject(res.body).getString("key").trim();
+            JSONObject o = new JSONObject(res.body);
+            key = o.getString("key").trim();
+            userId = o.optString("user_id", "").trim();
         } catch (JSONException e) {
             throw new IOException(e);
         }
         if (key.isEmpty()) throw new IOException("HTTP " + res.code);
-        return key;
+        return new Redeemed(key, userId);
     }
 
     private static final class Response {

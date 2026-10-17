@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+
 /**
  * tick://pair?code=…: de PWA geeft een eenmalige koppelcode door. Doorzichtig: de app wisselt de code op de achtergrond
  * in voor een sleutel, vraagt zo nodig om meldingen en sluit; daarna staat de TWA er weer. Mislukt het, dan toont de
@@ -30,7 +32,16 @@ public class PairActivity extends Activity {
         new Thread(() -> {
             boolean ok;
             try {
-                Prefs.setToken(app, Api.redeem(app, code, Build.MODEL));
+                String before = Prefs.userId(app);
+                Api.Redeemed r = Api.redeem(app, code, Build.MODEL, Prefs.token(app));
+                if (CacheWipe.shouldWipe(before, r.userId, CacheWipe.Reason.REDEEM)) {
+                    // Een andere persoon: zijn cache en geofences mogen niet blijven staan.
+                    Prefs.wipeAccountData(app);
+                    Geo.apply(app, new JSONArray(), true);
+                }
+                Prefs.setToken(app, r.key);
+                Prefs.setUserId(app, r.userId);
+                TaskWidgetProvider.updateAll(app);
                 // Nieuwe sleutel: de apparaatstatus opnieuw melden, net als na "Opslaan en testen".
                 Prefs.setDeviceStatus(app, "", 0);
                 Prefs.setSyncError(app, null);
