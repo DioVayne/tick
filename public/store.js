@@ -162,6 +162,7 @@ async function enqueue(op) {
   state.pending++;
   changed();
   try {
+    await ownerReady; // niet in de outbox van de vorige gebruiker schrijven terwijl die nog gewist wordt
     await db.outboxAdd(op);
   } catch (e) {
     report(tr('store.save_failed', { reason: e.message }));
@@ -169,10 +170,14 @@ async function enqueue(op) {
 }
 
 let syncing = null;
-/** Speelt de outbox op volgorde af. Geeft false als er nog iets wacht (offline of serverfout). */
+/**
+ * Speelt de outbox op volgorde af. Geeft false als er nog iets wacht (offline of serverfout).
+ * Wacht eerst op de eigenaarscontrole van init; mislukte die, dan speelt hij niets af (de outbox kan van een ander zijn).
+ */
 export function sync() {
   syncing ??= (async () => {
     try {
+      if (!(await ownerReady)) return false;
       for (let ops = await db.outboxAll(); ops.length; ops = await db.outboxAll()) {
         for (const op of ops) {
           try {
@@ -193,7 +198,7 @@ export function sync() {
       return true;
     } finally {
       syncing = null;
-      state.pending = (await db.outboxAll()).length;
+      state.pending = (await ownerReady) ? (await db.outboxAll().catch(() => [])).length : 0;
     }
   })();
   return syncing;
@@ -216,15 +221,18 @@ export async function load() {
     } catch (e) {
       if (e instanceof Offline) throw e;
     }
-    const queued = await db.outboxAll();
+    const owned = await ownerReady; // false: de lokale gegevens kunnen van een ander zijn, dan niet lezen of schrijven
+    const queued = owned ? await db.outboxAll() : [];
     if (seq !== loadSeq) return; // inmiddels is er een nieuwere load gestart
     state.open = open;
     state.done = done;
     if (serverLists) state.serverLists = serverLists;
     state.offline = false;
     state.pending = queued.length;
-    db.kvSet('open', open).catch(() => {});
-    if (serverLists) db.kvSet('lists', serverLists).catch(() => {});
+    if (owned) {
+      db.kvSet('open', open).catch(() => {});
+      if (serverLists) db.kvSet('lists', serverLists).catch(() => {});
+    }
     queued.forEach(applyLocal); // wat de server nog niet heeft, bijvoorbeeld na een serverfout
   } catch (e) {
     if (seq !== loadSeq) return;
@@ -253,6 +261,13 @@ export async function findDone(id) {
 export const SETTINGS_CACHE = 'tick.settings-cache';
 
 /**
+ * Uitkomst van de eigenaarscontrole die init start: true als de lokale gegevens van de ingelogde gebruiker zijn
+ * (of gewist zijn), false als de controle mislukte. sync, load en de outbox wachten hierop.
+ * @type {Promise<boolean>}
+ */
+let ownerReady = Promise.resolve(true);
+
+/**
  * De lokale kopie hoort bij één gebruiker. Hoort hij bij een ander (of bij niemand: een cache van vóór de accounts),
  * dan wissen we kopie, outbox en de cache van de instellingen, zodat een gedeelde browser niets van de vorige laat zien.
  * Geeft true als er gewist is.
@@ -271,14 +286,17 @@ export async function ensureOwner(userId) {
  * @param {string} userId de ingelogde gebruiker (CONFIG.userId)
  */
 export async function init(userId) {
-  try { await ensureOwner(userId); } catch { /* geen lokale opslag */ }
-  try {
-    state.open = (await db.kvGet('open')) ?? [];
-    state.serverLists = (await db.kvGet('lists')) ?? [];
-    const queued = await db.outboxAll();
-    state.pending = queued.length;
-    queued.forEach(applyLocal);
-  } catch { /* geen lokale kopie */ }
+  ownerReady = ensureOwner(userId).then(() => true, () => false);
+  // Fail-closed: zonder geslaagde controle geen lokale kopie en geen outbox, alleen wat de server geeft.
+  if (await ownerReady) {
+    try {
+      state.open = (await db.kvGet('open')) ?? [];
+      state.serverLists = (await db.kvGet('lists')) ?? [];
+      const queued = await db.outboxAll();
+      state.pending = queued.length;
+      queued.forEach(applyLocal);
+    } catch { /* geen lokale kopie */ }
+  }
   changed();
   return load();
 }

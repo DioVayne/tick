@@ -12,6 +12,7 @@ import CONFIG, { setLanguage } from './settings.js';
 import { closeDrawer } from './sidebar.js';
 import { SETTINGS_CACHE as CACHE_KEY, load } from './store.js';
 import { clearAll } from './db.js';
+import { forgetCachedConfig } from './next.js';
 
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
@@ -534,6 +535,7 @@ async function logout() {
   }
   try { await clearAll(); } catch { /* geen lokale opslag */ }
   storeSet(CACHE_KEY, null);
+  await forgetCachedConfig();
   location.href = '/login';
 }
 

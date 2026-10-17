@@ -15,6 +15,15 @@ describe('afterLogin', () => {
     expect(afterLogin('//evil.example', true)).toBe('/?app=android&pair=1');
   });
 
+  it('een pad dat de URL-parser tot een andere host normaliseert, blijft op deze site', () => {
+    for (const raw of ['/.//evil.example?app=android', '/a/..//evil.example?app=android', '/x/%2e%2e//evil.example?app=android']) {
+      const out = afterLogin(raw, false);
+      expect(out.startsWith('//'), out).toBe(false);
+      expect(out).toBe('/?app=android&pair=1');
+    }
+    expect(afterLogin('/%2e//evil.example', true)).toBe('/?app=android&pair=1');
+  });
+
   it('buiten de app verandert er niets', () => {
     expect(afterLogin('/?task=x', false)).toBe('/?task=x');
     expect(afterLogin(null, false)).toBe('/');

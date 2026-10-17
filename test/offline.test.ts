@@ -65,7 +65,7 @@ describe('app-shell', () => {
 
   it('de cacheversie is opgehoogd voor de instellingenpagina', async () => {
     const sw = await (await call('/sw.js')).text();
-    expect(sw.match(/const CACHE = '([^']+)'/)![1]).toBe('tick-shell-v9');
+    expect(sw.match(/const CACHE = '([^']+)'/)![1]).toBe('tick-shell-v10');
   });
 
   it('elke module die de shell importeert zit zelf ook in de shell (anders is de app offline leeg)', async () => {
