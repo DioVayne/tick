@@ -48,6 +48,8 @@ describe('migratie naar accounts', () => {
       .toEqual({ timezone: 'Europe/London', reminder_time: '08:30', week_start: 'sun', fallback_webhook: 'https://hook.example/x' });
     expect(await db.prepare("SELECT value FROM settings WHERE key = 'default_locale'").first()).toEqual({ value: 'nl' });
     expect(await db.prepare("SELECT value FROM settings WHERE key = 'env_api_token_off'").first()).toEqual({ value: '1' });
+    // 0010: wat naar users en user_settings is verhuisd, staat niet meer in settings.
+    expect((await db.prepare("SELECT key FROM settings WHERE key IN ('password_hash', 'session_version', 'timezone', 'reminder_time', 'week_start', 'fallback_webhook')").all()).results).toEqual([]);
   });
 
   it('plekken: dezelfde naam bij twee accounts mag, twee keer bij één account niet', async () => {

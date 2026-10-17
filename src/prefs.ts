@@ -1,24 +1,31 @@
 import type { Env } from './index';
+import type { User } from './users';
 import { normLocale, parseAcceptLanguage, pickLocale } from '../public/i18n.js';
 
-/** Instellingen van de installatie: een rij in `settings` gaat voor de config (wrangler.jsonc), die dient als terugval. */
-export type Prefs = {
-  timeZone: string;
-  reminderTime: string;
-  weekStart: 'mon' | 'sun';
+/** Instellingen van de hele installatie: een rij in `settings` gaat voor de config (wrangler.jsonc), die dient als terugval. */
+export type InstallPrefs = {
   defaultLocale: 'en' | 'nl';
-  fallbackWebhook: string | null;
-  fallbackFromEnv: boolean;
-  /** Er staat een rij `fallback_webhook` (ook '' = uit): die gaat voor FALLBACK_WEBHOOK. */
-  fallbackOverride: boolean;
-  /** FALLBACK_WEBHOOK is gezet (alleen ja/nee; de URL is een secret). */
-  fallbackEnvSet: boolean;
   envApiTokenOff: boolean;
   envInboxTokenOff: boolean;
   /** Wanneer de oude secrets voor het laatst werden gebruikt (hoogstens eens per uur bijgewerkt). */
   envApiTokenUsed: string | null;
   envInboxTokenUsed: string | null;
 };
+
+/** Instellingen van één persoon: een rij in `user_settings` gaat voor de config, die dient als terugval. */
+export type UserPrefs = {
+  timeZone: string;
+  reminderTime: string;
+  weekStart: 'mon' | 'sun';
+  fallbackWebhook: string | null;
+  fallbackFromEnv: boolean;
+  /** Er staat een rij `fallback_webhook` (ook '' = uit): die gaat voor FALLBACK_WEBHOOK. */
+  fallbackOverride: boolean;
+  /** FALLBACK_WEBHOOK is gezet en geldt voor deze persoon (alleen de beheerder; alleen ja/nee, de URL is een secret). */
+  fallbackEnvSet: boolean;
+};
+
+export type Prefs = InstallPrefs & UserPrefs;
 
 const validZone = (tz: string | undefined | null): tz is string => {
   if (!tz) return false;
@@ -32,23 +39,12 @@ const validZone = (tz: string | undefined | null): tz is string => {
 
 const validTime = (s: string | undefined | null): s is string => !!s && /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
 
-/** Leest alle instellingen met één query en valideert wat er staat. */
-export async function loadPrefs(env: Env): Promise<Prefs> {
+/** Leest de instellingen van de installatie met één query en valideert wat er staat. */
+export async function loadInstallPrefs(env: Env): Promise<InstallPrefs> {
   const { results } = await env.DB.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>();
   const row = new Map(results.map((r) => [r.key, r.value]));
-  const zone = row.get('timezone');
-  const time = row.get('reminder_time');
-  // Een rij gaat voor de secret, ook een lege (= uit); zonder rij geldt FALLBACK_WEBHOOK.
-  const override = row.has('fallback_webhook');
   return {
-    timeZone: validZone(zone) ? zone : validZone(env.TIMEZONE) ? env.TIMEZONE : 'UTC',
-    reminderTime: validTime(time) ? time : '09:00',
-    weekStart: row.get('week_start') === 'sun' ? 'sun' : 'mon',
     defaultLocale: normLocale(row.get('default_locale') || env.LOCALE),
-    fallbackWebhook: (override ? row.get('fallback_webhook') : env.FALLBACK_WEBHOOK) || null,
-    fallbackFromEnv: !override && !!env.FALLBACK_WEBHOOK,
-    fallbackOverride: override,
-    fallbackEnvSet: !!env.FALLBACK_WEBHOOK,
     envApiTokenOff: row.get('env_api_token_off') === '1',
     envInboxTokenOff: row.get('env_inbox_token_off') === '1',
     envApiTokenUsed: row.get('env_api_token_used') || null,
@@ -56,13 +52,44 @@ export async function loadPrefs(env: Env): Promise<Prefs> {
   };
 }
 
-/** Statement voor een instelling (voor een batch); `null` verwijdert de rij, zodat de config weer geldt. */
+/**
+ * Leest de instellingen van één persoon met één query. Volgorde: rij, dan config, dan de ingebouwde standaard.
+ * FALLBACK_WEBHOOK hoort bij de beheerder: voor een lid telt hij nooit.
+ */
+export async function loadUserPrefs(env: Env, user: Pick<User, 'id' | 'role'>): Promise<UserPrefs> {
+  const { results } = await env.DB.prepare('SELECT key, value FROM user_settings WHERE user_id = ?').bind(user.id)
+    .all<{ key: string; value: string }>();
+  const row = new Map(results.map((r) => [r.key, r.value]));
+  const zone = row.get('timezone');
+  const time = row.get('reminder_time');
+  const envHook = user.role === 'admin' ? env.FALLBACK_WEBHOOK || null : null;
+  // Een rij gaat voor de secret, ook een lege (= uit); zonder rij geldt FALLBACK_WEBHOOK (alleen voor de beheerder).
+  const override = row.has('fallback_webhook');
+  return {
+    timeZone: validZone(zone) ? zone : validZone(env.TIMEZONE) ? env.TIMEZONE : 'UTC',
+    reminderTime: validTime(time) ? time : '09:00',
+    weekStart: row.get('week_start') === 'sun' ? 'sun' : 'mon',
+    fallbackWebhook: (override ? row.get('fallback_webhook') : envHook) || null,
+    fallbackFromEnv: !override && !!envHook,
+    fallbackOverride: override,
+    fallbackEnvSet: !!envHook,
+  };
+}
+
+/** Statement voor een instelling van een persoon (voor een batch); `null` verwijdert de rij, zodat de config weer geldt. */
+export function userSettingStmt(db: D1Database, userId: string, key: string, value: string | null): D1PreparedStatement {
+  if (value === null) return db.prepare('DELETE FROM user_settings WHERE user_id = ? AND key = ?').bind(userId, key);
+  return db.prepare('INSERT INTO user_settings (user_id, key, value) VALUES (?, ?, ?) ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value')
+    .bind(userId, key, value);
+}
+
+/** Statement voor een instelling van de installatie (voor een batch); `null` verwijdert de rij, zodat de config weer geldt. */
 export function settingStmt(db: D1Database, key: string, value: string | null): D1PreparedStatement {
   if (value === null) return db.prepare('DELETE FROM settings WHERE key = ?').bind(key);
   return db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').bind(key, value);
 }
 
-/** Zet een instelling; `null` verwijdert de rij, zodat de config weer geldt. */
+/** Zet een instelling van de installatie; `null` verwijdert de rij, zodat de config weer geldt. */
 export async function setSetting(db: D1Database, key: string, value: string | null): Promise<void> {
   await settingStmt(db, key, value).run();
 }

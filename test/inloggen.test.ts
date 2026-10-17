@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it } from 'vitest';
 import { authorize } from '../src/auth';
 import { hashKey } from '../src/keys';
-import { loadPrefs } from '../src/prefs';
+import { loadInstallPrefs } from '../src/prefs';
 import { ADMIN_ID, call, callAs, createUser, json, login, randomIp, session } from './helpers';
 
 afterEach(async () => {
@@ -81,7 +81,7 @@ describe('inloggen met e-mailadres', () => {
   });
 
   it('API_TOKEN, INBOX_TOKEN en een sleutel van vóór de update horen bij de beheerder', async () => {
-    const install = await loadPrefs(env);
+    const install = await loadInstallPrefs(env);
     const req = (bearer: string) => new Request('https://tick.test/api/tasks', { headers: { authorization: `Bearer ${bearer}` } });
     expect(await authorize(req('test-token'), env, install)).toMatchObject({ kind: 'token', keyId: 'env-api', userId: ADMIN_ID });
     expect(await authorize(req('test-inbox-token'), env, install)).toMatchObject({ kind: 'inbox', userId: ADMIN_ID });

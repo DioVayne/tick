@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from './index';
 import { HttpError } from './errors';
 import { sessionOnly } from './guards';
-import { settingStmt, type Prefs } from './prefs';
+import { settingStmt, userSettingStmt, type Prefs } from './prefs';
 import { postWebhook } from './push';
 import { shiftWallClock } from './time';
 import { setDefaultTime, setTimeZone } from '../public/repeat.js';
@@ -40,11 +40,11 @@ function validWebhook(v: unknown): v is string {
 }
 
 /**
- * Statements die de open taken omzetten naar een andere zone met dezelfde wandklok; afgeronde taken en taken zonder
+ * Statements die de open taken van één gebruiker omzetten naar een andere zone met dezelfde wandklok; afgeronde taken en taken zonder
  * moment blijven staan. Ze gaan in dezelfde batch als de instelling, zodat het alles of niets is.
  */
-async function timeZoneShift(db: D1Database, from: string, to: string): Promise<D1PreparedStatement[]> {
-  const rows = (await db.prepare('SELECT id, remind_at, repeat_start, repeat_at FROM tasks WHERE done = 0').all<{
+async function timeZoneShift(db: D1Database, userId: string, from: string, to: string): Promise<D1PreparedStatement[]> {
+  const rows = (await db.prepare('SELECT id, remind_at, repeat_start, repeat_at FROM tasks WHERE done = 0 AND user_id = ?').bind(userId).all<{
     id: string; remind_at: string | null; repeat_start: string | null; repeat_at: string | null;
   }>()).results;
   const shift = (v: string | null) => (v === null ? null : shiftWallClock(v, from, to));
@@ -60,8 +60,11 @@ settingsApi.patch('/', async (c) => {
   const body = await c.req.json<Record<string, unknown>>().catch(() => null);
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new HttpError(400, 'err.invalid_json');
   const prefs = c.get('prefs');
+  const userId = c.get('auth').userId;
   const next = { ...prefs };
+  // Instellingen van de gebruiker (user_settings) en van de installatie (settings, alleen de beheerder).
   const writes: [string, string | null][] = [];
+  const installWrites: [string, string | null][] = [];
 
   if ('timeZone' in body) {
     if (!validZone(body.timeZone)) throw new HttpError(400, 'err.invalid_timezone');
@@ -79,9 +82,10 @@ settingsApi.patch('/', async (c) => {
     writes.push(['week_start', body.weekStart]);
   }
   if ('defaultLocale' in body) {
+    if (c.get('user').role !== 'admin') throw new HttpError(403, 'err.admin_only');
     if (body.defaultLocale !== 'en' && body.defaultLocale !== 'nl') throw new HttpError(400, 'err.invalid_locale');
     next.defaultLocale = body.defaultLocale;
-    writes.push(['default_locale', body.defaultLocale]);
+    installWrites.push(['default_locale', body.defaultLocale]);
   }
   if ('fallbackWebhook' in body) {
     // Een geplakte URL kan witruimte of een BOM (U+FEFF, uit Windows) meekrijgen; trim() haalt beide weg.
@@ -91,13 +95,15 @@ settingsApi.patch('/', async (c) => {
     // null wist de rij (de secret geldt weer); '' is een rij die hem uitzet.
     next.fallbackOverride = v !== null;
     next.fallbackFromEnv = v === null && next.fallbackEnvSet;
-    next.fallbackWebhook = v === null ? c.env.FALLBACK_WEBHOOK || null : (v as string) || null;
+    // FALLBACK_WEBHOOK telt alleen voor de beheerder; voor een lid is fallbackEnvSet altijd false.
+    next.fallbackWebhook = v === null ? (next.fallbackEnvSet && c.env.FALLBACK_WEBHOOK) || null : (v as string) || null;
   }
 
   // Taken omzetten en instellingen schrijven in één batch: alles of niets. Dezelfde zone nog eens kiezen verschuift niets.
   const db = c.env.DB;
-  const stmts = next.timeZone !== prefs.timeZone ? await timeZoneShift(db, prefs.timeZone, next.timeZone) : [];
-  for (const [key, value] of writes) stmts.push(settingStmt(db, key, value));
+  const stmts = next.timeZone !== prefs.timeZone ? await timeZoneShift(db, userId, prefs.timeZone, next.timeZone) : [];
+  for (const [key, value] of writes) stmts.push(userSettingStmt(db, userId, key, value));
+  for (const [key, value] of installWrites) stmts.push(settingStmt(db, key, value));
   if (stmts.length) await db.batch(stmts);
   setTimeZone(next.timeZone);
   setDefaultTime(next.reminderTime);

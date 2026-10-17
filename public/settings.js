@@ -1,4 +1,4 @@
-// Instellingen van de installatie (/config.js, door de Worker gemaakt). app.js importeert deze module als eerste,
+// Instellingen van de gebruiker en de installatie (/config.js, door de Worker gemaakt). app.js importeert deze module als eerste,
 // zodat taal en tijdzone al gelden als de andere modules laden.
 import CONFIG from './config.js';
 import { getLocale, pickLocale, setLocale, translate } from './i18n.js';
@@ -47,5 +47,9 @@ setDefaultTime(CONFIG.reminderTime);
 setWeekStart(CONFIG.weekStart);
 if (document.documentElement.lang !== getLocale()) applyI18n(document);
 
-/** @type {{ locale: 'en' | 'nl', defaultLocale: 'en' | 'nl', timeZone: string, reminderTime: string, weekStart: 'mon' | 'sun', androidPackage: string | null }} */
+/**
+ * Instellingen van de ingelogde gebruiker plus de standaardtaal van de installatie.
+ * @type {{ locale: 'en' | 'nl', defaultLocale: 'en' | 'nl', timeZone: string, reminderTime: string, weekStart: 'mon' | 'sun',
+ *   androidPackage: string | null, userId: string, userName: string, isAdmin: boolean }}
+ */
 export default CONFIG;

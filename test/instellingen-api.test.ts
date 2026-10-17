@@ -1,10 +1,10 @@
 import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { BASE, call, createTask as create, json, session } from './helpers';
+import { ADMIN_ID, BASE, call, createTask as create, json, session } from './helpers';
 import { getTimeZone, setTimeZone, zonedParts } from '../public/repeat.js';
 import { shiftWallClock } from '../src/time';
 import worker, { type Env } from '../src/index';
-import { loadPrefs } from '../src/prefs';
+import { loadInstallPrefs, loadUserPrefs } from '../src/prefs';
 import { runReminders } from '../src/push';
 
 const made: string[] = [];
@@ -14,10 +14,11 @@ const createTask: typeof create = async (b) => {
   return t;
 };
 
-const KEYS = "('timezone','reminder_time','week_start','default_locale','fallback_webhook')";
-
 afterEach(async () => {
-  await env.DB.prepare(`DELETE FROM settings WHERE key IN ${KEYS}`).run();
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM user_settings WHERE user_id = ?').bind(ADMIN_ID),
+    env.DB.prepare("DELETE FROM settings WHERE key = 'default_locale'"),
+  ]);
   for (const id of made.splice(0)) await env.DB.prepare('DELETE FROM tasks WHERE id = ?').bind(id).run();
 });
 
@@ -67,7 +68,7 @@ describe('instellingen-API', () => {
     const bom = String.fromCharCode(0xfeff);
     const res = await json(await patch({ fallbackWebhook: `${bom}  https://example.invalid/hook \r\n` }));
     expect(res.fallbackWebhook).toBe('https://example.invalid/hook');
-    const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'fallback_webhook'").first<{ value: string }>();
+    const row = await env.DB.prepare("SELECT value FROM user_settings WHERE user_id = ? AND key = 'fallback_webhook'").bind(ADMIN_ID).first<{ value: string }>();
     expect(row?.value).toBe('https://example.invalid/hook');
     expect((await patch({ fallbackWebhook: `${bom} ` })).status).toBe(200); // alleen een BOM telt als leeg: uit
   });
@@ -148,20 +149,21 @@ describe('instellingen-API', () => {
 
   it('tijdzonewissel: omzetten en instelling samen, of geen van beide', async () => {
     const t = await createTask({ title: 'alles of niets', remind_at: '2030-01-07T09:00:00Z' });
-    await env.DB.prepare("CREATE TRIGGER IF NOT EXISTS test_geen_zone BEFORE INSERT ON settings WHEN NEW.key = 'timezone' BEGIN SELECT RAISE(ABORT, 'test'); END").run();
+    await env.DB.prepare("CREATE TRIGGER IF NOT EXISTS test_geen_zone BEFORE INSERT ON user_settings WHEN NEW.key = 'timezone' BEGIN SELECT RAISE(ABORT, 'test'); END").run();
     try {
       expect((await patch({ timeZone: 'Europe/London' })).status).toBe(500);
     } finally {
       await env.DB.prepare('DROP TRIGGER IF EXISTS test_geen_zone').run();
     }
     expect((await row(t.id))!.remind_at).toBe('2030-01-07T09:00:00.000Z');
-    expect(await env.DB.prepare("SELECT value FROM settings WHERE key = 'timezone'").first()).toBeNull();
+    expect(await env.DB.prepare("SELECT value FROM user_settings WHERE user_id = ? AND key = 'timezone'").bind(ADMIN_ID).first()).toBeNull();
   });
 });
 
 describe('instellingen-API met FALLBACK_WEBHOOK', () => {
   const ENV_URL = 'https://env.invalid/hook';
   const withEnv = { ...env, FALLBACK_WEBHOOK: ENV_URL } as Env;
+  const adminPrefs = () => loadUserPrefs(withEnv, { id: ADMIN_ID, role: 'admin' });
   const send = async (method: string, body?: unknown) => {
     const cookie = await session();
     const init: RequestInit = { method, headers: { cookie, 'content-type': 'application/json' } };
@@ -175,25 +177,25 @@ describe('instellingen-API met FALLBACK_WEBHOOK', () => {
     const text = await send('GET');
     expect(text).not.toContain(ENV_URL);
     expect(JSON.parse(text)).toMatchObject({ fallbackWebhook: null, fallbackFromEnv: true, fallbackOverride: false, fallbackEnvSet: true });
-    expect((await loadPrefs(withEnv)).fallbackWebhook).toBe(ENV_URL);
+    expect((await adminPrefs()).fallbackWebhook).toBe(ENV_URL);
   });
 
   it("uitzetten ('') blijft uit, ook met de secret; Herstellen (null) maakt de secret weer geldig", async () => {
     expect(JSON.parse(await send('PATCH', { fallbackWebhook: '' }))).toMatchObject({ fallbackWebhook: null, fallbackFromEnv: false, fallbackOverride: true, fallbackEnvSet: true });
     expect(JSON.parse(await send('GET'))).toMatchObject({ fallbackWebhook: null, fallbackFromEnv: false, fallbackOverride: true });
-    const prefs = await loadPrefs(withEnv);
+    const prefs = await adminPrefs();
     expect(prefs).toMatchObject({ fallbackWebhook: null, fallbackFromEnv: false });
 
     const t = await createTask({ title: 'uit', remind_at: new Date(Date.now() - 60_000).toISOString() });
     const spy = vi.spyOn(globalThis, 'fetch');
-    await runReminders(withEnv, prefs);
+    await runReminders(withEnv, await loadInstallPrefs(withEnv));
     expect(spy).not.toHaveBeenCalled();
     await env.DB.prepare('UPDATE tasks SET notified = 1 WHERE id = ?').bind(t.id).run();
 
     const reset = await send('PATCH', { fallbackWebhook: null });
     expect(reset).not.toContain(ENV_URL);
     expect(JSON.parse(reset)).toMatchObject({ fallbackFromEnv: true, fallbackOverride: false });
-    expect((await loadPrefs(withEnv)).fallbackWebhook).toBe(ENV_URL);
+    expect((await adminPrefs()).fallbackWebhook).toBe(ENV_URL);
   });
 
   it('een eigen adres gaat voor de secret en wordt wel getoond', async () => {
