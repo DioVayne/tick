@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tick</string>
+    <string name="refresh">Vernieuwen</string>
+    <string name="add">Nieuwe taak</string>
+    <string name="done">Afvinken</string>
+    <string name="widget_empty">Niets te doen</string>
+    <string name="widget_no_token">Open Tick en voer je sleutel in</string>
+    <string name="main_help">Plak hieronder de API-sleutel. Daarna kun je de widget toevoegen: houd een lege plek op je startscherm ingedrukt, kies Widgets en dan Tick.</string>
+    <string name="error_offline">geen verbinding</string>
+    <string name="error_server">serverfout %s</string>
+    <string name="sync_failed">Niet bijgewerkt: %s</string>
+    <string name="done_failed">Afvinken mislukt: %s</string>
+    <string name="undo_failed">Terugzetten mislukt: %s</string>
+    <string name="shortcut_add">Nieuwe taak</string>
+    <string name="loc_channel">Locatiemeldingen</string>
+    <string name="loc_arrived">📍 Aangekomen bij %s</string>
+    <string name="loc_left">📍 Vertrokken van %s</string>
+    <string name="loc_button">Locatiemeldingen aanzetten</string>
+    <string name="loc_status_on">Locatiemeldingen: aan</string>
+    <string name="loc_status_missing">Locatiemeldingen: nog nodig: %s</string>
+    <string name="loc_missing_notifications">meldingen</string>
+    <string name="loc_missing_location">locatie</string>
+    <string name="loc_missing_background">locatie altijd toestaan</string>
+    <string name="loc_background_title">Locatie altijd toestaan</string>
+    <string name="loc_background_text">Tick meldt een taak als je bij een plek aankomt of er vertrekt, ook als de app dicht is. Kies daarvoor in het volgende scherm Rechten, dan Locatie en dan <b>Altijd toestaan</b>.</string>
+    <string name="loc_done_failed">Afvinken mislukt (%s). Tik op Afvinken om het opnieuw te proberen.</string>
+    <string name="loc_missing_system_location">locatie aan op de telefoon</string>
+    <string name="loc_missing_channel">meldingscategorie Locatiemeldingen aan</string>
+    <string name="loc_settings_hint">Zet de toestemming aan in de instellingen van Tick.</string>
+    <string name="main_token_hint">API-sleutel</string>
+    <string name="main_save_test">Opslaan en testen</string>
+    <string name="main_busy">Bezig...</string>
+    <string name="widget_settings">Widget-instellingen</string>
+    <string name="main_open_web">Open Tick in de browser</string>
+    <string name="main_connected">Verbonden. %d open taken. Voeg nu de widget toe via je startscherm (lang indrukken, dan Widgets, dan Tick).</string>
+    <string name="failed">Mislukt: %s</string>
+    <string name="quick_hint">Nieuwe taak...</string>
+    <string name="quick_clear_reminder">Reminder wissen</string>
+    <string name="quick_add">Toevoegen</string>
+    <string name="quick_added">Toegevoegd</string>
+    <string name="settings_reset">Standaard herstellen</string>
+    <string name="settings_done">Klaar</string>
+    <string name="settings_font">Tekstgrootte: %d sp</string>
+    <string name="settings_spacing">Regelafstand: %d dp extra</string>
+    <string-array name="settings_examples">
+        <item>Voorbeeld: bel de huisarts</item>
+        <item>Brood halen</item>
+        <item>Filmpje editen</item>
+    </string-array>
+    <string name="quick_set_reminder">🔔 Reminder instellen</string>
+    <string name="error_no_key">Geen sleutel ingesteld</string>
+    <string name="widget_refreshed">Bijgewerkt ✓</string>
+    <string name="widget_synced_at">Bijgewerkt %s</string>
+</resources>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tick</string>
+    <string name="refresh">Refresh</string>
+    <string name="add">New task</string>
+    <string name="done">Complete</string>
+    <string name="widget_empty">Nothing to do</string>
+    <string name="widget_no_token">Open Tick and enter your key</string>
+    <string name="main_help">Paste the API key (API_TOKEN) below. Then add the widget: long-press an empty spot on your home screen, choose Widgets and then Tick.</string>
+    <string name="error_offline">no connection</string>
+    <string name="error_server">server error %s</string>
+    <string name="sync_failed">Not updated: %s</string>
+    <string name="done_failed">Completing failed: %s</string>
+    <string name="undo_failed">Undo failed: %s</string>
+    <string name="shortcut_add">New task</string>
+    <string name="loc_channel">Location notifications</string>
+    <string name="loc_arrived">📍 Arrived at %s</string>
+    <string name="loc_left">📍 Left %s</string>
+    <string name="loc_button">Turn on location notifications</string>
+    <string name="loc_status_on">Location notifications: on</string>
+    <string name="loc_status_missing">Location notifications: still needed: %s</string>
+    <string name="loc_missing_notifications">notifications</string>
+    <string name="loc_missing_location">location</string>
+    <string name="loc_missing_background">allow location all the time</string>
+    <string name="loc_background_title">Allow location all the time</string>
+    <string name="loc_background_text">Tick notifies you about a task when you arrive at or leave a place, even when the app is closed. On the next screen, choose Permissions, then Location and then <b>Allow all the time</b>.</string>
+    <string name="loc_done_failed">Completing failed (%s). Tap Complete to try again.</string>
+    <string name="loc_missing_system_location">location turned on on the phone</string>
+    <string name="loc_missing_channel">notification category Location notifications on</string>
+    <string name="loc_settings_hint">Turn on the permission in the settings of Tick.</string>
+    <string name="main_token_hint">API key</string>
+    <string name="main_save_test">Save and test</string>
+    <string name="main_busy">Working…</string>
+    <string name="widget_settings">Widget settings</string>
+    <string name="main_open_web">Open Tick in the browser</string>
+    <string name="main_connected">Connected. %d open tasks. Now add the widget from your home screen (long-press, then Widgets, then Tick).</string>
+    <string name="failed">Failed: %s</string>
+    <string name="quick_hint">New task…</string>
+    <string name="quick_clear_reminder">Clear reminder</string>
+    <string name="quick_add">Add</string>
+    <string name="quick_added">Added</string>
+    <string name="settings_reset">Restore defaults</string>
+    <string name="settings_done">Done</string>
+    <string name="settings_font">Text size: %d sp</string>
+    <string name="settings_spacing">Line spacing: %d dp extra</string>
+    <string-array name="settings_examples">
+        <item>Example: call the doctor</item>
+        <item>Buy bread</item>
+        <item>Edit the video</item>
+    </string-array>
+    <string name="quick_set_reminder">🔔 Set reminder</string>
+    <string name="error_no_key">no API key set</string>
+    <string name="widget_refreshed">Up to date ✓</string>
+    <string name="widget_synced_at">Updated %s</string>
+</resources>

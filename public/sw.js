@@ -1,0 +1,92 @@
+'use strict';
+
+// App-shell voor offline gebruik. Network-first: online krijg je altijd de nieuwste versie (geen mix van oude en
+// nieuwe modules na een deploy), offline de laatst bewaarde. Verhoog de versie als de lijst hieronder verandert.
+const CACHE = 'tick-shell-v7';
+const SHELL = [
+  '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/push.js', '/style.css', '/sortable.min.js',
+  '/markdown.js', '/lists.js', '/editor.js', '/sidebar.js', '/detail.js', '/listpicker.js', '/listmenu.js', '/dialog.js',
+  '/repeat.js', '/i18n.js', '/config.js', '/settings.js', '/repeatpicker.js', '/places.js', '/map.js', '/leaflet.js', '/leaflet.css',
+  '/theme.js', '/settingsview.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
+];
+const NETWORK_TIMEOUT_MS = 4000;
+
+// De bestanden staan achter de inlog: een redirect naar /login mag nooit in de cache belanden.
+const cacheable = (res) => res.ok && !res.redirected && res.type === 'basic';
+
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE).then((cache) => Promise.all(SHELL.map((path) =>
+    fetch(path).then((res) => cacheable(res) && cache.put(path, res)).catch(() => {})))));
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    for (const key of await caches.keys()) if (key !== CACHE) await caches.delete(key);
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  // API-data regelt de app zelf (IndexedDB); inlog en de worker zelf altijd via het netwerk.
+  if (req.mode === 'navigate') {
+    if (url.pathname === '/') event.respondWith(networkFirst(req, '/'));
+    return;
+  }
+  if (SHELL.includes(url.pathname)) event.respondWith(networkFirst(req, url.pathname));
+});
+
+async function networkFirst(req, key) {
+  const cache = await caches.open(CACHE);
+  const network = fetch(req).then((res) => {
+    if (cacheable(res)) cache.put(key, res.clone());
+    return res;
+  });
+  const timeout = new Promise((resolve) => setTimeout(resolve, NETWORK_TIMEOUT_MS, 'timeout'));
+  const first = await Promise.race([network.catch(() => 'failed'), timeout]);
+  if (first instanceof Response) return first;
+  const hit = await cache.match(key);
+  if (hit) return hit;
+  // Niets in de cache: bij een trage verbinding toch op het netwerk wachten.
+  return first === 'timeout' ? network : Response.error();
+}
+
+self.addEventListener('push', (event) => {
+  let data = { title: 'Tick', body: '' };
+  try { data = event.data.json(); } catch { /* gewone tekst */ }
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: data.taskId || 'tick',
+      data,
+      // De server stuurt de knoppen vertaald mee; zonder taak geen knoppen.
+      actions: data.taskId ? (data.actions ?? [{ action: 'done', title: '✓' }, { action: 'snooze', title: '+1h' }]) : [],
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  const { taskId, url, occurrence } = event.notification.data || {};
+  event.notification.close();
+  const call = (path, method, body) =>
+    fetch(path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  if (taskId && event.action === 'done') {
+    event.waitUntil(call(`/api/tasks/${taskId}`, 'PATCH', { done: true, ...(occurrence ? { occurrence } : {}) }));
+    return;
+  }
+  if (taskId && event.action === 'snooze') {
+    event.waitUntil(call(`/api/tasks/${taskId}/snooze`, 'POST', { minutes: 60 }));
+    return;
+  }
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      const w = wins[0];
+      return w ? w.focus() : self.clients.openWindow(url || '/');
+    }),
+  );
+});

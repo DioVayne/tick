@@ -1,0 +1,182 @@
+import { t } from './i18n.js';
+import { $, el, render } from './render.js';
+import { createList, lists, load, state } from './store.js';
+
+let contextHandler = () => {};
+/** Haak voor het lijstmenu (rechtsklik op een lijst); de aanroeper krijgt de naam en het knopelement. */
+export const onListContext = (fn) => { contextHandler = fn; };
+
+// Het uitschuifmenu houdt de focus bij zich: de rest is zolang inert (niet te tabben, niet voor een schermlezer).
+const behindDrawer = () => ['#topbar', '#main', '#detail'].map((s) => /** @type {HTMLElement} */ ($(s)));
+
+export function openDrawer() {
+  document.body.classList.add('drawer-open');
+  $('#btn-menu').setAttribute('aria-expanded', 'true');
+  for (const e of behindDrawer()) e.inert = true;
+  /** @type {HTMLElement | null} */ ($('#side .item.on, #side .item[aria-pressed="true"], #side .item'))?.focus();
+}
+export function closeDrawer() {
+  if (!document.body.classList.contains('drawer-open')) return; // ook op desktop aangeroepen: dan geen focus verplaatsen
+  const inside = $('#side').contains(document.activeElement);
+  document.body.classList.remove('drawer-open');
+  $('#btn-menu').setAttribute('aria-expanded', 'false');
+  for (const e of behindDrawer()) e.inert = false;
+  if (inside) $('#btn-menu').focus();
+}
+
+export function selectList(name) {
+  state.list = name;
+  state.showDone = false;
+  closeDrawer();
+  render();
+}
+
+/** Zijbalk (en uitschuifmenu), mobiele titel en het invoerveld, passend bij de gekozen lijst. */
+export function renderSidebar() {
+  hideMore(); // de knoppen worden hieronder vervangen
+  // Tijdens het hernoemen blijft het invoerveld staan; de volgende render zet de rest recht.
+  if ($('#side-lists .rename-input')) { updateHeader(); return; }
+  const all = lists();
+  // Met de instellingen open is geen lijst gekozen in de zijbalk; ⚙ Instellingen is dan gemarkeerd.
+  const current = (name) => !settingsOpen() && !state.showDone && state.list === name;
+  const item = (name, label, count) =>
+    el('button', {
+      class: 'item' + (current(name) ? ' on' : ''),
+      'data-list': name ?? '',
+      'aria-current': current(name) ? 'true' : false,
+    }, el('span', { class: 'name' }, label), el('span', { class: 'count' }, String(count)));
+  // Een lijst die alleen afgeronde taken heeft staat er gewoon met 0.
+  const total = all.reduce((n, l) => n + l.open, 0);
+  $('#side-lists').replaceChildren(
+    item(null, t('ui.all'), total),
+    el('div', { class: 'sep' }),
+    ...all.map((l) => item(l.name, l.name, l.open)),
+  );
+  updateHeader();
+}
+
+const settingsOpen = () => document.body.classList.contains('settings-open');
+
+function updateHeader() {
+  const open = settingsOpen();
+  $('#btn-done').setAttribute('aria-pressed', String(state.showDone && !open));
+  $('#btn-settings')?.setAttribute('aria-pressed', String(open));
+  $('#title').textContent = open ? t('set.title') : state.showDone ? t('ui.completed') : state.list ?? t('ui.all');
+  // Afgerond toont alle lijsten; een nieuwe taak gaat daar naar Inbox, net als bij Alle.
+  $('#add-title').placeholder = state.list && !state.showDone ? t('sidebar.add_to_list', { list: state.list }) : t('ui.new_task_placeholder');
+}
+
+const listButton = (e) => e.target.closest('button[data-list]');
+const hasMenu = (b) => b && b.dataset.list && b.dataset.list !== 'Inbox';
+
+// ⋯ bij hover (alleen met een muis): één zwevend knopje, omdat een knop in een knop niet kan.
+let more = null;
+let moreFor = null;
+function hideMore() { if (more) more.hidden = true; moreFor = null; }
+function showMore(b) {
+  if (!more) {
+    more = el('button', { class: 'list-more', type: 'button', 'aria-label': 'Lijstmenu', 'aria-haspopup': 'menu', hidden: true,
+      onclick: () => { if (moreFor) contextHandler(moreFor.dataset.list, moreFor); } }, '⋯');
+    more.addEventListener('pointerleave', (e) => { if (!e.relatedTarget?.closest?.('#side-lists')) hideMore(); });
+    document.body.append(more);
+  }
+  const r = b.getBoundingClientRect();
+  more.style.left = r.right - 34 + 'px';
+  more.style.top = r.top + 3 + 'px';
+  more.style.height = r.height - 6 + 'px';
+  more.hidden = false;
+  moreFor = b;
+}
+
+// Lang drukken (mobiel) opent het lijstmenu; de klik die erop volgt mag de lijst niet kiezen.
+const LONG_PRESS_MS = 500;
+let pressTimer = 0;
+let pressed = false;
+let opened = { name: '', at: 0 };
+
+/** Opent het lijstmenu, maar niet twee keer kort na elkaar voor dezelfde lijst (lang drukken plus contextmenu). */
+function openMenu(b) {
+  const name = b.dataset.list;
+  if (opened.name === name && Date.now() - opened.at < 1000) return;
+  opened = { name, at: Date.now() };
+  contextHandler(name, b);
+}
+
+/** Koppelt de knoppen. Pas aanroepen vanuit app.js: render.js en dit bestand importeren elkaar. */
+export function setupSidebar() {
+  const side = $('#side-lists');
+  side.addEventListener('click', (e) => {
+    if (pressed) { pressed = false; return; }
+    const b = listButton(e);
+    if (b) selectList(b.dataset.list || null);
+  });
+  side.addEventListener('contextmenu', (e) => {
+    const b = listButton(e);
+    if (!hasMenu(b)) return;
+    e.preventDefault();
+    // Android stuurt bij lang drukken ook zelf een contextmenu: dat is hetzelfde drukken, dus één menu.
+    if (start || pressed) { cancelPress(); pressed = true; }
+    openMenu(b);
+  });
+  side.addEventListener('pointerover', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    const b = listButton(e);
+    if (hasMenu(b)) { if (b !== moreFor) showMore(b); } else hideMore();
+  });
+  side.addEventListener('pointerleave', (e) => { if (!e.relatedTarget?.closest?.('.list-more')) hideMore(); });
+  // Het ⋯ staat vast op het scherm en zou bij scrollen naast een andere lijst blijven hangen.
+  $('#side').addEventListener('scroll', hideMore, { passive: true });
+
+  let start = null;
+  const cancelPress = () => { clearTimeout(pressTimer); start = null; };
+  side.addEventListener('pointerdown', (e) => {
+    const b = listButton(e);
+    if (e.pointerType !== 'touch' || !hasMenu(b)) return;
+    pressed = false;
+    start = { x: e.clientX, y: e.clientY };
+    pressTimer = setTimeout(() => { pressed = true; start = null; openMenu(b); }, LONG_PRESS_MS);
+  });
+  side.addEventListener('pointermove', (e) => {
+    if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) cancelPress();
+  });
+  for (const type of ['pointerup', 'pointercancel']) side.addEventListener(type, cancelPress);
+  // Blijft het drukken zonder klik (vinger weggesleept), dan niet de volgende klik opeten.
+  side.addEventListener('pointerup', () => setTimeout(() => { pressed = false; }, 400));
+
+  $('#btn-menu').addEventListener('click', openDrawer);
+  // Breder geworden met het menu open: de zijbalk staat dan vast, dus niets meer inert laten.
+  matchMedia('(min-width: 1024px)').addEventListener('change', (e) => { if (e.matches) closeDrawer(); });
+  $('.scrim').addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+
+  $('#btn-done').addEventListener('click', () => {
+    state.showDone = true;
+    closeDrawer();
+    render();
+    load();
+  });
+
+  // "+ Nieuwe lijst" wordt op zijn plek een invoerveld.
+  const button = $('#btn-newlist');
+  const input = $('#newlist-input');
+  const stop = () => { input.hidden = true; input.value = ''; button.hidden = false; };
+  button.addEventListener('click', () => {
+    button.hidden = true;
+    input.hidden = false;
+    input.focus();
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); stop(); return; }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const value = input.value.trim();
+    stop();
+    if (!value) return;
+    state.list = createList(value);
+    state.showDone = false;
+    closeDrawer();
+    render();
+    $('#add-title').focus();
+  });
+  input.addEventListener('blur', stop);
+}

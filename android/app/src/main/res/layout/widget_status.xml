@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bovenste regel van de takenlijst: wanneer bijgewerkt, of de fout. Staat in de lijst omdat sommige launchers
+     updates van de rest van de widget niet tonen (Android 16+, "update deferred"); de lijst halen ze wel op. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/status_text"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="end"
+    android:paddingStart="10dp"
+    android:paddingTop="0dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="4dp"
+    android:textColor="@color/widget_muted"
+    android:textSize="12sp" />
