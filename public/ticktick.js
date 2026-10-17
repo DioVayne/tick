@@ -53,8 +53,9 @@ const clean = (s) => s.replace(/\r\n?/g, '\n').replace(/\\([()\[\]#*_>.\-!+])/g,
 
 /** Zet TickTick-rijen om naar taken, ouders eerst (voor de foreign key).
  * @param {Record<string, string>[]} all
+ * @param {string} [prefix] voorvoegsel voor de ids
  * @returns {{ tasks: ImportTask[], skipped: number }} */
-export function tickTickRows(all) {
+export function tickTickRows(all, prefix = 'tt') {
   const kept = all.filter((r) => r.projectKind === 'TASK' || !r.projectKind);
   const rows = kept.filter((r) => r.Title.trim());
   const skipped = kept.length - rows.length;
@@ -76,11 +77,11 @@ export function tickTickRows(all) {
       const done = r.Status === '2' || r.Status === '-1';
       const created = iso(r['Created Time']) ?? new Date().toISOString();
       tasks.push({
-        id: `tt${r.taskId}`,
+        id: `${prefix}${r.taskId}`,
         title: r.Title,
         description: clean(r.Content),
         list: r['List Name'] || 'Inbox',
-        parent_id: parentOf(r) && !cycle ? `tt${parentOf(r)}` : null,
+        parent_id: parentOf(r) && !cycle ? `${prefix}${parentOf(r)}` : null,
         position: Number(r.Order) || 0,
         remind_at: r.Reminder && r['Due Date'] && !done ? iso(r['Due Date']) : null,
         done,

@@ -337,14 +337,14 @@ async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone): Prom
   const ts = now();
   const stmts = [db.prepare('UPDATE tasks SET done = ?, done_at = ?, updated_at = ? WHERE id = ?').bind(done ? 1 : 0, done ? ts : null, ts, t.id)];
   if (done) {
-    stmts.push(db.prepare('UPDATE tasks SET done = 1, done_at = ?, updated_at = ? WHERE parent_id = ? AND done = 0').bind(ts, ts, t.id));
+    stmts.push(db.prepare('UPDATE tasks SET done = 1, done_at = ?, updated_at = ? WHERE parent_id = ? AND done = 0 AND user_id = ?').bind(ts, ts, t.id, t.user_id));
   } else {
     if (t.done && t.done_at) {
-      stmts.push(db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE parent_id = ? AND done = 1 AND done_at = ?')
-        .bind(ts, t.id, t.done_at));
+      stmts.push(db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE parent_id = ? AND done = 1 AND done_at = ? AND user_id = ?')
+        .bind(ts, t.id, t.done_at, t.user_id));
     }
     if (t.parent_id) {
-      stmts.push(db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE id = ? AND done = 1').bind(ts, t.parent_id));
+      stmts.push(db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE id = ? AND done = 1 AND user_id = ?').bind(ts, t.parent_id, t.user_id));
     }
   }
   await db.batch(stmts);

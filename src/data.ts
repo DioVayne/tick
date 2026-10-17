@@ -4,6 +4,7 @@ import { HttpError } from './errors';
 import { sessionOnly } from './guards';
 import { zonedParts } from '../public/repeat.js';
 import { inZone } from './time';
+import type { User } from './users';
 import { readTickTickText, tickTickRows } from '../public/ticktick.js';
 
 /** Kolommen van `tasks` die in een backup horen; alles daarbuiten wordt genegeerd. */
@@ -26,11 +27,12 @@ export async function insertBatched(db: D1Database, stmts: D1PreparedStatement[]
 }
 
 /** `INSERT … ON CONFLICT(id) DO UPDATE`: nooit INSERT OR REPLACE, want de cascade zou subtaken wissen. */
-function upsert(db: D1Database, table: string, cols: readonly string[], row: Row): D1PreparedStatement {
-  const present = cols.filter((c) => row[c] !== undefined);
+function upsert(db: D1Database, table: string, cols: readonly string[], row: Row, userId: string): D1PreparedStatement {
+  row = { ...row, user_id: userId };
+  const present = [...cols.filter((c) => row[c] !== undefined), 'user_id'];
   const updates = present.filter((c) => c !== 'id').map((c) => `${c} = excluded.${c}`).join(', ');
   return db.prepare(
-    `INSERT INTO ${table} (${present.join(', ')}) VALUES (${present.map(() => '?').join(', ')}) ON CONFLICT(id) DO UPDATE SET ${updates}`,
+    `INSERT INTO ${table} (${present.join(', ')}) VALUES (${present.map(() => '?').join(', ')}) ON CONFLICT(id) DO UPDATE SET ${updates} WHERE ${table}.user_id = excluded.user_id`,
   ).bind(...present.map((c) => row[c]));
 }
 
@@ -42,12 +44,29 @@ const NOT_NULL = new Set(['title', 'description', 'list', 'position', 'notified'
 const isNum = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
 const invalid = () => new HttpError(400, 'err.backup_invalid');
 
+/** Voorvoegsel voor TickTick-ids: de beheerder houdt `tt`, anderen krijgen een eigen reeks zodat ids niet botsen. */
+export function tickTickPrefix(user: Pick<User, 'id' | 'role'>): string {
+  return user.role === 'admin' ? 'tt' : `tt${user.id.slice(0, 8)}-`;
+}
+
+/** Zoekt de eigenaar van de gegeven ids op, in chunks van 50. */
+async function ownersOf(db: D1Database, table: 'tasks' | 'places', ids: string[]): Promise<Map<string, string>> {
+  const owners = new Map<string, string>();
+  for (let i = 0; i < ids.length; i += 50) {
+    const chunk = ids.slice(i, i + 50);
+    const { results } = await db.prepare(`SELECT id, user_id FROM ${table} WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk).all<{ id: string; user_id: string }>();
+    for (const r of results) owners.set(r.id, r.user_id);
+  }
+  return owners;
+}
+
 export const exportApi = new Hono<AppEnv>();
 exportApi.use('*', sessionOnly);
 exportApi.get('/', async (c) => {
+  const userId = c.get('auth').userId;
   const [tasks, places] = await Promise.all([
-    c.env.DB.prepare(`SELECT ${TASK_COLUMNS.join(', ')} FROM tasks ORDER BY created_at, id`).all(),
-    c.env.DB.prepare(`SELECT ${PLACE_COLUMNS.join(', ')} FROM places ORDER BY created_at, id`).all(),
+    c.env.DB.prepare(`SELECT ${TASK_COLUMNS.join(', ')} FROM tasks WHERE user_id = ? ORDER BY created_at, id`).bind(userId).all(),
+    c.env.DB.prepare(`SELECT ${PLACE_COLUMNS.join(', ')} FROM places WHERE user_id = ? ORDER BY created_at, id`).bind(userId).all(),
   ]);
   const now = Date.now();
   // De datum in de bestandsnaam: vandaag in de zone van de gebruiker.
@@ -76,7 +95,9 @@ importApi.post('/backup', async (c) => {
   // Optionele kolommen: tekst, getal of null; null bij een NOT NULL-kolom valt weg zodat de standaardwaarde geldt.
   // Een reminder die al voorbij is telt als gemeld: anders komt na het terugzetten een stoot oude meldingen.
   const now = Date.now();
-  const taskRows = (tasks as Row[]).map((t) => {
+  const userId = c.get('auth').userId;
+  let skipped = 0;
+  const taskRows0 = (tasks as Row[]).map((t) => {
     const row: Row = {};
     for (const col of TASK_COLUMNS) {
       const v = t[col];
@@ -88,15 +109,27 @@ importApi.post('/backup', async (c) => {
     if (isStr(row.remind_at) && Date.parse(row.remind_at as string) <= now) row.notified = 1;
     return row;
   });
-  const placeRows = places as Row[];
 
   const db = c.env.DB;
+  // Ids die van een ander account zijn, vallen weg.
+  const taskOwners = await ownersOf(db, 'tasks', [...new Set(taskRows0.map((t) => t.id as string))]);
+  const taskRows = taskRows0.filter((t) => {
+    const o = taskOwners.get(t.id as string);
+    if (o !== undefined && o !== userId) { skipped++; return false; }
+    return true;
+  });
+  const placeOwners = await ownersOf(db, 'places', [...new Set((places as Row[]).map((p) => p.id as string))]);
+  const placeRows = (places as Row[]).filter((p) => {
+    const o = placeOwners.get(p.id as string);
+    if (o !== undefined && o !== userId) { skipped++; return false; }
+    return true;
+  });
   const inBackup = new Set(taskRows.map((t) => t.id as string));
   const parentIds = [...new Set(taskRows.map((t) => t.parent_id).filter((v): v is string => isStr(v) && !inBackup.has(v)))];
   const inDb = new Set<string>();
   for (let i = 0; i < parentIds.length; i += 50) {
     const chunk = parentIds.slice(i, i + 50);
-    const { results } = await db.prepare(`SELECT id FROM tasks WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk).all<{ id: string }>();
+    const { results } = await db.prepare(`SELECT id FROM tasks WHERE user_id = ? AND id IN (${chunk.map(() => '?').join(',')})`).bind(userId, ...chunk).all<{ id: string }>();
     for (const r of results) inDb.add(r.id);
   }
   // Ouders eerst; een ouder die nergens bestaat wordt null.
@@ -120,19 +153,18 @@ importApi.post('/backup', async (c) => {
   }
 
   // Plekken: de naam is uniek (hoofdletterongevoelig); een andere id met dezelfde naam slaan we over.
-  const { results: existing } = await db.prepare('SELECT id, name FROM places').all<{ id: string; name: string }>();
+  const { results: existing } = await db.prepare('SELECT id, name FROM places WHERE user_id = ?').bind(userId).all<{ id: string; name: string }>();
   const nameOwner = new Map(existing.map((p) => [p.name.toLowerCase(), p.id]));
-  let skipped = 0;
   const placeStmts: D1PreparedStatement[] = [];
   for (const p of placeRows) {
     const key = (p.name as string).toLowerCase();
     const owner = nameOwner.get(key);
     if (owner !== undefined && owner !== p.id) { skipped++; continue; }
     nameOwner.set(key, p.id as string);
-    placeStmts.push(upsert(db, 'places', PLACE_COLUMNS, p));
+    placeStmts.push(upsert(db, 'places', PLACE_COLUMNS, p, userId));
   }
 
-  await insertBatched(db, ordered.map((t) => upsert(db, 'tasks', TASK_COLUMNS, t)));
+  await insertBatched(db, ordered.map((t) => upsert(db, 'tasks', TASK_COLUMNS, t, userId)));
   await insertBatched(db, placeStmts);
   return c.json({ tasks: ordered.length, places: placeStmts.length, skipped });
 });
@@ -144,12 +176,13 @@ importApi.post('/ticktick', async (c) => {
   if (text.length > MAX_TICKTICK) throw new HttpError(400, 'err.ticktick_invalid');
   const rows = readTickTickText(text);
   if (!rows.length) throw new HttpError(400, 'err.ticktick_invalid');
-  const { tasks, skipped } = tickTickRows(rows);
+  const userId = c.get('auth').userId;
+  const { tasks, skipped } = tickTickRows(rows, tickTickPrefix(c.get('user')));
   const db = c.env.DB;
   const stmts = tasks.map((t) => db.prepare(
-    `INSERT OR IGNORE INTO tasks (id, title, description, list, parent_id, position, remind_at, notified, done, done_at, source, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 'import', ?, ?)`,
-  ).bind(t.id, t.title, t.description, t.list, t.parent_id, t.position, t.remind_at, t.done ? 1 : 0, t.done_at, t.created_at, t.created_at));
+    `INSERT OR IGNORE INTO tasks (id, user_id, title, description, list, parent_id, position, remind_at, notified, done, done_at, source, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 'import', ?, ?)`,
+  ).bind(t.id, userId, t.title, t.description, t.list, t.parent_id, t.position, t.remind_at, t.done ? 1 : 0, t.done_at, t.created_at, t.created_at));
   const added = await insertBatched(db, stmts);
   return c.json({ added, existing: tasks.length - added, skipped });
 });
