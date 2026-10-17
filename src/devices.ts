@@ -37,7 +37,7 @@ type Status = { name: string; notifications: number; location: string; app_versi
 
 devicesApi.get('/', async (c) => {
   const db = c.env.DB;
-  const prefs = c.get('prefs');
+  const prefs = c.get('install');
   const [browsers, keys, devices] = await Promise.all([
     db.prepare('SELECT endpoint, user_agent, created_at, locale FROM push_subscriptions ORDER BY created_at, endpoint').all(),
     db.prepare("SELECT id, name, last_used_at FROM api_keys WHERE kind = 'full' ORDER BY created_at, id").all<{ id: string; name: string; last_used_at: string | null }>(),

@@ -1,6 +1,8 @@
 import { buildPushHTTPRequest } from '@pushforge/builder';
 import type { Env } from './index';
-import type { Prefs } from './prefs';
+import { loadUserPrefs, type InstallPrefs, type UserPrefs } from './prefs';
+import { getUser } from './users';
+import { setDefaultTime, setTimeZone } from '../public/repeat.js';
 import { translate } from '../public/i18n.js';
 
 type Sub = { endpoint: string; p256dh: string; auth: string; locale: string | null };
@@ -25,9 +27,12 @@ export function parseVapidKey(raw: string | undefined): JsonWebKey | null {
   }
 }
 
-/** Verstuurt naar alle abonnementen, elk in zijn eigen taal (zonder taal: defaultLocale). Geeft aantal geslaagd en het aantal abonnementen terug. */
-export async function sendToAll(env: Env, make: (locale: Locale) => Payload, defaultLocale: Locale): Promise<{ ok: number; total: number }> {
-  const subs = (await env.DB.prepare('SELECT endpoint,p256dh,auth,locale FROM push_subscriptions').all<Sub>()).results;
+/**
+ * Verstuurt naar alle abonnementen van één gebruiker, elk in zijn eigen taal (zonder taal: defaultLocale).
+ * Geeft het aantal geslaagd en het aantal abonnementen terug.
+ */
+export async function sendToAll(env: Env, userId: string, make: (locale: Locale) => Payload, defaultLocale: Locale): Promise<{ ok: number; total: number }> {
+  const subs = (await env.DB.prepare('SELECT endpoint,p256dh,auth,locale FROM push_subscriptions WHERE user_id = ?').bind(userId).all<Sub>()).results;
   if (!subs.length) return { ok: 0, total: 0 };
   const privateJWK = parseVapidKey(env.VAPID_PRIVATE_KEY);
   if (!privateJWK) {
@@ -75,19 +80,35 @@ export function reminderPayload(t: { id: string; title: string; description: str
 
 const RETRY_WINDOW_MS = 15 * 60_000;
 
-export async function runReminders(env: Env, prefs: Prefs): Promise<void> {
+/** Stuurt de verlopen herinneringen; per taak naar de abonnementen van de eigenaar, de terugval naar diens webhook. */
+export async function runReminders(env: Env, install: InstallPrefs): Promise<void> {
   const due = (await env.DB.prepare(
-    'SELECT id,title,description,remind_at,repeat_at FROM tasks WHERE done = 0 AND notified = 0 AND remind_at IS NOT NULL AND remind_at <= ?',
-  ).bind(new Date().toISOString()).all<{ id: string; title: string; description: string; remind_at: string; repeat_at: string | null }>()).results;
+    'SELECT id,user_id,title,description,remind_at,repeat_at FROM tasks WHERE done = 0 AND notified = 0 AND remind_at IS NOT NULL AND remind_at <= ?',
+  ).bind(new Date().toISOString()).all<{ id: string; user_id: string; title: string; description: string; remind_at: string; repeat_at: string | null }>()).results;
 
+  // Per gebruiker één keer lezen per run; null = de gebruiker bestaat niet meer.
+  const people = new Map<string, UserPrefs | null>();
   for (const t of due) {
-    const { ok, total } = await sendToAll(env, (locale) => reminderPayload(t, locale), prefs.defaultLocale);
+    if (!people.has(t.user_id)) {
+      const user = await getUser(env.DB, t.user_id);
+      people.set(t.user_id, user ? await loadUserPrefs(env, user) : null);
+    }
+    const prefs = people.get(t.user_id);
+    if (!prefs) {
+      // Een taak van een verdwenen account: niet elke minuut opnieuw proberen.
+      await env.DB.prepare('UPDATE tasks SET notified = 1 WHERE id = ?').bind(t.id).run();
+      continue;
+    }
+    // De rekenmodule kent (nog) alleen een globale zone en standaardtijd: die van de eigenaar van de taak.
+    setTimeZone(prefs.timeZone);
+    setDefaultTime(prefs.reminderTime);
+    const { ok, total } = await sendToAll(env, t.user_id, (locale) => reminderPayload(t, locale), install.defaultLocale);
     let delivered = ok > 0;
     const overdue = Date.now() - Date.parse(t.remind_at) > RETRY_WINDOW_MS;
-    // Geen abonnement of na 15 minuten nog niets aangekomen: via de fallback-webhook (instelling of FALLBACK_WEBHOOK),
-    // een generieke webhook die {title, body, taskId, url} als JSON krijgt, in de standaardtaal.
+    // Geen abonnement of na 15 minuten nog niets aangekomen: via de fallback-webhook van de eigenaar (instelling, of
+    // FALLBACK_WEBHOOK voor de beheerder), een generieke webhook die {title, body, taskId, url} als JSON krijgt, in de standaardtaal.
     if (!delivered && (total === 0 || overdue) && prefs.fallbackWebhook) {
-      delivered = await postWebhook(prefs.fallbackWebhook, reminderPayload(t, prefs.defaultLocale));
+      delivered = await postWebhook(prefs.fallbackWebhook, reminderPayload(t, install.defaultLocale));
     }
     // Blijft het onbezorgd na het retry-venster, dan niet eindeloos blijven proberen.
     if (delivered || overdue) {

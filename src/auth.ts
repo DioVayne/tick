@@ -1,7 +1,7 @@
 import type { Env } from './index';
 import { hashKey } from './keys';
 import { hashPassword, verifyPassword } from './password';
-import { setSetting, type Prefs } from './prefs';
+import { setSetting, type InstallPrefs } from './prefs';
 import { ADMIN_ID, getUser, type User } from './users';
 
 const enc = new TextEncoder();
@@ -123,7 +123,7 @@ async function touchEnv(env: Env, key: string, last: string | null): Promise<voi
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
 
-export async function authorize(req: Request, env: Env, prefs: Prefs): Promise<Authorized | null> {
+export async function authorize(req: Request, env: Env, prefs: InstallPrefs): Promise<Authorized | null> {
   // Alleen lokaal: op een echte host doet DEV_AUTH_BYPASS niets, ook als hij per ongeluk gezet is.
   if (env.DEV_AUTH_BYPASS === '1' && LOCAL_HOSTS.has(new URL(req.url).hostname)) return { kind: 'dev', userId: ADMIN_ID };
   const bearer = req.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];

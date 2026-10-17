@@ -40,7 +40,7 @@ const isEnvId = (id: string): id is EnvId => Object.hasOwn(ENV_KEYS, id);
 
 keysApi.get('/', async (c) => {
   const { results } = await c.env.DB.prepare('SELECT id, name, kind, hint, created_at, last_used_at FROM api_keys ORDER BY created_at, id').all();
-  const prefs = c.get('prefs');
+  const prefs = c.get('install');
   const off = { 'env-api': prefs.envApiTokenOff, 'env-inbox': prefs.envInboxTokenOff };
   const used = { 'env-api': prefs.envApiTokenUsed, 'env-inbox': prefs.envInboxTokenUsed };
   const envRows = (Object.keys(ENV_KEYS) as EnvId[])

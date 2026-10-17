@@ -9,7 +9,7 @@ import { normLocale, translate } from '../public/i18n.js';
 import { cleanLocation, cleanPlace, locColumns, locFromRow, type Place } from './location';
 import { repeatColumns, repeatFromRow, todayDefaultIso } from './repeat';
 import { nextOccurrence, setDefaultTime, setTimeZone } from '../public/repeat.js';
-import { loadPrefs, requestLocale, type Prefs } from './prefs';
+import { loadInstallPrefs, loadUserPrefs, requestLocale, type InstallPrefs, type Prefs } from './prefs';
 import { findLoginUser, getUser, touchLastSeen, type User } from './users';
 import { localToUtcIso } from './time';
 import { runReminders, sendToAll } from './push';
@@ -52,17 +52,19 @@ export type TaskRow = {
   repeat_rule: string | null; repeat_start: string | null; repeat_at: string | null; repeat_prev: string | null;
 };
 
-export type AppEnv = { Bindings: Env; Variables: { prefs: Prefs; lang: 'en' | 'nl'; auth: Auth; user: User } };
+export type AppEnv = {
+  Bindings: Env;
+  /** `install` staat er altijd (vóór de auth); `prefs` (installatie plus de gebruiker) en `user` alleen na de auth. */
+  Variables: { install: InstallPrefs; prefs: Prefs; lang: 'en' | 'nl'; auth: Auth; user: User };
+};
 
 const app = new Hono<AppEnv>();
 
-// Eerst de instellingen: de rekenmodule is gedeeld met de PWA en kent alleen een globale tijdzone en standaardtijd.
+// Eerst de instellingen van de installatie: de taal van het verzoek en de schakelaars van de oude secrets.
 app.use('*', async (c, next) => {
-  const prefs = await loadPrefs(c.env);
-  c.set('prefs', prefs);
-  c.set('lang', requestLocale(c.req.raw, prefs.defaultLocale));
-  setTimeZone(prefs.timeZone);
-  setDefaultTime(prefs.reminderTime);
+  const install = await loadInstallPrefs(c.env);
+  c.set('install', install);
+  c.set('lang', requestLocale(c.req.raw, install.defaultLocale));
   await next();
 });
 
@@ -120,7 +122,7 @@ app.post('/logout', (c) => {
 });
 
 app.use('*', async (c, next) => {
-  const found = await authorize(c.req.raw, c.env, c.get('prefs'));
+  const found = await authorize(c.req.raw, c.env, c.get('install'));
   if (found) {
     const { user: known, ...auth } = found;
     // Een sleutel van een verwijderd account (of een cookie van een verdwenen gebruiker) geeft geen toegang.
@@ -133,6 +135,11 @@ app.use('*', async (c, next) => {
     await touchLastSeen(c.env.DB, user);
     c.set('auth', auth);
     c.set('user', user);
+    const prefs: Prefs = { ...c.get('install'), ...await loadUserPrefs(c.env, user) };
+    c.set('prefs', prefs);
+    // De rekenmodule is gedeeld met de PWA en kent (nog) alleen een globale tijdzone en standaardtijd: die van deze gebruiker.
+    setTimeZone(prefs.timeZone);
+    setDefaultTime(prefs.reminderTime);
     await next();
     // Geen verlenging als de route zelf al een sessiecookie zet (wachtwoord wijzigen, elders uitloggen): die heeft
     // de nieuwe versie, en een verlenging met de oude gebruiker zou hem overschrijven.
@@ -359,7 +366,11 @@ app.get('/api/config', (c) => c.json({ vapidPublicKey: c.env.VAPID_PUBLIC_KEY })
 // Instellingen voor de PWA als module, zodat de service worker ze met de shell cachet (offline de juiste taal en zone).
 app.get('/config.js', (c) => {
   const { timeZone, reminderTime, weekStart, defaultLocale } = c.get('prefs');
-  const config = { locale: c.get('lang'), defaultLocale, timeZone, reminderTime, weekStart, androidPackage: c.env.ANDROID_PACKAGE || null };
+  const user = c.get('user');
+  const config = {
+    locale: c.get('lang'), defaultLocale, timeZone, reminderTime, weekStart, androidPackage: c.env.ANDROID_PACKAGE || null,
+    userId: user.id, userName: user.name, isAdmin: user.role === 'admin',
+  };
   return c.body(`export default ${JSON.stringify(config)};
 `, 200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' });
 });
@@ -667,7 +678,7 @@ app.delete('/api/push/subscribe', async (c) => {
 });
 
 app.post('/api/push/test', async (c) => {
-  const r = await sendToAll(c.env, (locale) => ({ title: 'Tick', body: translate(locale, 'push.test_body'), url: '/' }), c.get('prefs').defaultLocale);
+  const r = await sendToAll(c.env, c.get('auth').userId, (locale) => ({ title: 'Tick', body: translate(locale, 'push.test_body'), url: '/' }), c.get('prefs').defaultLocale);
   return c.json(r);
 });
 
@@ -755,10 +766,8 @@ export default {
   fetch: app.fetch,
   scheduled: (_e: ScheduledController, env: Env, ctx: ExecutionContext) => {
     ctx.waitUntil((async () => {
-      const prefs = await loadPrefs(env);
-      setTimeZone(prefs.timeZone);
-      setDefaultTime(prefs.reminderTime);
-      await runReminders(env, prefs);
+      // runReminders zet per taak de zone van de eigenaar (de rekenmodule kent nog alleen een globale zone).
+      await runReminders(env, await loadInstallPrefs(env));
     })());
   },
 };

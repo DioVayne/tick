@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { authorize, SESSION_DAYS } from '../src/auth';
-import { loadPrefs } from '../src/prefs';
+import { loadInstallPrefs } from '../src/prefs';
 import { ADMIN_ID, call, INBOX, json, login, randomIp, type Task } from './helpers';
 
 const DAY = 86_400_000;
@@ -98,13 +98,13 @@ describe('DEV_AUTH_BYPASS', () => {
   const devEnv = { ...env, DEV_AUTH_BYPASS: '1' };
 
   it('werkt op localhost en 127.0.0.1', async () => {
-    expect(await authorize(new Request('http://localhost:8787/api/tasks'), devEnv, await loadPrefs(devEnv))).toEqual({ kind: 'dev', userId: ADMIN_ID });
-    expect(await authorize(new Request('http://127.0.0.1:8787/'), devEnv, await loadPrefs(devEnv))).toEqual({ kind: 'dev', userId: ADMIN_ID });
+    expect(await authorize(new Request('http://localhost:8787/api/tasks'), devEnv, await loadInstallPrefs(devEnv))).toEqual({ kind: 'dev', userId: ADMIN_ID });
+    expect(await authorize(new Request('http://127.0.0.1:8787/'), devEnv, await loadInstallPrefs(devEnv))).toEqual({ kind: 'dev', userId: ADMIN_ID });
   });
 
   it('doet niets op een andere host', async () => {
-    expect(await authorize(new Request('https://tick.example.com/api/tasks'), devEnv, await loadPrefs(devEnv))).toBeNull();
-    expect(await authorize(new Request('http://localhost.evil.test/'), devEnv, await loadPrefs(devEnv))).toBeNull();
+    expect(await authorize(new Request('https://tick.example.com/api/tasks'), devEnv, await loadInstallPrefs(devEnv))).toBeNull();
+    expect(await authorize(new Request('http://localhost.evil.test/'), devEnv, await loadInstallPrefs(devEnv))).toBeNull();
   });
 });
 
