@@ -1,0 +1,10 @@
+plugins {
+    id 'com.android.application' version '8.13.0' apply false
+}
+
+// Bouw buiten de projectmap: een sync-map (Google Drive, OneDrive, Dropbox) vergrendelt bestanden in build-mappen
+// tijdens het synchroniseren.
+allprojects {
+    def out = System.getenv('LOCALAPPDATA') ?: System.getProperty('java.io.tmpdir')
+    layout.buildDirectory = new File(out, "tick-android-build/${project.name}")
+}

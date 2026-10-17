@@ -1,0 +1,29 @@
+{
+    "name": "tick",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "wrangler dev",
+        "deploy": "wrangler deploy",
+        "typecheck": "tsc && tsc -p test",
+        "db:migrate": "wrangler d1 migrations apply DB --remote",
+        "db:migrate:local": "wrangler d1 migrations apply DB --local",
+        "icons": "node scripts/make-icons.mjs",
+        "vendor": "node -e \"const fs=require('fs');fs.copyFileSync('node_modules/sortablejs/Sortable.min.js','public/sortable.min.js');fs.copyFileSync('node_modules/leaflet/dist/leaflet.js','public/leaflet.js');fs.copyFileSync('node_modules/leaflet/dist/leaflet.css','public/leaflet.css')\"",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@pushforge/builder": "^2.0.5",
+        "hono": "^4.13.13",
+        "sortablejs": "^1.15.7"
+    },
+    "devDependencies": {
+        "@cloudflare/vitest-plugin": "^1.4.2",
+        "@cloudflare/workers-types": "^5.20261011.1",
+        "leaflet": "1.9.4",
+        "typescript": "^7.0.2",
+        "vitest": "~4.1.0",
+        "wrangler": "^4.151.0"
+    }
+}

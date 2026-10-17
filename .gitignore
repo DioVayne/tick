@@ -1,0 +1,22 @@
+node_modules
+.wrangler
+.dev.vars
+import.sql
+
+.secrets.txt
+tick-widget.apk
+
+# persoonlijke gegevens en bouwresultaat
+*.csv
+*.apk
+import.sql
+
+# Superpowers-werkmap
+.superpowers/
+
+# eigen instellingen en notities (zie wrangler.example.jsonc)
+wrangler.jsonc
+.claude/settings.local.json
+notes/
+
+.claude/launch.json

@@ -1,0 +1,49 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Instellingen van je eigen build: -PtickBase=... -PtickPackage=... of dezelfde sleutels in android/tick.properties
+// (niet in git). tickBase is het adres van je Tick; tickPackage het unieke applicationId van je app.
+def tickProps = new Properties()
+def tickFile = rootProject.file('tick.properties')
+if (tickFile.exists()) tickFile.withInputStream { tickProps.load(it) }
+def tickSetting = { String key -> project.findProperty(key) ?: tickProps.getProperty(key) }
+def tickBase = tickSetting('tickBase')
+if (!tickBase) throw new GradleException('Set the address of your Tick: -PtickBase=https://your-tick.example or tickBase=... in android/tick.properties')
+
+android {
+    namespace 'nl.detussenpartij.tick'
+    compileSdk 36
+
+    defaultConfig {
+        // De Java-namespace blijft nl.detussenpartij.tick; alleen het applicationId moet uniek zijn.
+        applicationId tickSetting('tickPackage') ?: 'com.example.tick'
+        minSdk 31
+        targetSdk 36
+        versionCode 3
+        versionName '1.2'
+        // Adres van de API; voor testen op de emulator: -PtickBase=http://localhost:8787 (met adb reverse)
+        buildConfigField 'String', 'TICK_BASE', "\"${tickBase}\""
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+}

@@ -1,0 +1,5 @@
+# Local development only. Copy to .dev.vars (not in git) and run `npm run dev`.
+# Skips the login, but only on localhost/127.0.0.1; it does nothing on a real host.
+DEV_AUTH_BYPASS=1
+# Optional, to test push locally: the private JWK from `node scripts/gen-vapid.mjs`, on one line.
+VAPID_PRIVATE_KEY=
