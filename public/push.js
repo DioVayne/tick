@@ -29,13 +29,19 @@ export async function enablePush(reg) {
   await request('POST', '/api/push/subscribe', { ...sub.toJSON(), locale: getLocale() });
 }
 
-/** Meldt deze browser af, bij de server en in de browser zelf. */
+/**
+ * Meldt deze browser af, bij de server en in de browser zelf. De browser meldt zich ook af als de server faalt
+ * (anders blijven er meldingen komen, bijvoorbeeld na uitloggen); de fout van de server gaat daarna door.
+ */
 export async function disablePush(reg) {
   if (!supported(reg)) return;
   const sub = await reg.pushManager.getSubscription();
   if (!sub) return;
-  await request('DELETE', '/api/push/subscribe', { endpoint: sub.endpoint });
-  await sub.unsubscribe();
+  try {
+    await request('DELETE', '/api/push/subscribe', { endpoint: sub.endpoint });
+  } finally {
+    await sub.unsubscribe();
+  }
 }
 
 /** Na een taalwissel: hetzelfde abonnement opnieuw melden, zodat meldingen in de nieuwe taal komen. */

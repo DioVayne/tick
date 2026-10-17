@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 // De Workers-runtime heeft geen IndexedDB: db.js valt dan terug op geheugen, en dat lezen we hier uit.
 import { nextOccurrence } from '../public/repeat.js';
 import * as db from '../public/db.js';
-import { deleteList, ensureOwner, renameList, state, toggleDone, update } from '../public/store.js';
+import { deleteList, ensureOwner, init, renameList, state, sync, toggleDone, update } from '../public/store.js';
 
 describe('store: lijst-ops', () => {
   it('een lijst die alleen in deze sessie bestaat, hernoemen of verwijderen geeft geen outbox-op', async () => {
@@ -97,5 +97,22 @@ describe('store: lokale gegevens per gebruiker', () => {
   it('een cache van vóór de update (zonder eigenaar) wordt gewist', async () => {
     await db.clearAll(); await db.kvSet('open', [{ id: 'y' }]);
     expect(await ensureOwner('user-a')).toBe(true); expect(await db.kvGet('open')).toBeUndefined();
+  });
+
+  it('sync tijdens init wacht op de eigenaarscontrole: de outbox van de vorige gebruiker gaat nooit naar de server', async () => {
+    await db.clearAll(); await db.kvSet('owner', 'user-y'); await db.kvSet('open', [{ id: 'oud' }]);
+    await db.outboxAdd({ type: 'update', id: 'oud', body: { title: 'van y' } });
+    const calls: string[] = [];
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any, opts: any) => {
+      calls.push(`${opts?.method ?? 'GET'} ${String(input)}`);
+      return new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    try {
+      await Promise.all([init('user-z'), sync()]);
+    } finally { spy.mockRestore(); }
+    expect(calls.filter((c) => !c.startsWith('GET'))).toEqual([]);
+    expect(await db.outboxAll()).toEqual([]);
+    expect(state.open).toEqual([]);
+    expect(await db.kvGet('owner')).toBe('user-z');
   });
 });
