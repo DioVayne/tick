@@ -9,7 +9,7 @@ import { getUser } from './users';
 export const accountApi = new Hono<AppEnv>();
 accountApi.use('*', sessionOnly);
 
-const MIN_PASSWORD = 8;
+export const MIN_PASSWORD = 8;
 
 accountApi.post('/password', async (c) => {
   // Zelfde rem als /login, voor het controleren van het huidige wachtwoord.
@@ -42,6 +42,18 @@ accountApi.get('/', (c) => {
   return c.json({ id, name, email, role });
 });
 
+/** Naam en e-mailadres zoals een profiel ze toestaat: getrimd teruggegeven, anders een 400. */
+export function cleanName(v: unknown): string {
+  const name = typeof v === 'string' ? v.trim() : "";
+  if (!name || name.length > 60) throw new HttpError(400, 'err.invalid_name');
+  return name;
+}
+export function cleanEmail(v: unknown): string {
+  const email = typeof v === 'string' ? v.trim() : "";
+  if (email.length > 254 || !EMAIL_RE.test(email)) throw new HttpError(400, 'err.invalid_email');
+  return email;
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 accountApi.patch('/', async (c) => {
@@ -50,14 +62,10 @@ accountApi.patch('/', async (c) => {
   const sets: string[] = [];
   const vals: string[] = [];
   if (body.name !== undefined) {
-    const name = typeof body.name === 'string' ? body.name.trim() : '';
-    if (!name || name.length > 60) throw new HttpError(400, 'err.invalid_name');
-    sets.push('name = ?'); vals.push(name);
+    sets.push('name = ?'); vals.push(cleanName(body.name));
   }
   if (body.email !== undefined) {
-    const email = typeof body.email === 'string' ? body.email.trim() : '';
-    if (email.length > 254 || !EMAIL_RE.test(email)) throw new HttpError(400, 'err.invalid_email');
-    sets.push('email = ?'); vals.push(email);
+    sets.push('email = ?'); vals.push(cleanEmail(body.email));
   }
   const id = c.get('user').id;
   if (sets.length) {
