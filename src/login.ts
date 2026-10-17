@@ -11,7 +11,8 @@ export function loginPage(locale: string | undefined): string {
 <script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
 </head><body>
 <form id="f"><h1>Tick</h1>
-<input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="current-password" autofocus required>
+<input type="email" id="email" placeholder="${t('login.email')}" autocomplete="username" autofocus>
+<input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="current-password" required>
 <button>${t('login.submit')}</button><p id="err" role="alert"></p></form>
 <script type="module" src="/login.js"></script></body></html>`;
 }

@@ -39,6 +39,7 @@ export default defineConfig({
   ],
   test: {
     setupFiles: ['./test/setup.ts'],
-    testTimeout: 15000, // dev-machine onder load; D1-aanroepen kunnen traag zijn
+    // Dev-machine onder load: een lokale D1-aanroep kost hier tientallen ms, en elke request leest sinds de accounts ook de gebruiker.
+    testTimeout: 30000,
   },
 });

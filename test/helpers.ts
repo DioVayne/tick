@@ -1,4 +1,7 @@
-import { exports } from 'cloudflare:workers';
+import { env, exports } from 'cloudflare:workers';
+import { hashPassword } from '../src/password';
+
+export { ADMIN_ID } from '../src/users';
 
 export const BASE = 'https://tick.test';
 export const TOKEN = 'test-token';
@@ -22,8 +25,29 @@ export function call(path: string, init: RequestInit & { json?: unknown; auth?: 
 /** Willekeurig IP, zodat de rate limit (die over testbestanden heen telt) andere tests niet raakt. */
 export const randomIp = () => `10.${[...crypto.getRandomValues(new Uint8Array(3))].join('.')}`;
 
-export function login(password: string, from = randomIp()) {
-  return call('/login', { method: 'POST', json: { password }, auth: null, headers: { 'cf-connecting-ip': from } });
+export function login(password: string, from = randomIp(), email = '') {
+  return call('/login', { method: 'POST', json: { email, password }, auth: null, headers: { 'cf-connecting-ip': from } });
+}
+
+/** Request zonder Bearer, met een sessiecookie (`tick_session=…`). */
+export function callAs(cookie: string, path: string, init: RequestInit & { json?: unknown } = {}) {
+  const headers = new Headers(init.headers);
+  headers.set('cookie', cookie);
+  if (!headers.has('cf-connecting-ip')) headers.set('cf-connecting-ip', randomIp());
+  return call(path, { ...init, headers, auth: null });
+}
+
+/** Maakt een lid direct in `users` (uniek e-mailadres) en logt in via /login. */
+export async function createUser(o: { name?: string; email?: string; password?: string } = {}):
+  Promise<{ id: string; email: string; password: string; cookie: string }> {
+  const id = crypto.randomUUID();
+  const email = o.email ?? `u-${crypto.randomUUID()}@example.test`;
+  const password = o.password ?? 'lid-wachtwoord';
+  await env.DB.prepare("INSERT INTO users (id, name, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, 'member', ?)")
+    .bind(id, o.name ?? 'Lid', email, await hashPassword(password), new Date().toISOString()).run();
+  const res = await login(password, randomIp(), email);
+  if (res.status !== 200) throw new Error(`inloggen als lid mislukt: ${res.status} ${await res.text()}`);
+  return { id, email, password, cookie: res.headers.get('set-cookie')!.split(';')[0] };
 }
 
 /** Logt in en geeft de sessiecookie (`tick_session=…`) terug. */
