@@ -65,6 +65,15 @@
                 android:resource="@xml/filepaths" />
         </provider>
 
+        <!-- Browser Helper zet bij elke start de snelkoppeling "Site-instellingen" aan; zonder deze activity crasht de app -->
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.customtabs.trusted.MANAGE_SPACE_URL"
+                android:value="${tickBase}/" />
+        </activity>
+
         <!-- Meldingen van de PWA (web push) verschijnen als meldingen van deze app -->
         <service
             android:name="com.google.androidbrowserhelper.trusted.DelegationService"
