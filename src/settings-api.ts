@@ -5,7 +5,6 @@ import { sessionOnly } from './guards';
 import { settingStmt, userSettingStmt, type Prefs } from './prefs';
 import { postWebhook } from './push';
 import { shiftWallClock } from './time';
-import { setDefaultTime, setTimeZone } from '../public/repeat.js';
 import { translate } from '../public/i18n.js';
 
 export const settingsApi = new Hono<AppEnv>();
@@ -105,8 +104,6 @@ settingsApi.patch('/', async (c) => {
   for (const [key, value] of writes) stmts.push(userSettingStmt(db, userId, key, value));
   for (const [key, value] of installWrites) stmts.push(settingStmt(db, key, value));
   if (stmts.length) await db.batch(stmts);
-  setTimeZone(next.timeZone);
-  setDefaultTime(next.reminderTime);
   c.set('prefs', next);
   return c.json(view(next));
 });

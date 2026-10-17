@@ -62,7 +62,9 @@ Changing the time zone in the app keeps the wall-clock time: that person's open 
 Until the accounts feature is wired in, the Worker still works for the admin only: code that leaves out `user_id` gets the default. There is no separate `due_at`: the reminder is also the deadline.
 
 ## Times
-Always stored in UTC. A time without a zone counts as the time zone setting, a bare date as the reminder time (09:00 by default) in that zone (`src/time.ts`). The web app and Android already send UTC. Zone and reminder time come from the settings (D1, then `TIMEZONE`, then the built-in default), see "Settings".
+Always stored in UTC. A time without a zone counts in the time zone of the person making the request, a bare date as that person's reminder time (09:00 by default) in that zone (`src/time.ts`). The web app and Android already send UTC. Zone and reminder time come from that person's settings (D1, then `TIMEZONE`, then the built-in default), see "Settings".
+
+The Worker passes the zone with every call: `Zone = { timeZone, reminderTime }` (`c.get('prefs')` fits) goes into `localToUtcIso`, `todayDefaultIso`, `repeatColumns`, `createTask`, `setDone` and `rollRepeat`. The calculation module `public/repeat.js` is shared with the PWA and has one module-global zone and default time; in the Worker only `inZone(z, fn)` (`src/time.ts`) sets them, runs `fn` synchronously and restores the previous values in `finally`. There is never an `await` inside, so two requests from people in different zones cannot see each other's zone. Nothing else in `src/` calls `setTimeZone` or `setDefaultTime` (`shiftWallClock` switches zones the same synchronous way).
 
 ## API
 | Route | Purpose |
@@ -147,7 +149,7 @@ A top-level task with a reminder can repeat daily, weekly, monthly or yearly. Co
 - **Storage:** `repeat_rule` (an RRULE subset: `FREQ`, `INTERVAL` 1-99, `BYDAY` (with a rank for months, e.g. `3SU`/`-1SU`), `BYMONTHDAY`), `repeat_start` (time of day and phase of "every 2 weeks"), `repeat_at` (the occurrence the task is on now) and `repeat_prev` (internal JSON for undo). The API shows `repeat: {rule, start, at}` or `null`.
 - **Completing** moves on to the first occurrence after both now and `repeat_at` (missed ones lapse; subtasks reopen). The PWA sends `occurrence`, so a repeated request from the outbox does nothing. **Undo** within 15 minutes restores the last step.
 - **This time only:** snoozing or another date in the picker only moves `remind_at`. Clearing the reminder or making the task a subtask removes the rule.
-- **Time:** all calculations use the wall clock of `TIMEZONE`, so 10:00 stays 10:00 across daylight saving changes. "On the 31st" falls on the last day of a short month.
+- **Time:** all calculations use the wall clock of the owner's time zone (see "Times"), so 10:00 stays 10:00 across daylight saving changes. "On the 31st" falls on the last day of a short month.
 
 ## Settings page
 ⚙ Settings opens one page of blocks: **Display** (theme, text size, spacing, with an example task that changes along), **Language and time** (language of this device, time zone with a "use this device's" button, reminder time, week starts on), **Notifications** (switch for this device, test notification, the iPhone home-screen hint), **Devices** (this browser, other browsers with notifications, Android phones, and "connect an Android phone"), **Account** (change password, log out on other devices, log out), **Data** (download backup, restore backup, import from TickTick) and **Advanced** (collapsed: keys, default language, fallback webhook). Notifications, Theme and Log out used to be in the sidebar and moved here.

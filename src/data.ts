@@ -3,6 +3,7 @@ import type { AppEnv, TaskRow } from './index';
 import { HttpError } from './errors';
 import { sessionOnly } from './guards';
 import { zonedParts } from '../public/repeat.js';
+import { inZone } from './time';
 import { readTickTickText, tickTickRows } from '../public/ticktick.js';
 
 /** Kolommen van `tasks` die in een backup horen; alles daarbuiten wordt genegeerd. */
@@ -49,7 +50,8 @@ exportApi.get('/', async (c) => {
     c.env.DB.prepare(`SELECT ${PLACE_COLUMNS.join(', ')} FROM places ORDER BY created_at, id`).all(),
   ]);
   const now = Date.now();
-  const z = zonedParts(now);
+  // De datum in de bestandsnaam: vandaag in de zone van de gebruiker.
+  const z = inZone(c.get('prefs'), () => zonedParts(now));
   const date = `${z.y}-${String(z.m).padStart(2, '0')}-${String(z.d).padStart(2, '0')}`;
   c.header('Content-Disposition', `attachment; filename="tick-backup-${date}.json"`);
   return c.json({ app: 'tick', version: 1, exported_at: new Date(now).toISOString(), tasks: tasks.results, places: places.results });

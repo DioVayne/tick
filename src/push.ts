@@ -2,7 +2,6 @@ import { buildPushHTTPRequest } from '@pushforge/builder';
 import type { Env } from './index';
 import { loadUserPrefs, type InstallPrefs, type UserPrefs } from './prefs';
 import { getUser } from './users';
-import { setDefaultTime, setTimeZone } from '../public/repeat.js';
 import { translate } from '../public/i18n.js';
 
 type Sub = { endpoint: string; p256dh: string; auth: string; locale: string | null };
@@ -99,9 +98,6 @@ export async function runReminders(env: Env, install: InstallPrefs): Promise<voi
       await env.DB.prepare('UPDATE tasks SET notified = 1 WHERE id = ?').bind(t.id).run();
       continue;
     }
-    // De rekenmodule kent (nog) alleen een globale zone en standaardtijd: die van de eigenaar van de taak.
-    setTimeZone(prefs.timeZone);
-    setDefaultTime(prefs.reminderTime);
     const { ok, total } = await sendToAll(env, t.user_id, (locale) => reminderPayload(t, locale), install.defaultLocale);
     let delivered = ok > 0;
     const overdue = Date.now() - Date.parse(t.remind_at) > RETRY_WINDOW_MS;
