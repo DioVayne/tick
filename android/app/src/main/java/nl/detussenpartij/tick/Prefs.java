@@ -20,6 +20,21 @@ final class Prefs {
         sp(c).edit().putString("token", token.trim()).apply();
     }
 
+    /** De user_id van de sleutel (uit het koppelen), of leeg als die niet bekend is. */
+    static String userId(Context c) {
+        return sp(c).getString("userId", "");
+    }
+
+    static void setUserId(Context c, String id) {
+        sp(c).edit().putString("userId", id == null ? "" : id).apply();
+    }
+
+    /** Wist de gegevens van de vorige gebruiker: cache, wachtrijen, getoonde locatiemeldingen en geofence-handtekening. */
+    static synchronized void wipeAccountData(Context c) {
+        sp(c).edit().putString("cache", "[]").remove("pending").remove("pendingRemind")
+                .remove("locFired").remove("locSynced").remove("geoSig").commit();
+    }
+
     static String cache(Context c) {
         return sp(c).getString("cache", "[]");
     }
