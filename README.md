@@ -1,6 +1,6 @@
 # Tick
 
-A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push notifications, and it works offline. Built for one person: one password, no accounts. Free to run on Cloudflare's free plan.
+A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push notifications, and it works offline. Built for one person or a few: the administrator invites others with a link, and every account has its own tasks and settings. Free to run on Cloudflare's free plan.
 
 **Set it up:** [SETUP.md](SETUP.md), or open this folder in [Claude Code](https://claude.com/claude-code) and say *"set up Tick"*.
 **How it works:** [ARCHITECTURE.md](ARCHITECTURE.md).
@@ -40,7 +40,7 @@ A Cloudflare Worker ([Hono](https://hono.dev)) with D1, static assets and a cron
 The schema lives in `migrations/` and is applied with `wrangler d1 migrations apply` (`npm run db:migrate`). A schema change is always a new file (`0006_….sql`); existing migrations are never edited.
 
 ## Security
-- Your own login, no Cloudflare Access: a password on `/login`, then an HttpOnly cookie for 30 days, renewed automatically when you use Tick in the second half of that period.
+- Your own login, no Cloudflare Access: email address and password on `/login`, then an HttpOnly cookie for 30 days, renewed automatically when you use Tick in the second half of that period.
 - At most 5 login attempts per minute per IP (Workers Rate Limiting), then a 429.
 - Android: `Authorization: Bearer <key>` with a key you make in the app (or the old `API_TOKEN`): full access to the tasks, but not to settings, keys or your password.
 - Automations: an inbox key (or the old `INBOX_TOKEN`), only `POST /api/inbox`; everything else gives a 403.

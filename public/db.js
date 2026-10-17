@@ -56,3 +56,14 @@ export async function outboxDelete(seq) {
   if (await open()) return tx('outbox', 'readwrite', (s) => s.delete(seq));
   memory.outbox.delete(seq);
 }
+
+/** Wist de lokale kopie en de outbox, bijvoorbeeld bij uitloggen of als er iemand anders inlogt. */
+export async function clearAll() {
+  if (await open()) {
+    await tx('kv', 'readwrite', (s) => s.clear());
+    await tx('outbox', 'readwrite', (s) => s.clear());
+    return;
+  }
+  memory.kv.clear();
+  memory.outbox.clear();
+}

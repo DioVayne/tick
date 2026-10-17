@@ -1,4 +1,4 @@
-import './settings.js'; // eerst: taal en tijdzone
+import CONFIG from './settings.js'; // eerst: taal en tijdzone
 import { initAndroidApp } from './androidapp.js';
 import { t } from './i18n.js';
 import { closeTask, detailReady, flushPending, selectTask } from './detail.js';
@@ -60,7 +60,7 @@ if (openTask) {
 }
 // Herladen op de instellingen (bijvoorbeeld na een taalwissel): daar weer verder.
 if (history.state?.settings) openSettings({ push: false });
-init().then(() => {
+init(CONFIG.userId).then(() => {
   detailReady();
   if (openTask) document.querySelector(`li.task[data-id="${CSS.escape(openTask)}"]`)?.scrollIntoView({ block: 'center' });
 });
