@@ -2,6 +2,7 @@
 // terug (ook de Android-terugknop) en Esc hem sluiten. 📱-delen gelden voor dit apparaat en werken offline;
 // 🏠-delen gelden voor de hele installatie en tonen offline de laatst bekende waarde, uitgeschakeld.
 import { Offline, request } from './api.js';
+import { isInApp, openPhoneSettings } from './androidapp.js';
 import { ask } from './dialog.js';
 import { dateLocale, t } from './i18n.js';
 import { disablePush, enablePush, pushState, resubscribeLocale } from './push.js';
@@ -437,7 +438,8 @@ async function paintDevices() {
     rest = [note(offlineText(e))];
   }
   if (!S.open) return;
-  paint('devices', thisBrowserRow(ps), ...rest, row('', pair, t('set.pair_note')));
+  const phoneSettings = isInApp() && CONFIG.androidPackage ? row('', btn(t('set.phone_settings'), openPhoneSettings), null) : null;
+  paint('devices', thisBrowserRow(ps), ...rest, phoneSettings, row('', pair, t('set.pair_note')));
 }
 
 /** Vraagt een naam (en eventueel de soort) voor een nieuwe sleutel; null bij annuleren. */
