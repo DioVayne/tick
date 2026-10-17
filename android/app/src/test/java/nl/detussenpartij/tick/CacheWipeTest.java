@@ -8,9 +8,9 @@ import org.junit.Test;
 public class CacheWipeTest {
     @Test public void wisselNaarAnderePersoonWist() { assertTrue(CacheWipe.shouldWipe("u-a", "u-b", CacheWipe.Reason.REDEEM)); }
     @Test public void zelfdePersoonWistNiet() { assertFalse(CacheWipe.shouldWipe("u-a", "u-a", CacheWipe.Reason.REDEEM)); }
-    @Test public void sleutelVanVoorDeUpdateTeltAlsZelfde() {
-        assertFalse(CacheWipe.shouldWipe("", "u-b", CacheWipe.Reason.REDEEM));
-        assertFalse(CacheWipe.shouldWipe(null, "u-b", CacheWipe.Reason.REDEEM));
+    @Test public void sleutelVanVoorDeUpdateWistBijKoppelen() {
+        assertTrue(CacheWipe.shouldWipe("", "u-b", CacheWipe.Reason.REDEEM));
+        assertTrue(CacheWipe.shouldWipe(null, "u-b", CacheWipe.Reason.REDEEM));
         assertFalse(CacheWipe.shouldWipe("u-a", "", CacheWipe.Reason.REDEEM));
     }
     @Test public void na401AltijdWissen() {

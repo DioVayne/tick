@@ -154,6 +154,7 @@ public class MainActivity extends Activity {
                 // Een handmatige sleutel kan van iedereen zijn: gegevens van de vorige sleutel wissen.
                 Prefs.wipeAccountData(this);
                 Prefs.setUserId(this, "");
+                Geo.apply(this, new JSONArray(), true);
             }
             Prefs.setToken(this, entered);
             // Nieuwe of opnieuw gekoppelde sleutel: bij de volgende sync de apparaatstatus opnieuw melden.
