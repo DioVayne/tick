@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { call, callAs, createTask, createUser, json, openTasks, type Task } from './helpers';
+import { hashKey } from '../src/keys';
+import { call, callAs, createTask, createUser, json, openTasks, session, ADMIN_ID, type Task } from './helpers';
 
 describe('isolatie per gebruiker', () => {
   let b: Awaited<ReturnType<typeof createUser>>;
@@ -69,5 +70,51 @@ describe('isolatie per gebruiker', () => {
     expect((await callAs(b.cookie, `/api/places/${pa.id}`, { method: 'PATCH', json: { name: 'Weg' } })).status).toBe(404);
     expect((await callAs(b.cookie, `/api/places/${pa.id}`, { method: 'DELETE' })).status).toBe(404);
     expect((await json<{ id: string }[]>(await callAs(b.cookie, '/api/places'))).map((p) => p.id)).not.toContain(pa.id);
+  });
+  it("sleutels en telefoons zijn per persoon; B kan A's sleutel niet intrekken", async () => {
+    const cookieA = await session();
+    const ka = await json<{ id: string; key: string }>(await callAs(cookieA, '/api/keys', { method: 'POST', json: { name: 'Pixel A', kind: 'full' } }));
+    expect((await callAs(b.cookie, `/api/keys/${ka.id}`, { method: 'DELETE' })).status).toBe(404);
+    expect((await call('/api/tasks', { auth: `Bearer ${ka.key}` })).status).toBe(200);
+    const keysB = await json<{ keys: { id: string }[]; env: unknown[] }>(await callAs(b.cookie, '/api/keys'));
+    expect(keysB.keys.map((k) => k.id)).not.toContain(ka.id);
+    expect(keysB.env).toEqual([]);
+    const dev = await json<{ phones: { key_id: string }[] }>(await callAs(b.cookie, '/api/devices'));
+    expect(dev.phones.map((p) => p.key_id)).not.toContain(ka.id);
+    expect(dev.phones.map((p) => p.key_id)).not.toContain('env-api');
+    for (const id of ['env-api', 'env-inbox']) {
+      expect((await callAs(b.cookie, `/api/keys/${id}`, { method: 'PATCH', json: { off: true } })).status).toBe(403);
+    }
+    const devA = await json<{ phones: { key_id: string }[] }>(await callAs(cookieA, '/api/devices'));
+    expect(devA.phones.map((p) => p.key_id)).toContain(ka.id);
+    expect(devA.phones.map((p) => p.key_id)).toContain('env-api');
+  });
+
+  it('de inbox-sleutel van B zet de taak bij B', async () => {
+    const k = await json<{ key: string }>(await callAs(b.cookie, '/api/keys', { method: 'POST', json: { name: 'n8n', kind: 'inbox' } }));
+    const t = await json<Task>(await call('/api/inbox', { method: 'POST', auth: `Bearer ${k.key}`, json: { title: 'via inbox' } }));
+    expect(await env.DB.prepare('SELECT user_id FROM tasks WHERE id = ?').bind(t.id).first()).toEqual({ user_id: b.id });
+    expect(await env.DB.prepare('SELECT user_id FROM api_keys WHERE hash = ?').bind(await hashKey(k.key)).first()).toEqual({ user_id: b.id });
+  });
+
+  it("een browser die zich aanmeldt terwijl B is ingelogd, gaat over naar B; B kan A's abonnement niet wissen", async () => {
+    const cookieA = await session();
+    const sub = (endpoint: string) => ({ endpoint, keys: { p256dh: 'p', auth: 'a' } });
+    const owner = async (endpoint: string) => (await env.DB.prepare('SELECT user_id FROM push_subscriptions WHERE endpoint = ?').bind(endpoint).first<{ user_id: string }>())?.user_id;
+    const E = 'https://push.test/E-' + crypto.randomUUID();
+    const F = 'https://push.test/F-' + crypto.randomUUID();
+    expect((await callAs(cookieA, '/api/push/subscribe', { method: 'POST', json: sub(E) })).status).toBe(200);
+    expect(await owner(E)).toBe(ADMIN_ID);
+    expect((await callAs(b.cookie, '/api/push/subscribe', { method: 'POST', json: sub(E) })).status).toBe(200);
+    expect(await owner(E)).toBe(b.id);
+    const browsersA = await json<{ browsers: { endpoint: string }[] }>(await callAs(cookieA, '/api/devices'));
+    expect(browsersA.browsers.map((x) => x.endpoint)).not.toContain(E);
+    const browsersB = await json<{ browsers: { endpoint: string }[] }>(await callAs(b.cookie, '/api/devices'));
+    expect(browsersB.browsers.map((x) => x.endpoint)).toContain(E);
+    await callAs(cookieA, '/api/push/subscribe', { method: 'POST', json: sub(F) });
+    expect((await callAs(b.cookie, '/api/push/subscribe', { method: 'DELETE', json: { endpoint: F } })).status).toBe(200);
+    expect(await owner(F)).toBe(ADMIN_ID);
+    await callAs(cookieA, '/api/push/subscribe', { method: 'DELETE', json: { endpoint: F } });
+    expect(await owner(F)).toBeUndefined();
   });
 });

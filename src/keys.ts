@@ -19,11 +19,11 @@ export async function hashKey(key: string): Promise<string> {
 }
 
 /** Maakt een sleutel aan en geeft hem eenmalig terug; alleen de hash komt in de database. */
-export async function createKey(db: D1Database, name: string, kind: 'full' | 'inbox') {
+export async function createKey(db: D1Database, userId: string, name: string, kind: 'full' | 'inbox') {
   const key = newKey();
   const row = { id: crypto.randomUUID(), name, kind, hint: key.slice(-4), created_at: new Date().toISOString() };
-  await db.prepare('INSERT INTO api_keys (id, name, kind, hash, hint, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(row.id, row.name, row.kind, await hashKey(key), row.hint, row.created_at).run();
+  await db.prepare('INSERT INTO api_keys (id, name, kind, hash, hint, created_at, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(row.id, row.name, row.kind, await hashKey(key), row.hint, row.created_at, userId).run();
   return { ...row, key };
 }
 
@@ -39,12 +39,12 @@ type EnvId = keyof typeof ENV_KEYS;
 const isEnvId = (id: string): id is EnvId => Object.hasOwn(ENV_KEYS, id);
 
 keysApi.get('/', async (c) => {
-  const { results } = await c.env.DB.prepare('SELECT id, name, kind, hint, created_at, last_used_at FROM api_keys ORDER BY created_at, id').all();
+  const { results } = await c.env.DB.prepare('SELECT id, name, kind, hint, created_at, last_used_at FROM api_keys WHERE user_id = ? ORDER BY created_at, id').bind(c.get('auth').userId).all();
   const prefs = c.get('install');
   const off = { 'env-api': prefs.envApiTokenOff, 'env-inbox': prefs.envInboxTokenOff };
   const used = { 'env-api': prefs.envApiTokenUsed, 'env-inbox': prefs.envInboxTokenUsed };
   const envRows = (Object.keys(ENV_KEYS) as EnvId[])
-    .filter((id) => !!c.env[ENV_KEYS[id].secret])
+    .filter((id) => c.get('user').role === 'admin' && !!c.env[ENV_KEYS[id].secret])
     .map((id) => ({ id, kind: ENV_KEYS[id].kind, off: off[id], last_used_at: used[id] }));
   return c.json({ keys: results, env: envRows });
 });
@@ -55,12 +55,13 @@ keysApi.post('/', async (c) => {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   if (!name || name.length > MAX_NAME) throw new HttpError(400, 'err.invalid_key_name');
   if (body.kind !== 'full' && body.kind !== 'inbox') throw new HttpError(400, 'err.invalid_key_kind');
-  return c.json(await createKey(c.env.DB, name, body.kind), 201);
+  return c.json(await createKey(c.env.DB, c.get('auth').userId, name, body.kind), 201);
 });
 
 keysApi.patch('/:id', async (c) => {
   const id = c.req.param('id');
   if (!isEnvId(id)) throw new HttpError(404, 'err.not_found');
+  if (c.get('user').role !== 'admin') throw new HttpError(403, 'err.admin_only');
   const body = await c.req.json<Record<string, unknown>>().catch(() => null);
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new HttpError(400, 'err.invalid_json');
   if (typeof body.off !== 'boolean') throw new HttpError(400, 'err.invalid_off');
@@ -70,10 +71,12 @@ keysApi.patch('/:id', async (c) => {
 
 keysApi.delete('/:id', async (c) => {
   const id = c.req.param('id');
-  const [res] = await c.env.DB.batch([
-    c.env.DB.prepare('DELETE FROM api_keys WHERE id = ?').bind(id),
+  // Alleen een eigen sleutel; het devices-rijtje gaat mee, maar alleen als de sleutel echt van deze gebruiker is.
+  const own = await c.env.DB.prepare('SELECT id FROM api_keys WHERE id = ? AND user_id = ?').bind(id, c.get('auth').userId).first();
+  if (!own) throw new HttpError(404, 'err.not_found');
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM api_keys WHERE id = ? AND user_id = ?').bind(id, c.get('auth').userId),
     c.env.DB.prepare('DELETE FROM devices WHERE key_id = ?').bind(id),
   ]);
-  if (!res.meta.changes) throw new HttpError(404, 'err.not_found');
   return c.json({ ok: true });
 });
