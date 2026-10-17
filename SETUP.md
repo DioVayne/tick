@@ -130,6 +130,8 @@ The app opens your Tick full-screen (a Trusted Web Activity) and adds a widget w
 7. For location reminders turn on location notifications in the app and choose **Allow all the time** in the permission screen.
 
 Good to know:
+- Coming from app 1.2 or older (signed with a debug key)? Uninstall it first — Android refuses to update an app signed with a different key. Set up the widget and location again afterwards; linking happens by itself after you log in.
+- To test a debug build, add the debug key's SHA-256 to `ANDROID_CERT_SHA256` after a comma.
 - You can share the APK with others who use the same Tick: it is signed with the same key, so it matches `ANDROID_CERT_SHA256`.
 - Installed Tick in Firefox as a web app before? Remove that installation, or turn off its notifications, or you get every notification twice.
 - The app needs Chrome (or another browser that supports Trusted Web Activities). Without one it opens with an address bar.

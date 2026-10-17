@@ -46,7 +46,8 @@
     "TIMEZONE": "UTC"
     // Own Android build (optional): its applicationId, so the web app can wake it after a location change.
     // "ANDROID_PACKAGE": "com.example.tick"
-    // "ANDROID_CERT_SHA256": "AA:BB:…"  // SHA-256 van je ondertekeningssleutel (komma's tussen meerdere); nodig om de app zonder adresbalk te openen
+    // SHA-256 fingerprint(s) of your signing key, comma-separated; needed to open the app without an address bar
+    // "ANDROID_CERT_SHA256": "AA:BB:…"
   },
   "observability": { "enabled": true }
 }

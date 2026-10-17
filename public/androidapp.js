@@ -1,7 +1,7 @@
 // Tick draait in de Android-app (een Trusted Web Activity die /?app=android opent). Hier: koppelen met de app via een
 // eenmalige code in een intent-link, web push aanzetten en dubbele meldingen signaleren.
 import { request } from './api.js';
-import { pairIntent, settingsIntent } from './applink.js';
+import { pairIntent, pushAction, settingsIntent } from './applink.js';
 import { t } from './i18n.js';
 import { enablePush, pushState } from './push.js';
 import { el, toast } from './render.js';
@@ -12,6 +12,7 @@ const DUP_KEY = 'tick.dupHint';
 const POLL_MS = 1000;
 const BAR_AFTER_MS = 3000;
 const CODE_TTL_MS = 2 * 60 * 1000;
+const PUSH_WAIT_MS = 60 * 1000;
 
 /** Draait deze pagina in de Android-app? Onthouden per sessie, ook als de adresbalk al is opgeschoond. */
 export function isInApp() {
@@ -29,7 +30,8 @@ export function openPhoneSettings() {
  * @param {{ openDevices?: () => void }} [hooks] openDevices: opent Instellingen › Apparaten
  */
 export function initAndroidApp(params, { openDevices } = {}) {
-  if (params.get('app') === 'android') {
+  // Een TWA-start (ook vanuit een melding, zonder ?app=android) heeft android-app:// als referrer.
+  if (params.get('app') === 'android' || document.referrer.startsWith('android-app://')) {
     try { sessionStorage.setItem(APP_KEY, 'android'); } catch { /* geen opslag */ }
   }
   const pair = params.get('pair') === '1';
@@ -73,11 +75,33 @@ async function pairApp(pkg, openDevices) {
   }
 }
 
-/** Zet web push aan in deze (app-)browser; fouten slikken we in, de schakelaar in Instellingen blijft over. */
+/**
+ * Zet web push aan in deze (app-)browser. De app vraagt zelf om de meldingstoestemming; wij vragen niet, maar wachten
+ * (max. 60 s) tot hij gegeven is. Fouten slikken we in, de schakelaar in Instellingen blijft over.
+ */
 async function enableAppPush() {
   try {
     const reg = await Promise.race([navigator.serviceWorker?.ready, sleep(5000).then(() => null)]) ?? null;
-    if (reg && !(await pushState(reg)).subscribed) await enablePush(reg);
+    if (!reg) return;
+    const subscribed = (await pushState(reg)).subscribed;
+    let action = pushAction(Notification.permission, subscribed);
+    if (action === 'wait') {
+      const until = Date.now() + PUSH_WAIT_MS;
+      let wake = () => {};
+      const onWake = () => { if (document.visibilityState !== 'hidden') wake(); };
+      document.addEventListener('visibilitychange', onWake);
+      window.addEventListener('focus', onWake);
+      try {
+        while (action === 'wait' && Date.now() < until) {
+          await Promise.race([sleep(POLL_MS), new Promise((r) => { wake = r; })]);
+          action = pushAction(Notification.permission, subscribed);
+        }
+      } finally {
+        document.removeEventListener('visibilitychange', onWake);
+        window.removeEventListener('focus', onWake);
+      }
+    }
+    if (action === 'subscribe') await enablePush(reg);
   } catch { /* zie boven */ }
 }
 
