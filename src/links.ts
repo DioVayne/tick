@@ -1,3 +1,11 @@
+import { Hono, type Context } from 'hono';
+import type { AppEnv } from './index';
+import { HttpError } from './errors';
+import { cleanEmail, cleanName, MIN_PASSWORD } from './account';
+import { sessionCookie } from './auth';
+import { linkPage } from './login';
+import { hashPassword } from './password';
+import { getUser } from './users';
 import { hashKey, newKey } from './keys';
 
 export const INVITE_TTL_MS = 7 * 86_400_000;
@@ -29,3 +37,62 @@ export async function consumeLink(db: D1Database, kind: LinkKind, code: string):
   return db.prepare('UPDATE account_links SET used_at = ? WHERE hash = ? AND kind = ? AND used_at IS NULL AND expires_at > ? RETURNING user_id')
     .bind(now, await hashKey(code), kind, now).first<{ user_id: string | null }>();
 }
+
+/** De publieke pagina's /invite/:code en /reset/:code (vóór de auth-middleware gemonteerd). */
+export const linkPages = new Hono<AppEnv>();
+
+async function limited(c: Context<AppEnv>) {
+  const { success } = await c.env.LOGIN_LIMITER.limit({ key: 'link:' + (c.req.header('cf-connecting-ip') ?? 'onbekend') });
+  if (!success) throw new HttpError(429, 'err.too_many_attempts');
+}
+
+for (const kind of ['invite', 'reset'] as const) {
+  linkPages.get(`/${kind}/:code`, async (c) => {
+    await limited(c);
+    return c.html(linkPage(c.get('lang'), kind, await linkValid(c.env.DB, kind, c.req.param('code'))));
+  });
+}
+
+function checkPassword(v: unknown): string {
+  if (typeof v !== 'string' || v.length < MIN_PASSWORD) throw new HttpError(400, 'err.password_short', { min: MIN_PASSWORD });
+  return v;
+}
+
+linkPages.post('/invite/:code', async (c) => {
+  await limited(c);
+  const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new HttpError(400, 'err.invalid_json');
+  const name = cleanName(body.name);
+  const email = cleanEmail(body.email);
+  const password = checkPassword(body.password);
+  const db = c.env.DB;
+  // Controleren vóór het verbruiken: een mislukte poging maakt de link niet op.
+  if (await db.prepare('SELECT 1 FROM users WHERE email = ?').bind(email).first()) throw new HttpError(409, 'err.email_taken');
+  if (!(await consumeLink(db, 'invite', c.req.param('code')))) throw new HttpError(400, 'err.link_invalid');
+  const id = crypto.randomUUID();
+  try {
+    await db.prepare("INSERT INTO users (id, name, email, password_hash, role, session_version, created_at) VALUES (?, ?, ?, ?, 'member', 1, ?)")
+      .bind(id, name, email, await hashPassword(password), new Date().toISOString()).run();
+  } catch (e) {
+    // Zelfde adres net tussendoor vergeven: de link is dan wel verbruikt.
+    if (/UNIQUE constraint failed/.test((e as Error).message)) throw new HttpError(409, 'err.email_taken');
+    throw e;
+  }
+  c.header('Set-Cookie', await sessionCookie(c.env, (await getUser(db, id))!));
+  return c.json({ ok: true }, 201);
+});
+
+linkPages.post('/reset/:code', async (c) => {
+  await limited(c);
+  const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+  const password = checkPassword(body?.password);
+  const db = c.env.DB;
+  const link = await consumeLink(db, 'reset', c.req.param('code'));
+  if (!link?.user_id) throw new HttpError(400, 'err.link_invalid');
+  await db.prepare('UPDATE users SET password_hash = ?, session_version = session_version + 1 WHERE id = ?')
+    .bind(await hashPassword(password), link.user_id).run();
+  const user = await getUser(db, link.user_id);
+  if (!user) throw new HttpError(400, 'err.link_invalid'); // account intussen verwijderd
+  c.header('Set-Cookie', await sessionCookie(c.env, user));
+  return c.json({ ok: true });
+});

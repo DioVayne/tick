@@ -16,6 +16,7 @@ import { runReminders, sendToAll } from './push';
 import { settingsApi } from './settings-api';
 import { accountApi } from './account';
 import { usersApi } from './users-api';
+import { linkPages } from './links';
 import { deviceApi, devicesApi } from './devices';
 import { exportApi, importApi } from './data';
 
@@ -93,6 +94,7 @@ async function asset(c: Context<AppEnv>) {
 
 app.get('/.well-known/assetlinks.json', (c) => c.json(assetLinks(c.env.ANDROID_PACKAGE, c.env.ANDROID_CERT_SHA256)));
 app.get('/login', (c) => c.html(loginPage(c.get('lang'))));
+app.route('/', linkPages);
 for (const path of loginAssets) app.get(path, asset);
 
 app.post('/login', async (c) => {
