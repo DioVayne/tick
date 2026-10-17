@@ -5,6 +5,29 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 **Set it up:** [SETUP.md](SETUP.md), or open this folder in [Claude Code](https://claude.com/claude-code) and say *"set up Tick"*.
 **How it works:** [ARCHITECTURE.md](ARCHITECTURE.md).
 
+## Screenshots
+
+![Tick on the desktop in dark mode: lists in the sidebar, the task list in the middle and an open task on the right](docs/screenshots/desktop-dark.png)
+
+**On the desktop** you get three columns: your lists on the left, the tasks in the middle and the open task on the right. A task can have a reminder (🔔), a repeat rule (🔁), a list and subtasks. The notes are markdown, so a checklist in a note can be ticked off right there.
+
+![Tick in light mode with a task that has a location reminder](docs/screenshots/desktop-light.png)
+
+**Light or dark** follows your device, or you pick one in the settings. Here a shopping task has a location reminder: with the Android app you get a notification when you arrive at the supermarket.
+
+<p>
+  <img src="docs/screenshots/mobile-list.png" width="260" alt="The task list on a phone">
+  <img src="docs/screenshots/mobile-task.png" width="260" alt="An open task on a phone">
+</p>
+
+**On your phone** Tick is an installable web app that also works offline. The list fills the screen; tap a task to open it full screen, and drag the handle (⋮⋮) to sort. Changes you make offline sync once you are back online.
+
+![The settings page](docs/screenshots/settings.png)
+
+**Settings** live in the app itself: theme, text size and spacing (with a live preview), language and time zone, notifications, your password, keys for your phone and automations, and backup, restore and TickTick import.
+
+*The screenshots use made-up demo tasks.*
+
 ## Features
 - Tasks with lists, one level of subtasks, drag to sort, and search.
 - Reminders with web push; a reminder can repeat (daily, weekly, monthly, yearly, with custom rules).
