@@ -97,7 +97,6 @@
             android:exported="true"
             android:excludeFromRecents="true"
             android:taskAffinity=""
-            android:noHistory="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
             android:theme="@style/TranslucentTheme">
             <intent-filter>
