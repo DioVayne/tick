@@ -29,7 +29,7 @@ deviceApi.post('/', async (c) => {
   return c.json({ ok: true });
 });
 
-/** Overzicht voor de instellingen: browsers met een push-abonnement en telefoons (alle volledige sleutels) met hun laatst gemelde status. */
+/** Overzicht voor de instellingen: browsers met een push-abonnement en telefoons (de eigen volledige sleutels) met hun laatst gemelde status. */
 export const devicesApi = new Hono<AppEnv>();
 devicesApi.use('*', sessionOnly);
 
@@ -38,14 +38,15 @@ type Status = { name: string; notifications: number; location: string; app_versi
 devicesApi.get('/', async (c) => {
   const db = c.env.DB;
   const prefs = c.get('install');
+  const userId = c.get('auth').userId;
   const [browsers, keys, devices] = await Promise.all([
-    db.prepare('SELECT endpoint, user_agent, created_at, locale FROM push_subscriptions ORDER BY created_at, endpoint').all(),
-    db.prepare("SELECT id, name, last_used_at FROM api_keys WHERE kind = 'full' ORDER BY created_at, id").all<{ id: string; name: string; last_used_at: string | null }>(),
+    db.prepare('SELECT endpoint, user_agent, created_at, locale FROM push_subscriptions WHERE user_id = ? ORDER BY created_at, endpoint').bind(userId).all(),
+    db.prepare("SELECT id, name, last_used_at FROM api_keys WHERE kind = 'full' AND user_id = ? ORDER BY created_at, id").bind(userId).all<{ id: string; name: string; last_used_at: string | null }>(),
     db.prepare('SELECT key_id, name, notifications, location, app_version, seen_at FROM devices').all<Status & { key_id: string }>(),
   ]);
   const status = new Map(devices.results.map((d) => [d.key_id, d]));
   const phones = keys.results.map((k) => ({ key_id: k.id, name: k.name as string | null, last_used_at: k.last_used_at }));
-  if (c.env.API_TOKEN && !prefs.envApiTokenOff) phones.push({ key_id: 'env-api', name: null, last_used_at: prefs.envApiTokenUsed });
+  if (c.get('user').role === 'admin' && c.env.API_TOKEN && !prefs.envApiTokenOff) phones.push({ key_id: 'env-api', name: null, last_used_at: prefs.envApiTokenUsed });
   return c.json({
     browsers: browsers.results,
     phones: phones.map((p) => {

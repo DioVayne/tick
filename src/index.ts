@@ -663,16 +663,16 @@ app.post('/api/push/subscribe', async (c) => {
   const s = await body<{ endpoint: string; keys: { p256dh: string; auth: string }; locale?: string }>(c);
   if (!s?.endpoint || !s.keys?.p256dh || !s.keys?.auth) throw new HttpError(400, 'err.invalid_subscription');
   await c.env.DB.prepare(
-    'INSERT INTO push_subscriptions (endpoint,p256dh,auth,user_agent,created_at,locale) VALUES (?,?,?,?,?,?) ' +
+    'INSERT INTO push_subscriptions (endpoint,p256dh,auth,user_agent,created_at,locale,user_id) VALUES (?,?,?,?,?,?,?) ' +
     'ON CONFLICT(endpoint) DO UPDATE SET p256dh=excluded.p256dh, auth=excluded.auth, user_agent=excluded.user_agent, ' +
-    'locale=COALESCE(excluded.locale, locale)',
-  ).bind(s.endpoint, s.keys.p256dh, s.keys.auth, c.req.header('user-agent') ?? '', now(), s.locale === 'en' || s.locale === 'nl' ? s.locale : null).run();
+    'locale=COALESCE(excluded.locale, locale), user_id = excluded.user_id',
+  ).bind(s.endpoint, s.keys.p256dh, s.keys.auth, c.req.header('user-agent') ?? '', now(), s.locale === 'en' || s.locale === 'nl' ? s.locale : null, c.get('auth').userId).run();
   return c.json({ ok: true });
 });
 
 app.delete('/api/push/subscribe', async (c) => {
   const { endpoint } = await body<{ endpoint: string }>(c);
-  await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(endpoint).run();
+  await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint = ? AND user_id = ?').bind(endpoint, c.get('auth').userId).run();
   return c.json({ ok: true });
 });
 
