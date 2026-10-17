@@ -8,5 +8,12 @@
         <item name="android:windowAnimationStyle">@null</item>
         <item name="android:backgroundDimEnabled">false</item>
     </style>
+    <!-- PairActivity: onzichtbaar terwijl de app koppelt; de TWA blijft eronder zichtbaar -->
+    <style name="TranslucentTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
     <style name="DialogTheme" parent="@android:style/Theme.DeviceDefault.Dialog.Alert" />
 </resources>
