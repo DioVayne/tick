@@ -158,8 +158,10 @@ public class TaskWidgetProvider extends AppWidgetProvider {
                 new Intent(c, WidgetClickActivity.class),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE));
 
+        // De titel opent Tick in de app (TWA), niet in de standaardbrowser.
         rv.setOnClickPendingIntent(R.id.header_title, PendingIntent.getActivity(c, 1,
-                new Intent(Intent.ACTION_VIEW, Uri.parse(Api.BASE)), PendingIntent.FLAG_IMMUTABLE));
+                new Intent(c, TickLauncherActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                PendingIntent.FLAG_IMMUTABLE));
         rv.setOnClickPendingIntent(R.id.btn_add, PendingIntent.getActivity(c, 2,
                 new Intent(c, QuickAddActivity.class), PendingIntent.FLAG_IMMUTABLE));
         rv.setOnClickPendingIntent(R.id.btn_refresh, manualRefreshIntent(c));
