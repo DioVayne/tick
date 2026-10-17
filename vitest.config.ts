@@ -26,6 +26,7 @@ export default defineConfig({
           TIMEZONE: 'Europe/Amsterdam',
           LOCALE: 'en',
           ANDROID_PACKAGE: '',
+          ANDROID_CERT_SHA256: '',
           // Vaste testsleutel (alleen de vorm telt): het voorbeeld heeft een lege VAPID_PUBLIC_KEY.
           VAPID_PUBLIC_KEY: 'BODSvJ4nOeqW2EzlIrbRLEzxO227EYmlsX3hYfV5EC7-1QzMyXWS8RaBNnBArOM6FurdGPVpUOEu3IngsAsMSFY',
           ADMIN_CONTACT: 'mailto:test@example.com',

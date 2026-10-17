@@ -35,7 +35,7 @@ Changing the time zone in the app keeps the wall-clock time: open tasks get the 
 
 **Per device** (in the browser, so not shared): theme (`tick.theme`: automatic, light, dark), text size (`tick.font`: `s`, `m`, `l`, `xl`), spacing between tasks (`tick.density`: compact, normal, roomy) and language (`tick.lang`, also in the cookie `tick_lang`). `public/theme.js` sits in `<head>` (also on the login page) and puts the first three on `<html>` as data attributes before the first paint, so nothing flashes. Notifications also belong to a browser (a push subscription).
 
-**Only in the config** (install-level, not in the app): `ADMIN_CONTACT` (`mailto:` contact for push services and Nominatim), `VAPID_PUBLIC_KEY` (var), `VAPID_PRIVATE_KEY` and `SESSION_SECRET` (secrets), `ANDROID_PACKAGE` (var, optional: applicationId of your own Android build, so the PWA can wake it after a location change), `DEV_AUTH_BYPASS`.
+**Only in the config** (install-level, not in the app): `ADMIN_CONTACT` (`mailto:` contact for push services and Nominatim), `VAPID_PUBLIC_KEY` (var), `VAPID_PRIVATE_KEY` and `SESSION_SECRET` (secrets), `ANDROID_PACKAGE` (var, optional: applicationId of your own Android build, so the PWA can wake it after a location change), `ANDROID_CERT_SHA256` (var, optional: SHA-256 fingerprint(s) of your signing key, comma-separated; with `ANDROID_PACKAGE` it makes `/.well-known/assetlinks.json` link the app to this domain), `DEV_AUTH_BYPASS`.
 
 **Still read from the config, now optional:** `LOGIN_PASSWORD` (until you set a password in the app, and for the emergency route), `API_TOKEN` and `INBOX_TOKEN` (old keys that keep working until you switch them off in the app).
 
@@ -58,6 +58,7 @@ Always stored in UTC. A time without a zone counts as the time zone setting, a b
 ## API
 | Route | Purpose |
 |---|---|
+| `GET /.well-known/assetlinks.json` | Digital Asset Links, without login: the `handle_all_urls` statement for `ANDROID_PACKAGE` and the fingerprints in `ANDROID_CERT_SHA256`; `[]` when either is missing or no fingerprint is valid |
 | `GET /api/tasks` | Open tasks in order. `?done=1&limit=&offset=` for completed tasks. `?q=` searches title and description (max. 200 characters) |
 | `POST /api/tasks` | Create a task, optionally with `repeat`. Optional `id` (UUID from the client); an existing id returns the existing task (200), so resending is safe |
 | `PATCH /api/tasks/:id` | Change fields, including `position` (drag) and `done`. `repeat` (RRULE or `null`); `occurrence` (ISO) next to `done`: the server only moves on or restores when it equals `repeat_at` |
