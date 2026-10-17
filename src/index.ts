@@ -44,7 +44,7 @@ export type Env = {
 };
 
 export type TaskRow = {
-  id: string; title: string; description: string; list: string; parent_id: string | null;
+  id: string; user_id: string; title: string; description: string; list: string; parent_id: string | null;
   position: number; remind_at: string | null; notified: number; done: number; done_at: string | null;
   source: string; created_at: string; updated_at: string;
   loc_name: string | null; loc_lat: number | null; loc_lng: number | null; loc_radius: number | null;
@@ -230,14 +230,15 @@ function intParam(v: string | undefined, fallback: number, min: number, max: num
   return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : fallback;
 }
 
-const getTask = (db: D1Database, id: string) => db.prepare('SELECT * FROM tasks WHERE id = ?').bind(id).first<TaskRow>();
+const getTask = (db: D1Database, userId: string, id: string) =>
+  db.prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ?').bind(id, userId).first<TaskRow>();
 
-/** Controleert een parent_id: bestaat, is niet de taak zelf en is zelf geen subtaak (één niveau). */
-async function checkParent(db: D1Database, v: unknown, self?: TaskRow): Promise<TaskRow | null> {
+/** Controleert een parent_id: bestaat bij deze gebruiker (een parent van een ander telt als niet bestaand), is niet de taak zelf en is zelf geen subtaak (één niveau). */
+async function checkParent(db: D1Database, userId: string, v: unknown, self?: TaskRow): Promise<TaskRow | null> {
   if (v === null || v === undefined || v === '') return null;
   const id = String(v);
   if (self && id === self.id) throw new HttpError(400, 'err.own_parent');
-  const parent = await getTask(db, id);
+  const parent = await getTask(db, userId, id);
   if (!parent) throw new HttpError(400, 'err.parent_missing');
   if (parent.parent_id) throw new HttpError(400, 'err.subtask_no_children');
   if (self) {
@@ -248,21 +249,21 @@ async function checkParent(db: D1Database, v: unknown, self?: TaskRow): Promise<
 }
 
 /** Nieuwe taak bovenaan; nieuwe subtaak onderaan bij haar broers en zussen. */
-async function newPosition(db: D1Database, parentId: string | null): Promise<number> {
+async function newPosition(db: D1Database, userId: string, parentId: string | null): Promise<number> {
   if (parentId) {
-    const r = await db.prepare('SELECT MAX(position) AS p FROM tasks WHERE parent_id = ? AND done = 0')
-      .bind(parentId).first<{ p: number | null }>();
+    const r = await db.prepare('SELECT MAX(position) AS p FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 0')
+      .bind(parentId, userId).first<{ p: number | null }>();
     return r?.p == null ? 0 : r.p + STEP;
   }
-  const r = await db.prepare('SELECT MIN(position) AS p FROM tasks WHERE done = 0').first<{ p: number | null }>();
+  const r = await db.prepare('SELECT MIN(position) AS p FROM tasks WHERE user_id = ? AND done = 0').bind(userId).first<{ p: number | null }>();
   return (r?.p ?? 0) - STEP;
 }
 
 /** Verdeelt de open taken naast `t` opnieuw zodra twee buren dichter dan MIN_GAP bij elkaar liggen. */
 async function rebalanceIfNeeded(db: D1Database, t: TaskRow): Promise<void> {
   const rows = (t.parent_id
-    ? await db.prepare('SELECT id, position FROM tasks WHERE parent_id = ? AND done = 0 ORDER BY position').bind(t.parent_id).all<{ id: string; position: number }>()
-    : await db.prepare('SELECT id, position FROM tasks WHERE parent_id IS NULL AND done = 0 ORDER BY position').all<{ id: string; position: number }>()
+    ? await db.prepare('SELECT id, position FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 0 ORDER BY position').bind(t.parent_id, t.user_id).all<{ id: string; position: number }>()
+    : await db.prepare('SELECT id, position FROM tasks WHERE parent_id IS NULL AND user_id = ? AND done = 0 ORDER BY position').bind(t.user_id).all<{ id: string; position: number }>()
   ).results;
   if (!rows.some((r, i) => i > 0 && r.position - rows[i - 1].position < MIN_GAP)) return;
   const stmt = db.prepare('UPDATE tasks SET position = ? WHERE id = ?');
@@ -422,16 +423,17 @@ function searchFilter(q: string | undefined): { sql: string; binds: string[] } {
 }
 
 app.get('/api/tasks', async (c) => {
+  const userId = c.get('auth').userId;
   const done = c.req.query('done');
   const search = searchFilter(c.req.query('q'));
   if (done) {
     const limit = intParam(c.req.query('limit'), 100, 1, 500);
     const offset = intParam(c.req.query('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
-    const rows = await c.env.DB.prepare(`SELECT * FROM tasks WHERE done = 1${search.sql} ORDER BY done_at DESC LIMIT ? OFFSET ?`)
-      .bind(...search.binds, limit, offset).all<TaskRow>();
+    const rows = await c.env.DB.prepare(`SELECT * FROM tasks WHERE user_id = ? AND done = 1${search.sql} ORDER BY done_at DESC LIMIT ? OFFSET ?`)
+      .bind(userId, ...search.binds, limit, offset).all<TaskRow>();
     return c.json(rows.results.map(asBool));
   }
-  const rows = await c.env.DB.prepare(`SELECT * FROM tasks WHERE done = 0${search.sql} ORDER BY position`).bind(...search.binds).all<TaskRow>();
+  const rows = await c.env.DB.prepare(`SELECT * FROM tasks WHERE user_id = ? AND done = 0${search.sql} ORDER BY position`).bind(userId, ...search.binds).all<TaskRow>();
   return c.json(rows.results.map(asBool));
 });
 
@@ -448,15 +450,18 @@ function clientId(v: unknown): string | null {
 app.post('/api/tasks', async (c) => {
   const b = await body(c);
   const id = clientId(b.id);
-  const existing = id && await getTask(c.env.DB, id);
+  const userId = c.get('auth').userId;
+  const existing = id && await getTask(c.env.DB, userId, id);
   if (existing) return c.json(asBool(existing), 200);
-  return c.json(await createTask(c.env, b, 'app', id ?? undefined), 201);
+  // Een id dat bij een ander account hoort mag niets overschrijven en lekt niets.
+  if (id && await c.env.DB.prepare('SELECT 1 FROM tasks WHERE id = ?').bind(id).first()) throw new HttpError(409, 'err.id_taken');
+  return c.json(await createTask(c.env, userId, b, 'app', id ?? undefined), 201);
 });
 
-async function createTask(env: Env, b: Record<string, unknown>, source: string, id: string = crypto.randomUUID()) {
+async function createTask(env: Env, userId: string, b: Record<string, unknown>, source: string, id: string = crypto.randomUUID()) {
   const title = cleanTitle(b.title);
   const description = cleanDescription(b.description);
-  const parent = await checkParent(env.DB, b.parent_id);
+  const parent = await checkParent(env.DB, userId, b.parent_id);
   const loc = locColumns('location' in b ? cleanLocation(b.location) : null);
   // Een ritme bepaalt de eerste reminder: die wordt `at`, ook als de body een andere remind_at had.
   const rule = typeof b.repeat === 'string' && !b.repeat.trim() ? null : b.repeat ?? null; // leeg = geen ritme
@@ -465,23 +470,27 @@ async function createTask(env: Env, b: Record<string, unknown>, source: string, 
   const rep = repeatColumns(rule as string | null, remindIso);
   const remindAt = (rep.repeat_at as string | null) ?? remindIso;
   const ts = now();
-  const position = typeof b.position === 'number' && Number.isFinite(b.position) ? b.position : await newPosition(env.DB, parent?.id ?? null);
+  const position = typeof b.position === 'number' && Number.isFinite(b.position) ? b.position : await newPosition(env.DB, userId, parent?.id ?? null);
   // Een subtaak hoort altijd in de lijst van haar parent.
   const list = parent ? parent.list : cleanList(b.list);
   await env.DB.prepare(
     // ON CONFLICT: twee gelijktijdige pogingen met hetzelfde client-id geven geen fout.
-    'INSERT INTO tasks (id,title,description,list,parent_id,position,remind_at,source,created_at,updated_at,loc_name,loc_lat,loc_lng,loc_radius,loc_trigger,repeat_rule,repeat_start,repeat_at,repeat_prev) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING',
-  ).bind(id, title, description, list, parent?.id ?? null, position, remindAt, source, ts, ts,
+    'INSERT INTO tasks (id,user_id,title,description,list,parent_id,position,remind_at,source,created_at,updated_at,loc_name,loc_lat,loc_lng,loc_radius,loc_trigger,repeat_rule,repeat_start,repeat_at,repeat_prev) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING',
+  ).bind(id, userId, title, description, list, parent?.id ?? null, position, remindAt, source, ts, ts,
     loc.loc_name, loc.loc_lat, loc.loc_lng, loc.loc_radius, loc.loc_trigger,
     rep.repeat_rule, rep.repeat_start, rep.repeat_at, rep.repeat_prev).run();
-  return asBool((await getTask(env.DB, id))!);
+  // Alleen null als een ander account dit id net gelijktijdig kreeg (ON CONFLICT DO NOTHING).
+  const created = await getTask(env.DB, userId, id);
+  if (!created) throw new HttpError(409, 'err.id_taken');
+  return asBool(created);
 }
 
 app.patch('/api/tasks/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
+  const userId = c.get('auth').userId;
   const b = await body(c);
-  const t = await getTask(db, id);
+  const t = await getTask(db, userId, id);
   if (!t) throw new HttpError(404, 'err.not_found');
   const sets: string[] = [];
   const vals: unknown[] = [];
@@ -491,7 +500,7 @@ app.patch('/api/tasks/:id', async (c) => {
   let list = 'list' in b ? cleanList(b.list) : null;
   let parentId = t.parent_id;
   if ('parent_id' in b) {
-    const parent = await checkParent(db, b.parent_id, t);
+    const parent = await checkParent(db, userId, b.parent_id, t);
     set('parent_id', parent?.id ?? null);
     parentId = parent?.id ?? null;
     if (parent) list = parent.list;
@@ -531,15 +540,15 @@ app.patch('/api/tasks/:id', async (c) => {
   if (!sets.length && !('done' in b)) throw new HttpError(400, 'err.nothing_to_change');
   if (sets.length) {
     set('updated_at', now());
-    await db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, id).run();
+    await db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = ? AND user_id = ?`).bind(...vals, id, userId).run();
   }
   // Subtaken verhuizen mee naar de nieuwe lijst van hun parent.
   if (list !== null && list !== t.list) {
-    await db.prepare('UPDATE tasks SET list = ?, updated_at = ? WHERE parent_id = ?').bind(list, now(), id).run();
+    await db.prepare('UPDATE tasks SET list = ?, updated_at = ? WHERE parent_id = ? AND user_id = ?').bind(list, now(), id, userId).run();
   }
   if ('done' in b) {
     // Opnieuw lezen: dezelfde PATCH kan net remind_at of repeat gezet hebben.
-    const cur = sets.length ? (await getTask(db, id))! : t;
+    const cur = sets.length ? (await getTask(db, userId, id))! : t;
     // Een herhalende taak staat altijd open. `occurrence` (indien meegestuurd) moet de huidige keer zijn: bij done:true
     // schuift een herhaald verzoek uit de outbox zo niet nog een keer door, bij done:false draait een vertraagd
     // ongedaan maken (dat een eerdere stap bedoelde) de nieuwste stap niet terug.
@@ -547,21 +556,27 @@ app.patch('/api/tasks/:id', async (c) => {
     const act = rolls(cur) ? sameAt && (!!b.done || !!undoable(cur)) : !!b.done !== !!cur.done;
     if (act) await setDone(db, cur, !!b.done);
   }
-  const updated = (await getTask(db, id))!;
+  const updated = (await getTask(db, userId, id))!;
   if ('position' in b) await rebalanceIfNeeded(db, updated);
-  return c.json(asBool((await getTask(db, id))!));
+  return c.json(asBool((await getTask(db, userId, id))!));
 });
 
 app.delete('/api/tasks/:id', async (c) => {
-  await c.env.DB.prepare('DELETE FROM tasks WHERE parent_id = ?').bind(c.req.param('id')).run();
-  await c.env.DB.prepare('DELETE FROM tasks WHERE id = ?').bind(c.req.param('id')).run();
+  const userId = c.get('auth').userId;
+  const id = c.req.param('id');
+  const t = await getTask(c.env.DB, userId, id);
+  if (!t) throw new HttpError(404, 'err.not_found');
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM tasks WHERE parent_id = ? AND user_id = ?').bind(id, userId),
+    c.env.DB.prepare('DELETE FROM tasks WHERE id = ? AND user_id = ?').bind(id, userId),
+  ]);
   return c.json({ ok: true });
 });
 
 // Lijsten bestaan alleen als `list`-kolom van taken; er is geen aparte tabel.
 app.get('/api/lists', async (c) => {
-  const { results } = await c.env.DB.prepare('SELECT list AS name, SUM(done = 0) AS open FROM tasks GROUP BY list')
-    .all<{ name: string; open: number }>();
+  const { results } = await c.env.DB.prepare('SELECT list AS name, SUM(done = 0) AS open FROM tasks WHERE user_id = ? GROUP BY list')
+    .bind(c.get('auth').userId).all<{ name: string; open: number }>();
   const lists = results.map((r) => ({ name: r.name, open: r.open }));
   // Inbox is vast en moet er ook zijn zonder taken.
   if (!lists.some((l) => l.name === 'Inbox')) lists.push({ name: 'Inbox', open: 0 });
@@ -576,7 +591,7 @@ app.post('/api/lists/rename', async (c) => {
   if (from === 'Inbox') throw new HttpError(400, 'err.inbox_rename');
   if (from === to) return c.json({ moved: 0 });
   // Subtaken staan in dezelfde lijst als hun parent, dus één UPDATE dekt alles.
-  const res = await c.env.DB.prepare('UPDATE tasks SET list = ?, updated_at = ? WHERE list = ?').bind(to, now(), from).run();
+  const res = await c.env.DB.prepare('UPDATE tasks SET list = ?, updated_at = ? WHERE list = ? AND user_id = ?').bind(to, now(), from, c.get('auth').userId).run();
   return c.json({ moved: res.meta.changes });
 });
 
@@ -585,15 +600,16 @@ app.post('/api/lists/delete', async (c) => {
   const name = existingListName(b.name, 'name');
   if (name === 'Inbox') throw new HttpError(400, 'err.inbox_delete');
   const db = c.env.DB;
+  const userId = c.get('auth').userId;
   if (b.tasks === 'inbox') {
-    const res = await db.prepare("UPDATE tasks SET list = 'Inbox', updated_at = ? WHERE list = ?").bind(now(), name).run();
+    const res = await db.prepare("UPDATE tasks SET list = 'Inbox', updated_at = ? WHERE list = ? AND user_id = ?").bind(now(), name, userId).run();
     return c.json({ moved: res.meta.changes });
   }
   if (b.tasks === 'delete') {
     // Eerst de subtaken, dan de taken zelf, zoals bij het verwijderen van één taak.
     const res = await db.batch([
-      db.prepare('DELETE FROM tasks WHERE parent_id IN (SELECT id FROM tasks WHERE list = ?)').bind(name),
-      db.prepare('DELETE FROM tasks WHERE list = ?').bind(name),
+      db.prepare('DELETE FROM tasks WHERE user_id = ? AND parent_id IN (SELECT id FROM tasks WHERE list = ? AND user_id = ?)').bind(userId, name, userId),
+      db.prepare('DELETE FROM tasks WHERE list = ? AND user_id = ?').bind(name, userId),
     ]);
     return c.json({ deleted: res.reduce((n, r) => n + r.meta.changes, 0) });
   }
@@ -603,7 +619,7 @@ app.post('/api/lists/delete', async (c) => {
 // Simpele variant voor clients zonder PATCH (Android-widget); werkt net als PATCH {done}.
 for (const [action, done] of [['done', true], ['reopen', false]] as const) {
   app.post(`/api/tasks/:id/${action}`, async (c) => {
-    const t = await getTask(c.env.DB, c.req.param('id'));
+    const t = await getTask(c.env.DB, c.get('auth').userId, c.req.param('id'));
     if (!t) throw new HttpError(404, 'err.not_found');
     // Een herhalende taak staat altijd open: /done schuift altijd door, /reopen draait terug als dat nog mag (setDone beslist).
     if (rolls(t) || !!t.done !== done) await setDone(c.env.DB, t, done);
@@ -617,8 +633,8 @@ app.post('/api/tasks/:id/snooze', async (c) => {
   if (!Number.isFinite(m)) throw new HttpError(400, 'err.must_be_number', { field: 'minutes' });
   const at = new Date(Date.now() + Math.min(Math.max(m, 1), MAX_SNOOZE_MIN) * 60_000).toISOString();
   // Het ritme (repeat_at) blijft staan; zoals elke schrijver van remind_at wist snoozen de ongedaan-maakstand.
-  const res = await c.env.DB.prepare('UPDATE tasks SET remind_at = ?, notified = 0, repeat_prev = NULL, updated_at = ? WHERE id = ?')
-    .bind(at, now(), c.req.param('id')).run();
+  const res = await c.env.DB.prepare('UPDATE tasks SET remind_at = ?, notified = 0, repeat_prev = NULL, updated_at = ? WHERE id = ? AND user_id = ?')
+    .bind(at, now(), c.req.param('id'), c.get('auth').userId).run();
   if (!res.meta.changes) throw new HttpError(404, 'err.not_found');
   return c.json({ ok: true, remind_at: at });
 });
@@ -630,7 +646,7 @@ app.post('/api/inbox', async (c) => {
   const title = b.title ?? b.titel;
   const description = b.notes ?? b.description ?? b.omschrijving ?? '';
   const remind = b.due ?? b.remind_at ?? b.datum ?? b.date ?? null; // een kale datum krijgt de reminder-tijd in localToUtcIso
-  return c.json(await createTask(c.env, { title, description, remind_at: remind, repeat: b.repeat, list: String(b.list ?? '').slice(0, MAX_LIST).trim() || 'Inbox' }, 'api'), 201);
+  return c.json(await createTask(c.env, c.get('auth').userId, { title, description, remind_at: remind, repeat: b.repeat, list: String(b.list ?? '').slice(0, MAX_LIST).trim() || 'Inbox' }, 'api'), 201);
 });
 
 app.post('/api/push/subscribe', async (c) => {
@@ -669,7 +685,7 @@ async function placeWrite<T>(run: () => Promise<T>): Promise<T> {
 }
 
 app.get('/api/places', async (c) => {
-  const { results } = await c.env.DB.prepare(`SELECT ${PLACE_COLS} FROM places ORDER BY name COLLATE NOCASE, id`).all<Place>();
+  const { results } = await c.env.DB.prepare(`SELECT ${PLACE_COLS} FROM places WHERE user_id = ? ORDER BY name COLLATE NOCASE, id`).bind(c.get('auth').userId).all<Place>();
   return c.json(results);
 });
 
@@ -677,26 +693,28 @@ app.post('/api/places', async (c) => {
   const p = cleanPlace(await body(c), false) as Omit<Place, 'id'>;
   const id = crypto.randomUUID();
   const ts = now();
-  await placeWrite(() => c.env.DB.prepare('INSERT INTO places (id, name, lat, lng, radius, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .bind(id, p.name, p.lat, p.lng, p.radius, ts, ts).run());
+  await placeWrite(() => c.env.DB.prepare('INSERT INTO places (id, user_id, name, lat, lng, radius, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(id, c.get('auth').userId, p.name, p.lat, p.lng, p.radius, ts, ts).run());
   return c.json({ id, ...p } satisfies Place, 201);
 });
 
 app.patch('/api/places/:id', async (c) => {
   const id = c.req.param('id');
+  const userId = c.get('auth').userId;
   const p = cleanPlace(await body(c), true);
   const cols = Object.keys(p);
   if (cols.length) {
-    await placeWrite(() => c.env.DB.prepare(`UPDATE places SET ${cols.map((k) => `${k} = ?`).join(', ')}, updated_at = ? WHERE id = ?`)
-      .bind(...Object.values(p), now(), id).run());
+    await placeWrite(() => c.env.DB.prepare(`UPDATE places SET ${cols.map((k) => `${k} = ?`).join(', ')}, updated_at = ? WHERE id = ? AND user_id = ?`)
+      .bind(...Object.values(p), now(), id, userId).run());
   }
-  const row = await c.env.DB.prepare(`SELECT ${PLACE_COLS} FROM places WHERE id = ?`).bind(id).first<Place>();
+  const row = await c.env.DB.prepare(`SELECT ${PLACE_COLS} FROM places WHERE id = ? AND user_id = ?`).bind(id, userId).first<Place>();
   if (!row) throw new HttpError(404, 'err.not_found');
   return c.json(row);
 });
 
 app.delete('/api/places/:id', async (c) => {
-  await c.env.DB.prepare('DELETE FROM places WHERE id = ?').bind(c.req.param('id')).run();
+  const res = await c.env.DB.prepare('DELETE FROM places WHERE id = ? AND user_id = ?').bind(c.req.param('id'), c.get('auth').userId).run();
+  if (!res.meta.changes) throw new HttpError(404, 'err.not_found');
   return c.json({ ok: true });
 });
 

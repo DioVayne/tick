@@ -63,15 +63,16 @@ Always stored in UTC. A time without a zone counts as the time zone setting, a b
 | Route | Purpose |
 |---|---|
 | `GET /.well-known/assetlinks.json` | Digital Asset Links, without login: the `handle_all_urls` statement for `ANDROID_PACKAGE` and the fingerprints in `ANDROID_CERT_SHA256`; `[]` when either is missing or no fingerprint is valid |
+| Every `/api/tasks`, `/api/lists`, `/api/places` and `/api/inbox` route | Every query filters on `user_id` (the account of the session or key). An id that belongs to someone else behaves like an id that does not exist: 404, or 400 `err.parent_missing` as a `parent_id` |
 | `GET /api/tasks` | Open tasks in order. `?done=1&limit=&offset=` for completed tasks. `?q=` searches title and description (max. 200 characters) |
-| `POST /api/tasks` | Create a task, optionally with `repeat`. Optional `id` (UUID from the client); an existing id returns the existing task (200), so resending is safe |
+| `POST /api/tasks` | Create a task, optionally with `repeat`. Optional `id` (UUID from the client); an existing id returns the existing task (200), so resending is safe. An id that belongs to another account gives a 409 (`err.id_taken`) and changes nothing |
 | `PATCH /api/tasks/:id` | Change fields, including `position` (drag) and `done`. `repeat` (RRULE or `null`); `occurrence` (ISO) next to `done`: the server only moves on or restores when it equals `repeat_at` |
-| `DELETE /api/tasks/:id` | Delete, including subtasks |
+| `DELETE /api/tasks/:id` | Delete, including subtasks. 404 when the id is not yours (or does not exist); the outbox drops a 404 silently |
 | `POST /api/tasks/:id/done`, `/reopen` | Complete and undo (Android), like PATCH `done` including subtasks. `/done` moves a repeating task on (it stays open); `/reopen` undoes the last step, within 15 minutes |
 | `POST /api/tasks/:id/snooze` | Move the reminder, 60 minutes by default, limited to 1 minute up to 30 days. For a repeating task only this occurrence |
 | `location` in `GET`/`POST`/`PATCH /api/tasks` | Object `{name, lat, lng, radius, trigger}` or `null` (clear). Invalid or incomplete gives a 400 |
 | `location_notified` in `PATCH /api/tasks/:id` | Boolean; Android sets it to `true` after a notification. A place change in the same PATCH sets it back to `false` |
-| `GET`/`POST /api/places`, `PATCH`/`DELETE /api/places/:id` | Favourite places. A duplicate name gives a 409 |
+| `GET`/`POST /api/places`, `PATCH`/`DELETE /api/places/:id` | Favourite places. A duplicate name (per account) gives a 409; `PATCH`/`DELETE` of an unknown or foreign id gives a 404 |
 | `GET /api/geocode?q=` | Address search through Nominatim (2 to 200 characters, max. 5 results `{name, lat, lng}`). 429 on too many searches, 502 when Nominatim does not answer |
 | `GET /api/lists` | `[{ name, open }]`: every list name on a task (open or done) with the number of open tasks, subtasks included. Inbox is always there |
 | `POST /api/lists/rename` | `{ from, to }`: moves all tasks with `list = from` to `to`; an existing `to` merges. Empty, longer than 100 characters or `from = Inbox` gives a 400. Answer `{ moved }` |
