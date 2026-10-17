@@ -7,7 +7,7 @@ document.getElementById('f').addEventListener('submit', async (e) => {
   const r = await fetch('/login', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ password: document.getElementById('pw').value }),
+    body: JSON.stringify({ email: document.getElementById('email').value.trim(), password: document.getElementById('pw').value }),
   });
   if (r.ok) location.href = safeNext(new URLSearchParams(location.search).get('next'));
   // De server geeft de melding in de taal van de installatie.

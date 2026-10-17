@@ -16,7 +16,7 @@ const CACHE_KEY = 'tick.settings-cache';
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
 // Noodroute als het wachtwoord kwijt is (staat ook in SETUP.md); een commando, geen tekst om te vertalen.
-const RESCUE = `npx wrangler d1 execute tick --remote --command "DELETE FROM settings WHERE key='password_hash'"`;
+const RESCUE = `npx wrangler d1 execute DB --remote --command "UPDATE users SET password_hash = NULL WHERE role = 'admin'"`;
 const ENV_SECRET = { 'env-api': 'API_TOKEN', 'env-inbox': 'INBOX_TOKEN' };
 
 /** @typedef {{ timeZone: string, reminderTime: string, weekStart: 'mon' | 'sun', defaultLocale: 'en' | 'nl', fallbackWebhook: string | null, fallbackFromEnv: boolean, fallbackOverride: boolean, fallbackEnvSet: boolean }} Settings */

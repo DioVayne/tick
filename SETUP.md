@@ -60,7 +60,7 @@ The deploy prints your URL. Logging in does not work yet: that needs the secrets
 ## 6. Secrets
 | Secret | | Value |
 |---|---|---|
-| `LOGIN_PASSWORD` | required | Your first password; type it yourself. You can change it in the app afterwards (it stays the emergency password, see "Good to know") |
+| `LOGIN_PASSWORD` | required | The administrator's first password; type it yourself. Log in with an empty email address and this password. You can change it in the app afterwards (it stays the emergency password, see "Good to know"). It never works for other accounts |
 | `SESSION_SECRET` | required | Random |
 | `VAPID_PRIVATE_KEY` | required | The JSON from step 4 |
 | `API_TOKEN` | optional | Random; an old-style key for the Android app. Easier: connect the phone in the app (step 10) |
@@ -147,11 +147,11 @@ Open the app once online afterwards, so the service worker caches the new versio
 
 ## Good to know
 - **Log out on other devices** (for example after losing a phone): **Settings → Account → Log out on other devices**. This device stays logged in. Keys for phones and automations keep working; revoke those under **Advanced → Keys**.
-- **Forgot your password?** A password you set in the app is stored as a hash in the database and overrides `LOGIN_PASSWORD`. To go back to `LOGIN_PASSWORD`, delete it:
+- **Forgot your password?** A password you set in the app is stored as a hash in the database and overrides `LOGIN_PASSWORD`. For the administrator, go back to `LOGIN_PASSWORD` by deleting it:
   ```bash
-  npx wrangler d1 execute DB --remote --command "DELETE FROM settings WHERE key='password_hash'"
+  npx wrangler d1 execute DB --remote --command "UPDATE users SET password_hash = NULL WHERE role = 'admin'"
   ```
-  Then log in with the `LOGIN_PASSWORD` secret (set a new one with `npx wrangler secret put LOGIN_PASSWORD` if you lost that too) and choose a new password in the app. Deleting the hash does not log out other sessions: use **Log out on other devices** afterwards (choosing a new password in the app also does that).
+  Then log in with the `LOGIN_PASSWORD` secret and an empty email address (or your email address if you had already set one; set a new secret a new one with `npx wrangler secret put LOGIN_PASSWORD` if you lost that too) and choose a new password in the app. Deleting the hash does not log out other sessions: use **Log out on other devices** afterwards (choosing a new password in the app also does that).
 - **Backup:** **Settings → Data → Download backup** gives a JSON file with your tasks and places. Restoring merges by id and never deletes anything. Settings, keys and the password are not in it.
 - **Time zone:** changing it in the app keeps the clock time of open reminders and repeats (9:00 stays 9:00).
 - **Quick add on Android** keeps its own default of 09:00 for a date without a time; it does not follow the reminder time you set in the app.

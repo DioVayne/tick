@@ -1,13 +1,16 @@
 import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it } from 'vitest';
-import { bumpSessionVersion, passwordOk, sessionVersion } from '../src/auth';
+import { bumpSessionVersion, passwordOk } from '../src/auth';
 import { hashPassword, verifyPassword } from '../src/password';
-import { loadPrefs, setSetting } from '../src/prefs';
 import type { Env } from '../src/index';
-import { call, login, randomIp, session } from './helpers';
+import type { User } from '../src/users';
+import { ADMIN_ID, call, login, randomIp, session } from './helpers';
+
+const setAdminHash = (hash: string | null) => env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(hash, ADMIN_ID).run();
+const adminVersion = async () => (await env.DB.prepare('SELECT session_version FROM users WHERE id = ?').bind(ADMIN_ID).first<{ session_version: number }>())!.session_version;
 
 afterEach(async () => {
-  await env.DB.prepare("DELETE FROM settings WHERE key='password_hash'").run();
+  await env.DB.prepare('UPDATE users SET password_hash = NULL, session_version = 1 WHERE id = ?').bind(ADMIN_ID).run();
 });
 
 const post = (path: string, cookie: string, json?: unknown) =>
@@ -27,18 +30,18 @@ describe('account', () => {
   });
 
   it('noodroute: password_hash wissen → LOGIN_PASSWORD geldt weer', async () => {
-    await env.DB.prepare("INSERT INTO settings (key, value) VALUES ('password_hash', ?)").bind(await hashPassword('ander-wachtwoord')).run();
+    await setAdminHash(await hashPassword('ander-wachtwoord'));
     expect((await login('test-wachtwoord')).status).toBe(401);
     expect((await login('ander-wachtwoord')).status).toBe(200);
-    await env.DB.prepare("DELETE FROM settings WHERE key='password_hash'").run();
+    await setAdminHash(null);
     expect((await login('test-wachtwoord')).status).toBe(200);
   });
 
   it('met password_hash werkt inloggen ook zonder LOGIN_PASSWORD', async () => {
-    const prefs = await loadPrefs(env as Env);
+    const admin: Pick<User, 'role' | 'password_hash'> = { role: 'admin', password_hash: null };
     const e = { ...env, LOGIN_PASSWORD: '' } as Env;
-    expect(await passwordOk(e, prefs, 'x')).toBe(false);
-    expect(await passwordOk(e, { ...prefs, passwordHash: await hashPassword('x') }, 'x')).toBe(true);
+    expect(await passwordOk(e, admin, 'x')).toBe(false);
+    expect(await passwordOk(e, { ...admin, password_hash: await hashPassword('x') }, 'x')).toBe(true);
   });
 
   it('fout huidig wachtwoord → 403; te kort → 400', async () => {
@@ -69,29 +72,24 @@ describe('account', () => {
     const a = await session();
     const db = env.DB;
     await db.batch([
-      db.prepare("CREATE TRIGGER IF NOT EXISTS test_geen_versie_upd BEFORE UPDATE ON settings WHEN NEW.key = 'session_version' BEGIN SELECT RAISE(ABORT, 'test'); END"),
-      db.prepare("CREATE TRIGGER IF NOT EXISTS test_geen_versie_ins BEFORE INSERT ON settings WHEN NEW.key = 'session_version' BEGIN SELECT RAISE(ABORT, 'test'); END"),
+      db.prepare("CREATE TRIGGER IF NOT EXISTS test_geen_versie_upd BEFORE UPDATE OF session_version ON users BEGIN SELECT RAISE(ABORT, 'test'); END"),
     ]);
     try {
       expect((await post('/api/account/password', a, { current: 'test-wachtwoord', next: 'nieuw-wachtwoord' })).status).toBe(500);
     } finally {
-      await db.batch([db.prepare('DROP TRIGGER IF EXISTS test_geen_versie_upd'), db.prepare('DROP TRIGGER IF EXISTS test_geen_versie_ins')]);
+      await db.prepare('DROP TRIGGER IF EXISTS test_geen_versie_upd').run();
     }
-    expect(await db.prepare("SELECT value FROM settings WHERE key = 'password_hash'").first()).toBeNull();
+    expect(await db.prepare('SELECT password_hash FROM users WHERE id = ?').bind(ADMIN_ID).first()).toEqual({ password_hash: null });
     expect((await login('test-wachtwoord')).status).toBe(200);
   });
 
-  it('sessieversie ophogen: zonder rij wordt het 2, daarna 3', async () => {
-    const before = await env.DB.prepare("SELECT value FROM settings WHERE key = 'session_version'").first<{ value: string }>();
-    await env.DB.prepare("DELETE FROM settings WHERE key = 'session_version'").run();
-    try {
-      await bumpSessionVersion(env.DB);
-      expect(await sessionVersion(env.DB)).toBe('2');
-      await bumpSessionVersion(env.DB);
-      expect(await sessionVersion(env.DB)).toBe('3');
-    } finally {
-      await setSetting(env.DB, 'session_version', before?.value ?? null);
-    }
+  it('sessieversie ophogen: users.session_version van de beheerder gaat met 1 omhoog', async () => {
+    const before = await adminVersion();
+    await bumpSessionVersion(env.DB, ADMIN_ID);
+    expect(await adminVersion()).toBe(before + 1);
+    await bumpSessionVersion(env.DB, ADMIN_ID);
+    expect(await adminVersion()).toBe(before + 2);
+    // terugzetten gebeurt in afterEach
   });
 
   it('verifyPassword weigert een ander wachtwoord en een kapotte hash', async () => {

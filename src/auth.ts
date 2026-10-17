@@ -2,6 +2,7 @@ import type { Env } from './index';
 import { hashKey } from './keys';
 import { verifyPassword } from './password';
 import { setSetting, type Prefs } from './prefs';
+import { ADMIN_ID, type User } from './users';
 
 const enc = new TextEncoder();
 const DAY_MS = 86_400_000;
@@ -21,34 +22,31 @@ async function hmac(secret: string, msg: string): Promise<string> {
   return [...sig].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Een in de app gezet wachtwoord (hash) gaat voor; zonder hash geldt LOGIN_PASSWORD (ook de noodroute). */
-export async function passwordOk(env: Env, prefs: Prefs, password: string): Promise<boolean> {
-  if (prefs.passwordHash) return verifyPassword(password, prefs.passwordHash);
-  if (!env.LOGIN_PASSWORD) return false; // fail closed
+/**
+ * Een in de app gezet wachtwoord (hash) gaat voor. Zonder hash geldt LOGIN_PASSWORD, maar alleen voor de beheerder
+ * (ook de noodroute); een lid zonder wachtwoord kan niet inloggen.
+ */
+export async function passwordOk(env: Env, user: Pick<User, 'role' | 'password_hash'>, password: string): Promise<boolean> {
+  if (user.password_hash) return verifyPassword(password, user.password_hash);
+  if (user.role !== 'admin' || !env.LOGIN_PASSWORD) return false; // fail closed
   // Vergelijk via hash zodat lengte niet uitlekt.
   const [a, b] = await Promise.all([hmac('pw', password), hmac('pw', env.LOGIN_PASSWORD)]);
   return safeEqual(a, b);
 }
 
-/** Statement dat de sessieversie ophoogt (voor een batch); zonder rij (versie 1) wordt het 2. */
-export function bumpSessionVersionStmt(db: D1Database): D1PreparedStatement {
-  return db.prepare("INSERT INTO settings (key, value) VALUES ('session_version', '2') "
-    + 'ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(settings.value AS INTEGER) + 1 AS TEXT)');
+/** Statement dat de sessieversie van een gebruiker ophoogt (voor een batch). */
+export function bumpSessionVersionStmt(db: D1Database, userId: string): D1PreparedStatement {
+  return db.prepare('UPDATE users SET session_version = session_version + 1 WHERE id = ?').bind(userId);
 }
 
-/** Hoogt de sessieversie op (logt alle bestaande sessies uit); maakt de rij aan als hij ontbreekt. */
-export async function bumpSessionVersion(db: D1Database): Promise<void> {
-  await bumpSessionVersionStmt(db).run();
+/** Hoogt de sessieversie van een gebruiker op: logt al zijn bestaande sessies uit. */
+export async function bumpSessionVersion(db: D1Database, userId: string): Promise<void> {
+  await bumpSessionVersionStmt(db, userId).run();
 }
 
-/** Huidige sessieversie uit `settings`; ophogen logt alle sessies uit. */
-export async function sessionVersion(db: D1Database): Promise<string> {
-  const r = await db.prepare("SELECT value FROM settings WHERE key = 'session_version'").first<{ value: string }>();
-  return r?.value ?? '1';
-}
-
-export async function sessionCookie(env: Env): Promise<string> {
-  const payload = `${Date.now() + SESSION_DAYS * DAY_MS}.${await sessionVersion(env.DB)}`;
+/** Sessiecookie `exp.userId.version.hmac`; `version` is `users.session_version`. */
+export async function sessionCookie(env: Env, user: Pick<User, 'id' | 'session_version'>): Promise<string> {
+  const payload = `${Date.now() + SESSION_DAYS * DAY_MS}.${user.id}.${user.session_version}`;
   const token = `${payload}.${await hmac(env.SESSION_SECRET, payload)}`;
   return `${COOKIE}=${token}; Path=/; Max-Age=${SESSION_DAYS * 86_400}; HttpOnly; Secure; SameSite=Lax`;
 }
@@ -57,31 +55,33 @@ export const clearCookie = `${COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; Sam
 
 /** Wie de request doet. `inbox` mag alleen POST /api/inbox; `renew` vraagt om een verse sessiecookie. */
 export type Auth =
-  | { kind: 'dev' }
-  | { kind: 'token'; keyId: string }
-  | { kind: 'inbox'; keyId: string }
-  | { kind: 'session'; renew: boolean };
+  | { kind: 'dev'; userId: string }
+  | { kind: 'token'; keyId: string; userId: string }
+  | { kind: 'inbox'; keyId: string; userId: string }
+  | { kind: 'session'; userId: string; renew: boolean };
 
-async function session(req: Request, env: Env, prefs: Prefs): Promise<Auth | null> {
+async function session(req: Request, env: Env): Promise<Auth | null> {
   if (!env.SESSION_SECRET) return null;
   const token = req.headers.get('cookie')?.match(new RegExp(`(?:^|; )${COOKIE}=([^;]+)`))?.[1];
   if (!token) return null;
-  const [exp, version, sig, ...rest] = token.split('.');
-  if (!exp || !version || !sig || rest.length) return null;
+  // Oude cookies (`exp.version.hmac`, zonder gebruiker) hebben een deel te weinig en zijn ongeldig.
+  const [exp, userId, version, sig, ...rest] = token.split('.');
+  if (!exp || !userId || !version || !sig || rest.length) return null;
   const left = Number(exp) - Date.now();
   if (!(left > 0)) return null;
-  if (!safeEqual(sig, await hmac(env.SESSION_SECRET, `${exp}.${version}`))) return null;
-  if (version !== prefs.sessionVersion) return null;
+  if (!safeEqual(sig, await hmac(env.SESSION_SECRET, `${exp}.${userId}.${version}`))) return null;
+  const row = await env.DB.prepare('SELECT session_version FROM users WHERE id = ?').bind(userId).first<{ session_version: number }>();
+  if (!row || String(row.session_version) !== version) return null;
   // Sliding renewal: na de helft van de looptijd krijgt de browser een nieuwe cookie.
-  return { kind: 'session', renew: left < (SESSION_DAYS * DAY_MS) / 2 };
+  return { kind: 'session', userId, renew: left < (SESSION_DAYS * DAY_MS) / 2 };
 }
 
 const USED_EVERY_MS = 3_600_000;
 
 /** Zoekt een sleutel uit de app op zijn hash (unieke index) en markeert hem hoogstens eens per uur als gebruikt. */
 async function keyFromDb(env: Env, key: string): Promise<Auth | null> {
-  const row = await env.DB.prepare('SELECT id, kind, last_used_at FROM api_keys WHERE hash = ?').bind(await hashKey(key))
-    .first<{ id: string; kind: 'full' | 'inbox'; last_used_at: string | null }>();
+  const row = await env.DB.prepare('SELECT id, kind, last_used_at, user_id FROM api_keys WHERE hash = ?').bind(await hashKey(key))
+    .first<{ id: string; kind: 'full' | 'inbox'; last_used_at: string | null; user_id: string }>();
   if (!row) return null;
   // Alleen schrijven als het nodig is: anders kost elke request met een sleutel een D1-schrijfactie.
   if (!(Date.parse(row.last_used_at ?? '') >= Date.now() - USED_EVERY_MS)) {
@@ -91,7 +91,7 @@ async function keyFromDb(env: Env, key: string): Promise<Auth | null> {
       console.warn('last_used_at bijwerken mislukt', e);
     }
   }
-  return row.kind === 'inbox' ? { kind: 'inbox', keyId: row.id } : { kind: 'token', keyId: row.id };
+  return row.kind === 'inbox' ? { kind: 'inbox', keyId: row.id, userId: row.user_id } : { kind: 'token', keyId: row.id, userId: row.user_id };
 }
 
 /** Gebruik van een oude secret staat in `settings`; een mislukte schrijfactie mag het verzoek niet breken. */
@@ -108,7 +108,7 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
 
 export async function authorize(req: Request, env: Env, prefs: Prefs): Promise<Auth | null> {
   // Alleen lokaal: op een echte host doet DEV_AUTH_BYPASS niets, ook als hij per ongeluk gezet is.
-  if (env.DEV_AUTH_BYPASS === '1' && LOCAL_HOSTS.has(new URL(req.url).hostname)) return { kind: 'dev' };
+  if (env.DEV_AUTH_BYPASS === '1' && LOCAL_HOSTS.has(new URL(req.url).hostname)) return { kind: 'dev', userId: ADMIN_ID };
   const bearer = req.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
   if (bearer) {
     // Sleutels uit de app beginnen met tick_; oude secrets niet, die slaan de query over.
@@ -118,12 +118,12 @@ export async function authorize(req: Request, env: Env, prefs: Prefs): Promise<A
     }
     if (env.API_TOKEN && !prefs.envApiTokenOff && safeEqual(bearer, env.API_TOKEN)) {
       await touchEnv(env, 'env_api_token_used', prefs.envApiTokenUsed);
-      return { kind: 'token', keyId: 'env-api' };
+      return { kind: 'token', keyId: 'env-api', userId: ADMIN_ID };
     }
     if (env.INBOX_TOKEN && !prefs.envInboxTokenOff && safeEqual(bearer, env.INBOX_TOKEN)) {
       await touchEnv(env, 'env_inbox_token_used', prefs.envInboxTokenUsed);
-      return { kind: 'inbox', keyId: 'env-inbox' };
+      return { kind: 'inbox', keyId: 'env-inbox', userId: ADMIN_ID };
     }
   }
-  return session(req, env, prefs);
+  return session(req, env);
 }

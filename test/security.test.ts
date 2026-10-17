@@ -2,15 +2,14 @@ import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { authorize, SESSION_DAYS } from '../src/auth';
 import { loadPrefs } from '../src/prefs';
-import { call, INBOX, json, login, randomIp, type Task } from './helpers';
+import { ADMIN_ID, call, INBOX, json, login, randomIp, type Task } from './helpers';
 
 const DAY = 86_400_000;
 
-/** Sessiecookie zoals de Worker hem maakt, met zelf gekozen verloopmoment en versie. */
-async function cookieFor(exp: number, version = '1') {
+/** Sessiecookie van de beheerder zoals de Worker hem maakt, met zelf gekozen verloopmoment en versie. */
+async function cookieFor(exp: number, version = '1', payload = `${exp}.${ADMIN_ID}.${version}`) {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey('raw', enc.encode('test-sessie-geheim'), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const payload = `${exp}.${version}`;
   const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(payload)));
   return `tick_session=${payload}.${[...sig].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
@@ -33,29 +32,30 @@ describe('sessies', () => {
   it('geeft een cookie van 30 dagen met versie in de payload', async () => {
     const cookie = (await login('test-wachtwoord')).headers.get('set-cookie')!;
     expect(cookie).toContain(`Max-Age=${SESSION_DAYS * 86_400}`);
-    expect(cookie).toMatch(/^tick_session=\d+\.1\.[0-9a-f]{64};/);
+    expect(cookie).toMatch(new RegExp(String.raw`^tick_session=\d+\.${ADMIN_ID}\.1\.[0-9a-f]{64};`));
   });
 
   it('logt alle sessies uit als session_version omhoog gaat', async () => {
     const session = (await login('test-wachtwoord')).headers.get('set-cookie')!.split(';')[0];
     expect((await withCookie(session)).status).toBe(200);
-    const setVersion = (v: string) => env.DB.prepare("UPDATE settings SET value = ? WHERE key = 'session_version'").bind(v).run();
+    const setVersion = (v: string) => env.DB.prepare('UPDATE users SET session_version = ? WHERE id = ?').bind(Number(v), ADMIN_ID).run();
     await setVersion('2');
     try {
       expect((await withCookie(session)).status).toBe(401);
       // Opnieuw inloggen geeft een cookie met de nieuwe versie.
       const fresh = (await login('test-wachtwoord')).headers.get('set-cookie')!.split(';')[0];
-      expect(fresh).toMatch(/^tick_session=\d+\.2\./);
+      expect(fresh).toMatch(new RegExp(String.raw`^tick_session=\d+\.${ADMIN_ID}\.2\.`));
       expect((await withCookie(fresh)).status).toBe(200);
     } finally {
       await setVersion('1'); // de D1 wordt tussen tests niet teruggezet
     }
   });
 
-  it('weigert een verlopen cookie en het oude formaat zonder versie', async () => {
+  it('weigert een verlopen cookie en het oude formaat zonder gebruiker', async () => {
     expect((await withCookie(await cookieFor(Date.now() + DAY))).status).toBe(200);
     expect((await withCookie(await cookieFor(Date.now() - 1000))).status).toBe(401);
-    const old = (await cookieFor(Date.now() + DAY)).replace('.1.', '.');
+    const exp = Date.now() + DAY;
+    const old = await cookieFor(exp, '1', `${exp}.1`); // geldig ondertekend, maar zonder gebruiker
     expect((await withCookie(old)).status).toBe(401);
   });
 
@@ -98,8 +98,8 @@ describe('DEV_AUTH_BYPASS', () => {
   const devEnv = { ...env, DEV_AUTH_BYPASS: '1' };
 
   it('werkt op localhost en 127.0.0.1', async () => {
-    expect(await authorize(new Request('http://localhost:8787/api/tasks'), devEnv, await loadPrefs(devEnv))).toEqual({ kind: 'dev' });
-    expect(await authorize(new Request('http://127.0.0.1:8787/'), devEnv, await loadPrefs(devEnv))).toEqual({ kind: 'dev' });
+    expect(await authorize(new Request('http://localhost:8787/api/tasks'), devEnv, await loadPrefs(devEnv))).toEqual({ kind: 'dev', userId: ADMIN_ID });
+    expect(await authorize(new Request('http://127.0.0.1:8787/'), devEnv, await loadPrefs(devEnv))).toEqual({ kind: 'dev', userId: ADMIN_ID });
   });
 
   it('doet niets op een andere host', async () => {

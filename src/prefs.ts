@@ -13,14 +13,11 @@ export type Prefs = {
   fallbackOverride: boolean;
   /** FALLBACK_WEBHOOK is gezet (alleen ja/nee; de URL is een secret). */
   fallbackEnvSet: boolean;
-  passwordHash: string | null;
   envApiTokenOff: boolean;
   envInboxTokenOff: boolean;
   /** Wanneer de oude secrets voor het laatst werden gebruikt (hoogstens eens per uur bijgewerkt). */
   envApiTokenUsed: string | null;
   envInboxTokenUsed: string | null;
-  /** Zit in elke sessiecookie; ophogen logt alle sessies uit. */
-  sessionVersion: string;
 };
 
 const validZone = (tz: string | undefined | null): tz is string => {
@@ -52,12 +49,10 @@ export async function loadPrefs(env: Env): Promise<Prefs> {
     fallbackFromEnv: !override && !!env.FALLBACK_WEBHOOK,
     fallbackOverride: override,
     fallbackEnvSet: !!env.FALLBACK_WEBHOOK,
-    passwordHash: row.get('password_hash') || null,
     envApiTokenOff: row.get('env_api_token_off') === '1',
     envInboxTokenOff: row.get('env_inbox_token_off') === '1',
     envApiTokenUsed: row.get('env_api_token_used') || null,
     envInboxTokenUsed: row.get('env_inbox_token_used') || null,
-    sessionVersion: row.get('session_version') ?? '1',
   };
 }
 

@@ -55,7 +55,7 @@ describe('i18n', () => {
   it('een fout wachtwoord geeft een leesbare melding', async () => {
     const res = await login('fout', randomIp());
     expect(res.status).toBe(401);
-    expect((await json<{ error: string }>(res)).error).toBe('Incorrect password.');
+    expect((await json<{ error: string }>(res)).error).toBe('Unknown email address or wrong password.');
   });
 
   it('de loginpagina volgt de locale', () => {

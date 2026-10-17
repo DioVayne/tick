@@ -10,6 +10,7 @@ import { cleanLocation, cleanPlace, locColumns, locFromRow, type Place } from '.
 import { repeatColumns, repeatFromRow, todayDefaultIso } from './repeat';
 import { nextOccurrence, setDefaultTime, setTimeZone } from '../public/repeat.js';
 import { loadPrefs, requestLocale, type Prefs } from './prefs';
+import { findLoginUser, getUser, touchLastSeen, type User } from './users';
 import { localToUtcIso } from './time';
 import { runReminders, sendToAll } from './push';
 import { settingsApi } from './settings-api';
@@ -51,7 +52,7 @@ export type TaskRow = {
   repeat_rule: string | null; repeat_start: string | null; repeat_at: string | null; repeat_prev: string | null;
 };
 
-export type AppEnv = { Bindings: Env; Variables: { prefs: Prefs; lang: 'en' | 'nl'; auth: Auth } };
+export type AppEnv = { Bindings: Env; Variables: { prefs: Prefs; lang: 'en' | 'nl'; auth: Auth; user: User } };
 
 const app = new Hono<AppEnv>();
 
@@ -95,12 +96,17 @@ app.post('/login', async (c) => {
   // Per IP; de binding telt per Cloudflare-locatie, wat voor brute force ruim genoeg is.
   const { success } = await c.env.LOGIN_LIMITER.limit({ key: c.req.header('cf-connecting-ip') ?? 'onbekend' });
   if (!success) throw new HttpError(429, 'err.too_many_attempts');
-  const { password } = await c.req.json<{ password?: string }>().catch(() => ({ password: '' }));
-  if (!(await passwordOk(c.env, c.get('prefs'), password ?? ''))) {
+  const body = await c.req.json<{ email?: unknown; password?: unknown }>().catch(() => null);
+  const email = typeof body?.email === 'string' ? body.email.trim() : '';
+  const password = typeof body?.password === 'string' ? body.password : '';
+  const user = await findLoginUser(c.env.DB, email);
+  // Onbekend adres en fout wachtwoord geven dezelfde fout, zodat niet uitlekt welke adressen bestaan.
+  if (!user || !(await passwordOk(c.env, user, password))) {
     await new Promise((r) => setTimeout(r, 1500)); // rem op gokken
-    throw new HttpError(401, 'err.wrong_password');
+    throw new HttpError(401, 'err.login_failed');
   }
-  c.header('Set-Cookie', await sessionCookie(c.env));
+  await touchLastSeen(c.env.DB, user);
+  c.header('Set-Cookie', await sessionCookie(c.env, user));
   return c.json({ ok: true });
 });
 
@@ -113,14 +119,19 @@ app.post('/logout', (c) => {
 
 app.use('*', async (c, next) => {
   const auth = await authorize(c.req.raw, c.env, c.get('prefs'));
-  const isInbox = c.req.path === '/api/inbox';
-  // Het inbox-token mag alleen taken in de inbox zetten, en de inbox is alleen voor het inbox-token.
-  if (auth?.kind === 'inbox') return isInbox && c.req.method === 'POST' ? next() : c.text('Forbidden', 403);
-  if (auth?.kind === 'token' && isInbox) return c.text('Forbidden', 403);
   if (auth) {
+    // Een sleutel van een verwijderd account (of een cookie van een verdwenen gebruiker) geeft geen toegang.
+    const user = await getUser(c.env.DB, auth.userId);
+    if (!user) return c.text('Unauthorized', 401);
+    const isInbox = c.req.path === '/api/inbox';
+    // Het inbox-token mag alleen taken in de inbox zetten, en de inbox is alleen voor het inbox-token.
+    if (auth.kind === 'inbox' && !(isInbox && c.req.method === 'POST')) return c.text('Forbidden', 403);
+    if (auth.kind === 'token' && isInbox) return c.text('Forbidden', 403);
+    await touchLastSeen(c.env.DB, user);
     c.set('auth', auth);
+    c.set('user', user);
     await next();
-    if (auth.kind === 'session' && auth.renew) c.res.headers.append('Set-Cookie', await sessionCookie(c.env));
+    if (auth.kind === 'session' && auth.renew) c.res.headers.append('Set-Cookie', await sessionCookie(c.env, user));
     return;
   }
   const wantsPage = c.req.method === 'GET' && !c.req.path.startsWith('/api/') && c.req.header('accept')?.includes('text/html');
