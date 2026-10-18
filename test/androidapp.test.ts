@@ -49,6 +49,12 @@ describe('swclick.js: waar een tik op een melding heen gaat', () => {
     expect(clickTarget({}, [])).toEqual({ open: '/' });
     expect(clickTarget(undefined, [win])).toEqual({ focus: win });
   });
+  it('url met een taak: een open venster krijgt die taak', () => {
+    expect(clickTarget({ url: '/?task=t2' }, [win])).toEqual({ focus: win, message: { type: 'open-task', id: 't2' } });
+    expect(clickTarget({ url: '/?task=a%26b' }, [win])).toEqual({ focus: win, message: { type: 'open-task', id: 'a&b' } });
+    expect(clickTarget({ url: '/?task=t2' }, [])).toEqual({ open: '/?task=t2' });
+    expect(clickTarget({ url: '/' }, [win])).toEqual({ focus: win });
+  });
   it('codeert het taak-id in het adres', () =>
     expect(clickTarget({ taskId: 'a&b' }, [])).toEqual({ open: '/?task=a%26b' }));
 });
