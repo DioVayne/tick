@@ -146,7 +146,9 @@ async function removeAttachment(a) {
 
 // ---------- grote weergave ----------
 
-let viewer = null; // { dialog, close }
+let viewer = null; // { close }
+/** De volgende popstate komt van onze eigen history.back() bij het sluiten. */
+let ownPop = false;
 
 /** Toont de foto's van een taak groot, vanaf `start`, met vorige/volgende. Terug (Android) en Esc sluiten. */
 function openViewer(images, start, readOnly) {
@@ -158,7 +160,7 @@ function openViewer(images, start, readOnly) {
   const prev = el('button', { type: 'button', class: 'att-nav prev', 'aria-label': t('att.prev'), onclick: () => show(i - 1) }, '‹');
   const next = el('button', { type: 'button', class: 'att-nav next', 'aria-label': t('att.next'), onclick: () => show(i + 1) }, '›');
   const del = readOnly ? null : el('button', {
-    type: 'button', class: 'pill danger',
+    type: 'button', class: 'pill att-viewer-del',
     onclick: async () => {
       const a = images[i];
       if (!(await removeAttachment(a))) return;
@@ -166,7 +168,7 @@ function openViewer(images, start, readOnly) {
       if (!images.length) close();
       else show(Math.min(i, images.length - 1));
     },
-  }, t('detail.delete'));
+  }, '🗑 ' + t('detail.delete'));
   const closeBtn = el('button', { type: 'button', class: 'att-close', 'aria-label': t('att.close'), onclick: () => close() }, '✕');
   const dialog = /** @type {HTMLDialogElement} */ (el('dialog', { class: 'att-viewer', 'aria-label': t('att.title') },
     closeBtn, prev, img, next,
@@ -188,7 +190,7 @@ function openViewer(images, start, readOnly) {
     document.body.classList.remove('viewer-open');
     if (dialog.open) dialog.close();
     dialog.remove();
-    if (pushed && !fromHistory) history.back();
+    if (pushed && !fromHistory) { ownPop = true; history.back(); }
   }
   dialog.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
   dialog.addEventListener('keydown', (e) => {
@@ -206,8 +208,15 @@ function openViewer(images, start, readOnly) {
   show(i);
 }
 
-// Terug sluit de weergave. Deze module laadt vóór app.js, dus dit loopt eerst; daarna is de taak nog dezelfde.
-window.addEventListener('popstate', () => { viewer?.close(true); });
+// Terug sluit de weergave, en de popstate van de weergave is nooit voor app.js: die zou hem lezen als "geen taak
+// gekozen" (op desktop heeft de taak geen eigen stap) en het paneel sluiten. Deze module laadt vóór app.js, dus deze
+// listener loopt eerst en kan de rest tegenhouden.
+window.addEventListener('popstate', (e) => {
+  if (ownPop) ownPop = false;
+  else if (viewer) viewer.close(true);
+  else return;
+  e.stopImmediatePropagation();
+});
 
 // ---------- het blok in het detailpaneel ----------
 
@@ -242,7 +251,12 @@ export function fillAttachmentsBox(box, task, readOnly) {
         const thumb = el('img', { src: src(a), alt: a.name, loading: 'lazy', decoding: 'async' });
         // Met de afmetingen van de server houdt het raster zijn vorm terwijl de foto laadt (CSSOM, geen style-attribuut).
         if (a.width && a.height) thumb.style.aspectRatio = `${a.width} / ${a.height}`;
-        return el('li', {}, el('button', { type: 'button', class: 'att-thumb', title: a.name, onclick: () => openViewer(images.slice(), n, readOnly) }, thumb));
+        return el('li', {},
+          el('button', { type: 'button', class: 'att-thumb', title: a.name, onclick: () => openViewer(images.slice(), n, readOnly) }, thumb),
+          readOnly ? null : el('button', {
+            type: 'button', class: 'att-del', title: t('att.delete_title'), 'aria-label': t('att.delete_named', { name: a.name }),
+            onclick: () => removeAttachment(a),
+          }, '✕'));
       })) : null,
       files.length ? el('ul', { class: 'att-files' }, ...files.map((a) => el('li', {},
         el('a', { href: src(a, true), download: a.name, class: 'att-name' }, '📄 ', a.name),
