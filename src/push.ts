@@ -82,7 +82,7 @@ const RETRY_WINDOW_MS = 15 * 60_000;
 /** Stuurt de verlopen herinneringen; per taak naar de abonnementen van de eigenaar, de terugval naar diens webhook. */
 export async function runReminders(env: Env, install: InstallPrefs): Promise<void> {
   const due = (await env.DB.prepare(
-    'SELECT id,user_id,title,description,remind_at,repeat_at FROM tasks WHERE done = 0 AND notified = 0 AND remind_at IS NOT NULL AND remind_at <= ?',
+    'SELECT id,user_id,title,description,remind_at,repeat_at FROM tasks WHERE done = 0 AND notified = 0 AND deleted_at IS NULL AND remind_at IS NOT NULL AND remind_at <= ?',
   ).bind(new Date().toISOString()).all<{ id: string; user_id: string; title: string; description: string; remind_at: string; repeat_at: string | null }>()).results;
 
   // Per gebruiker één keer lezen per run; null = de gebruiker bestaat niet meer.

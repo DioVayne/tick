@@ -19,6 +19,7 @@ import { usersApi } from './users-api';
 import { linkPages } from './links';
 import { deviceApi, devicesApi } from './devices';
 import { exportApi, importApi } from './data';
+import { purgeTrash, wipeStmts } from './trash';
 
 export type Env = {
   DB: D1Database;
@@ -52,6 +53,7 @@ export type TaskRow = {
   loc_name: string | null; loc_lat: number | null; loc_lng: number | null; loc_radius: number | null;
   loc_trigger: string | null; loc_notified: number;
   repeat_rule: string | null; repeat_start: string | null; repeat_at: string | null; repeat_prev: string | null;
+  deleted_at: string | null;
 };
 
 export type AppEnv = {
@@ -244,7 +246,7 @@ function intParam(v: string | undefined, fallback: number, min: number, max: num
 }
 
 const getTask = (db: D1Database, userId: string, id: string) =>
-  db.prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ?').bind(id, userId).first<TaskRow>();
+  db.prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ? AND deleted_at IS NULL').bind(id, userId).first<TaskRow>();
 
 /** Controleert een parent_id: bestaat bij deze gebruiker (een parent van een ander telt als niet bestaand), is niet de taak zelf en is zelf geen subtaak (één niveau). */
 async function checkParent(db: D1Database, userId: string, v: unknown, self?: TaskRow): Promise<TaskRow | null> {
@@ -264,19 +266,19 @@ async function checkParent(db: D1Database, userId: string, v: unknown, self?: Ta
 /** Nieuwe taak bovenaan; nieuwe subtaak onderaan bij haar broers en zussen. */
 async function newPosition(db: D1Database, userId: string, parentId: string | null): Promise<number> {
   if (parentId) {
-    const r = await db.prepare('SELECT MAX(position) AS p FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 0')
+    const r = await db.prepare('SELECT MAX(position) AS p FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 0 AND deleted_at IS NULL')
       .bind(parentId, userId).first<{ p: number | null }>();
     return r?.p == null ? 0 : r.p + STEP;
   }
-  const r = await db.prepare('SELECT MIN(position) AS p FROM tasks WHERE user_id = ? AND done = 0').bind(userId).first<{ p: number | null }>();
+  const r = await db.prepare('SELECT MIN(position) AS p FROM tasks WHERE user_id = ? AND done = 0 AND deleted_at IS NULL').bind(userId).first<{ p: number | null }>();
   return (r?.p ?? 0) - STEP;
 }
 
 /** Verdeelt de open taken naast `t` opnieuw zodra twee buren dichter dan MIN_GAP bij elkaar liggen. */
 async function rebalanceIfNeeded(db: D1Database, t: TaskRow): Promise<void> {
   const rows = (t.parent_id
-    ? await db.prepare('SELECT id, position FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 0 ORDER BY position').bind(t.parent_id, t.user_id).all<{ id: string; position: number }>()
-    : await db.prepare('SELECT id, position FROM tasks WHERE parent_id IS NULL AND user_id = ? AND done = 0 ORDER BY position').bind(t.user_id).all<{ id: string; position: number }>()
+    ? await db.prepare('SELECT id, position FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 0 AND deleted_at IS NULL ORDER BY position').bind(t.parent_id, t.user_id).all<{ id: string; position: number }>()
+    : await db.prepare('SELECT id, position FROM tasks WHERE parent_id IS NULL AND user_id = ? AND done = 0 AND deleted_at IS NULL ORDER BY position').bind(t.user_id).all<{ id: string; position: number }>()
   ).results;
   if (!rows.some((r, i) => i > 0 && r.position - rows[i - 1].position < MIN_GAP)) return;
   const stmt = db.prepare('UPDATE tasks SET position = ? WHERE id = ?');
@@ -443,14 +445,21 @@ app.get('/api/tasks', async (c) => {
   const userId = c.get('auth').userId;
   const done = c.req.query('done');
   const search = searchFilter(c.req.query('q'));
+  const limit = intParam(c.req.query('limit'), 100, 1, 500);
+  const offset = intParam(c.req.query('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
+  if (c.req.query('deleted')) {
+    // Prullenbak, nieuwste eerst. Een subtaak die samen met haar ouder verwijderd werd, hoort bij die ouder.
+    const rows = await c.env.DB.prepare('SELECT * FROM tasks t WHERE user_id = ? AND deleted_at IS NOT NULL AND NOT EXISTS ' +
+      '(SELECT 1 FROM tasks p WHERE p.id = t.parent_id AND p.deleted_at = t.deleted_at) ORDER BY deleted_at DESC LIMIT ? OFFSET ?')
+      .bind(userId, limit, offset).all<TaskRow>();
+    return c.json(rows.results.map(asBool));
+  }
   if (done) {
-    const limit = intParam(c.req.query('limit'), 100, 1, 500);
-    const offset = intParam(c.req.query('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
-    const rows = await c.env.DB.prepare(`SELECT * FROM tasks WHERE user_id = ? AND done = 1${search.sql} ORDER BY done_at DESC LIMIT ? OFFSET ?`)
+    const rows = await c.env.DB.prepare(`SELECT * FROM tasks WHERE user_id = ? AND done = 1 AND deleted_at IS NULL${search.sql} ORDER BY done_at DESC LIMIT ? OFFSET ?`)
       .bind(userId, ...search.binds, limit, offset).all<TaskRow>();
     return c.json(rows.results.map(asBool));
   }
-  const rows = await c.env.DB.prepare(`SELECT * FROM tasks WHERE user_id = ? AND done = 0${search.sql} ORDER BY position`).bind(userId, ...search.binds).all<TaskRow>();
+  const rows = await c.env.DB.prepare(`SELECT * FROM tasks WHERE user_id = ? AND done = 0 AND deleted_at IS NULL${search.sql} ORDER BY position`).bind(userId, ...search.binds).all<TaskRow>();
   return c.json(rows.results.map(asBool));
 });
 
@@ -468,7 +477,8 @@ app.post('/api/tasks', async (c) => {
   const b = await body(c);
   const id = clientId(b.id);
   const userId = c.get('auth').userId;
-  const existing = id && await getTask(c.env.DB, userId, id);
+  // Ook een eigen taak in de prullenbak telt als bestaand: opnieuw versturen haalt hem er niet uit.
+  const existing = id && await c.env.DB.prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ?').bind(id, userId).first<TaskRow>();
   if (existing) return c.json(asBool(existing), 200);
   // Een id dat bij een ander account hoort mag niets overschrijven en lekt niets.
   if (id && await c.env.DB.prepare('SELECT 1 FROM tasks WHERE id = ?').bind(id).first()) throw new HttpError(409, 'err.id_taken');
@@ -582,18 +592,55 @@ app.patch('/api/tasks/:id', async (c) => {
 app.delete('/api/tasks/:id', async (c) => {
   const userId = c.get('auth').userId;
   const id = c.req.param('id');
-  const t = await getTask(c.env.DB, userId, id);
+  const db = c.env.DB;
+  if (c.req.query('purge')) {
+    // Definitief, alleen vanuit de prullenbak.
+    const t = await db.prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL').bind(id, userId).first<TaskRow>();
+    if (!t) throw new HttpError(404, 'err.not_found');
+    await db.batch(wipeStmts(db, 'id = ?', [id]));
+    return c.json({ ok: true });
+  }
+  const t = await getTask(db, userId, id);
   if (!t) throw new HttpError(404, 'err.not_found');
-  await c.env.DB.batch([
-    c.env.DB.prepare('DELETE FROM tasks WHERE parent_id = ? AND user_id = ?').bind(id, userId),
-    c.env.DB.prepare('DELETE FROM tasks WHERE id = ? AND user_id = ?').bind(id, userId),
-  ]);
+  await db.batch(trashStmts(db, t));
   return c.json({ ok: true });
+});
+
+/** Naar de prullenbak: de taak en haar subtaken met hetzelfde tijdstempel, zodat terugzetten ze samen terugzet. */
+function trashStmts(db: D1Database, t: TaskRow): D1PreparedStatement[] {
+  const ts = now();
+  return [db.prepare('UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE (id = ? OR parent_id = ?) AND user_id = ? AND deleted_at IS NULL')
+    .bind(ts, ts, t.id, t.id, t.user_id)];
+}
+
+/**
+ * Uit de prullenbak: de taak met de subtaken die samen met haar verwijderd werden. Staat de ouder van een subtaak ook
+ * in de prullenbak, dan gaat die eerst terug. Een herinnering die intussen voorbij is, telt als gemeld.
+ */
+app.post('/api/tasks/:id/restore', async (c) => {
+  const db = c.env.DB;
+  const userId = c.get('auth').userId;
+  const trashed = (id: string) => db.prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL').bind(id, userId).first<TaskRow>();
+  const t = await trashed(c.req.param('id'));
+  if (!t) throw new HttpError(404, 'err.not_found');
+  const parent = t.parent_id ? await trashed(t.parent_id) : null;
+  const ts = now();
+  const back = (r: TaskRow) => db.prepare(
+    'UPDATE tasks SET deleted_at = NULL, notified = CASE WHEN remind_at IS NOT NULL AND remind_at <= ? THEN 1 ELSE notified END, updated_at = ? ' +
+    'WHERE user_id = ? AND deleted_at = ? AND (id = ? OR parent_id = ?)').bind(ts, ts, r.user_id, r.deleted_at, r.id, r.id);
+  await db.batch([...(parent ? [back(parent)] : []), back(t)]);
+  return c.json({ ok: true });
+});
+
+app.post('/api/trash/empty', async (c) => {
+  const db = c.env.DB;
+  const res = await db.batch(wipeStmts(db, 'user_id = ? AND deleted_at IS NOT NULL', [c.get('auth').userId]));
+  return c.json({ deleted: res[2].meta.changes + res[3].meta.changes });
 });
 
 // Lijsten bestaan alleen als `list`-kolom van taken; er is geen aparte tabel.
 app.get('/api/lists', async (c) => {
-  const { results } = await c.env.DB.prepare('SELECT list AS name, SUM(done = 0) AS open FROM tasks WHERE user_id = ? GROUP BY list')
+  const { results } = await c.env.DB.prepare('SELECT list AS name, SUM(done = 0) AS open FROM tasks WHERE user_id = ? AND deleted_at IS NULL GROUP BY list')
     .bind(c.get('auth').userId).all<{ name: string; open: number }>();
   const lists = results.map((r) => ({ name: r.name, open: r.open }));
   // Inbox is vast en moet er ook zijn zonder taken.
@@ -624,12 +671,11 @@ app.post('/api/lists/delete', async (c) => {
     return c.json({ moved: res.meta.changes });
   }
   if (b.tasks === 'delete') {
-    // Eerst de subtaken, dan de taken zelf, zoals bij het verwijderen van één taak.
-    const res = await db.batch([
-      db.prepare('DELETE FROM tasks WHERE user_id = ? AND parent_id IN (SELECT id FROM tasks WHERE list = ? AND user_id = ?)').bind(userId, name, userId),
-      db.prepare('DELETE FROM tasks WHERE list = ? AND user_id = ?').bind(name, userId),
-    ]);
-    return c.json({ deleted: res.reduce((n, r) => n + r.meta.changes, 0) });
+    // Naar de prullenbak, zoals één taak verwijderen; subtaken staan in de lijst van hun ouder en gaan mee.
+    const ts = now();
+    const res = await db.prepare('UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE list = ? AND user_id = ? AND deleted_at IS NULL')
+      .bind(ts, ts, name, userId).run();
+    return c.json({ deleted: res.meta.changes });
   }
   throw new HttpError(400, 'err.tasks_option');
 });
@@ -651,7 +697,7 @@ app.post('/api/tasks/:id/snooze', async (c) => {
   if (!Number.isFinite(m)) throw new HttpError(400, 'err.must_be_number', { field: 'minutes' });
   const at = new Date(Date.now() + Math.min(Math.max(m, 1), MAX_SNOOZE_MIN) * 60_000).toISOString();
   // Het ritme (repeat_at) blijft staan; zoals elke schrijver van remind_at wist snoozen de ongedaan-maakstand.
-  const res = await c.env.DB.prepare('UPDATE tasks SET remind_at = ?, notified = 0, repeat_prev = NULL, updated_at = ? WHERE id = ? AND user_id = ?')
+  const res = await c.env.DB.prepare('UPDATE tasks SET remind_at = ?, notified = 0, repeat_prev = NULL, updated_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL')
     .bind(at, now(), c.req.param('id'), c.get('auth').userId).run();
   if (!res.meta.changes) throw new HttpError(404, 'err.not_found');
   return c.json({ ok: true, remind_at: at });
@@ -775,6 +821,7 @@ export default {
     ctx.waitUntil((async () => {
       // runReminders leest per taak de instellingen van de eigenaar; er zit geen globale zone tussen.
       await runReminders(env, await loadInstallPrefs(env));
+      await purgeTrash(env.DB, Date.now());
     })());
   },
 };

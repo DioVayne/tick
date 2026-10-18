@@ -65,7 +65,7 @@ exportApi.use('*', sessionOnly);
 exportApi.get('/', async (c) => {
   const userId = c.get('auth').userId;
   const [tasks, places] = await Promise.all([
-    c.env.DB.prepare(`SELECT ${TASK_COLUMNS.join(', ')} FROM tasks WHERE user_id = ? ORDER BY created_at, id`).bind(userId).all(),
+    c.env.DB.prepare(`SELECT ${TASK_COLUMNS.join(', ')} FROM tasks WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at, id`).bind(userId).all(),
     c.env.DB.prepare(`SELECT ${PLACE_COLUMNS.join(', ')} FROM places WHERE user_id = ? ORDER BY created_at, id`).bind(userId).all(),
   ]);
   const now = Date.now();
@@ -164,7 +164,8 @@ importApi.post('/backup', async (c) => {
     placeStmts.push(upsert(db, 'places', PLACE_COLUMNS, p, userId));
   }
 
-  await insertBatched(db, ordered.map((t) => upsert(db, 'tasks', TASK_COLUMNS, t, userId)));
+  // deleted_at = NULL: een taak uit het bestand die in de prullenbak staat, komt terug.
+  await insertBatched(db, ordered.map((t) => upsert(db, 'tasks', [...TASK_COLUMNS, 'deleted_at'], { ...t, deleted_at: null }, userId)));
   await insertBatched(db, placeStmts);
   return c.json({ tasks: ordered.length, places: placeStmts.length, skipped });
 });
