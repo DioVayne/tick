@@ -348,7 +348,10 @@ function build(t, readOnly) {
     class: 'danger', type: 'button',
     onclick: () => {
       const task = current(id);
-      if (!task || !confirm(tr('detail.confirm_delete', { title: task.title }))) return;
+      if (!task) return;
+      // Een gedeelde taak (of een subtaak ervan) gaat voor iedereen naar de prullenbak.
+      const top = task.parent_id ? current(task.parent_id) : task;
+      if (!confirm(tr(top?.share ? 'detail.confirm_delete_shared' : 'detail.confirm_delete', { title: task.title }))) return;
       dropPending(id);
       const pushed = !!history.state?.task;
       remove(id); // zet de keuze op null

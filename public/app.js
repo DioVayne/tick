@@ -17,7 +17,7 @@ $('#add').addEventListener('submit', (e) => {
   e.preventDefault();
   const title = $('#add-title').value.trim();
   if (!title) return;
-  addTask(title, fromLocalInput($('#add-remind').value), (!state.showDone && state.list) || 'Inbox');
+  addTask(title, fromLocalInput($('#add-remind').value), (!state.showDone && !state.showTrash && state.list) || 'Inbox');
   $('#add-title').value = '';
   $('#add-remind').value = '';
 });
@@ -87,11 +87,11 @@ document.addEventListener('keydown', (e) => {
 // Een andere lijst (of Afgerond) kiezen sluit het paneel en de instellingen. Capture: vóór de zijbalk zelf rendert.
 $('#side').addEventListener('click', (e) => {
   if (!(e.target instanceof Element)) return;
-  if (isSettingsOpen() && e.target.closest('button[data-list], #btn-done')) closeSettings();
+  if (isSettingsOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeSettings();
   if (!state.selected) return;
-  const b = e.target.closest('button[data-list], #btn-done');
+  const b = e.target.closest('button[data-list], #btn-done, #btn-trash');
   if (!b) return;
-  const other = b.id === 'btn-done' ? !state.showDone : state.showDone || (b.dataset.list || null) !== state.list;
+  const other = b.id === 'btn-trash' || (b.id === 'btn-done' ? !state.showDone : state.showDone || (b.dataset.list || null) !== state.list);
   if (other) closeTask();
 }, true);
 $('#newlist-input').addEventListener('keydown', (e) => {

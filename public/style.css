@@ -86,6 +86,13 @@ li.task.sortable-ghost { opacity: .4; }
 mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1px; }
 .status { color: var(--muted); font-size: .8125rem; text-align: center; min-height: 20px; }
 .empty { text-align: center; color: var(--muted); padding: 32px 0; }
+/* Prullenbak: uitleg en legen bovenaan, per taak terugzetten of definitief verwijderen */
+.trash-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 8px; }
+.trash-head .muted { color: var(--muted); font-size: .8125rem; margin: 0; flex: 1 1 220px; }
+li.trashed .title { min-height: 0; padding: 8px 4px; }
+li.trashed .meta { padding-left: 10px; margin-top: 0; }
+.trash-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.trash-actions button { min-height: 34px; padding: 4px 10px; font-size: .8125rem; }
 .toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); translate: -50% 0; z-index: 20; max-width: calc(100% - 32px); background: var(--toast-bg); color: #fff; padding: 10px 14px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.25); font-size: .875rem; }
 .toast[hidden] { display: none; }
 html { overscroll-behavior-y: contain; }

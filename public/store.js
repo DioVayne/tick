@@ -14,6 +14,8 @@ const undoRepeat = new Map();
 // Net afgevinkte taken (justDone): blijven even zichtbaar (doorgestreept) zodat je ze kunt terugzetten en de lijst niet verspringt.
 export const state = {
   open: [], done: [], showDone: false, list: null, selected: null, justDone: new Map(), query: '',
+  // Prullenbak: alleen online opgehaald (null = nog niet geladen of offline).
+  showTrash: false, trash: /** @type {any[] | null} */ (null),
   serverLists: [], extraLists: /** @type {string[]} */ ([]), offline: false, pending: 0,
 };
 
@@ -395,3 +397,31 @@ export function toggleDone(t) {
   state.justDone.set(t.id, { timer, task: t });
   return update(t.id, t.repeat && !t.parent_id ? { done: true, occurrence: t.repeat.at } : { done: true });
 }
+
+// ---------- prullenbak (alleen online) ----------
+
+/** Haalt de prullenbak op; offline blijft state.trash null en toont de weergave dat. */
+export async function loadTrash() {
+  try {
+    state.trash = await request('GET', '/api/tasks?deleted=1&limit=200');
+  } catch (e) {
+    state.trash = null;
+    if (!(e instanceof Offline)) report(tr('store.load_failed', { reason: e.message }));
+  }
+  changed();
+}
+
+/** Een prullenbakactie op de server, daarna prullenbak en takenlijst opnieuw ophalen. */
+async function trashAction(method, path) {
+  try {
+    await request(method, path, method === 'POST' ? {} : undefined);
+  } catch (e) {
+    report(e instanceof Offline ? tr('trash.offline') : tr('store.change_refused', { reason: e.message }));
+    return;
+  }
+  await Promise.all([loadTrash(), load()]);
+}
+
+export const restoreTask = (id) => trashAction('POST', `/api/tasks/${id}/restore`);
+export const purgeTask = (id) => trashAction('DELETE', `/api/tasks/${id}?purge=1`);
+export const emptyTrash = () => trashAction('POST', '/api/trash/empty');

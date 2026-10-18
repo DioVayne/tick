@@ -2,12 +2,12 @@
 
 // App-shell voor offline gebruik. Network-first: online krijg je altijd de nieuwste versie (geen mix van oude en
 // nieuwe modules na een deploy), offline de laatst bewaarde. Verhoog de versie als de lijst hieronder verandert.
-const CACHE = 'tick-shell-v11';
+const CACHE = 'tick-shell-v12';
 const SHELL = [
   '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/push.js', '/style.css', '/sortable.min.js',
   '/markdown.js', '/lists.js', '/editor.js', '/sidebar.js', '/detail.js', '/listpicker.js', '/listmenu.js', '/dialog.js',
   '/repeat.js', '/i18n.js', '/config.js', '/settings.js', '/repeatpicker.js', '/places.js', '/map.js', '/leaflet.js', '/leaflet.css',
-  '/theme.js', '/settingsview.js', '/androidapp.js', '/applink.js', '/swclick.js', '/next.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/badge-96.png',
+  '/theme.js', '/settingsview.js', '/androidapp.js', '/applink.js', '/swclick.js', '/next.js', '/trash.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/badge-96.png',
 ];
 importScripts('/swclick.js'); // zet self.tickClickTarget
 const NETWORK_TIMEOUT_MS = 4000;
