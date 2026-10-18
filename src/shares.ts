@@ -108,14 +108,17 @@ sharesApi.post('/:id/accept', async (c) => {
   }
   const position = ((await topMin(db, userId)) ?? 0) - STEP;
   if (s.mode === 'shared') {
-    await db.prepare("UPDATE task_shares SET status = 'accepted', list = 'Inbox', position = ?, responded_at = ? WHERE id = ? AND status = 'pending'")
+    const res = await db.prepare("UPDATE task_shares SET status = 'accepted', list = 'Inbox', position = ?, responded_at = ? WHERE id = ? AND status = 'pending'")
       .bind(position, now(), s.id).run();
+    if (!res.meta.changes) throw new HttpError(404, 'err.not_found'); // intussen geweigerd of ingetrokken
     return c.json({ ok: true, task_id: task.id });
   }
   const { results: kids } = await db.prepare('SELECT * FROM tasks WHERE parent_id = ? AND deleted_at IS NULL ORDER BY position').bind(task.id).all<TaskRow>();
-  const stmts = copyStmts(db, task, kids, userId, position);
-  // De deelrij als eerste: een tweede gelijktijdige accept vindt hem dan niet meer (de batch is één transactie).
-  await db.batch([db.prepare('DELETE FROM task_shares WHERE id = ?').bind(s.id), ...stmts]);
+  // Eerst de deelrij weghalen: alleen wie hem echt weghaalt, maakt de kopie. Een gelijktijdige accept, weigering of
+  // intrekking vindt hem dan niet meer, en er komt nooit een kopie van een uitnodiging die er niet meer is.
+  const claim = await db.prepare("DELETE FROM task_shares WHERE id = ? AND status = 'pending'").bind(s.id).run();
+  if (!claim.meta.changes) throw new HttpError(404, 'err.not_found');
+  await db.batch(copyStmts(db, task, kids, userId, position));
   return c.json({ ok: true });
 });
 

@@ -120,7 +120,8 @@ export function fillShareBox(box, task, readOnly) {
 
 /** Balk per openstaande uitnodiging bovenaan de takenlijst, met Accepteren en Weigeren. */
 export function renderInvites(root) {
-  if (!state.invites.length) return;
+  // Offline niet: accepteren en weigeren gaan alleen online, en de lijst kan verouderd zijn.
+  if (state.offline || !state.invites.length) return;
   root.append(el('div', { class: 'invites' }, ...state.invites.map((inv) => el('div', { class: 'invite', 'data-id': inv.id, role: 'group' },
     el('p', {}, t(inv.mode === 'copy' ? 'share.invite_copy' : 'share.invite_shared', { name: inv.from.name, title: inv.task.title })),
     el('div', { class: 'invite-buttons' },

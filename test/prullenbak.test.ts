@@ -75,6 +75,17 @@ describe('prullenbak', () => {
     expect((await restore(crypto.randomUUID())).status).toBe(404);
   });
 
+  it('een subtaak in de prullenbak wordt niet mee afgevinkt of heropend met haar ouder', async () => {
+    const p = await createTask({ title: 'Ouder met weggegooide subtaak' });
+    const k = await createTask({ title: 'weggegooid', parent_id: p.id });
+    await del(k.id);
+    await call(`/api/tasks/${p.id}/done`, { method: 'POST', json: {} });
+    expect((await row(k.id))!.done).toBe(0);
+    // en na terugzetten is hij gewoon nog open
+    await restore(k.id);
+    expect((await row(k.id))!).toMatchObject({ done: 0, deleted_at: null });
+  });
+
   it('definitief verwijderen wist echt, alleen vanuit de prullenbak', async () => {
     const t = await createTask({ title: 'Definitief' });
     const k = await createTask({ title: 'Definitief-kind', parent_id: t.id });
