@@ -7,9 +7,17 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 
 ## Screenshots
 
-![Tick on the desktop in dark mode: lists in the sidebar, the task list in the middle and an open task on the right](docs/screenshots/desktop-dark.png)
+![Tick on the desktop in dark mode: lists in the sidebar, the task list in the middle and an open shared task on the right](docs/screenshots/desktop-dark.png)
 
-**On the desktop** you get three columns: your lists on the left, the tasks in the middle and the open task on the right. A task can have a reminder (🔔), a repeat rule (🔁), a list and subtasks. The notes are markdown, so a checklist in a note can be ticked off right there.
+**On the desktop** you get three columns: your lists on the left, the tasks in the middle and the open task on the right. A task can have a reminder (🔔), a repeat rule (🔁), a list and subtasks. The notes are markdown, so a checklist in a note can be ticked off right there. Click a task and you can edit its title right in the list. Tick something off and a little burst of confetti comes out of the checkbox.
+
+![The share dialog: pick someone, then choose a shared task or a copy](docs/screenshots/sharing.png)
+
+**Sharing** works between the accounts on your Tick. Pick someone from the list (or type a name or email address) and choose *Shared*, one task for both of you, where done is done for everyone, or *Copy*, which gives them their own copy. They get an invitation at the top of their list to accept or decline. The task shows who it is shared with, and a reminder on a shared task reaches everyone on it. The owner can remove people; the others can stop sharing whenever they like.
+
+![The trash with deleted tasks, each with Restore and Delete for good](docs/screenshots/trash.png)
+
+**The trash** keeps deleted tasks for 30 days. Restore one, delete it for good, or empty the trash in one go.
 
 ![Tick in light mode with a task that has a location reminder](docs/screenshots/desktop-light.png)
 
@@ -30,12 +38,14 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 
 ## Features
 - Tasks with lists, one level of subtasks, drag to sort, and search.
-- Several accounts on one Tick; share a task with someone as one shared task (done is done for everyone) or as a separate copy. Deleted tasks stay in a trash for 30 days.
-- Reminders with web push; a reminder can repeat (daily, weekly, monthly, yearly, with custom rules).
+- Several accounts on one Tick; share a task with someone as one shared task (done is done for everyone) or as a separate copy. They accept or decline the invitation, and reminders on a shared task go to everyone on it.
+- A trash: deleted tasks stay there for 30 days; restore them, delete them for good, or empty the trash.
+- Reminders with web push; a reminder can repeat (daily, weekly, monthly, yearly, with custom rules). A new reminder starts at the next whole hour.
 - Notes in markdown, with clickable checklists.
 - Works offline as an installable web app (PWA); changes sync when you are back online.
-- Desktop layout with a sidebar and detail panel; a full-screen task view on mobile.
-- Optional Android app: a home-screen widget, quick add, and location reminders (notify me when I arrive at or leave a place).
+- Desktop layout with a sidebar and detail panel, where you edit a task's title right in the list; a full-screen task view on mobile.
+- Confetti when you tick off a task (not when your device asks for reduced motion).
+- Optional Android app: a home-screen widget, quick add, and location reminders (notify me when I arrive at or leave a place). Notifications show up as Tick instead of Chrome, and you link the app with one tap on *Link* in the web app.
 - An inbox API for automations (`POST /api/inbox` with its own token).
 - A settings page in the app: display (theme, text size, spacing), language per device, time zone, password, keys for your phone and automations, a view of your devices, and backup, restore and TickTick import. After the install you rarely need the config again.
 - English and Dutch; your own time zone.
