@@ -37,6 +37,8 @@ public class MainActivity extends Activity {
     private TextView result;
     private TextView locStatus;
     private TextView pairStatus;
+    private TextView batteryStatus;
+    private Button battery;
 
     /**
      * Wat de app bij elke start nodig heeft: periodiek verversen, het kanaal "locatie" (zodat het in de instellingen staat
@@ -114,6 +116,15 @@ public class MainActivity extends Activity {
         locStatus.setPadding(0, (int) (4 * d), 0, (int) (12 * d));
         root.addView(locStatus);
 
+        battery = new Button(this);
+        battery.setText(R.string.battery_button);
+        battery.setOnClickListener(v -> Battery.ask(this));
+        root.addView(battery);
+
+        batteryStatus = new TextView(this);
+        batteryStatus.setPadding(0, (int) (4 * d), 0, (int) (12 * d));
+        root.addView(batteryStatus);
+
         Button look = new Button(this);
         look.setText(R.string.widget_settings);
         look.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
@@ -185,6 +196,7 @@ public class MainActivity extends Activity {
         super.onResume();
         updatePairStatus();
         updateLocStatus();
+        updateBatteryStatus();
         // Zonder toestemming of na "locatie uit" is de signature gewist: dan alles opnieuw zetten. Anders alleen
         // als de set veranderd is; elke keer opnieuw registreren kan een nog niet afgeleverde aankomst wissen.
         if (Geo.permitted(this)) {
@@ -196,6 +208,12 @@ public class MainActivity extends Activity {
         }
         // Bij openen ook de lijst ophalen (op de achtergrond), bijvoorbeeld voor een plek die op de laptop gezet is.
         if (!Prefs.token(this).isEmpty()) SyncJob.syncSoon(this, null, null, 0);
+    }
+
+    private void updateBatteryStatus() {
+        boolean free = Battery.unrestricted(this);
+        batteryStatus.setText(free ? R.string.battery_status_free : R.string.battery_status_limited);
+        battery.setVisibility(free ? View.GONE : View.VISIBLE);
     }
 
     private boolean granted(String permission) {

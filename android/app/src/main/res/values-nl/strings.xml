@@ -16,6 +16,9 @@
     <string name="loc_channel">Locatiemeldingen</string>
     <string name="loc_arrived">📍 Aangekomen bij %s</string>
     <string name="loc_left">📍 Vertrokken van %s</string>
+    <string name="battery_button">Batterijbeperking uitzetten</string>
+    <string name="battery_status_free">Batterij: Tick mag op de achtergrond verversen</string>
+    <string name="battery_status_limited">Batterij: Android kan Tick op de achtergrond afremmen (widget en locatiemeldingen)</string>
     <string name="loc_button">Locatiemeldingen aanzetten</string>
     <string name="loc_status_on">Locatiemeldingen: aan</string>
     <string name="loc_status_missing">Locatiemeldingen: nog nodig: %s</string>
