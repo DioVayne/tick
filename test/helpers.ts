@@ -67,6 +67,10 @@ export type Task = {
   location: { name: string; lat: number; lng: number; radius: number; trigger: 'enter' | 'exit' } | null;
   location_notified: boolean;
   repeat: { rule: string; start: string; at: string } | null;
+  share: {
+    owner: { id: string; name: string }; mine: boolean;
+    members: { share_id: string; user_id: string; name: string; status: 'pending' | 'accepted' }[];
+  } | null;
 };
 
 export async function createTask(body: Json): Promise<Task> {
