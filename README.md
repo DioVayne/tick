@@ -27,7 +27,7 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 
 ![The share dialog: pick someone, then choose a shared task or a copy](docs/screenshots/sharing.png)
 
-**Sharing** works between the accounts on your Tick. Pick someone from the list (or type a name or email address) and choose *Shared*, one task for both of you, where done is done for everyone, or *Copy*, which gives them their own copy. They get an invitation at the top of their list to accept or decline. The task shows who it is shared with, and a reminder on a shared task reaches everyone on it. The owner can remove people; the others can stop sharing whenever they like.
+**Sharing** works between the accounts on your Tick. Pick someone from the list (or type a name or email address) and choose *Shared*, one task for both of you, where done is done for everyone, or *Copy*, which gives them their own copy. They get an invitation at the top of their list to accept or decline. The task shows who it is shared with, and a reminder on a shared task reaches everyone on it. The owner can remove people; the others can stop sharing whenever they like. With a copy you see how far the others are, and you get a notification when one of them is done.
 
 ![The trash with deleted tasks, each with Restore and Delete for good](docs/screenshots/trash.png)
 

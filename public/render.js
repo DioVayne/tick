@@ -1,4 +1,5 @@
 import { confetti, isCouple } from './confetti.js';
+import { copyPills } from './copies.js';
 import { bindTitle, renderDetail, selectTask, titleOf } from './detail.js';
 import { autoGrow } from './editor.js';
 import { dateLocale, t, t as tr } from './i18n.js'; // tr waar t al een taak is
@@ -164,6 +165,7 @@ function taskItem(t, children) {
     const names = shareNames(t) || label;
     meta.push(el('span', { class: 'shared', title: label, 'aria-label': label }, '👥 ' + names));
   }
+  if (!t.parent_id && t.copies) meta.push(...copyPills(t));
   if (!state.list && t.list !== 'Inbox') meta.push(el('span', {}, t.list));
   // Zonder markdowntekens; zoeken gebeurt wel in de ruwe tekst.
   const plain = t.description ? plainText(t.description) : '';
