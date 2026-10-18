@@ -31,7 +31,7 @@ function trashItem(task) {
     el('div', { class: 'meta' },
       el('span', {}, t('trash.deleted_at', { when: when(task.deleted_at) })),
       task.list !== 'Inbox' ? el('span', {}, task.list) : null,
-      task.share ? el('span', { class: 'shared' }, t('share.with', { names: shareNames(task) })) : null));
+      task.share ? el('span', { class: 'shared' }, shareLabel(task)) : null));
 }
 
 /** Namen van de anderen op een gedeelde taak, voor "Gedeeld met …". */
@@ -40,6 +40,14 @@ export function shareNames(task) {
   if (!s) return '';
   const others = s.mine ? s.members.filter((m) => m.status === 'accepted').map((m) => m.name) : [s.owner.name];
   return others.join(', ');
+}
+
+/** Korte tekst bij een gedeelde taak: "Gedeeld met …", of "Wacht op …" zolang nog niemand accepteerde. */
+export function shareLabel(task) {
+  const names = shareNames(task);
+  if (names) return t('share.with', { names });
+  const waiting = task.share?.members.filter((m) => m.status === 'pending').map((m) => m.name).join(', ');
+  return t('share.waiting_for', { names: waiting || '…' });
 }
 
 /** De prullenbak in de middenkolom: uitleg, legen, en per taak terugzetten of definitief verwijderen. */

@@ -50,9 +50,17 @@ sharesApi.post('/', async (c) => {
   if (!task) throw new HttpError(404, 'err.not_found');
   if (task.user_id !== userId) throw new HttpError(403, 'err.share_owner_only');
   if (task.parent_id) throw new HttpError(400, 'err.share_subtask');
-  const to = String(b.to ?? '').trim();
-  if (!to) throw new HttpError(400, 'err.required', { field: 'to' });
-  const toUser = await findRecipient(db, to);
+  // Uit de keuzelijst komt een id (to_user); getypt een naam of e-mailadres (to).
+  let toUser: string;
+  if (typeof b.to_user === 'string' && b.to_user) {
+    const u = await db.prepare('SELECT id FROM users WHERE id = ?').bind(b.to_user).first<{ id: string }>();
+    if (!u) throw new HttpError(404, 'err.share_user_unknown');
+    toUser = u.id;
+  } else {
+    const to = String(b.to ?? '').trim();
+    if (!to) throw new HttpError(400, 'err.required', { field: 'to' });
+    toUser = await findRecipient(db, to);
+  }
   if (toUser === userId) throw new HttpError(400, 'err.share_self');
   const row: ShareRow = {
     id: crypto.randomUUID(), task_id: task.id, from_user: userId, to_user: toUser, mode: b.mode, status: 'pending',
@@ -66,6 +74,16 @@ sharesApi.post('/', async (c) => {
     .catch((e) => console.warn('uitnodiging melden mislukt', (e as Error).message));
   try { c.executionCtx.waitUntil(sending); } catch { await sending; }
   return c.json(row, 201);
+});
+
+/**
+ * De andere accounts op deze installatie, voor de keuzelijst in de deeldialoog: alleen id en naam. Tick is voor een
+ * huishouden of klein team; wie een account heeft, mag de namen van de anderen zien om met hen te delen.
+ */
+sharesApi.get('/people', async (c) => {
+  const { results } = await c.env.DB.prepare('SELECT id, name FROM users WHERE id != ? ORDER BY lower(name), id')
+    .bind(c.get('auth').userId).all<{ id: string; name: string }>();
+  return c.json(results);
 });
 
 sharesApi.get('/incoming', async (c) => {

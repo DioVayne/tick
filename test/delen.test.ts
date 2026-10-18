@@ -53,6 +53,19 @@ describe('taken delen', () => {
     expect((await share(crypto.randomUUID(), c.email)).status).toBe(404);
   });
 
+  it('de keuzelijst toont de andere accounts (naam en id, geen e-mail), en uitnodigen kan op id', async () => {
+    const people = await json<{ id: string; name: string }[]>(await call('/api/shares/people'));
+    expect(people).toEqual(expect.arrayContaining([{ id: b.id, name: bName }]));
+    expect(people.map((p) => p.id)).not.toContain(ADMIN_ID);
+    expect(Object.keys(people[0]).sort()).toEqual(['id', 'name']);
+    const t = await createTask({ title: `Op id ${uniq()}` });
+    const res = await call('/api/shares', { method: 'POST', json: { task_id: t.id, to_user: c.id, mode: 'shared' } });
+    expect(res.status).toBe(201);
+    expect(await json(res)).toMatchObject({ to_user: c.id });
+    expect((await call('/api/shares', { method: 'POST', json: { task_id: t.id, to_user: crypto.randomUUID(), mode: 'copy' } })).status).toBe(404);
+    expect((await call('/api/shares', { method: 'POST', json: { task_id: t.id, to_user: ADMIN_ID, mode: 'copy' } })).status).toBe(400);
+  });
+
   it('alleen de eigenaar mag uitnodigen', async () => {
     const { t } = await sharedWith(b);
     expect((await share(t.id, c.email, 'shared', b.cookie)).status).toBe(403);

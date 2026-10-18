@@ -20,22 +20,32 @@ async function call(method, path, body) {
   }
 }
 
-/** Namen van mensen met wie je al eerder deelde, als suggestie in het veld. */
-function earlierPeople() {
-  const names = new Set();
-  for (const task of [...state.open, ...state.done]) {
-    if (task.share?.mine) for (const m of task.share.members) names.add(m.name);
+/** De andere accounts op deze Tick (id en naam), voor de keuzelijst; offline of bij een fout een lege lijst. */
+async function people() {
+  try {
+    return await request('GET', '/api/shares/people');
+  } catch {
+    return [];
   }
-  return [...names].sort((a, b) => a.localeCompare(b));
 }
 
-/** De deeldialoog: naam of e-mailadres, en per keer gedeeld of kopie. */
-export function openShareDialog(task) {
+/** De deeldialoog: iemand kiezen (of een naam of e-mailadres typen), en per keer gedeeld of kopie. */
+export async function openShareDialog(task) {
   if (state.offline) { toast(t('share.online_only')); return; }
+  const others = await people();
+  /** @type {{ id: string, name: string } | null} */
+  let chosen = others.length === 1 ? others[0] : null; // met maar één ander account staat die al klaar
   const input = el('input', {
-    id: 'share-to', type: 'text', required: true, autocomplete: 'off', list: 'share-people', maxlength: '254',
-    placeholder: t('share.to_placeholder'), enterkeyhint: 'send',
+    id: 'share-to', type: 'text', autocomplete: 'off', maxlength: '254', enterkeyhint: 'send',
+    placeholder: t(others.length ? 'share.to_placeholder_other' : 'share.to_placeholder'),
   });
+  const chips = others.map((p) => el('button', {
+    type: 'button', class: 'ghost person', 'aria-pressed': String(chosen?.id === p.id),
+    onclick: () => { chosen = chosen?.id === p.id ? null : p; input.value = ''; mark(); },
+  }, p.name));
+  const mark = () => chips.forEach((b, i) => b.setAttribute('aria-pressed', String(chosen?.id === others[i].id)));
+  // Typen gaat boven een keuze uit de lijst.
+  input.addEventListener('input', () => { if (input.value.trim()) { chosen = null; mark(); } });
   const option = (value, label, hint, checked) => el('label', { class: 'share-mode' },
     el('input', { type: 'radio', name: 'share-mode', value, checked }),
     el('span', {}, el('strong', {}, label), el('small', {}, hint)));
@@ -45,21 +55,22 @@ export function openShareDialog(task) {
     method: 'dialog',
     onsubmit: async (e) => {
       e.preventDefault();
-      const to = input.value.trim();
-      if (!to) return;
+      const typed = input.value.trim();
+      if (!typed && !chosen) { (chips[0] ?? input).focus(); return; }
       const mode = /** @type {HTMLInputElement} */ (form.querySelector('input[name="share-mode"]:checked')).value;
       const send = /** @type {HTMLButtonElement} */ (form.querySelector('button[type="submit"]'));
       send.disabled = true;
-      if (await call('POST', '/api/shares', { task_id: task.id, to, mode })) {
+      const who = typed ? { to: typed } : { to_user: chosen.id };
+      if (await call('POST', '/api/shares', { task_id: task.id, mode, ...who })) {
         close();
-        toast(t('share.sent', { name: to }), 'ok');
+        toast(t('share.sent', { name: typed || chosen.name }), 'ok');
       } else send.disabled = false;
     },
   },
   el('h2', { id: 'share-title' }, t('share.title', { title: task.title })),
   el('label', { for: 'share-to' }, t('share.to_label')),
+  chips.length ? el('div', { class: 'people', role: 'group', 'aria-label': t('share.to_label') }, ...chips) : null,
   input,
-  el('datalist', { id: 'share-people' }, ...earlierPeople().map((n) => el('option', { value: n }))),
   el('fieldset', { class: 'share-modes' },
     el('legend', {}, t('share.mode_label')),
     option('shared', t('share.mode_shared'), t('share.mode_shared_hint'), true),
@@ -73,7 +84,8 @@ export function openShareDialog(task) {
   dialog.addEventListener('close', close);
   document.body.append(dialog);
   dialog.showModal();
-  input.focus();
+  // Met een keuzelijst geen toetsenbord openklappen: dat duwt de namen op een telefoon uit beeld.
+  (chips.find((b) => b.getAttribute('aria-pressed') === 'true') ?? chips[0] ?? input).focus();
 }
 
 /** Stoppen met delen (jezelf) of iemand eraf halen (als eigenaar), na een bevestiging. */
