@@ -3,6 +3,7 @@ import { dateLocale, t, t as tr } from './i18n.js'; // tr waar t al een taak is
 import { plainText } from './markdown.js';
 import { renderSidebar } from './sidebar.js';
 import { state, toggleDone, update } from './store.js';
+import { renderTrash, shareNames } from './trash.js';
 
 export const $ = (s) => document.querySelector(s);
 
@@ -139,6 +140,7 @@ export function render() {
   renderDetail(); // eerst: kan de keuze wissen als de taak elders verwijderd is
   const root = $('#list');
   root.replaceChildren();
+  if (state.showTrash) { renderTrash(root); return; }
   // Afgerond toont alle lijsten; de zijbalk markeert dan alleen "Afgerond".
   let visible = state.showDone ? state.done : openTasks().filter((t) => !state.list || t.list === state.list);
   const q = norm(state.query.trim());

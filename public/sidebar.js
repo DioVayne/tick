@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 import { $, el, render } from './render.js';
-import { createList, lists, load, state } from './store.js';
+import { createList, lists, load, loadTrash, state } from './store.js';
 
 let contextHandler = () => {};
 /** Haak voor het lijstmenu (rechtsklik op een lijst); de aanroeper krijgt de naam en het knopelement. */
@@ -27,6 +27,7 @@ export function closeDrawer() {
 export function selectList(name) {
   state.list = name;
   state.showDone = false;
+  state.showTrash = false;
   closeDrawer();
   render();
 }
@@ -38,7 +39,7 @@ export function renderSidebar() {
   if ($('#side-lists .rename-input')) { updateHeader(); return; }
   const all = lists();
   // Met de instellingen open is geen lijst gekozen in de zijbalk; ⚙ Instellingen is dan gemarkeerd.
-  const current = (name) => !settingsOpen() && !state.showDone && state.list === name;
+  const current = (name) => !settingsOpen() && !state.showDone && !state.showTrash && state.list === name;
   const item = (name, label, count) =>
     el('button', {
       class: 'item' + (current(name) ? ' on' : ''),
@@ -60,10 +61,11 @@ const settingsOpen = () => document.body.classList.contains('settings-open');
 function updateHeader() {
   const open = settingsOpen();
   $('#btn-done').setAttribute('aria-pressed', String(state.showDone && !open));
+  $('#btn-trash').setAttribute('aria-pressed', String(state.showTrash && !open));
   $('#btn-settings')?.setAttribute('aria-pressed', String(open));
-  $('#title').textContent = open ? t('set.title') : state.showDone ? t('ui.completed') : state.list ?? t('ui.all');
+  $('#title').textContent = open ? t('set.title') : state.showTrash ? t('ui.trash') : state.showDone ? t('ui.completed') : state.list ?? t('ui.all');
   // Afgerond toont alle lijsten; een nieuwe taak gaat daar naar Inbox, net als bij Alle.
-  $('#add-title').placeholder = state.list && !state.showDone ? t('sidebar.add_to_list', { list: state.list }) : t('ui.new_task_placeholder');
+  $('#add-title').placeholder = state.list && !state.showDone && !state.showTrash ? t('sidebar.add_to_list', { list: state.list }) : t('ui.new_task_placeholder');
 }
 
 const listButton = (e) => e.target.closest('button[data-list]');
@@ -151,9 +153,18 @@ export function setupSidebar() {
 
   $('#btn-done').addEventListener('click', () => {
     state.showDone = true;
+    state.showTrash = false;
     closeDrawer();
     render();
     load();
+  });
+  $('#btn-trash').addEventListener('click', () => {
+    state.showTrash = true;
+    state.showDone = false;
+    state.trash = null;
+    closeDrawer();
+    render();
+    loadTrash();
   });
 
   // "+ Nieuwe lijst" wordt op zijn plek een invoerveld.
@@ -174,6 +185,7 @@ export function setupSidebar() {
     if (!value) return;
     state.list = createList(value);
     state.showDone = false;
+    state.showTrash = false;
     closeDrawer();
     render();
     $('#add-title').focus();
