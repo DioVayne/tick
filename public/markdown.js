@@ -233,6 +233,26 @@ export function plainText(src) {
   return blockLines(parseMarkdown(src)).join('\n');
 }
 
+// Takenlijst-regels (- [ ] en - [x]), ook in citaten en geneste items; regels in een codeblok tellen niet.
+/** @param {string} src @returns {{ done: number, total: number }} */
+export function countTasks(src) {
+  const n = { done: 0, total: 0 };
+  /** @param {Item} it */
+  const item = (it) => {
+    if (it.task) { n.total++; if (it.task.checked) n.done++; }
+    it.children.forEach(item);
+  };
+  /** @param {Block[]} blocks */
+  const walk = (blocks) => {
+    for (const b of blocks) {
+      if (b.type === 'ul' || b.type === 'ol') b.items.forEach(item);
+      else if (b.type === 'quote') walk(b.blocks);
+    }
+  };
+  walk(parseMarkdown(src));
+  return n;
+}
+
 // Eigen kleine bouwer; render.js importeren geeft een kringverwijzing.
 /** @param {string} tag @param {Record<string, any>} [props] @param {...any} kids */
 function h(tag, props = {}, ...kids) {

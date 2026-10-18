@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { translate } from '../public/i18n.js';
+import { progressOf } from '../src/copies';
 import { ADMIN_ID, call, callAs, createTask, createUser, json, type Task } from './helpers';
 
 type User = Awaited<ReturnType<typeof createUser>>;
@@ -123,5 +124,177 @@ describe('kopiegroep', () => {
     for (const t of tasks) expect('copy_group' in t).toBe(false);
     const bTasks = await json<Task[]>(await callAs(b.cookie, '/api/tasks'));
     for (const t of bTasks) expect('copy_group' in t).toBe(false);
+  });
+});
+
+describe('progressOf', () => {
+  it('telt takenlijst-regels en subtaken', () => {
+    expect(progressOf('', [])).toBeNull();
+    expect(progressOf('- [x] a\n- [ ] b', [])).toBe(0.5);
+    expect(progressOf('', [{ done: 1 }, { done: 0 }, { done: 0 }, { done: 0 }])).toBe(0.25);
+    expect(progressOf('- [x] a', [{ done: 0 }])).toBe(0.5);
+    expect(progressOf('```\n- [x] a\n```', [])).toBeNull();
+    expect(progressOf('> - [x] a\n- [ ] b', [])).toBe(0.5);
+    expect(progressOf('* [x] a', [])).toBe(1);
+    expect(progressOf('- [x] a\n  - [ ] b', [])).toBe(0.5);
+  });
+});
+
+describe('copies in GET /api/tasks', () => {
+  type U = User & { name: string };
+  let a: U, b: U, c: U, d: U, e: U;
+  const mk = async (name: string): Promise<U> => ({ ...await createUser({ name }), name });
+  beforeAll(async () => {
+    [a, b, c, d, e] = await Promise.all(['Anna', 'Bert', 'Cor', 'Dirk', 'Els'].map((n) => mk(`${n} ${uniq()}`)));
+  });
+  const post = async (u: User, body: Record<string, unknown>) => {
+    const res = await callAs(u.cookie, '/api/tasks', { method: 'POST', json: body });
+    expect(res.status).toBe(201);
+    return json<Task>(res);
+  };
+  const patch = (u: User, id: string, body: Record<string, unknown>) => callAs(u.cookie, `/api/tasks/${id}`, { method: 'PATCH', json: body });
+  const del = (u: User, id: string) => callAs(u.cookie, `/api/tasks/${id}`, { method: 'DELETE' });
+  const list = async (u: User, q = '') => json<Task[]>(await callAs(u.cookie, `/api/tasks${q}`));
+  const copiesOf = async (u: User, id: string, q = '') => {
+    const t = (await list(u, q)).find((x) => x.id === id);
+    expect(t).toBeDefined();
+    return t!.copies;
+  };
+  const names = (cp: Task['copies']) => (cp?.members ?? []).map((m) => m.name);
+  const member = async (u: User, id: string, name: string) => (await copiesOf(u, id))!.members.find((m) => m.name === name)!;
+  /** Groep van a met b en c; geeft de ids van de drie exemplaren. */
+  async function trio(extra: Record<string, unknown> = {}) {
+    const title = `Klus ${uniq()}`;
+    const ta = (await post(a, { title, ...extra })).id;
+    const tb = await copyTo(ta, title, b, a);
+    const tc = await copyTo(ta, title, c, a);
+    return { ta, tb, tc };
+  }
+
+  it('de deler ziet de ontvangers, de ontvangers zien de deler en elkaar', async () => {
+    const { ta, tb, tc } = await trio();
+    expect(names(await copiesOf(a, ta))).toEqual([b.name, c.name]);
+    expect(names(await copiesOf(b, tb))).toEqual([a.name, c.name]);
+    expect(names(await copiesOf(c, tc))).toEqual([a.name, b.name]);
+  });
+
+  it('alleen naam, klaar en voortgang', async () => {
+    const { ta, tb } = await trio({ description: 'beschrijving van Anna' });
+    const geheim = `Bert-titel ${uniq()}`;
+    expect((await patch(b, tb, { title: geheim, description: 'geheime notitie' })).status).toBe(200);
+    for (const m of (await copiesOf(a, ta))!.members) expect(Object.keys(m).sort()).toEqual(['done', 'done_at', 'name', 'progress']);
+    const body = await (await callAs(a.cookie, '/api/tasks')).text();
+    expect(body).not.toContain(geheim);
+    expect(body).not.toContain('geheime notitie');
+  });
+
+  it('voortgang van een ander', async () => {
+    const title = `Sub ${uniq()}`;
+    const ta = (await post(a, { title })).id;
+    await post(a, { title: 'k1', parent_id: ta });
+    await post(a, { title: 'k2', parent_id: ta });
+    const tb = await copyTo(ta, title, b, a);
+    expect(await member(a, ta, b.name)).toEqual({ name: b.name, done: false, done_at: null, progress: 0 });
+    const k1 = (await list(b)).find((t) => t.parent_id === tb && t.title === 'k1')!;
+    expect((await patch(b, k1.id, { done: true })).status).toBe(200);
+    expect((await member(a, ta, b.name)).progress).toBe(0.5);
+    expect((await patch(b, tb, { done: true })).status).toBe(200);
+    const klaar = await member(a, ta, b.name);
+    expect(klaar.done).toBe(true);
+    expect(klaar.done_at).toBeTruthy();
+  });
+
+  it('een derde buiten de groep ziet niets', async () => {
+    const { ta } = await trio();
+    const eigen = await post(e, { title: `Eigen ${uniq()}` });
+    const tasks = await list(e);
+    expect(tasks.find((t) => t.id === ta)).toBeUndefined();
+    expect(tasks.find((t) => t.id === eigen.id)!.copies).toBeNull();
+    expect((await patch(e, ta, { title: 'x' })).status).toBe(404);
+  });
+
+  it('pending alleen voor de eigenaar', async () => {
+    const title = `Wacht ${uniq()}`;
+    const ta = (await post(a, { title })).id;
+    const tb = await copyTo(ta, title, b, a);
+    expect((await share(ta, c.id, 'copy', a.cookie)).status).toBe(201);
+    const tA = (await list(a)).find((t) => t.id === ta)!;
+    expect(tA.copies!.pending).toEqual([{ name: c.name }]);
+    expect((tA.share?.members ?? []).some((m) => m.user_id === c.id)).toBe(false);
+    expect((await copiesOf(b, tb))!.pending).toEqual([]);
+  });
+
+  it('alleen een openstaande uitnodiging geeft ook copies', async () => {
+    const ta = (await post(a, { title: `Alleen ${uniq()}` })).id;
+    expect(await copiesOf(a, ta)).toBeNull();
+    expect((await share(ta, c.id, 'copy', a.cookie)).status).toBe(201);
+    expect(await copiesOf(a, ta)).toEqual({ members: [], pending: [{ name: c.name }] });
+  });
+
+  it('prullenbak', async () => {
+    const { ta, tb } = await trio();
+    expect((await del(b, tb)).status).toBe(200);
+    expect(names(await copiesOf(a, ta))).toEqual([c.name]);
+    const trash = await list(b, '?deleted=1');
+    expect(trash.some((t) => t.id === tb)).toBe(true);
+    for (const t of trash) expect(t.copies).toBeNull();
+    expect((await callAs(b.cookie, `/api/tasks/${tb}/restore`, { method: 'POST', json: {} })).status).toBe(200);
+    expect(names(await copiesOf(a, ta))).toEqual([b.name, c.name]);
+  });
+
+  it('origineel verwijderd', async () => {
+    const { ta, tb, tc } = await trio();
+    expect((await del(a, ta)).status).toBe(200);
+    expect(names(await copiesOf(b, tb))).toEqual([c.name]);
+    expect(names(await copiesOf(c, tc))).toEqual([b.name]);
+  });
+
+  it('groep van één', async () => {
+    const { ta, tb, tc } = await trio();
+    await del(b, tb);
+    await del(c, tc);
+    expect(await copiesOf(a, ta)).toBeNull();
+  });
+
+  it('?done=1 geeft copies mee', async () => {
+    const { ta } = await trio();
+    expect((await patch(a, ta, { done: true })).status).toBe(200);
+    expect(names(await copiesOf(a, ta, '?done=1'))).toEqual([b.name, c.name]);
+  });
+
+  it('gedeeld exemplaar', async () => {
+    const { ta, tb } = await trio();
+    const s = await json<Share>(await share(ta, d.id, 'shared', a.cookie));
+    expect((await accept(d, s.id)).status).toBe(200);
+    const vanA = await copiesOf(a, ta);
+    expect(names(vanA)).toEqual([b.name, c.name]);
+    expect(await copiesOf(d, ta)).toEqual(vanA);
+    expect(names(await copiesOf(b, tb))).toEqual([a.name, c.name]);
+  });
+
+  it('herhalend, relatief aan de kijker', async () => {
+    const title = `Wekelijks ${uniq()}`;
+    const ta = (await post(a, { title, remind_at: '2099-10-18T10:00:00', repeat: 'FREQ=WEEKLY;BYDAY=SU' })).id;
+    const tb = await copyTo(ta, title, b, a);
+    expect(await member(a, ta, b.name)).toMatchObject({ done: false });
+    expect((await patch(b, tb, { done: true })).status).toBe(200);
+    expect(await member(a, ta, b.name)).toMatchObject({ done: true, done_at: null });
+    expect(await member(b, tb, a.name)).toMatchObject({ done: false });
+    expect((await patch(a, ta, { done: true })).status).toBe(200);
+    expect(await member(a, ta, b.name)).toMatchObject({ done: false });
+  });
+
+  it('herhaling weggehaald', async () => {
+    const title = `Niet meer ${uniq()}`;
+    const ta = (await post(a, { title, remind_at: '2099-10-18T10:00:00', repeat: 'FREQ=WEEKLY;BYDAY=SU' })).id;
+    const tb = await copyTo(ta, title, b, a);
+    expect((await patch(b, tb, { repeat: '' })).status).toBe(200);
+    // B herhaalt niet meer: A die doorschuift maakt B niet ineens "achter", en B is pas klaar als B afvinkt.
+    expect((await patch(a, ta, { done: true })).status).toBe(200);
+    expect(await member(a, ta, b.name)).toMatchObject({ done: false, done_at: null });
+    expect((await patch(b, tb, { done: true })).status).toBe(200);
+    const m = await member(a, ta, b.name);
+    expect(m.done).toBe(true);
+    expect(m.done_at).toBeTruthy();
   });
 });

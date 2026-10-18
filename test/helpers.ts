@@ -71,6 +71,10 @@ export type Task = {
     owner: { id: string; name: string }; mine: boolean;
     members: { share_id: string; user_id: string; name: string; status: 'pending' | 'accepted' }[];
   } | null;
+  copies: {
+    members: { name: string; done: boolean; done_at: string | null; progress: number | null }[];
+    pending: { name: string }[];
+  } | null;
 };
 
 export async function createTask(body: Json): Promise<Task> {
