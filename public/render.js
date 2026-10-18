@@ -44,6 +44,16 @@ export const toLocalInput = (iso) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 export const fromLocalInput = (v) => (v ? new Date(v).toISOString() : null);
+/** Een leeg tijdveld toont in de kiezer vandaag als gekozen; vul daarom bij openen het volgende hele uur in. */
+export function prefillOnOpen(input, onPrefill) {
+  input.addEventListener('pointerdown', () => {
+    if (input.value || input.disabled) return;
+    const d = new Date();
+    d.setHours(d.getHours() + 1, 0, 0, 0);
+    input.value = toLocalInput(d.toISOString());
+    onPrefill?.();
+  });
+}
 export const fmt = (iso) =>
   new Date(iso).toLocaleString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 

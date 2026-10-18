@@ -6,7 +6,7 @@ import { openRepeatPicker } from './repeatpicker.js';
 import { openMap } from './map.js';
 import { renderMarkdown } from './markdown.js';
 import { locationLabel, wakeAndroidApp } from './places.js';
-import { $, el, fmt, fromLocalInput, render, toLocalInput } from './render.js';
+import { $, el, fmt, fromLocalInput, prefillOnOpen, render, toLocalInput } from './render.js';
 import { addSubtask, findDone, remove, snooze, state, toggleDone, update, updateQueued } from './store.js';
 import { fillShareBox } from './share.js';
 
@@ -244,10 +244,12 @@ function build(t, readOnly) {
   });
 
   const remind = el('input', { type: 'datetime-local', 'aria-label': tr('ui.reminder'), disabled: readOnly });
-  remind.addEventListener('change', () => {
+  const remindChanged = () => {
     setPending(id, 'remind_at', fromLocalInput(remind.value));
     showStatus();
-  });
+  };
+  remind.addEventListener('change', remindChanged);
+  prefillOnOpen(remind, remindChanged);
   remind.addEventListener('blur', flushSoon);
   const remindPill = el('label', { class: 'pill remind', title: tr('ui.reminder') }, el('span', { 'aria-hidden': 'true' }, '🔔'), remind);
   // Verzetten en wissen winnen van een gekozen, nog niet opgeslagen tijd (die anders na de klik alsnog zou gaan).

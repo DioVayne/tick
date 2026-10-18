@@ -3,7 +3,7 @@ import { initAndroidApp } from './androidapp.js';
 import { t } from './i18n.js';
 import { closeTask, detailReady, flushPending, selectTask } from './detail.js';
 import { openListMenu } from './listmenu.js';
-import { $, el, fromLocalInput, render, status, toast } from './render.js';
+import { $, el, fromLocalInput, prefillOnOpen, render, status, toast } from './render.js';
 import { closeSettings, hideSettings, isSettingsOpen, openSettings } from './settingsview.js';
 import { onListContext, setupSidebar } from './sidebar.js';
 import { addTask, init, load, on, state } from './store.js';
@@ -13,6 +13,7 @@ on('error', toast);
 setupSidebar();
 onListContext(openListMenu);
 
+prefillOnOpen($('#add-remind'));
 $('#add').addEventListener('submit', (e) => {
   e.preventDefault();
   const title = $('#add-title').value.trim();
