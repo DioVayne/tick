@@ -1,4 +1,5 @@
-// Genereert de PNG-iconen uit dezelfde vormen als public/icon.svg (geen dependencies).
+// Genereert de PNG-iconen van Tick (geen dependencies). public/icon.svg (het favicon) is dezelfde speld,
+// maar groter, zonder achtergrond en met een dikker vinkje, zodat hij op 16 px nog leesbaar is.
 // public/badge-96.png (wit vinkje op transparant, voor meldingen) maakt dit script niet.
 import fs from 'node:fs';
 import zlib from 'node:zlib';
@@ -26,7 +27,7 @@ function distToSeg(px, py, ax, ay, bx, by) {
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
-// Dezelfde vormen als public/icon.svg, in het 512-raster: gele speld met een vinkje erin, op leisteenblauw.
+// De vormen in het 512-raster: gele speld met een vinkje erin, op leisteenblauw.
 const BG = [0x1e, 0x29, 0x3b];
 const PIN = [0xfc, 0xd3, 0x4d];
 const PIN_CURVES = [
