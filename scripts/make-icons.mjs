@@ -1,4 +1,5 @@
-// Genereert effen blauwe PNG-iconen met een vinkje (geen dependencies).
+// Genereert de PNG-iconen uit dezelfde vormen als public/icon.svg (geen dependencies).
+// public/badge-96.png (wit vinkje op transparant, voor meldingen) maakt dit script niet.
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 
@@ -25,20 +26,60 @@ function distToSeg(px, py, ax, ay, bx, by) {
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
+// Dezelfde vormen als public/icon.svg, in het 512-raster: gele speld met een vinkje erin, op leisteenblauw.
+const BG = [0x1e, 0x29, 0x3b];
+const PIN = [0xfc, 0xd3, 0x4d];
+const PIN_CURVES = [
+  [[256, 104], [184, 104], [132, 158], [132, 226]],
+  [[132, 226], [132, 312], [256, 416], [256, 416]],
+  [[256, 416], [256, 416], [380, 312], [380, 226]],
+  [[380, 226], [380, 158], [328, 104], [256, 104]],
+];
+const CHECK = [[204, 226], [242, 264], [314, 184]];
+const CHECK_HALF = 18;
+
+const bezier = ([a, b, c, d], t) => {
+  const u = 1 - t;
+  return [0, 1].map((i) => u * u * u * a[i] + 3 * u * u * t * b[i] + 3 * u * t * t * c[i] + t * t * t * d[i]);
+};
+const pinPoly = PIN_CURVES.flatMap((curve) => Array.from({ length: 64 }, (_, i) => bezier(curve, i / 64)));
+
+// Snijpunten van een horizontale lijn met de speld (even-odd), in 512-coördinaten.
+function pinSpans(y) {
+  const xs = [];
+  for (let i = 0; i < pinPoly.length; i++) {
+    const [ax, ay] = pinPoly[i], [bx, by] = pinPoly[(i + 1) % pinPoly.length];
+    if ((ay <= y) !== (by <= y)) xs.push(ax + ((y - ay) * (bx - ax)) / (by - ay));
+  }
+  return xs.sort((a, b) => a - b);
+}
+
 function png(size) {
-  const s = size / 512;
-  const pts = [[130, 268], [222, 360], [386, 170]].map(([x, y]) => [x * s, y * s]);
-  const half = 24 * s;
+  const SS = 4; // 4×4 monsters per pixel voor gladde randen
+  const s = 512 / (size * SS);
   const raw = Buffer.alloc(size * (size * 3 + 1));
+  const cover = new Float32Array(size);
   let o = 0;
   for (let y = 0; y < size; y++) {
+    cover.fill(0);
+    for (let sy = 0; sy < SS; sy++) {
+      const py = (y * SS + sy + 0.5) * s;
+      const xs = pinSpans(py);
+      for (let x = 0; x < size; x++) {
+        for (let sx = 0; sx < SS; sx++) {
+          const px = (x * SS + sx + 0.5) * s;
+          let inPin = false;
+          for (let i = 0; i < xs.length; i += 2) if (px >= xs[i] && px < xs[i + 1]) inPin = true;
+          if (!inPin) continue;
+          const d = Math.min(distToSeg(px, py, ...CHECK[0], ...CHECK[1]), distToSeg(px, py, ...CHECK[1], ...CHECK[2]));
+          if (d > CHECK_HALF) cover[x]++;
+        }
+      }
+    }
     raw[o++] = 0;
     for (let x = 0; x < size; x++) {
-      const d = Math.min(distToSeg(x, y, ...pts[0], ...pts[1]), distToSeg(x, y, ...pts[1], ...pts[2]));
-      const a = Math.max(0, Math.min(1, half + 0.5 - d));
-      raw[o++] = Math.round(0x1f + (255 - 0x1f) * a);
-      raw[o++] = Math.round(0x6f + (255 - 0x6f) * a);
-      raw[o++] = Math.round(0xeb + (255 - 0xeb) * a);
+      const a = cover[x] / (SS * SS);
+      for (let c = 0; c < 3; c++) raw[o++] = Math.round(BG[c] + (PIN[c] - BG[c]) * a);
     }
   }
   const ihdr = Buffer.alloc(13);
