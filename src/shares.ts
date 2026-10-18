@@ -17,6 +17,13 @@ type ShareRow = {
 
 const now = () => new Date().toISOString();
 
+/** Heeft userId al een (niet-verwijderd) exemplaar in de kopiegroep van deze taak? Zonder groep is het altijd nee. */
+async function hasCopyInGroup(db: D1Database, taskId: string, userId: string): Promise<boolean> {
+  const r = await db.prepare('SELECT 1 AS x FROM tasks m WHERE m.user_id = ? AND m.parent_id IS NULL AND m.deleted_at IS NULL AND m.copy_group IS NOT NULL ' +
+    'AND m.copy_group = (SELECT copy_group FROM tasks WHERE id = ?) LIMIT 1').bind(userId, taskId).first();
+  return !!r;
+}
+
 /** Ontvanger op e-mailadres (exact) of anders op naam (getrimd); beide hoofdletterongevoelig. */
 async function findRecipient(db: D1Database, to: string): Promise<string> {
   const byEmail = await db.prepare('SELECT id FROM users WHERE email = ?').bind(to).first<{ id: string }>();
@@ -62,6 +69,7 @@ sharesApi.post('/', async (c) => {
     toUser = await findRecipient(db, to);
   }
   if (toUser === userId) throw new HttpError(400, 'err.share_self');
+  if (await hasCopyInGroup(db, task.id, toUser)) throw new HttpError(409, 'err.copy_exists');
   const row: ShareRow = {
     id: crypto.randomUUID(), task_id: task.id, from_user: userId, to_user: toUser, mode: b.mode, status: 'pending',
     list: null, position: null, created_at: now(), responded_at: null,
@@ -99,19 +107,27 @@ sharesApi.get('/incoming', async (c) => {
   })));
 });
 
-/** Kopie accepteren: nieuwe taken van de ontvanger met nieuwe ids, zoals het origineel nu is, subtaken allemaal open. */
+/**
+ * Kopie accepteren: nieuwe taken van de ontvanger met nieuwe ids, zoals het origineel nu is, subtaken allemaal open.
+ * De hoofdtaak komt in de kopiegroep van het origineel; die groep wordt eerst aangemaakt als ze er nog niet is. De
+ * insert leest de groep met een subquery, zodat gelijktijdige accepts dezelfde groep krijgen.
+ */
 function copyStmts(db: D1Database, src: TaskRow, kids: TaskRow[], userId: string, position: number): D1PreparedStatement[] {
   const ts = now();
   const past = (iso: string | null) => (iso && Date.parse(iso) <= Date.now() ? 1 : 0);
   const insert = db.prepare(
     'INSERT INTO tasks (id, user_id, title, description, list, parent_id, position, remind_at, notified, done, source, created_at, updated_at, ' +
-    'loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_notified, repeat_rule, repeat_start, repeat_at) ' +
-    "VALUES (?, ?, ?, ?, 'Inbox', ?, ?, ?, ?, 0, 'share', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)");
+    'loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_notified, repeat_rule, repeat_start, repeat_at, copy_group) ' +
+    "VALUES (?, ?, ?, ?, 'Inbox', ?, ?, ?, ?, 0, 'share', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, (SELECT copy_group FROM tasks WHERE id = ?))");
   const row = (t: TaskRow, id: string, parent: string | null, pos: number) => insert.bind(
     id, userId, t.title, t.description, parent, pos, t.remind_at, past(t.remind_at), ts, ts,
-    t.loc_name, t.loc_lat, t.loc_lng, t.loc_radius, t.loc_trigger, t.repeat_rule, t.repeat_start, t.repeat_at);
+    t.loc_name, t.loc_lat, t.loc_lng, t.loc_radius, t.loc_trigger, t.repeat_rule, t.repeat_start, t.repeat_at,
+    parent ? null : src.id); // alleen de hoofdtaak krijgt de groep, gelezen op het moment van invoegen
   const id = crypto.randomUUID();
-  return [row(src, id, null, position), ...kids.map((k) => row(k, crypto.randomUUID(), id, k.position))];
+  return [
+    db.prepare('UPDATE tasks SET copy_group = ? WHERE id = ? AND copy_group IS NULL').bind(crypto.randomUUID(), src.id),
+    row(src, id, null, position), ...kids.map((k) => row(k, crypto.randomUUID(), id, k.position)),
+  ];
 }
 
 sharesApi.post('/:id/accept', async (c) => {
@@ -136,6 +152,8 @@ sharesApi.post('/:id/accept', async (c) => {
   // intrekking vindt hem dan niet meer, en er komt nooit een kopie van een uitnodiging die er niet meer is.
   const claim = await db.prepare("DELETE FROM task_shares WHERE id = ? AND status = 'pending'").bind(s.id).run();
   if (!claim.meta.changes) throw new HttpError(404, 'err.not_found');
+  // Intussen kan een andere uitnodiging uit dezelfde groep al zijn geaccepteerd: één exemplaar per persoon. De rij is al weg.
+  if (await hasCopyInGroup(db, task.id, userId)) throw new HttpError(409, 'err.copy_exists');
   await db.batch(copyStmts(db, task, kids, userId, position));
   return c.json({ ok: true });
 });

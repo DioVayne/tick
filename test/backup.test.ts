@@ -176,3 +176,17 @@ describe('backup per gebruiker', () => {
     expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM tasks WHERE parent_id = ?').bind(a.id).first()).toEqual({ n: 0 });
   });
 });
+
+describe('backup en kopiegroep', () => {
+  it('een export bevat geen copy_group en een import laat de bestaande groep staan', async () => {
+    const t = await track({ title: 'Groepstaak' });
+    await env.DB.prepare("UPDATE tasks SET copy_group = 'groep-x' WHERE id = ?").bind(t.id).run();
+    const backup = await exportBackup();
+    const row = backup.tasks.find((x) => x.id === t.id);
+    expect(row).toBeDefined();
+    expect('copy_group' in row).toBe(false);
+    expect((await importBackup({ ...backup, tasks: [{ ...row, title: 'Hersteld', copy_group: 'andere' }] })).status).toBe(200);
+    const after = await env.DB.prepare('SELECT title, copy_group FROM tasks WHERE id = ?').bind(t.id).first();
+    expect(after).toEqual({ title: 'Hersteld', copy_group: 'groep-x' });
+  });
+});
