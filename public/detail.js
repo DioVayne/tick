@@ -8,6 +8,7 @@ import { renderMarkdown } from './markdown.js';
 import { locationLabel, wakeAndroidApp } from './places.js';
 import { $, el, fmt, fromLocalInput, render, toLocalInput } from './render.js';
 import { addSubtask, findDone, remove, snooze, state, toggleDone, update, updateQueued } from './store.js';
+import { fillShareBox } from './share.js';
 
 // Detailpaneel (desktop) en taakscherm (mobiel): één opbouw per gekozen taak, daarna alleen bijwerken.
 // Zo overschrijft een verversing nooit het veld waarin je typt.
@@ -359,6 +360,7 @@ function build(t, readOnly) {
     },
   }, tr('detail.delete'));
 
+  const shareBox = el('section', { class: 'dshare', hidden: true });
   $('#detail').replaceChildren(...[
     back,
     crumb,
@@ -366,9 +368,10 @@ function build(t, readOnly) {
     el('div', { class: 'pills' }, remindPill, plusHour, clearRemind, repeatPill, locPill, clearLoc, listPill),
     desc,
     subs,
+    shareBox,
     el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, reopen, del)),
   ].filter(Boolean));
-  view = { id, readOnly, title, titleSize, remind, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
+  view = { shareBox, id, readOnly, title, titleSize, remind, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
 }
 
 function fill(t) {
@@ -434,5 +437,6 @@ function fill(t) {
     }
     v.subs.hidden = done && !kids.length; // afgerond zonder subtaken: geen leeg kopje
   }
+  fillShareBox(v.shareBox, t, done);
   showStatus();
 }

@@ -59,7 +59,7 @@ describe('app-shell', () => {
     const shell = JSON.parse(sw.match(/const SHELL = (\[[^\]]+\])/)![1].replace(/'/g, '"').replace(/,\s*\]/, ']')) as string[];
     expect(shell).toContain('/store.js');
     expect(shell).toContain('/settingsview.js');
-    for (const p of ['/androidapp.js', '/applink.js', '/swclick.js', '/trash.js']) expect(shell).toContain(p);
+    for (const p of ['/androidapp.js', '/applink.js', '/swclick.js', '/trash.js', '/share.js']) expect(shell).toContain(p);
     for (const path of shell) expect((await call(path)).status, path).toBe(200);
   });
 

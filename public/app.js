@@ -51,6 +51,9 @@ document.addEventListener('keydown', (e) => {
 const params = new URLSearchParams(location.search);
 initAndroidApp(params, { openDevices: () => openSettings() }); // haalt ?app en ?pair uit de adresbalk
 if (params.has('add')) $('#add-title').focus();
+// Uit een uitnodigingsmelding: de balk met Accepteren en Weigeren in beeld.
+const openShare = params.get('share');
+if (openShare) history.replaceState(null, '', '/');
 const openTask = params.get('task');
 if (openTask) {
   state.selected = openTask;
@@ -63,6 +66,7 @@ if (history.state?.settings) openSettings({ push: false });
 init(CONFIG.userId).then(() => {
   detailReady();
   if (openTask) document.querySelector(`li.task[data-id="${CSS.escape(openTask)}"]`)?.scrollIntoView({ block: 'center' });
+  if (openShare) document.querySelector(`.invite[data-id="${CSS.escape(openShare)}"]`)?.scrollIntoView({ block: 'center' });
 });
 
 // ---------- detailpaneel ----------

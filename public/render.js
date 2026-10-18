@@ -4,6 +4,7 @@ import { plainText } from './markdown.js';
 import { renderSidebar } from './sidebar.js';
 import { state, toggleDone, update } from './store.js';
 import { renderTrash, shareNames } from './trash.js';
+import { renderInvites } from './share.js';
 
 export const $ = (s) => document.querySelector(s);
 
@@ -113,6 +114,11 @@ function taskItem(t, children) {
     meta.push(el('span', { class: 'bell' + (past ? ' past' : '') }, '🔔 ' + fmt(t.remind_at) + (t.repeat ? ' 🔁' : '')));
   }
   if (t.location && !t.location_notified && !done) meta.push(el('span', { class: 'loc' }, '📍 ' + t.location.name));
+  if (t.share) {
+    const names = shareNames(t) || '…';
+    const label = tr('share.with', { names });
+    meta.push(el('span', { class: 'shared', title: label, 'aria-label': label }, '👥 ' + names));
+  }
   if (!state.list && t.list !== 'Inbox') meta.push(el('span', {}, t.list));
   // Zonder markdowntekens; zoeken gebeurt wel in de ruwe tekst.
   const plain = t.description ? plainText(t.description) : '';
@@ -141,6 +147,7 @@ export function render() {
   const root = $('#list');
   root.replaceChildren();
   if (state.showTrash) { renderTrash(root); return; }
+  if (!state.showDone) renderInvites(root);
   // Afgerond toont alle lijsten; de zijbalk markeert dan alleen "Afgerond".
   let visible = state.showDone ? state.done : openTasks().filter((t) => !state.list || t.list === state.list);
   const q = norm(state.query.trim());

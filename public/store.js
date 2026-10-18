@@ -16,6 +16,8 @@ export const state = {
   open: [], done: [], showDone: false, list: null, selected: null, justDone: new Map(), query: '',
   // Prullenbak: alleen online opgehaald (null = nog niet geladen of offline).
   showTrash: false, trash: /** @type {any[] | null} */ (null),
+  // Openstaande uitnodigingen om een taak te delen (alleen online opgehaald).
+  invites: /** @type {any[]} */ ([]),
   serverLists: [], extraLists: /** @type {string[]} */ ([]), offline: false, pending: 0,
 };
 
@@ -225,12 +227,20 @@ export async function load() {
     } catch (e) {
       if (e instanceof Offline) throw e;
     }
+    // Net als de lijsten: een fout bij de uitnodigingen houdt de taken niet tegen.
+    let invites = state.invites;
+    try {
+      invites = await request('GET', '/api/shares/incoming');
+    } catch (e) {
+      if (e instanceof Offline) throw e;
+    }
     const owned = await ownerReady; // false: de lokale gegevens kunnen van een ander zijn, dan niet lezen of schrijven
     const queued = owned ? await db.outboxAll() : [];
     if (seq !== loadSeq) return; // inmiddels is er een nieuwere load gestart
     state.open = open;
     state.done = done;
     if (serverLists) state.serverLists = serverLists;
+    state.invites = invites;
     state.offline = false;
     state.pending = queued.length;
     if (owned) {
