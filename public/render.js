@@ -1,3 +1,4 @@
+import { confetti } from './confetti.js';
 import { renderDetail, selectTask } from './detail.js';
 import { dateLocale, t, t as tr } from './i18n.js'; // tr waar t al een taak is
 import { plainText } from './markdown.js';
@@ -112,7 +113,7 @@ function taskItem(t, children) {
     el('button', {
       class: 'check', role: 'checkbox', 'aria-checked': String(done),
       'aria-label': state.justDone.has(t.id) ? tr('render.undo') : t.done ? tr('render.reopen') : tr('render.check'),
-      onclick: () => toggleDone(t),
+      onclick: (e) => { if (!done) confetti(e.currentTarget); toggleDone(t); },
     }),
     el('button', { class: 'title', 'aria-current': selected ? 'true' : false, onclick: () => selectTask(t.id) }, ...highlight(t.title)),
   );
