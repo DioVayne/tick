@@ -55,7 +55,7 @@ export type TaskRow = {
   loc_name: string | null; loc_lat: number | null; loc_lng: number | null; loc_radius: number | null;
   loc_trigger: string | null; loc_notified: number;
   repeat_rule: string | null; repeat_start: string | null; repeat_at: string | null; repeat_prev: string | null;
-  deleted_at: string | null;
+  deleted_at: string | null; copy_group: string | null;
 };
 
 export type AppEnv = {
@@ -176,9 +176,9 @@ app.route('/api/import', importApi);
 app.route('/api/shares', sharesApi);
 
 const now = () => new Date().toISOString();
-/** Taak als JSON voor de client: 0/1 wordt boolean, de loc_*-kolommen worden één location-object en de repeat_*-kolommen één repeat-object (repeat_prev blijft op de server). */
+/** Taak als JSON voor de client: 0/1 wordt boolean, de loc_*-kolommen worden één location-object en de repeat_*-kolommen één repeat-object (repeat_prev en copy_group blijven op de server). */
 function asBool(t: TaskRow) {
-  const { loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_notified, repeat_rule, repeat_start, repeat_at, repeat_prev, ...rest } = t;
+  const { loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_notified, repeat_rule, repeat_start, repeat_at, repeat_prev, copy_group, ...rest } = t;
   return {
     ...rest,
     done: !!t.done,
