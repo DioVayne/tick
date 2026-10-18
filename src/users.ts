@@ -45,6 +45,9 @@ export async function touchLastSeen(db: D1Database, user: User): Promise<void> {
 export function deleteUserStmts(db: D1Database, id: string): D1PreparedStatement[] {
   return [
     db.prepare('DELETE FROM devices WHERE key_id IN (SELECT id FROM api_keys WHERE user_id = ?)').bind(id),
+    // Delen: deelrijen van en naar deze gebruiker, en op zijn taken (die verdwijnen ook bij de ontvangers).
+    db.prepare('DELETE FROM task_shares WHERE to_user = ?1 OR from_user = ?1 OR task_id IN (SELECT id FROM tasks WHERE user_id = ?1)').bind(id),
+    db.prepare('DELETE FROM reminder_sent WHERE user_id = ?1 OR task_id IN (SELECT id FROM tasks WHERE user_id = ?1)').bind(id),
     ...['api_keys', 'pair_codes', 'push_subscriptions', 'tasks', 'places', 'user_settings']
       .map((t) => db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(id)),
     // Ook links die deze gebruiker zelf aanmaakte (created_by verwijst naar users).

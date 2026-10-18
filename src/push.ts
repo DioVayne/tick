@@ -6,10 +6,12 @@ import { translate } from '../public/i18n.js';
 
 type Sub = { endpoint: string; p256dh: string; auth: string; locale: string | null };
 type Locale = 'en' | 'nl';
-type Payload = {
+export type Payload = {
   title: string; body: string; url?: string; taskId?: string; occurrence?: string;
+  /** Uitnodiging om een taak te delen: de knoppen accept/decline gaan naar /api/shares/<shareId>. */
+  shareId?: string;
   /** Knoppen in de melding, al vertaald: de service worker kent de taal niet. */
-  actions?: { action: 'done' | 'snooze'; title: string }[];
+  actions?: { action: 'done' | 'snooze' | 'accept' | 'decline'; title: string }[];
 };
 
 /**
