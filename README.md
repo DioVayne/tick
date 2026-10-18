@@ -1,4 +1,8 @@
-# Tick
+<p align="center">
+  <img src="docs/logo.svg" width="112" alt="The Tick icon: a yellow map pin with a check mark on slate blue">
+</p>
+
+<h1 align="center">Tick</h1>
 
 A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push notifications, and it works offline. Its standout feature is **location reminders**: tie a task to a place and your phone reminds you when you arrive there or leave, so the shopping list pops up as you walk into the supermarket. Built for one person or a few: the administrator invites others with a link, and every account has its own tasks and settings. Free to run on Cloudflare's free plan.
 
