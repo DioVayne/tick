@@ -22,6 +22,7 @@ import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
 import { sharesApi } from './shares';
+import { anyCopies, type Copies, copiesFor } from './copies';
 
 export type Env = {
   DB: D1Database;
@@ -191,14 +192,22 @@ function asBool(t: TaskRow) {
 
 /**
  * Taken voor de client zoals `userId` ze ziet: lijst en volgorde uit zijn deelrij, en `share` op de hoofdtaak
- * (null op subtaken en op taken die met niemand gedeeld zijn).
+ * (null op subtaken en op taken die met niemand gedeeld zijn), en `copies` uit `copiesFor` (null zonder kopiegroep).
  */
-function present(rows: Access[], userId: string, info: Map<string, ShareInfo>) {
+function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, copies: Map<string, Copies>) {
   return rows.map((r) => {
-    const { share_id, share_list, share_position, has_share, ...t } = overlay(r);
+    const { share_id, share_list, share_position, has_share, has_copy_invite, ...t } = overlay(r);
     const s = t.parent_id ? undefined : info.get(t.id);
-    return { ...asBool(t), share: s ? { ...s, mine: s.owner.id === userId } : null };
+    return { ...asBool(t), share: s ? { ...s, mine: s.owner.id === userId } : null, copies: (!t.parent_id && copies.get(t.id)) || null };
   });
+}
+
+/** Deelinformatie en kopiegroepen voor deze rijen; elke query alleen als er iets te vinden is. */
+async function extras(db: D1Database, userId: string, rows: Access[]) {
+  return Promise.all([
+    anyShared(rows) ? shareInfo(db, userId) : new Map<string, ShareInfo>(),
+    anyCopies(rows, userId) ? copiesFor(db, userId, rows) : new Map<string, Copies>(),
+  ]);
 }
 
 /** Eén taak voor de client, na een wijziging; met `row` als die al net gelezen is. */
@@ -206,8 +215,11 @@ async function presentOne(db: D1Database, userId: string, id: string, row?: Acce
   const t = row ?? await getAccess(db, userId, id);
   if (!t) throw new HttpError(404, 'err.not_found');
   // Een subtaak krijgt share: null, en zonder deelrijen is er niets op te zoeken.
-  const info = !t.parent_id && anyShared([t]) ? await shareInfo(db, userId, t.id) : new Map<string, ShareInfo>();
-  return present([t], userId, info)[0];
+  const [info, copies] = await Promise.all([
+    !t.parent_id && anyShared([t]) ? shareInfo(db, userId, t.id) : new Map<string, ShareInfo>(),
+    anyCopies([t], userId) ? copiesFor(db, userId, [t]) : new Map<string, Copies>(),
+  ]);
+  return present([t], userId, info, copies)[0];
 }
 
 const MAX_TITLE = 500;
@@ -494,15 +506,16 @@ app.get('/api/tasks', async (c) => {
     // Ook gedeelde taken waar je (nog) deelnemer van bent, voor iedereen in de prullenbak.
     const rows = await visibleTasks(db, userId, 't.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM tasks p WHERE p.id = t.parent_id AND p.deleted_at = t.deleted_at)',
       [limit, offset], 'ORDER BY t.deleted_at DESC LIMIT ? OFFSET ?');
-    return c.json(present(rows, userId, anyShared(rows) ? await shareInfo(db, userId) : new Map()));
+    // In de prullenbak telt een exemplaar niet als lid, dus ook copies: null.
+    return c.json(present(rows, userId, anyShared(rows) ? await shareInfo(db, userId) : new Map(), new Map()));
   }
   if (done) {
     const rows = await visibleTasks(db, userId, `t.done = 1 AND t.deleted_at IS NULL${search.sql}`, [...search.binds, limit, offset], 'ORDER BY t.done_at DESC LIMIT ? OFFSET ?');
-    return c.json(present(rows, userId, anyShared(rows) ? await shareInfo(db, userId) : new Map()));
+    return c.json(present(rows, userId, ...await extras(db, userId, rows)));
   }
   // Sorteren na overlay: een deelnemer heeft zijn eigen positie in zijn deelrij.
   const rows = await visibleTasks(db, userId, `t.done = 0 AND t.deleted_at IS NULL${search.sql}`, search.binds);
-  const out = present(rows, userId, anyShared(rows) ? await shareInfo(db, userId) : new Map()).sort((a, b) => a.position - b.position);
+  const out = present(rows, userId, ...await extras(db, userId, rows)).sort((a, b) => a.position - b.position);
   return c.json(out);
 });
 
@@ -524,7 +537,7 @@ app.post('/api/tasks', async (c) => {
     // Ook een eigen taak in de prullenbak telt als bestaand: opnieuw versturen haalt hem er niet uit.
     if (await getTask(c.env.DB, userId, id)) return c.json(await presentOne(c.env.DB, userId, id), 200);
     const trashed = await getTask(c.env.DB, userId, id, { deleted: true });
-    if (trashed) return c.json(present([trashed], userId, new Map())[0], 200);
+    if (trashed) return c.json(present([trashed], userId, new Map(), new Map())[0], 200);
   }
   // Een id dat bij een ander account hoort mag niets overschrijven en lekt niets.
   if (id && await c.env.DB.prepare('SELECT 1 FROM tasks WHERE id = ?').bind(id).first()) throw new HttpError(409, 'err.id_taken');
