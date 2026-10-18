@@ -15,6 +15,12 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 
 **📍 Location reminders** are the feature that sets Tick apart. Search for a place or address on the map, set the radius, choose *on arrival* or *on leaving*, and save places you use often as favorites. The Android app then notifies you at the right spot: the groceries at the supermarket, the screws at the hardware store, the parcel as you leave the house. A task can have a time reminder and a place reminder at the same time. (This screenshot also shows light mode: Tick follows your device, or you pick light or dark in the settings.)
 
+<p>
+  <img src="docs/screenshots/location.png" width="300" alt="The location picker on a phone: a map with the chosen place and its radius, two favorite places, a radius slider, and the choice between on arrival and on leaving">
+</p>
+
+**The location picker** on a phone: your favorite places sit right under the map, so a supermarket task gets its reminder in one tap.
+
 ![The share dialog: pick someone, then choose a shared task or a copy](docs/screenshots/sharing.png)
 
 **Sharing** works between the accounts on your Tick. Pick someone from the list (or type a name or email address) and choose *Shared*, one task for both of you, where done is done for everyone, or *Copy*, which gives them their own copy. They get an invitation at the top of their list to accept or decline. The task shows who it is shared with, and a reminder on a shared task reaches everyone on it. The owner can remove people; the others can stop sharing whenever they like.
