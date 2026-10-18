@@ -110,6 +110,35 @@ describe('backup', () => {
     expect(r).toEqual({ done: 0, description: '', list: 'Inbox' });
   });
 
+  it('ritmevelden worden opgeschoond: geen ongedaan-maakstand, een ongeldige regel valt weg', async () => {
+    const now = new Date().toISOString();
+    const base = { position: 1, created_at: now, updated_at: now, remind_at: '2099-01-04T09:00:00.000Z', repeat_start: '2099-01-04T09:00:00.000Z', repeat_at: '2099-01-04T09:00:00.000Z' };
+    const tasks = [
+      { ...base, id: 'bulk-rule-ok', title: 'goed', repeat_rule: 'FREQ=DAILY', repeat_prev: '{kapot' },
+      { ...base, id: 'bulk-rule-bad', title: 'fout', repeat_rule: 'onzin', repeat_prev: null },
+    ];
+    expect((await importBackup({ app: 'tick', version: 1, tasks })).status).toBe(200);
+    const r = (id: string) => env.DB.prepare('SELECT repeat_rule, repeat_start, repeat_at, repeat_prev FROM tasks WHERE id = ?').bind(id).first<any>();
+    expect(await r('bulk-rule-ok')).toMatchObject({ repeat_rule: 'FREQ=DAILY', repeat_prev: null });
+    expect(await r('bulk-rule-bad')).toEqual({ repeat_rule: null, repeat_start: null, repeat_at: null, repeat_prev: null });
+    // afvinken en heropenen geven geen serverfout
+    expect((await asSession('/api/tasks/bulk-rule-ok', { method: 'PATCH', json: { done: false } })).status).toBe(200);
+    expect((await asSession('/api/tasks/bulk-rule-bad', { method: 'PATCH', json: { done: true } })).status).toBe(200);
+  });
+
+  it('een subtaak onder een subtaak wordt een hoofdtaak (één niveau)', async () => {
+    const now = new Date().toISOString();
+    const mk = (id: string, parent_id: string | null) => ({ id, parent_id, title: id, position: 1, created_at: now, updated_at: now });
+    const own = await track({ title: 'ouder in de db' });
+    const kid = await track({ title: 'kind in de db', parent_id: own.id });
+    const tasks = [mk('bulk-a', null), mk('bulk-b', 'bulk-a'), mk('bulk-c', 'bulk-b'), mk('bulk-d', kid.id)];
+    expect((await importBackup({ app: 'tick', version: 1, tasks })).status).toBe(200);
+    const parent = async (id: string) => (await env.DB.prepare('SELECT parent_id FROM tasks WHERE id = ?').bind(id).first<any>())?.parent_id;
+    expect(await parent('bulk-b')).toBe('bulk-a');
+    expect(await parent('bulk-c')).toBeNull();
+    expect(await parent('bulk-d')).toBeNull();
+  });
+
   it('terugzetten zet een reminder die al voorbij is op gemeld; een toekomstige blijft staan', async () => {
     const now = new Date().toISOString();
     const base = { position: 1, created_at: now, updated_at: now, notified: 0, loc_notified: 0 };

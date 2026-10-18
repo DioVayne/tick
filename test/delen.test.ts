@@ -225,6 +225,36 @@ describe('taken delen', () => {
     expect(await env.DB.prepare('SELECT 1 FROM tasks WHERE id = ?').bind(t.id).first()).toBeNull();
   });
 
+  it('prullenbak legen door de ontvanger haalt ook gedeelde taken uit zijn prullenbak', async () => {
+    const { t } = await sharedWith(b);
+    const inTrash = async (u?: User) => (await json<Task[]>(u ? await callAs(u.cookie, '/api/tasks?deleted=1') : await call('/api/tasks?deleted=1'))).map((x) => x.id);
+    await call(`/api/tasks/${t.id}`, { method: 'DELETE' });
+    expect(await inTrash(b)).toContain(t.id);
+    expect((await callAs(b.cookie, '/api/trash/empty', { method: 'POST', json: {} })).status).toBe(200);
+    expect(await inTrash(b)).not.toContain(t.id);
+    // de eigenaar kan hem nog terugzetten; B zit er niet meer op
+    expect(await inTrash()).toContain(t.id);
+    expect((await call(`/api/tasks/${t.id}/restore`, { method: 'POST', json: {} })).status).toBe(200);
+    expect((await tasksOf(b)).map((x) => x.id)).not.toContain(t.id);
+  });
+
+  it('een herhalende gedeelde taak schuift door in de zone van de eigenaar, ook als een ander afvinkt', async () => {
+    const d = await createUser({ name: `Dex ${uniq()}` });
+    expect((await callAs(d.cookie, '/api/settings', { method: 'PATCH', json: { timeZone: 'America/Los_Angeles' } })).status).toBe(200);
+    // maandag 1 juli 2030, 01:00 in Amsterdam (de zone van de eigenaar) = zondag in Los Angeles
+    const { t } = await sharedWith(d, { remind_at: '2030-07-01T01:00', repeat: 'FREQ=WEEKLY;BYDAY=MO' });
+    expect(t.repeat?.at).toBe('2030-06-30T23:00:00.000Z');
+    const r = await callAs(d.cookie, `/api/tasks/${t.id}`, { method: 'PATCH', json: { done: true, occurrence: t.repeat!.at } });
+    expect((await json<Task>(r)).repeat?.at).toBe('2030-07-07T23:00:00.000Z');
+    // ook via de eenvoudige route van de widget
+    expect((await callAs(d.cookie, `/api/tasks/${t.id}/done`, { method: 'POST', json: {} })).status).toBe(200);
+    const row = await env.DB.prepare('SELECT repeat_at FROM tasks WHERE id = ?').bind(t.id).first<{ repeat_at: string }>();
+    expect(row!.repeat_at).toBe('2030-07-14T23:00:00.000Z');
+    // een ritme instellen door de ontvanger rekent ook in de zone van de eigenaar
+    const p = await callAs(d.cookie, `/api/tasks/${t.id}`, { method: 'PATCH', json: { repeat: 'FREQ=WEEKLY;BYDAY=MO', remind_at: '2030-07-01T01:00:00+02:00' } });
+    expect((await json<Task>(p)).repeat?.at).toBe('2030-06-30T23:00:00.000Z');
+  });
+
   it('een subtaak definitief verwijderen door de ontvanger laat zijn deelname staan', async () => {
     const { t } = await sharedWith(b);
     const k = await createTask({ title: 'losse subtaak', parent_id: t.id });

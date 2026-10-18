@@ -391,6 +391,16 @@ async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone): Prom
   await db.batch(stmts);
 }
 
+/**
+ * De zone waarin het ritme van `t` rekent: die van de eigenaar. Een deelnemer met een andere zone laat een gedeelde
+ * taak zo niet naar zijn eigen wandklok verspringen.
+ */
+async function ownerZone(c: Context<AppEnv>, t: TaskRow): Promise<Zone> {
+  if (t.user_id === c.get('auth').userId) return c.get('prefs');
+  const owner = await getUser(c.env.DB, t.user_id);
+  return owner ? { ...c.get('install'), ...await loadUserPrefs(c.env, owner) } : c.get('prefs');
+}
+
 function normRemind(v: unknown, z: Zone): string | null {
   if (v === null || v === undefined || v === '') return null;
   try {
@@ -593,7 +603,8 @@ app.patch('/api/tasks/:id', async (c) => {
   const setRepeat = 'repeat' in b && !noRepeat && newRemind !== null;
   if (setRepeat && parentId) throw new HttpError(400, 'err.only_parents_repeat');
   if (setRepeat) {
-    const rep = repeatColumns(b.repeat as string, newRemind ?? t.remind_at ?? todayDefaultIso(z), z);
+    const oz = await ownerZone(c, t);
+    const rep = repeatColumns(b.repeat as string, newRemind ?? t.remind_at ?? todayDefaultIso(oz), oz);
     for (const [col, v] of Object.entries(rep)) set(col, v);
     set('remind_at', rep.repeat_at);
     set('notified', 0);
@@ -633,7 +644,7 @@ app.patch('/api/tasks/:id', async (c) => {
     // ongedaan maken (dat een eerdere stap bedoelde) de nieuwste stap niet terug.
     const sameAt = !('occurrence' in b) || Date.parse(String(b.occurrence)) === Date.parse(cur.repeat_at!);
     const act = rolls(cur) ? sameAt && (!!b.done || !!undoable(cur)) : !!b.done !== !!cur.done;
-    if (act) await setDone(db, cur, !!b.done, z);
+    if (act) await setDone(db, cur, !!b.done, await ownerZone(c, cur));
   }
   const updated = await getTask(db, userId, id);
   if ('position' in b && updated) {
@@ -696,8 +707,16 @@ app.post('/api/tasks/:id/restore', async (c) => {
 
 app.post('/api/trash/empty', async (c) => {
   const db = c.env.DB;
-  const res = await db.batch(wipeStmts(db, 'user_id = ? AND deleted_at IS NOT NULL', [c.get('auth').userId]));
-  return c.json({ deleted: res[2].meta.changes + res[3].meta.changes });
+  const userId = c.get('auth').userId;
+  // Andermans gedeelde taken in jouw prullenbak: net als één keer definitief verwijderen stop je met delen.
+  const theirs = "SELECT task_id FROM task_shares WHERE to_user = ?1 AND status = 'accepted' " +
+    'AND task_id IN (SELECT id FROM tasks WHERE deleted_at IS NOT NULL AND user_id != ?1)';
+  const res = await db.batch([
+    db.prepare(`DELETE FROM reminder_sent WHERE user_id = ?1 AND (task_id IN (${theirs}) OR task_id IN (SELECT id FROM tasks WHERE parent_id IN (${theirs})))`).bind(userId),
+    db.prepare(`DELETE FROM task_shares WHERE to_user = ?1 AND task_id IN (${theirs})`).bind(userId),
+    ...wipeStmts(db, 'user_id = ? AND deleted_at IS NOT NULL', [userId]),
+  ]);
+  return c.json({ deleted: res[1].meta.changes + res[4].meta.changes + res[5].meta.changes });
 });
 
 // Lijsten bestaan alleen als `list`-kolom van taken; er is geen aparte tabel.
@@ -764,7 +783,7 @@ for (const [action, done] of [['done', true], ['reopen', false]] as const) {
     const t = await getTask(c.env.DB, c.get('auth').userId, c.req.param('id'));
     if (!t) throw new HttpError(404, 'err.not_found');
     // Een herhalende taak staat altijd open: /done schuift altijd door, /reopen draait terug als dat nog mag (setDone beslist).
-    if (rolls(t) || !!t.done !== done) await setDone(c.env.DB, t, done, c.get('prefs'));
+    if (rolls(t) || !!t.done !== done) await setDone(c.env.DB, t, done, await ownerZone(c, t));
     return c.json({ ok: true });
   });
 }

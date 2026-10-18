@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { AppEnv, TaskRow } from './index';
 import { HttpError } from './errors';
 import { sessionOnly } from './guards';
-import { zonedParts } from '../public/repeat.js';
+import { normalizeRule, zonedParts } from '../public/repeat.js';
 import { inZone } from './time';
 import type { User } from './users';
 import { readTickTickText, tickTickRows } from '../public/ticktick.js';
@@ -107,6 +107,14 @@ importApi.post('/backup', async (c) => {
       row[col] = v;
     }
     if (isStr(row.remind_at) && Date.parse(row.remind_at as string) <= now) row.notified = 1;
+    // Geen ongedaan-maakstand uit een bestand (die is na 15 minuten toch verlopen), en een ritme alleen als het klopt.
+    row.repeat_prev = null;
+    if (row.repeat_rule !== undefined && row.repeat_rule !== null) {
+      const ok = isStr(row.repeat_start) && isStr(row.repeat_at) && (() => {
+        try { row.repeat_rule = normalizeRule(row.repeat_rule as string); return true; } catch { return false; }
+      })();
+      if (!ok) Object.assign(row, { repeat_rule: null, repeat_start: null, repeat_at: null });
+    }
     return row;
   });
 
@@ -129,14 +137,18 @@ importApi.post('/backup', async (c) => {
   const inDb = new Set<string>();
   for (let i = 0; i < parentIds.length; i += 50) {
     const chunk = parentIds.slice(i, i + 50);
-    const { results } = await db.prepare(`SELECT id FROM tasks WHERE user_id = ? AND id IN (${chunk.map(() => '?').join(',')})`).bind(userId, ...chunk).all<{ id: string }>();
+    // Alleen hoofdtaken: een subtaak kan zelf geen subtaken hebben (één niveau).
+    const { results } = await db.prepare(`SELECT id FROM tasks WHERE user_id = ? AND parent_id IS NULL AND id IN (${chunk.map(() => '?').join(',')})`).bind(userId, ...chunk).all<{ id: string }>();
     for (const r of results) inDb.add(r.id);
   }
   // Ouders eerst; een ouder die nergens bestaat wordt null.
-  const clean: Row[] = taskRows.map((t): Row => {
+  const linked: Row[] = taskRows.map((t): Row => {
     const pid = t.parent_id;
     return isStr(pid) && (inBackup.has(pid) || inDb.has(pid)) && pid !== t.id ? t : { ...t, parent_id: null };
   });
+  // Een ouder uit het bestand die zelf een ouder heeft: dan wordt het kind een hoofdtaak.
+  const nested = new Set(linked.filter((t) => isStr(t.parent_id)).map((t) => t.id as string));
+  const clean: Row[] = linked.map((t) => (isStr(t.parent_id) && nested.has(t.parent_id) ? { ...t, parent_id: null } : t));
   const roots = clean.filter((t) => t.parent_id === null || t.parent_id === undefined);
   const children = clean.filter((t) => isStr(t.parent_id));
   // Kinderen onderling op diepte: pas schrijven als de ouder al aan de beurt was.
