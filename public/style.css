@@ -383,3 +383,32 @@ p.set-note { margin: 0 0 8px; }
 
 /* Confetti bij afvinken (confetti.js): een doorzichtig vlak over alles heen dat geen klikken opvangt */
 .confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1000; }
+
+/* Bijlagen in het detailpaneel */
+.dfiles { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 8px; display: grid; gap: 8px; }
+.dfiles[hidden] { display: none; }
+.dfiles h3 { margin: 0; font-size: .8125rem; font-weight: 600; color: var(--muted); }
+.att-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; }
+.att-thumb { display: block; width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--line); cursor: zoom-in; }
+.att-thumb img { display: block; width: 100%; height: 88px; object-fit: cover; }
+.att-files, .att-busy { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.att-files li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.att-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; }
+.att-size { color: var(--muted); font-size: .8125rem; white-space: nowrap; }
+.att-busy li { display: grid; gap: 2px; font-size: .8125rem; color: var(--muted); }
+.att-add input[hidden] { display: none; }
+#detail.drop { outline: 2px dashed var(--accent); outline-offset: -6px; }
+
+/* Grote weergave van een foto */
+.att-viewer { border: 0; padding: 0; margin: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; background: rgba(0, 0, 0, .92); color: #fff; }
+.att-viewer[open] { display: grid; grid-template: 1fr auto / auto 1fr auto; align-items: center; }
+.att-viewer::backdrop { background: rgba(0, 0, 0, .6); }
+.att-big { grid-column: 2; grid-row: 1; justify-self: center; max-width: 100%; max-height: calc(100dvh - 72px); object-fit: contain; }
+.att-nav { grid-row: 1; background: none; border: 0; color: #fff; font-size: 2.5rem; padding: 0 12px; cursor: pointer; }
+.att-nav.prev { grid-column: 1; }
+.att-nav.next { grid-column: 3; }
+.att-nav[hidden] { visibility: hidden; display: block; }
+.att-close { position: absolute; top: 8px; right: 8px; background: none; border: 0; color: #fff; font-size: 1.5rem; padding: 8px 12px; cursor: pointer; z-index: 1; }
+.att-bar { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; gap: 8px; padding: 12px 16px; flex-wrap: wrap; }
+.att-cap { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .875rem; }
+.att-bar .pill { color: #fff; border-color: rgba(255, 255, 255, .4); text-decoration: none; }

@@ -74,7 +74,7 @@ describe('backup', () => {
     const res = await asSession('/api/export');
     expect(res.headers.get('content-disposition')).toMatch(/^attachment; filename="tick-backup-\d{4}-\d{2}-\d{2}\.json"$/);
     const body = await json<Backup>(res);
-    expect(Object.keys(body).sort()).toEqual(['app', 'exported_at', 'places', 'tasks', 'version']);
+    expect(Object.keys(body).sort()).toEqual(['app', 'attachments', 'exported_at', 'places', 'tasks', 'version']);
   });
 
   it('is alleen voor een sessie, niet voor het API-token', async () => {

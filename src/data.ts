@@ -64,16 +64,19 @@ export const exportApi = new Hono<AppEnv>();
 exportApi.use('*', sessionOnly);
 exportApi.get('/', async (c) => {
   const userId = c.get('auth').userId;
-  const [tasks, places] = await Promise.all([
+  const [tasks, places, attachments] = await Promise.all([
     c.env.DB.prepare(`SELECT ${TASK_COLUMNS.join(', ')} FROM tasks WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at, id`).bind(userId).all(),
     c.env.DB.prepare(`SELECT ${PLACE_COLUMNS.join(', ')} FROM places WHERE user_id = ? ORDER BY created_at, id`).bind(userId).all(),
+    // Alleen wat er bij hoort, niet de bestanden zelf; importeren slaat dit over.
+    c.env.DB.prepare('SELECT a.id, a.task_id, a.name, a.mime, a.size, a.width, a.height, a.created_at FROM attachments a JOIN tasks t ON t.id = a.task_id ' +
+      "WHERE t.user_id = ? AND t.deleted_at IS NULL AND a.status = 'ready' ORDER BY a.created_at, a.id").bind(userId).all(),
   ]);
   const now = Date.now();
   // De datum in de bestandsnaam: vandaag in de zone van de gebruiker.
   const z = inZone(c.get('prefs'), () => zonedParts(now));
   const date = `${z.y}-${String(z.m).padStart(2, '0')}-${String(z.d).padStart(2, '0')}`;
   c.header('Content-Disposition', `attachment; filename="tick-backup-${date}.json"`);
-  return c.json({ app: 'tick', version: 1, exported_at: new Date(now).toISOString(), tasks: tasks.results, places: places.results });
+  return c.json({ app: 'tick', version: 1, exported_at: new Date(now).toISOString(), tasks: tasks.results, places: places.results, attachments: attachments.results });
 });
 
 export const importApi = new Hono<AppEnv>();

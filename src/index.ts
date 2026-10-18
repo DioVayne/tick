@@ -23,6 +23,7 @@ import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
 import { sharesApi } from './shares';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
+import { type Attachment, attachmentsApi, attachmentsFor, maxUpload, sweepAttachments } from './attachments';
 
 export type Env = {
   DB: D1Database;
@@ -47,6 +48,10 @@ export type Env = {
   ANDROID_PACKAGE?: string;
   /** SHA-256-vingerafdruk(ken) van de ondertekeningssleutel, gescheiden door komma's; nodig voor assetlinks.json. */
   ANDROID_CERT_SHA256?: string;
+  /** R2-bucket voor bijlagen; zonder deze binding bestaan de bijlagen niet. */
+  FILES?: R2Bucket;
+  /** Grootste bijlage in MB (standaard 10, hoogstens 100). */
+  MAX_UPLOAD_MB?: string;
 };
 
 export type TaskRow = {
@@ -88,7 +93,11 @@ const SECURITY_HEADERS: Record<string, string> = {
 
 app.use('*', async (c, next) => {
   await next();
-  for (const [k, v] of Object.entries(SECURITY_HEADERS)) c.res.headers.set(k, v);
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
+    // Een eigen CSP van de route (een bijlage: sandbox) komt erbij, en vervangt de strikte niet.
+    const own = k === 'Content-Security-Policy' ? c.res.headers.get(k) : null;
+    c.res.headers.set(k, own ? `${v}; ${own}` : v);
+  }
 });
 
 /** Statisch bestand; als kopie, want headers van een fetch-response zijn onveranderbaar. */
@@ -175,6 +184,7 @@ app.route('/api/devices', devicesApi);
 app.route('/api/export', exportApi);
 app.route('/api/import', importApi);
 app.route('/api/shares', sharesApi);
+app.route('/api', attachmentsApi);
 
 const now = () => new Date().toISOString();
 /** Taak als JSON voor de client: 0/1 wordt boolean, de loc_*-kolommen worden één location-object en de repeat_*-kolommen één repeat-object (repeat_prev en copy_group blijven op de server). */
@@ -194,32 +204,38 @@ function asBool(t: TaskRow) {
  * Taken voor de client zoals `userId` ze ziet: lijst en volgorde uit zijn deelrij, en `share` op de hoofdtaak
  * (null op subtaken en op taken die met niemand gedeeld zijn), en `copies` uit `copiesFor` (null zonder kopiegroep).
  */
-function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, copies: Map<string, Copies>) {
+function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, copies: Map<string, Copies>, files = new Map<string, Attachment[]>()) {
   return rows.map((r) => {
     const { share_id, share_list, share_position, has_share, has_copy_invite, ...t } = overlay(r);
     const s = t.parent_id ? undefined : info.get(t.id);
-    return { ...asBool(t), share: s ? { ...s, mine: s.owner.id === userId } : null, copies: (!t.parent_id && copies.get(t.id)) || null };
+    return {
+      ...asBool(t), share: s ? { ...s, mine: s.owner.id === userId } : null, copies: (!t.parent_id && copies.get(t.id)) || null,
+      attachments: files.get(t.id) ?? [],
+    };
   });
 }
 
-/** Deelinformatie en kopiegroepen voor deze rijen; elke query alleen als er iets te vinden is. */
-async function extras(db: D1Database, userId: string, rows: Access[]) {
+/** Deelinformatie, kopiegroepen en bijlagen voor deze rijen; de eerste twee alleen als er iets te vinden is. */
+async function extras(env: Env, userId: string, rows: Access[]) {
   return Promise.all([
-    anyShared(rows) ? shareInfo(db, userId) : new Map<string, ShareInfo>(),
-    anyCopies(rows, userId) ? copiesFor(db, userId, rows) : new Map<string, Copies>(),
+    anyShared(rows) ? shareInfo(env.DB, userId) : new Map<string, ShareInfo>(),
+    anyCopies(rows, userId) ? copiesFor(env.DB, userId, rows) : new Map<string, Copies>(),
+    attachmentsFor(env, rows.map((r) => r.id)),
   ]);
 }
 
 /** Eén taak voor de client, na een wijziging; met `row` als die al net gelezen is. */
-async function presentOne(db: D1Database, userId: string, id: string, row?: Access | null) {
+async function presentOne(env: Env, userId: string, id: string, row?: Access | null) {
+  const db = env.DB;
   const t = row ?? await getAccess(db, userId, id);
   if (!t) throw new HttpError(404, 'err.not_found');
   // Een subtaak krijgt share: null, en zonder deelrijen is er niets op te zoeken.
-  const [info, copies] = await Promise.all([
+  const [info, copies, files] = await Promise.all([
     !t.parent_id && anyShared([t]) ? shareInfo(db, userId, t.id) : new Map<string, ShareInfo>(),
     anyCopies([t], userId) ? copiesFor(db, userId, [t]) : new Map<string, Copies>(),
+    attachmentsFor(env, [t.id]),
   ]);
-  return present([t], userId, info, copies)[0];
+  return present([t], userId, info, copies, files)[0];
 }
 
 const MAX_TITLE = 500;
@@ -442,6 +458,7 @@ app.get('/config.js', (c) => {
   const config = {
     locale: c.get('lang'), defaultLocale, timeZone, reminderTime, weekStart, androidPackage: c.env.ANDROID_PACKAGE || null,
     userId: user.id, userName: user.name, isAdmin: user.role === 'admin',
+    attachments: !!c.env.FILES, maxUploadMb: maxUpload(c.env) / 1024 / 1024,
   };
   return c.body(`export default ${JSON.stringify(config)};
 `, 200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' });
@@ -522,11 +539,11 @@ app.get('/api/tasks', async (c) => {
   }
   if (done) {
     const rows = await visibleTasks(db, userId, `t.done = 1 AND t.deleted_at IS NULL${search.sql}`, [...search.binds, limit, offset], 'ORDER BY t.done_at DESC LIMIT ? OFFSET ?');
-    return c.json(present(rows, userId, ...await extras(db, userId, rows)));
+    return c.json(present(rows, userId, ...await extras(c.env, userId, rows)));
   }
   // Sorteren na overlay: een deelnemer heeft zijn eigen positie in zijn deelrij.
   const rows = await visibleTasks(db, userId, `t.done = 0 AND t.deleted_at IS NULL${search.sql}`, search.binds);
-  const out = present(rows, userId, ...await extras(db, userId, rows)).sort((a, b) => a.position - b.position);
+  const out = present(rows, userId, ...await extras(c.env, userId, rows)).sort((a, b) => a.position - b.position);
   return c.json(out);
 });
 
@@ -546,7 +563,7 @@ app.post('/api/tasks', async (c) => {
   const userId = c.get('auth').userId;
   if (id) {
     // Ook een eigen taak in de prullenbak telt als bestaand: opnieuw versturen haalt hem er niet uit.
-    if (await getTask(c.env.DB, userId, id)) return c.json(await presentOne(c.env.DB, userId, id), 200);
+    if (await getTask(c.env.DB, userId, id)) return c.json(await presentOne(c.env, userId, id), 200);
     const trashed = await getTask(c.env.DB, userId, id, { deleted: true });
     if (trashed) return c.json(present([trashed], userId, new Map(), new Map())[0], 200);
   }
@@ -580,7 +597,7 @@ async function createTask(env: Env, userId: string, z: Zone, b: Record<string, u
   // Alleen null als een ander account dit id net gelijktijdig kreeg (ON CONFLICT DO NOTHING).
   const created = await getTask(env.DB, userId, id);
   if (!created) throw new HttpError(409, 'err.id_taken');
-  return presentOne(env.DB, userId, id, created);
+  return presentOne(env, userId, id, created);
 }
 
 app.patch('/api/tasks/:id', async (c) => {
@@ -673,9 +690,9 @@ app.patch('/api/tasks/:id', async (c) => {
   const updated = await getTask(db, userId, id);
   if ('position' in b && updated) {
     await rebalanceIfNeeded(db, updated, userId);
-    return c.json(await presentOne(db, userId, id));
+    return c.json(await presentOne(c.env, userId, id));
   }
-  return c.json(await presentOne(db, userId, id, updated));
+  return c.json(await presentOne(c.env, userId, id, updated));
 });
 
 app.delete('/api/tasks/:id', async (c) => {
@@ -944,6 +961,8 @@ export default {
       // runReminders leest per taak de instellingen van de eigenaar; er zit geen globale zone tussen.
       await runReminders(env, await loadInstallPrefs(env));
       await purgeTrash(env.DB, Date.now());
+      // Na het wissen: de bijlagen van taken die nu weg zijn, ook in R2.
+      await sweepAttachments(env, Date.now());
     })());
   },
 };

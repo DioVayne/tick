@@ -17,6 +17,8 @@ export default defineConfig({
       miniflare: {
         // Tweede, lege D1 voor test/migratie.test.ts: die bouwt zelf een oude database op en migreert hem.
         d1Databases: ['MIGRATE_DB'],
+        // Lokale R2 voor de bijlagen (een eigen wrangler.jsonc heeft hem misschien niet).
+        r2Buckets: ['FILES'],
         // Vaste testwaarden; overschrijft ook een lokale .dev.vars (DEV_AUTH_BYPASS).
         bindings: {
           LOGIN_PASSWORD: 'test-wachtwoord',

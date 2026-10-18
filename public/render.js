@@ -166,6 +166,10 @@ function taskItem(t, children) {
     meta.push(el('span', { class: 'shared', title: label, 'aria-label': label }, '👥 ' + names));
   }
   if (!t.parent_id && t.copies) meta.push(...copyPills(t));
+  if (t.attachments?.length) {
+    const label = tr('att.count', { n: t.attachments.length });
+    meta.push(el('span', { class: 'att', title: label, 'aria-label': label }, '📎 ' + t.attachments.length));
+  }
   if (!state.list && t.list !== 'Inbox') meta.push(el('span', {}, t.list));
   // Zonder markdowntekens; zoeken gebeurt wel in de ruwe tekst.
   const plain = t.description ? plainText(t.description) : '';

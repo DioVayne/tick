@@ -719,7 +719,7 @@ async function importTickTick() {
 function paintData() {
   const off = !S.online;
   paint('data',
-    row(t('set.backup'), btn(t('set.download'), downloadBackup, { disabled: off }), homeNote(t('set.backup_note'))),
+    row(t('set.backup'), btn(t('set.download'), downloadBackup, { disabled: off }), homeNote(t('set.backup_note') + (CONFIG.attachments ? ' · ' + t('set.backup_no_files') : ''))),
     row(t('set.restore'), btn(t('set.choose_file'), restoreBackup, { disabled: off }), homeNote(t('set.restore_note'))),
     row(t('set.ticktick'), btn(t('set.import_csv'), importTickTick, { disabled: off }), homeNote(t('set.ticktick_note'))));
 }

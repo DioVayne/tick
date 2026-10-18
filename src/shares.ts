@@ -6,6 +6,7 @@ import { postWebhook, sendToAll, type Payload } from './push';
 import { loadUserPrefs } from './prefs';
 import { getUser } from './users';
 import { translate } from '../public/i18n.js';
+import { copyAttachmentStmt } from './attachments';
 
 /** Taken delen: uitnodigen, uitnodigingen bekijken, accepteren, weigeren en stoppen. */
 export const sharesApi = new Hono<AppEnv>();
@@ -124,9 +125,12 @@ function copyStmts(db: D1Database, src: TaskRow, kids: TaskRow[], userId: string
     t.loc_name, t.loc_lat, t.loc_lng, t.loc_radius, t.loc_trigger, t.repeat_rule, t.repeat_start, t.repeat_at,
     parent ? null : src.id); // alleen de hoofdtaak krijgt de groep, gelezen op het moment van invoegen
   const id = crypto.randomUUID();
+  const kidIds = kids.map(() => crypto.randomUUID());
   return [
     db.prepare('UPDATE tasks SET copy_group = ? WHERE id = ? AND copy_group IS NULL').bind(crypto.randomUUID(), src.id),
-    row(src, id, null, position), ...kids.map((k) => row(k, crypto.randomUUID(), id, k.position)),
+    row(src, id, null, position), ...kids.map((k, i) => row(k, kidIds[i], id, k.position)),
+    // De bijlagen gaan mee als verwijzing naar hetzelfde R2-object.
+    copyAttachmentStmt(db, src.id, id), ...kids.map((k, i) => copyAttachmentStmt(db, k.id, kidIds[i])),
   ];
 }
 
