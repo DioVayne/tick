@@ -342,7 +342,7 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
   const ts = now();
   if (done) {
     const next = inZone(z, () => nextOccurrence(t.repeat_rule!, t.repeat_start!, Math.max(Date.now(), Date.parse(t.repeat_at!))));
-    const { results: kids } = await db.prepare('SELECT id, done_at FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 1')
+    const { results: kids } = await db.prepare('SELECT id, done_at FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 1 AND deleted_at IS NULL')
       .bind(t.id, t.user_id).all<{ id: string; done_at: string | null }>();
     // Elke stap overschrijft de stand: ongedaan maken draait altijd de laatste stap terug.
     const prev = JSON.stringify({
@@ -378,10 +378,10 @@ async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone): Prom
   const ts = now();
   const stmts = [db.prepare('UPDATE tasks SET done = ?, done_at = ?, updated_at = ? WHERE id = ?').bind(done ? 1 : 0, done ? ts : null, ts, t.id)];
   if (done) {
-    stmts.push(db.prepare('UPDATE tasks SET done = 1, done_at = ?, updated_at = ? WHERE parent_id = ? AND done = 0 AND user_id = ?').bind(ts, ts, t.id, t.user_id));
+    stmts.push(db.prepare('UPDATE tasks SET done = 1, done_at = ?, updated_at = ? WHERE parent_id = ? AND done = 0 AND user_id = ? AND deleted_at IS NULL').bind(ts, ts, t.id, t.user_id));
   } else {
     if (t.done && t.done_at) {
-      stmts.push(db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE parent_id = ? AND done = 1 AND done_at = ? AND user_id = ?')
+      stmts.push(db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE parent_id = ? AND done = 1 AND done_at = ? AND user_id = ? AND deleted_at IS NULL')
         .bind(ts, t.id, t.done_at, t.user_id));
     }
     if (t.parent_id) {

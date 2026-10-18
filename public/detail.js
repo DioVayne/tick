@@ -352,7 +352,10 @@ function build(t, readOnly) {
       if (!task) return;
       // Een gedeelde taak (of een subtaak ervan) gaat voor iedereen naar de prullenbak.
       const top = task.parent_id ? current(task.parent_id) : task;
-      if (!confirm(tr(top?.share ? 'detail.confirm_delete_shared' : 'detail.confirm_delete', { title: task.title }))) return;
+      // Alleen als er echt iemand meedoet (de eigenaar met een geaccepteerde deelnemer, of jij als deelnemer).
+      const s = top?.share;
+      const shared = !!s && (!s.mine || s.members.some((m) => m.status === 'accepted'));
+      if (!confirm(tr(shared ? 'detail.confirm_delete_shared' : 'detail.confirm_delete', { title: task.title }))) return;
       dropPending(id);
       const pushed = !!history.state?.task;
       remove(id); // zet de keuze op null
