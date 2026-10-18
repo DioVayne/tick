@@ -3,7 +3,7 @@ import { dateLocale, t, t as tr } from './i18n.js'; // tr waar t al een taak is
 import { plainText } from './markdown.js';
 import { renderSidebar } from './sidebar.js';
 import { state, toggleDone, update } from './store.js';
-import { renderTrash, shareNames } from './trash.js';
+import { renderTrash, shareLabel, shareNames } from './trash.js';
 import { renderInvites } from './share.js';
 
 export const $ = (s) => document.querySelector(s);
@@ -115,8 +115,8 @@ function taskItem(t, children) {
   }
   if (t.location && !t.location_notified && !done) meta.push(el('span', { class: 'loc' }, '📍 ' + t.location.name));
   if (t.share) {
-    const names = shareNames(t) || '…';
-    const label = tr('share.with', { names });
+    const label = shareLabel(t);
+    const names = shareNames(t) || label;
     meta.push(el('span', { class: 'shared', title: label, 'aria-label': label }, '👥 ' + names));
   }
   if (!state.list && t.list !== 'Inbox') meta.push(el('span', {}, t.list));

@@ -263,6 +263,8 @@ body.resizing { cursor: col-resize; user-select: none; }
 /* Delen: dialoog, deelblok in het detailpaneel, uitnodigingen en het kenmerk in de lijst */
 .share-dialog form { display: grid; gap: 8px; }
 .share-dialog label[for] { font-size: .8125rem; color: var(--muted); }
+.people { display: flex; flex-wrap: wrap; gap: 6px; }
+.people .person { min-height: 36px; padding: 6px 14px; border-radius: 999px; }
 .share-modes { border: 0; margin: 4px 0 8px; padding: 0; display: grid; gap: 6px; }
 .share-modes legend { font-size: .8125rem; color: var(--muted); padding: 0; margin-bottom: 4px; }
 .share-mode { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
