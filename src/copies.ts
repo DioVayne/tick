@@ -1,5 +1,10 @@
 import { countTasks } from '../public/markdown.js';
+import { translate } from '../public/i18n.js';
 import type { Access } from './access';
+import type { Env, TaskRow } from './index';
+import { loadUserPrefs } from './prefs';
+import { type Locale, type Payload, postWebhook, type Sender, sendToAll } from './push';
+import { getUser } from './users';
 
 /**
  * Kopiegroep: hoofdtaken met dezelfde `copy_group` zijn exemplaren van dezelfde klus, één per persoon. Van een ander lid
@@ -68,4 +73,32 @@ export async function copiesFor(db: D1Database, userId: string, rows: Access[]):
     if (list.length || waiting.length) out.set(r.id, { members: list, pending: waiting });
   }
   return out;
+}
+
+/**
+ * Push "{name} is klaar ✓" naar de andere leden van de groep van `task` (hoofdtaak): de eigenaars van de andere
+ * niet-verwijderde exemplaren en hun geaccepteerde deelnemers, niet wie op het afgevinkte exemplaar zit. Iedereen
+ * krijgt de titel van zijn eigen exemplaar. Komt er niets aan, dan de eigen fallback-webhook (zoals bij uitnodigingen).
+ */
+export async function notifyCopyDone(env: Env, task: TaskRow, actorName: string, defaultLocale: Locale, send: Sender = sendToAll): Promise<void> {
+  const group = task.copy_group;
+  if (!group || task.parent_id) return;
+  const people = "SELECT t.id, t.title, t.user_id AS uid FROM tasks t WHERE t.copy_group = ? AND t.parent_id IS NULL AND t.deleted_at IS NULL " +
+    "UNION ALL SELECT t.id, t.title, s.to_user FROM tasks t JOIN task_shares s ON s.task_id = t.id AND s.mode = 'shared' AND s.status = 'accepted' " +
+    'WHERE t.copy_group = ? AND t.parent_id IS NULL AND t.deleted_at IS NULL';
+  const { results } = await env.DB.prepare(people).bind(group, group).all<{ id: string; title: string; uid: string }>();
+  const skip = new Set(results.filter((r) => r.id === task.id).map((r) => r.uid));
+  const seen = new Set<string>();
+  for (const r of results) {
+    if (r.id === task.id || skip.has(r.uid) || seen.has(r.uid)) continue;
+    seen.add(r.uid);
+    const make = (locale: string): Payload => ({
+      title: translate(locale, 'copy.push_done', { name: actorName }), body: r.title, url: `/?task=${r.id}`, tag: `copy-${group}`, actions: [],
+    });
+    const { total } = await send(env, r.uid, make, defaultLocale);
+    if (total) continue;
+    const user = await getUser(env.DB, r.uid);
+    const hook = user && (await loadUserPrefs(env, user)).fallbackWebhook;
+    if (hook) await postWebhook(hook, { ...make(defaultLocale), actions: undefined });
+  }
 }
