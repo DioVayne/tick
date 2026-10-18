@@ -109,7 +109,6 @@ describe('kopiegroep', () => {
 
   it('bestaande kopieën blijven los', async () => {
     const t = await createTask({ title: `Los ${uniq()}` });
-    await call('/api/tasks?done=1');
     await call(`/api/tasks/${t.id}`, { method: 'PATCH', json: { title: 'nieuwe titel' } });
     expect(await group(t.id)).toBeNull();
   });
@@ -204,6 +203,43 @@ describe('copies in GET /api/tasks', () => {
     expect(klaar.done_at).toBeTruthy();
   });
 
+  it('self: de eigen subtaken van de kijker', async () => {
+    const title = `Eigen ${uniq()}`;
+    const ta = (await post(a, { title, description: '- [x] regel telt niet mee' })).id;
+    const kids = [];
+    for (const k of ['k1', 'k2', 'k3', 'k4']) kids.push((await post(a, { title: k, parent_id: ta })).id);
+    const tb = await copyTo(ta, title, b, a);
+    expect((await copiesOf(a, ta))!.self).toEqual({ done: 0, total: 4 });
+    for (const id of kids.slice(0, 2)) expect((await patch(a, id, { done: true })).status).toBe(200);
+    expect((await copiesOf(a, ta))!.self).toEqual({ done: 2, total: 4 });
+    expect((await del(a, kids[3])).status).toBe(200);
+    expect((await copiesOf(a, ta))!.self).toEqual({ done: 2, total: 3 });
+    expect((await copiesOf(b, tb))!.self).toEqual({ done: 0, total: 4 });
+  });
+
+  it('een verwijderde subtaak telt niet mee in de voortgang', async () => {
+    const title = `Weg ${uniq()}`;
+    const ta = (await post(a, { title })).id;
+    for (const k of ['k1', 'k2', 'k3', 'k4']) await post(a, { title: k, parent_id: ta });
+    const tb = await copyTo(ta, title, b, a);
+    const bKids = (await list(b)).filter((t) => t.parent_id === tb);
+    expect((await patch(b, bKids.find((t) => t.title === 'k1')!.id, { done: true })).status).toBe(200);
+    expect((await member(a, ta, b.name)).progress).toBe(0.25);
+    expect((await del(b, bKids.find((t) => t.title === 'k2')!.id)).status).toBe(200);
+    expect((await member(a, ta, b.name)).progress).toBeCloseTo(1 / 3);
+  });
+
+  it('je bent nooit lid van je eigen groep', async () => {
+    const { ta, tb } = await trio();
+    const s = await json<Share>(await share(tb, d.id, 'shared', b.cookie));
+    expect((await accept(d, s.id)).status).toBe(200);
+    const title = (await list(a)).find((t) => t.id === ta)!.title;
+    const td = await copyTo(ta, title, d, a);
+    expect(names(await copiesOf(d, tb))).toEqual([a.name, c.name]);
+    expect(names(await copiesOf(d, td))).toEqual([a.name, b.name, c.name].sort((x, y) => x.localeCompare(y)));
+    expect(names(await copiesOf(b, tb))).toEqual([a.name, c.name, d.name].sort((x, y) => x.localeCompare(y)));
+  });
+
   it('een derde buiten de groep ziet niets', async () => {
     const { ta } = await trio();
     const eigen = await post(e, { title: `Eigen ${uniq()}` });
@@ -228,7 +264,7 @@ describe('copies in GET /api/tasks', () => {
     const ta = (await post(a, { title: `Alleen ${uniq()}` })).id;
     expect(await copiesOf(a, ta)).toBeNull();
     expect((await share(ta, c.id, 'copy', a.cookie)).status).toBe(201);
-    expect(await copiesOf(a, ta)).toEqual({ members: [], pending: [{ name: c.name }] });
+    expect(await copiesOf(a, ta)).toEqual({ members: [], pending: [{ name: c.name }], self: { done: 0, total: 0 } });
   });
 
   it('prullenbak', async () => {
@@ -282,6 +318,18 @@ describe('copies in GET /api/tasks', () => {
     expect(await member(b, tb, a.name)).toMatchObject({ done: false });
     expect((await patch(a, ta, { done: true })).status).toBe(200);
     expect(await member(a, ta, b.name)).toMatchObject({ done: false });
+  });
+
+  it('herhalend: een uur later is nog niet klaar (zomertijd)', async () => {
+    const title = `Uur ${uniq()}`;
+    const ta = (await post(a, { title, remind_at: '2099-10-18T10:00:00', repeat: 'FREQ=WEEKLY;BYDAY=SU' })).id;
+    const tb = await copyTo(ta, title, b, a);
+    const at = (await env.DB.prepare('SELECT repeat_at FROM tasks WHERE id = ?').bind(ta).first<{ repeat_at: string }>())!.repeat_at;
+    const later = (h: number) => new Date(Date.parse(at) + h * 3600_000).toISOString();
+    await env.DB.prepare('UPDATE tasks SET repeat_at = ? WHERE id = ?').bind(later(1), tb).run();
+    expect(await member(a, ta, b.name)).toMatchObject({ done: false });
+    await env.DB.prepare('UPDATE tasks SET repeat_at = ? WHERE id = ?').bind(later(3), tb).run();
+    expect(await member(a, ta, b.name)).toMatchObject({ done: true });
   });
 
   it('herhaling weggehaald', async () => {

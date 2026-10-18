@@ -34,13 +34,19 @@ export function copyPills(task) {
   });
 }
 
-/** Eigen voortgang: takenlijst-regels in de beschrijving plus de subtaken (zoals de server dat voor de anderen telt). */
-function ownProgress(task) {
+/**
+ * Eigen voortgang: takenlijst-regels in de beschrijving (zoals de app hem kent) plus de subtaken. Afgevinkte subtaken
+ * staan na herladen niet in `state.open` (en `state.done` is alleen geladen met Afgerond open), dus het totaal komt van
+ * de server (`copies.self`). De open subtaken kent de app wel allemaal, met wat nog in de outbox staat erbij; daarmee
+ * tellen lokaal afgevinkte, heropende en doorgeschoven subtaken meteen mee. Een lokaal toegevoegde of verwijderde
+ * subtaak klopt pas na de volgende load.
+ */
+function ownProgress(task, self) {
   const n = countTasks(task.description ?? '');
-  const kids = [...state.open, ...state.done].filter((x, i, all) => x.parent_id === task.id && all.findIndex((y) => y.id === x.id) === i);
-  const done = n.done + kids.filter((k) => k.done || state.justDone.has(k.id)).length;
-  const total = n.total + kids.length;
-  return total ? done / total : null;
+  const open = state.open.filter((x) => x.parent_id === task.id && !x.done && !state.justDone.has(x.id)).length;
+  const total = Math.max(self?.total ?? 0, open);
+  const done = n.done + total - open;
+  return n.total + total ? done / (n.total + total) : null;
 }
 
 /** Eén regel in het blok: naam, en klaar (met tijdstip) of een balkje. */
@@ -57,7 +63,7 @@ function row(name, done, doneAt, progress) {
  */
 export function fillCopiesBox(box, task) {
   const c = !task.parent_id ? task.copies : null;
-  const me = c ? [!!(task.done || state.justDone.has(task.id)), task.done_at ?? null, ownProgress(task)] : null;
+  const me = c ? [!!(task.done || state.justDone.has(task.id)), task.done_at ?? null, ownProgress(task, c.self)] : null;
   const key = JSON.stringify([task.id, c, me]);
   if (box.dataset.key === key) return;
   box.dataset.key = key;
