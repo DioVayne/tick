@@ -1,13 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Zelfde vormen als public/icon.svg (512-raster), geschaald naar het zichtbare 72dp-midden van 108dp. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:pathData="M32,56 L47,71 L77,38"
-        android:strokeWidth="9"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+    <group
+        android:translateX="18"
+        android:translateY="18"
+        android:scaleX="0.140625"
+        android:scaleY="0.140625">
+        <path
+            android:pathData="M256,104 C184,104 132,158 132,226 C132,312 256,416 256,416 C256,416 380,312 380,226 C380,158 328,104 256,104 Z"
+            android:fillColor="@color/icon_pin" />
+        <path
+            android:pathData="M204,226 L242,264 L314,184"
+            android:strokeWidth="36"
+            android:strokeColor="@color/icon_bg"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
 </vector>

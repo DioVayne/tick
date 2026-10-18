@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="accent">#1F6FEB</color>
+    <color name="icon_bg">#1E293B</color>
+    <color name="icon_pin">#FCD34D</color>
     <color name="widget_bg">#FFFFFF</color>
     <color name="widget_text">#1B1F24</color>
     <color name="widget_muted">#6B7280</color>
