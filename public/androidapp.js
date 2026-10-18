@@ -1,9 +1,9 @@
 // Tick draait in de Android-app (een Trusted Web Activity die /?app=android opent). Hier: koppelen met de app via een
 // eenmalige code in een intent-link, web push aanzetten en dubbele meldingen signaleren.
 import { request } from './api.js';
-import { pairIntent, pushAction, settingsIntent } from './applink.js';
+import { pairIntent, pushAction, settingsIntent, startPushAction } from './applink.js';
 import { t } from './i18n.js';
-import { enablePush, pushState } from './push.js';
+import { enablePush, pushState, pushTurnedOff } from './push.js';
 import { el, toast } from './render.js';
 import CONFIG from './settings.js';
 
@@ -42,7 +42,19 @@ export function initAndroidApp(params, { openDevices } = {}) {
   }
   if (!isInApp() || !CONFIG.androidPackage) return;
   if (pair) pairApp(CONFIG.androidPackage, openDevices).catch(() => { /* de knop in Instellingen blijft de terugvalroute */ });
-  else hintDuplicates(openDevices).catch(() => { /* alleen een tip */ });
+  else {
+    // Al gekoppeld (ook na een update van de app): meldingen aanzetten als de app toestemming heeft en ze nog uit staan.
+    startAppPush().catch(() => { /* de schakelaar in Instellingen blijft over */ });
+    hintDuplicates(openDevices).catch(() => { /* alleen een tip */ });
+  }
+}
+
+/** Zet web push aan bij een gewone start in de app, zonder te wachten; zie startPushAction. */
+async function startAppPush() {
+  const reg = await Promise.race([navigator.serviceWorker?.ready, sleep(5000).then(() => null)]) ?? null;
+  if (!reg) return;
+  const { supported, permission, subscribed } = await pushState(reg);
+  if (supported && startPushAction(permission, subscribed, pushTurnedOff()) === 'subscribe') await enablePush(reg);
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

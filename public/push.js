@@ -6,6 +6,11 @@ const isStandalone = () => window.matchMedia('(display-mode: standalone)').match
 const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 const supported = (reg) => !!reg && 'PushManager' in window && 'Notification' in window;
 
+/** Zelf uitgezet op dit apparaat: dan zet de Android-app meldingen bij het starten niet vanzelf weer aan. */
+export const PUSH_OFF_KEY = 'tick.pushOff';
+const markOff = (off) => { try { if (off) localStorage.setItem(PUSH_OFF_KEY, '1'); else localStorage.removeItem(PUSH_OFF_KEY); } catch { /* geen opslag */ } };
+export const pushTurnedOff = () => { try { return localStorage.getItem(PUSH_OFF_KEY) === '1'; } catch { return false; } };
+
 /**
  * Stand van web push in deze browser. Verwacht de registratie van de service worker (of null).
  * @param {ServiceWorkerRegistration | null} reg
@@ -27,6 +32,7 @@ export async function enablePush(reg) {
   const sub = await reg.pushManager.getSubscription()
     ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(vapidPublicKey) });
   await request('POST', '/api/push/subscribe', { ...sub.toJSON(), locale: getLocale() });
+  markOff(false);
 }
 
 /**
@@ -35,6 +41,7 @@ export async function enablePush(reg) {
  */
 export async function disablePush(reg) {
   if (!supported(reg)) return;
+  markOff(true);
   const sub = await reg.pushManager.getSubscription();
   if (!sub) return;
   try {
