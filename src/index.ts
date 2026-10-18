@@ -22,7 +22,7 @@ import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
 import { sharesApi } from './shares';
-import { anyCopies, type Copies, copiesFor } from './copies';
+import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 
 export type Env = {
   DB: D1Database;
@@ -350,7 +350,7 @@ function undoable(t: TaskRow): RepeatPrev | null {
  * Heropenen draait dat terug zolang undoable() het toestaat. Beide in één batch; de WHERE op repeat_at/repeat_prev
  * zorgt dat een gelijktijdig verzoek niets half of dubbel doet.
  */
-async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): Promise<void> {
+async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): Promise<boolean> {
   const ts = now();
   if (done) {
     const next = inZone(z, () => nextOccurrence(t.repeat_rule!, t.repeat_start!, Math.max(Date.now(), Date.parse(t.repeat_at!))));
@@ -360,17 +360,17 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
     const prev = JSON.stringify({
       remind_at: t.remind_at, repeat_at: t.repeat_at!, next, kids, at: ts, notified: t.notified, loc_notified: t.loc_notified,
     } satisfies RepeatPrev);
-    await db.batch([
+    const [res] = await db.batch([
       db.prepare('UPDATE tasks SET remind_at = ?, repeat_at = ?, notified = 0, loc_notified = CASE WHEN loc_lat IS NULL THEN loc_notified ELSE 0 END, ' +
         'repeat_prev = ?, updated_at = ? WHERE id = ? AND done = 0 AND repeat_at = ?').bind(next, next, prev, ts, t.id, t.repeat_at),
       // Alleen als de parent hierboven echt is doorgeschoven (repeat_at en updated_at van deze stap).
       db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE parent_id = ? AND user_id = ? AND done = 1 AND id IN (SELECT value FROM json_each(?)) ' +
         'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_at = ? AND updated_at = ?)').bind(ts, t.id, t.user_id, JSON.stringify(kids.map((k) => k.id)), t.id, next, ts),
     ]);
-    return;
+    return res.meta.changes > 0;
   }
   const prev = undoable(t);
-  if (!prev) return;
+  if (!prev) return false;
   await db.batch([
     // Eerst de subtaken, zolang repeat_prev nog als bewijs in de parent staat.
     ...prev.kids.map((k) => db.prepare('UPDATE tasks SET done = 1, done_at = ?, updated_at = ? WHERE id = ? AND parent_id = ? AND user_id = ? AND done = 0 ' +
@@ -378,17 +378,19 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
     db.prepare('UPDATE tasks SET remind_at = ?, repeat_at = ?, notified = ?, loc_notified = ?, repeat_prev = NULL, updated_at = ? WHERE id = ? AND repeat_prev = ?')
       .bind(prev.remind_at, prev.repeat_at, prev.notified, prev.loc_notified, ts, t.id, t.repeat_prev),
   ]);
+  return false;
 }
 
 /**
  * Vinkt een taak af of heropent haar. Afvinken neemt open subtaken mee (met hetzelfde done_at);
  * heropenen zet precies die subtaken weer open, en een heropende subtaak opent ook haar parent.
- * Een open herhalende hoofdtaak gaat via rollRepeat.
+ * Een open herhalende hoofdtaak gaat via rollRepeat. Geeft true als de taak hierdoor echt van open naar klaar ging
+ * (bij herhalen: echt doorschoof); heropenen geeft altijd false.
  */
-async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone): Promise<void> {
+async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone): Promise<boolean> {
   if (rolls(t)) return rollRepeat(db, t, done, z);
   const ts = now();
-  const stmts = [db.prepare('UPDATE tasks SET done = ?, done_at = ?, updated_at = ? WHERE id = ?').bind(done ? 1 : 0, done ? ts : null, ts, t.id)];
+  const stmts = [db.prepare(`UPDATE tasks SET done = ?, done_at = ?, updated_at = ? WHERE id = ?${done ? ' AND done = 0' : ''}`).bind(done ? 1 : 0, done ? ts : null, ts, t.id)];
   if (done) {
     stmts.push(db.prepare('UPDATE tasks SET done = 1, done_at = ?, updated_at = ? WHERE parent_id = ? AND done = 0 AND user_id = ? AND deleted_at IS NULL').bind(ts, ts, t.id, t.user_id));
   } else {
@@ -400,7 +402,16 @@ async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone): Prom
       stmts.push(db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE id = ? AND done = 1 AND user_id = ?').bind(ts, t.parent_id, t.user_id));
     }
   }
-  await db.batch(stmts);
+  const [res] = await db.batch(stmts);
+  return done && res.meta.changes > 0;
+}
+
+/** Na echt afvinken van een hoofdtaak in een kopiegroep: melding aan de anderen, op de achtergrond. */
+async function copyDone(c: Context<AppEnv>, t: TaskRow) {
+  if (!t.copy_group || t.parent_id) return;
+  const sending = notifyCopyDone(c.env, t, c.get('user').name, c.get('install').defaultLocale)
+    .catch((e) => console.warn('kopie klaar melden mislukt', (e as Error).message));
+  try { c.executionCtx.waitUntil(sending); } catch { await sending; }
 }
 
 /**
@@ -657,7 +668,7 @@ app.patch('/api/tasks/:id', async (c) => {
     // ongedaan maken (dat een eerdere stap bedoelde) de nieuwste stap niet terug.
     const sameAt = !('occurrence' in b) || Date.parse(String(b.occurrence)) === Date.parse(cur.repeat_at!);
     const act = rolls(cur) ? sameAt && (!!b.done || !!undoable(cur)) : !!b.done !== !!cur.done;
-    if (act) await setDone(db, cur, !!b.done, await ownerZone(c, cur));
+    if (act && await setDone(db, cur, !!b.done, await ownerZone(c, cur))) await copyDone(c, cur);
   }
   const updated = await getTask(db, userId, id);
   if ('position' in b && updated) {
@@ -796,7 +807,7 @@ for (const [action, done] of [['done', true], ['reopen', false]] as const) {
     const t = await getTask(c.env.DB, c.get('auth').userId, c.req.param('id'));
     if (!t) throw new HttpError(404, 'err.not_found');
     // Een herhalende taak staat altijd open: /done schuift altijd door, /reopen draait terug als dat nog mag (setDone beslist).
-    if (rolls(t) || !!t.done !== done) await setDone(c.env.DB, t, done, await ownerZone(c, t));
+    if ((rolls(t) || !!t.done !== done) && await setDone(c.env.DB, t, done, await ownerZone(c, t))) await copyDone(c, t);
     return c.json({ ok: true });
   });
 }

@@ -63,7 +63,7 @@ self.addEventListener('push', (event) => {
       body: data.body,
       icon: '/icon-192.png',
       badge: '/badge-96.png', // wit op transparant: Android tekent de badge als silhouet
-      tag: data.taskId || (data.shareId ? 'share-' + data.shareId : 'tick'),
+      tag: data.tag || data.taskId || (data.shareId ? 'share-' + data.shareId : 'tick'),
       data,
       // De server stuurt de knoppen vertaald mee; zonder taak geen knoppen.
       actions: data.taskId || data.shareId ? (data.actions ?? (data.taskId ? [{ action: 'done', title: '✓' }, { action: 'snooze', title: '+1h' }] : [])) : [],
