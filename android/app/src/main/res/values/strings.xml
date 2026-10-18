@@ -16,6 +16,9 @@
     <string name="loc_channel">Location notifications</string>
     <string name="loc_arrived">📍 Arrived at %s</string>
     <string name="loc_left">📍 Left %s</string>
+    <string name="battery_button">Turn off battery restriction</string>
+    <string name="battery_status_free">Battery: Tick may refresh in the background</string>
+    <string name="battery_status_limited">Battery: Android may slow Tick down in the background (widget and location notifications)</string>
     <string name="loc_button">Turn on location notifications</string>
     <string name="loc_status_on">Location notifications: on</string>
     <string name="loc_status_missing">Location notifications: still needed: %s</string>

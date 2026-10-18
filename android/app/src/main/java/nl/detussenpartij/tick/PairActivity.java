@@ -66,7 +66,7 @@ public class PairActivity extends Activity {
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
         } else {
-            finish();
+            askBatteryAndFinish();
         }
     }
 
@@ -77,8 +77,14 @@ public class PairActivity extends Activity {
             // De meldingsstatus is net veranderd: opnieuw melden (DeviceStatus stuurt alleen als het anders is).
             final Context app = getApplicationContext();
             new Thread(() -> DeviceStatus.report(app)).start();
-            finish();
+            askBatteryAndFinish();
         }
+    }
+
+    /** Na het koppelen ook de batterijvraag: zonder vrijstelling verversen widget en locatiemeldingen op sommige telefoons niet. */
+    private void askBatteryAndFinish() {
+        Battery.ask(this);
+        finish();
     }
 
     private static void failed(Context app) {
