@@ -1,6 +1,6 @@
 # Tick
 
-A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push notifications, and it works offline. Built for one person or a few: the administrator invites others with a link, and every account has its own tasks and settings. Free to run on Cloudflare's free plan.
+A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push notifications, and it works offline. Its standout feature is **location reminders**: tie a task to a place and your phone reminds you when you arrive there or leave, so the shopping list pops up as you walk into the supermarket. Built for one person or a few: the administrator invites others with a link, and every account has its own tasks and settings. Free to run on Cloudflare's free plan.
 
 **Set it up:** [SETUP.md](SETUP.md), or open this folder in [Claude Code](https://claude.com/claude-code) and say *"set up Tick"*.
 **How it works:** [ARCHITECTURE.md](ARCHITECTURE.md).
@@ -11,6 +11,10 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 
 **On the desktop** you get three columns: your lists on the left, the tasks in the middle and the open task on the right. A task can have a reminder (🔔), a repeat rule (🔁), a list and subtasks. The notes are markdown, so a checklist in a note can be ticked off right there. Click a task and you can edit its title right in the list. Tick something off and a little burst of confetti comes out of the checkbox.
 
+![Tick in light mode with a task that has a location reminder at the supermarket](docs/screenshots/desktop-light.png)
+
+**📍 Location reminders** are the feature that sets Tick apart. Search for a place or address on the map, set the radius, choose *on arrival* or *on leaving*, and save places you use often as favorites. The Android app then notifies you at the right spot: the groceries at the supermarket, the screws at the hardware store, the parcel as you leave the house. A task can have a time reminder and a place reminder at the same time. (This screenshot also shows light mode: Tick follows your device, or you pick light or dark in the settings.)
+
 ![The share dialog: pick someone, then choose a shared task or a copy](docs/screenshots/sharing.png)
 
 **Sharing** works between the accounts on your Tick. Pick someone from the list (or type a name or email address) and choose *Shared*, one task for both of you, where done is done for everyone, or *Copy*, which gives them their own copy. They get an invitation at the top of their list to accept or decline. The task shows who it is shared with, and a reminder on a shared task reaches everyone on it. The owner can remove people; the others can stop sharing whenever they like.
@@ -18,10 +22,6 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 ![The trash with deleted tasks, each with Restore and Delete for good](docs/screenshots/trash.png)
 
 **The trash** keeps deleted tasks for 30 days. Restore one, delete it for good, or empty the trash in one go.
-
-![Tick in light mode with a task that has a location reminder](docs/screenshots/desktop-light.png)
-
-**Light or dark** follows your device, or you pick one in the settings. Here a shopping task has a location reminder: with the Android app you get a notification when you arrive at the supermarket.
 
 <p>
   <img src="docs/screenshots/mobile-list.png" width="260" alt="The task list on a phone">
@@ -37,6 +37,7 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 *The screenshots use made-up demo tasks.*
 
 ## Features
+- **Location reminders**: get a notification when you arrive at or leave a place, set on a map (with the Android app).
 - Tasks with lists, one level of subtasks, drag to sort, and search.
 - Several accounts on one Tick; share a task with someone as one shared task (done is done for everyone) or as a separate copy. They accept or decline the invitation, and reminders on a shared task go to everyone on it.
 - A trash: deleted tasks stay there for 30 days; restore them, delete them for good, or empty the trash.
@@ -45,7 +46,7 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 - Works offline as an installable web app (PWA); changes sync when you are back online.
 - Desktop layout with a sidebar and detail panel, where you edit a task's title right in the list; a full-screen task view on mobile.
 - Confetti when you tick off a task (not when your device asks for reduced motion).
-- Optional Android app: a home-screen widget, quick add, and location reminders (notify me when I arrive at or leave a place). Notifications show up as Tick instead of Chrome, and you link the app with one tap on *Link* in the web app.
+- Optional Android app: location reminders, a home-screen widget and quick add. Notifications show up as Tick instead of Chrome, and you link the app with one tap on *Link* in the web app.
 - An inbox API for automations (`POST /api/inbox` with its own token).
 - A settings page in the app: display (theme, text size, spacing), language per device, time zone, password, keys for your phone and automations, a view of your devices, and backup, restore and TickTick import. After the install you rarely need the config again.
 - English and Dutch; your own time zone.
