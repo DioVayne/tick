@@ -1,0 +1,60 @@
+<!doctype html>
+<!-- Source of social-preview.png (GitHub social preview, 1280x640).
+     Render: msedge --headless --screenshot=social-preview.png --window-size=1280,640 --force-device-scale-factor=2 social-preview.html -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1280px; height: 640px; overflow: hidden; }
+  body {
+    position: relative;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    color: #f1f5f9;
+    background:
+      radial-gradient(circle at 78% 30%, #334155 0, transparent 55%),
+      #1e293b;
+  }
+  .text { position: absolute; left: 80px; top: 80px; width: 440px; }
+  .text img { width: 112px; height: 112px; display: block; border-radius: 25px; box-shadow: 0 0 0 1px #475569, 0 10px 30px rgb(0 0 0 / .4); }
+  h1 { font-size: 92px; font-weight: 700; letter-spacing: -2px; line-height: 1; margin-top: 28px; }
+  .tag { font-size: 27px; line-height: 1.25; color: #cbd5e1; margin-top: 14px; }
+  ul { list-style: none; padding: 0; margin-top: 30px; font-size: 22px; color: #e2e8f0; }
+  li { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+  li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: #fcd34d; flex: none; }
+
+  .desktop {
+    position: absolute; left: 600px; top: 96px; width: 760px;
+    border-radius: 14px; overflow: hidden;
+    border: 1px solid #475569;
+    box-shadow: 0 30px 70px rgb(0 0 0 / .5);
+    background: #1f1f1f;
+  }
+  .bar { height: 26px; background: #2b2b2b; display: flex; gap: 7px; align-items: center; padding-left: 12px; }
+  .bar i { width: 10px; height: 10px; border-radius: 50%; background: #555; }
+  .desktop img { display: block; width: 100%; }
+
+  .phone {
+    position: absolute; left: 572px; top: 226px; width: 196px; height: 424px;
+    border-radius: 30px; padding: 8px; background: #0f172a;
+    border: 1px solid #475569;
+    box-shadow: 0 24px 60px rgb(0 0 0 / .6);
+  }
+  .phone img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 22px; }
+</style>
+</head>
+<body>
+  <div class="text">
+    <img src="logo.svg" alt="">
+    <h1>Tick</h1>
+    <p class="tag">The to-do app you host yourself on Cloudflare</p>
+    <ul>
+      <li>Location reminders</li>
+      <li>Push notifications &amp; offline</li>
+      <li>Shared tasks, free to run</li>
+    </ul>
+  </div>
+  <div class="desktop"><div class="bar"><i></i><i></i><i></i></div><img src="screenshots/desktop-dark.png" alt=""></div>
+  <div class="phone"><img src="screenshots/location.png" alt=""></div>
+</body>
+</html>
