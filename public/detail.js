@@ -1,4 +1,4 @@
-import { confetti } from './confetti.js';
+import { confetti, isCouple } from './confetti.js';
 import { autoGrow, createEditor } from './editor.js';
 import { t as tr } from './i18n.js'; // tr: t is hier een taak
 import { openListPicker } from './listpicker.js';
@@ -320,7 +320,7 @@ function build(t, readOnly) {
     onclick: (e) => {
       flushPending();
       const task = current(id);
-      if (task && !task.done && !state.justDone.has(task.id)) confetti(e.currentTarget);
+      if (task && !task.done && !state.justDone.has(task.id)) confetti(e.currentTarget, isCouple(task.share ?? findTask(task.parent_id)?.share));
       if (task) toggleDone(task);
     },
   });
@@ -437,7 +437,7 @@ function fill(t) {
           el('button', {
             class: 'check', role: 'checkbox', 'aria-checked': String(kDone), disabled: done,
             'aria-label': state.justDone.has(k.id) ? tr('render.undo') : kDone ? tr('render.reopen') : tr('render.check'),
-            onclick: (e) => { if (!kDone) confetti(e.currentTarget); toggleDone(current(k.id) ?? k); }, // de rij kan ouder zijn dan de taak na een verversing
+            onclick: (e) => { if (!kDone) confetti(e.currentTarget, isCouple(t.share)); toggleDone(current(k.id) ?? k); }, // de rij kan ouder zijn dan de taak na een verversing
           }),
           el('button', { class: 'subtitle', type: 'button', onclick: () => selectTask(k.id) }, k.title));
       }));
