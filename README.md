@@ -53,6 +53,7 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 - A trash: deleted tasks stay there for 30 days; restore them, delete them for good, or empty the trash.
 - Reminders with web push; a reminder can repeat (daily, weekly, monthly, yearly, with custom rules). A new reminder starts at the next whole hour.
 - Notes in markdown, with clickable checklists.
+- Optional attachments: photos and files on a task, stored in Cloudflare R2. Photos are scaled down and lose their EXIF data (such as the location) before upload.
 - Works offline as an installable web app (PWA); changes sync when you are back online.
 - Desktop layout with a sidebar and detail panel, where you edit a task's title right in the list; a full-screen task view on mobile.
 - Confetti when you tick off a task (not when your device asks for reduced motion).
@@ -60,6 +61,22 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 - An inbox API for automations (`POST /api/inbox` with its own token).
 - A settings page in the app: display (theme, text size, spacing), language per device, time zone, password, keys for your phone and automations, a view of your devices, and backup, restore and TickTick import. After the install you rarely need the config again.
 - English and Dutch; your own time zone.
+
+## Requirements
+1. [Claude Code](https://claude.com/claude-code) (or do it by hand with [SETUP.md](SETUP.md)).
+2. A free [Cloudflare](https://dash.cloudflare.com/sign-up) account. No credit card needed: only the optional attachments ask for a payment method on file (Cloudflare R2, see step 11 of [SETUP.md](SETUP.md)).
+3. [Node.js](https://nodejs.org) 22 or newer and [git](https://git-scm.com). Claude Code checks this and tells you if something is missing.
+
+## How to install (short version)
+1. Make a free Cloudflare account and open **Workers & Pages** once in the dashboard, so your account gets its `workers.dev` address.
+2. Open Claude Code in an empty folder that is **not** inside Google Drive, OneDrive or Dropbox (npm does not work well there).
+3. Paste this:
+   > Clone https://github.com/DioVayne/tick into this folder and set up Tick for me.
+4. Answer Claude's questions: language, time zone, contact email, and whether you want the Android app and attachments.
+5. When Claude asks, log in to Cloudflare in the browser window that opens, and type your own password in the terminal (`npx wrangler secret put LOGIN_PASSWORD`). Claude never sees it.
+6. Open the URL Claude gives you, log in with an empty email address and that password, and turn on notifications under **⚙ Settings**.
+
+Updating later: open the folder in Claude Code and say *"update Tick"*.
 
 ## Built with
 A Cloudflare Worker ([Hono](https://hono.dev)) with D1, static assets and a cron trigger. The web app is vanilla JavaScript without a build step. Push through [@pushforge/builder](https://www.npmjs.com/package/@pushforge/builder), maps through [Leaflet](https://leafletjs.com) and OpenStreetMap.

@@ -18,7 +18,8 @@ Walk the user through [SETUP.md](../../../SETUP.md) and do the work for them. SE
    - time zone (offer the one from the user's system as the default),
    - contact e-mail for `ADMIN_CONTACT`,
    - own domain or `workers.dev`,
-   - whether they want the inbox API (`INBOX_TOKEN`) and the Android app.
+   - whether they want the inbox API (`INBOX_TOKEN`) and the Android app,
+   - whether they want attachments (photos and files on a task). Say plainly that this needs R2, and that R2 only switches on with a payment method on file in Cloudflare, even within the free tier; without it Tick works the same and they can add it later. Default: no.
 
 ## Doing it
 - Run `npm ci`, copy `wrangler.example.jsonc` to `wrangler.jsonc`, run `npx wrangler d1 create tick`, and write the `database_id` and the vars into `wrangler.jsonc` yourself.
@@ -48,6 +49,12 @@ Walk the user through [SETUP.md](../../../SETUP.md) and do the work for them. SE
 - `curl -s -o /dev/null -w "%{http_code}" <url>/login` gives `200`.
 - Ask the user to log in, add a task, and turn on notifications in the sidebar; that sends a test notification.
 - Mention the cron trigger (every minute) and where to see it: the Worker's **Settings → Triggers** in the dashboard.
+
+## Attachments (only if wanted)
+Follow step 11 of SETUP.md:
+1. The user adds the payment method and switches R2 on in the dashboard themselves; never enter payment details. Check with `npx wrangler r2 bucket list`: an error about R2 not being enabled means that step is not done yet.
+2. Run `npx wrangler r2 bucket create tick-files` (skip it if the bucket already exists), remove the `//` before `"r2_buckets"` in `wrangler.jsonc`, and set `MAX_UPLOAD_MB` only if they asked for another limit.
+3. Deploy again after a yes, and ask the user to open a task: it should show **📎 Add photo or file**. Suggest a billable-usage notification under **Billing** in the dashboard.
 
 ## Android (only if wanted)
 Follow step 10 of SETUP.md:

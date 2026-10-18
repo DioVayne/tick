@@ -8,6 +8,7 @@ You only do this once. Afterwards you change everything in the app itself (**⚙
 
 ## What you need
 - A Cloudflare account. The free plan is enough: Workers, D1, Cron Triggers and Rate Limiting. Tick uses one cron trigger; the free plan allows 5 per account, so if you already have 5, the deploy reports *"reached the Workers Free limit of 5 cron triggers"* and reminders will not be sent until you free one up.
+  No credit card needed: only the optional attachments (step 11) ask for a payment method on file.
 - Node.js 22 or newer, and git.
 - Optional: Claude Code. Optional for the Android app: JDK 17+ and the Android SDK.
 
@@ -135,6 +136,18 @@ Good to know:
 - You can share the APK with others who use the same Tick: it is signed with the same key, so it matches `ANDROID_CERT_SHA256`.
 - Installed Tick in Firefox as a web app before? Remove that installation, or turn off its notifications, or you get every notification twice.
 - The app needs Chrome (or another browser that supports Trusted Web Activities). Without one it opens with an address bar.
+
+## 11. Optional: attachments
+Photos and files on a task. They are stored in Cloudflare R2, and R2 only switches on once your account has a payment method on file, even though Tick stays within the free tier (10 GB storage) for a long time. Without this step Tick works the same, just without attachments; you can add it any time later.
+1. In the dashboard, open **R2 Object Storage**, add a payment method and switch R2 on.
+2. Create the bucket:
+   ```bash
+   npx wrangler r2 bucket create tick-files
+   ```
+3. In `wrangler.jsonc`, remove the `//` in front of `"r2_buckets"`. Optionally set `MAX_UPLOAD_MB` in `vars` (default 10, at most 100).
+4. Deploy again with `npm run deploy`. Open a task: it now has **📎 Add photo or file**.
+
+Photos are scaled down in the browser before upload, which also strips their EXIF data (such as where the photo was taken). Attachments only work online. Against surprises: set up a billable-usage notification under **Billing** in the dashboard.
 
 ## Updating
 ```bash
