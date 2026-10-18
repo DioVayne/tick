@@ -20,7 +20,7 @@ import { linkPages } from './links';
 import { deviceApi, devicesApi } from './devices';
 import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
-import { type Access, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
+import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
 import { sharesApi } from './shares';
 
 export type Env = {
@@ -195,7 +195,7 @@ function asBool(t: TaskRow) {
  */
 function present(rows: Access[], userId: string, info: Map<string, ShareInfo>) {
   return rows.map((r) => {
-    const { share_id, share_list, share_position, ...t } = overlay(r);
+    const { share_id, share_list, share_position, has_share, ...t } = overlay(r);
     const s = t.parent_id ? undefined : info.get(t.id);
     return { ...asBool(t), share: s ? { ...s, mine: s.owner.id === userId } : null };
   });
@@ -482,15 +482,15 @@ app.get('/api/tasks', async (c) => {
     // Ook gedeelde taken waar je (nog) deelnemer van bent, voor iedereen in de prullenbak.
     const rows = await visibleTasks(db, userId, 't.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM tasks p WHERE p.id = t.parent_id AND p.deleted_at = t.deleted_at)',
       [limit, offset], 'ORDER BY t.deleted_at DESC LIMIT ? OFFSET ?');
-    return c.json(present(rows, userId, await shareInfo(db, userId)));
+    return c.json(present(rows, userId, anyShared(rows) ? await shareInfo(db, userId) : new Map()));
   }
   if (done) {
     const rows = await visibleTasks(db, userId, `t.done = 1 AND t.deleted_at IS NULL${search.sql}`, [...search.binds, limit, offset], 'ORDER BY t.done_at DESC LIMIT ? OFFSET ?');
-    return c.json(present(rows, userId, await shareInfo(db, userId)));
+    return c.json(present(rows, userId, anyShared(rows) ? await shareInfo(db, userId) : new Map()));
   }
   // Sorteren na overlay: een deelnemer heeft zijn eigen positie in zijn deelrij.
   const rows = await visibleTasks(db, userId, `t.done = 0 AND t.deleted_at IS NULL${search.sql}`, search.binds);
-  const out = present(rows, userId, await shareInfo(db, userId)).sort((a, b) => a.position - b.position);
+  const out = present(rows, userId, anyShared(rows) ? await shareInfo(db, userId) : new Map()).sort((a, b) => a.position - b.position);
   return c.json(out);
 });
 

@@ -4,13 +4,15 @@ import type { TaskRow } from './index';
  * Toegang tot taken. Je hebt toegang als je de eigenaar bent (`tasks.user_id`), of als er een geaccepteerde deelrij is
  * voor de hoofdtaak (`COALESCE(parent_id, id)`) met jou als ontvanger. Een taak zonder toegang bestaat voor jou niet.
  */
-export type Access = TaskRow & { share_id: string | null; share_list: string | null; share_position: number | null };
+export type Access = TaskRow & { share_id: string | null; share_list: string | null; share_position: number | null; has_share: number | null };
 
 /** Afstand tussen posities na aanmaken of herverdelen; slepen halveert het gat. */
 export const STEP = 1_000_000;
 
 // ?1 is altijd de gebruiker; een gewone ? daarna krijgt het volgende nummer (?2, ?3, …).
-const COLS = 't.*, s.id AS share_id, s.list AS share_list, s.position AS share_position';
+// has_share: de taak heeft deelrijen (dan is shareInfo nodig); zonder één zo'n taak slaat de route die query over.
+const COLS = "t.*, s.id AS share_id, s.list AS share_list, s.position AS share_position, " +
+  "(SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'shared' LIMIT 1) AS has_share";
 const JOIN = "LEFT JOIN task_shares s ON s.task_id = COALESCE(t.parent_id, t.id) AND s.to_user = ?1 AND s.status = 'accepted'";
 const VISIBLE = '(t.user_id = ?1 OR s.id IS NOT NULL)';
 
@@ -26,6 +28,9 @@ export async function visibleTasks(db: D1Database, userId: string, where: string
     .bind(userId, ...binds).all<Access>();
   return results;
 }
+
+/** Of er bij deze rijen een gedeelde taak zit; anders hoeft shareInfo niet te draaien. */
+export const anyShared = (rows: Access[]) => rows.some((r) => r.share_id || r.has_share);
 
 /** Lijst en volgorde van de ontvanger: de hoofdtaak krijgt die uit zijn deelrij, een subtaak de lijst van haar ouder bij hem. */
 export function overlay(t: Access): Access {
