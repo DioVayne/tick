@@ -10,7 +10,6 @@ import CONFIG from './settings.js';
 const APP_KEY = 'tick.app';
 const DUP_KEY = 'tick.dupHint';
 const POLL_MS = 1000;
-const BAR_AFTER_MS = 3000;
 const CODE_TTL_MS = 2 * 60 * 1000;
 const PUSH_WAIT_MS = 60 * 1000;
 
@@ -54,24 +53,26 @@ function bar(text, label, onClick) {
   return b;
 }
 
+/**
+ * Koppelen gaat via een knop, nooit vanzelf: Chrome ziet een intent zonder tik als redirect van de vorige
+ * navigatie en zet na het openen van de app de geschiedenis terug van vóór die keten. Na het inloggen
+ * (loginpagina → / → intent) stond je dan weer op de loginpagina.
+ */
 async function pairApp(pkg, openDevices) {
   const { id, code, expires_at: expires } = await request('POST', '/api/pair');
   const intent = pairIntent(pkg, code);
-  location.href = intent;
-  const started = Date.now();
-  const deadline = Math.min(Date.parse(expires) || Infinity, started + CODE_TTL_MS);
-  let notice = null;
+  const deadline = Math.min(Date.parse(expires) || Infinity, Date.now() + CODE_TTL_MS);
+  const notice = bar(t('app.pair_hint'), t('app.pair_button'), () => { location.href = intent; });
   try {
     while (Date.now() < deadline) {
       await sleep(POLL_MS);
       let used = false;
       try { used = (await request('GET', `/api/pair/${id}`)).used; } catch { /* offline of 404: blijven peilen tot het verloopt */ }
       if (used) { await enableAppPush(); await hintDuplicates(openDevices); return; }
-      if (!notice && Date.now() - started >= BAR_AFTER_MS) notice = bar(t('app.pair_hint'), t('app.pair_button'), () => { location.href = intent; });
     }
     toast(t('app.pair_failed'));
   } finally {
-    notice?.remove();
+    notice.remove();
   }
 }
 
