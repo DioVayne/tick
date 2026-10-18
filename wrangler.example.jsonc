@@ -32,6 +32,9 @@
     { "name": "LOGIN_LIMITER", "namespace_id": "1001", "simple": { "limit": 5, "period": 60 } },
     { "name": "GEOCODE_LIMITER", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }
   ],
+  // Attachments (optional): photos and files on a task, stored in R2. Create the bucket with
+  // `npx wrangler r2 bucket create tick-files` and remove the // below. Without it the app shows no attachments.
+  // "r2_buckets": [{ "binding": "FILES", "bucket_name": "tick-files" }],
   // Every minute: send reminders that are due.
   "triggers": { "crons": ["* * * * *"] },
   "vars": {
@@ -44,6 +47,8 @@
     // Starting value for the time zone of reminders and repeating tasks, e.g. "Europe/London" or "America/New_York".
     // Change it in the app (Settings); what you choose there wins.
     "TIMEZONE": "UTC"
+    // Largest attachment in MB (optional, default 10, at most 100).
+    // "MAX_UPLOAD_MB": "10"
     // Own Android build (optional): its applicationId, so the web app can wake it after a location change.
     // "ANDROID_PACKAGE": "com.example.tick"
     // SHA-256 fingerprint(s) of your signing key, comma-separated; needed to open the app without an address bar

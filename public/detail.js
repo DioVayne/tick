@@ -1,3 +1,4 @@
+import { bindDrop, fillAttachmentsBox } from './attachments.js';
 import { confetti, isCouple } from './confetti.js';
 import { fillCopiesBox } from './copies.js';
 import { autoGrow, createEditor } from './editor.js';
@@ -233,6 +234,10 @@ function vanished(id) {
   });
 }
 
+// Plakken of slepen van bestanden op het paneel: bijlagen voor de open taak (niet bij een afgeronde). Niet met $ uit
+// render.js: die module importeert deze, en is hier nog niet klaar.
+bindDrop(/** @type {HTMLElement} */ (document.getElementById('detail')), () => (view && !view.readOnly ? view.id : null));
+
 /** Bij elke render(): alleen opnieuw opbouwen bij een andere taak, anders de velden bijwerken. */
 export function renderDetail() {
   const root = $('#detail');
@@ -401,6 +406,7 @@ function build(t, readOnly) {
     },
   }, tr('detail.delete'));
 
+  const filesBox = el('section', { class: 'dfiles', hidden: true });
   const shareBox = el('section', { class: 'dshare', hidden: true });
   const copiesBox = el('section', { class: 'dcopies', hidden: true });
   $('#detail').replaceChildren(...[
@@ -409,12 +415,13 @@ function build(t, readOnly) {
     el('div', { class: 'dhead' }, check, title),
     el('div', { class: 'pills' }, remindPill, plusHour, clearRemind, repeatPill, locPill, clearLoc, listPill),
     desc,
+    filesBox,
     subs,
     copiesBox,
     shareBox,
     el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, reopen, del)),
   ].filter(Boolean));
-  view = { shareBox, copiesBox, id, readOnly, title, titleSize, remind, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
+  view = { filesBox, shareBox, copiesBox, id, readOnly, title, titleSize, remind, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
 }
 
 function fill(t) {
@@ -480,6 +487,7 @@ function fill(t) {
     }
     v.subs.hidden = done && !kids.length; // afgerond zonder subtaken: geen leeg kopje
   }
+  fillAttachmentsBox(v.filesBox, t, done);
   fillCopiesBox(v.copiesBox, t);
   fillShareBox(v.shareBox, t, done);
   showStatus();
