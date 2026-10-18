@@ -59,13 +59,13 @@ describe('app-shell', () => {
     const shell = JSON.parse(sw.match(/const SHELL = (\[[^\]]+\])/)![1].replace(/'/g, '"').replace(/,\s*\]/, ']')) as string[];
     expect(shell).toContain('/store.js');
     expect(shell).toContain('/settingsview.js');
-    for (const p of ['/androidapp.js', '/applink.js', '/swclick.js', '/trash.js', '/share.js']) expect(shell).toContain(p);
+    for (const p of ['/androidapp.js', '/applink.js', '/swclick.js', '/trash.js', '/share.js', '/copies.js']) expect(shell).toContain(p);
     for (const path of shell) expect((await call(path)).status, path).toBe(200);
   });
 
-  it('de cacheversie is opgehoogd voor delen en de prullenbak', async () => {
+  it('de cacheversie is opgehoogd voor de kopiegroep', async () => {
     const sw = await (await call('/sw.js')).text();
-    expect(sw.match(/const CACHE = '([^']+)'/)![1]).toBe('tick-shell-v13');
+    expect(sw.match(/const CACHE = '([^']+)'/)![1]).toBe('tick-shell-v14');
   });
 
   it('elke module die de shell importeert zit zelf ook in de shell (anders is de app offline leeg)', async () => {

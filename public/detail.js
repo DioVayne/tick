@@ -1,4 +1,5 @@
 import { confetti, isCouple } from './confetti.js';
+import { fillCopiesBox } from './copies.js';
 import { autoGrow, createEditor } from './editor.js';
 import { t as tr } from './i18n.js'; // tr: t is hier een taak
 import { openListPicker } from './listpicker.js';
@@ -401,6 +402,7 @@ function build(t, readOnly) {
   }, tr('detail.delete'));
 
   const shareBox = el('section', { class: 'dshare', hidden: true });
+  const copiesBox = el('section', { class: 'dcopies', hidden: true });
   $('#detail').replaceChildren(...[
     back,
     crumb,
@@ -408,10 +410,11 @@ function build(t, readOnly) {
     el('div', { class: 'pills' }, remindPill, plusHour, clearRemind, repeatPill, locPill, clearLoc, listPill),
     desc,
     subs,
+    copiesBox,
     shareBox,
     el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, reopen, del)),
   ].filter(Boolean));
-  view = { shareBox, id, readOnly, title, titleSize, remind, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
+  view = { shareBox, copiesBox, id, readOnly, title, titleSize, remind, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
 }
 
 function fill(t) {
@@ -477,6 +480,7 @@ function fill(t) {
     }
     v.subs.hidden = done && !kids.length; // afgerond zonder subtaken: geen leeg kopje
   }
+  fillCopiesBox(v.copiesBox, t);
   fillShareBox(v.shareBox, t, done);
   showStatus();
 }
