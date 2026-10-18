@@ -111,11 +111,11 @@ export function fillShareBox(box, task, readOnly) {
       el('span', { class: 'state' }, m.status === 'pending' ? t('share.pending') : t('share.accepted')),
       action));
   }
-  box.replaceChildren(
+  box.replaceChildren(...[
     el('h3', {}, t('share.members')),
     rows.length ? el('ul', { class: 'share-list' }, ...rows) : null,
     owner && !readOnly ? el('button', { class: 'ghost', type: 'button', onclick: () => openShareDialog(task) }, '👥 ' + t('share.button')) : null,
-  );
+  ].filter(Boolean));
 }
 
 /** Balk per openstaande uitnodiging bovenaan de takenlijst, met Accepteren en Weigeren. */
