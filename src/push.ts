@@ -92,8 +92,8 @@ export type Sender = typeof sendToAll;
  */
 export async function runReminders(env: Env, install: InstallPrefs, send: Sender = sendToAll): Promise<void> {
   const due = (await env.DB.prepare(
-    'SELECT id,user_id,title,description,remind_at,repeat_at FROM tasks WHERE done = 0 AND notified = 0 AND deleted_at IS NULL AND remind_at IS NOT NULL AND remind_at <= ?',
-  ).bind(new Date().toISOString()).all<{ id: string; user_id: string; title: string; description: string; remind_at: string; repeat_at: string | null }>()).results;
+    'SELECT id,user_id,parent_id,title,description,remind_at,repeat_at FROM tasks WHERE done = 0 AND notified = 0 AND deleted_at IS NULL AND remind_at IS NOT NULL AND remind_at <= ?',
+  ).bind(new Date().toISOString()).all<{ id: string; user_id: string; parent_id: string | null; title: string; description: string; remind_at: string; repeat_at: string | null }>()).results;
 
   // Per gebruiker één keer lezen per run; null = de gebruiker bestaat niet meer.
   const people = new Map<string, UserPrefs | null>();
@@ -107,7 +107,7 @@ export async function runReminders(env: Env, install: InstallPrefs, send: Sender
   for (const t of due) {
     const { results: rows } = await env.DB.prepare(
       "SELECT ? AS user_id UNION SELECT to_user FROM task_shares WHERE task_id = ? AND status = 'accepted'",
-    ).bind(t.user_id, t.id).all<{ user_id: string }>();
+    ).bind(t.user_id, t.parent_id ?? t.id).all<{ user_id: string }>(); // deelrijen hangen aan de hoofdtaak
     const { results: sent } = await env.DB.prepare('SELECT user_id FROM reminder_sent WHERE task_id = ? AND remind_at = ?')
       .bind(t.id, t.remind_at).all<{ user_id: string }>();
     const done = new Set(sent.map((r) => r.user_id));
