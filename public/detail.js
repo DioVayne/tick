@@ -140,6 +140,56 @@ function flushSoon() {
   else flushPending();
 }
 
+// ---------- titelveld ----------
+// Twee velden voor dezelfde titel: bovenin het paneel, en op desktop in de rij van de gekozen taak (zoals TickTick).
+// Ze delen één wachtende waarde en lopen tijdens het typen met elkaar mee.
+
+/** De titel zoals hij getypt is (nog niet opgeslagen), anders die van de taak. */
+export const titleOf = (t) => pending.get(t.id)?.title ?? t.title;
+
+/** Zet de titel in de andere velden voor deze taak, behalve het veld waarin je typt. */
+function mirrorTitle(id, value, from) {
+  const fields = [view?.id === id ? view.title : null, document.querySelector(`#list li.task[data-id="${CSS.escape(id)}"] > .row > .title-edit`)];
+  for (const f of fields) {
+    if (!f || f === from || f === document.activeElement) continue;
+    f.value = value;
+    autoGrow(f);
+  }
+}
+
+/**
+ * Maakt van een textarea een titelveld: een lange titel loopt door op de volgende regel, Enter maakt geen nieuwe
+ * regel maar is klaar, Esc zet de opgeslagen titel terug. `skipBlur` slaat een blur over (het veld wordt vervangen).
+ * @param {HTMLTextAreaElement} ta @param {string} id @param {{ skipBlur?: () => boolean }} [opts]
+ */
+export function bindTitle(ta, id, { skipBlur } = {}) {
+  const restore = () => {
+    dropField(id, 'title');
+    ta.value = current(id)?.title ?? '';
+    autoGrow(ta);
+    mirrorTitle(id, ta.value, ta);
+  };
+  ta.addEventListener('input', () => {
+    if (ta.value.includes('\n')) { // geplakt: regelovergangen worden spaties (textarea geeft altijd \n)
+      const at = ta.selectionStart;
+      ta.value = ta.value.replace(/\n/g, ' ');
+      ta.setSelectionRange(at, at);
+    }
+    autoGrow(ta);
+    queue(id, 'title', ta.value);
+    mirrorTitle(id, ta.value, ta);
+  });
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); ta.blur(); }
+    if (e.key === 'Escape') { e.preventDefault(); restore(); ta.blur(); }
+  });
+  ta.addEventListener('blur', () => {
+    if (skipBlur?.()) return;
+    if (!ta.value.trim()) restore(); // lege titel: niet opslaan, de oude komt terug
+    flushSoon();
+  });
+}
+
 // ---------- kiezen en sluiten ----------
 
 /** Kiest een taak (of null). Wachtende tekst gaat eerst naar de vorige taak. */
@@ -216,16 +266,8 @@ function build(t, readOnly) {
 
   // Een textarea zodat een lange titel doorloopt op de volgende regel; Enter maakt geen nieuwe regel.
   const title = el('textarea', { class: 'dt', rows: '1', 'aria-label': tr('detail.title'), maxlength: '500', enterkeyhint: 'done', disabled: readOnly });
-  title.value = pending.get(id)?.title ?? t.title;
-  title.addEventListener('input', () => {
-    if (title.value.includes('\n')) { // geplakt: regelovergangen worden spaties (textarea geeft altijd \n)
-      const at = title.selectionStart;
-      title.value = title.value.replace(/\n/g, ' ');
-      title.setSelectionRange(at, at);
-    }
-    autoGrow(title);
-    queue(id, 'title', title.value);
-  });
+  title.value = titleOf(t);
+  bindTitle(title, id);
   // Andere breedte (paneel versleept, scherm gedraaid): andere hoogte.
   let titleWidth = 0;
   const titleSize = new ResizeObserver(() => {
@@ -234,15 +276,6 @@ function build(t, readOnly) {
     autoGrow(title);
   });
   titleSize.observe(title);
-  title.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); title.blur(); } });
-  title.addEventListener('blur', () => {
-    if (!title.value.trim()) { // lege titel: niet opslaan, de oude komt terug
-      if (hasPending(id, 'title')) { delete pending.get(id).title; clearTimeout(timers.get(id + '\n' + 'title')); timers.delete(id + '\n' + 'title'); }
-      title.value = current(id)?.title ?? '';
-      showStatus();
-    }
-    flushSoon();
-  });
 
   const remind = el('input', { type: 'datetime-local', 'aria-label': tr('ui.reminder'), disabled: readOnly });
   const remindChanged = () => {

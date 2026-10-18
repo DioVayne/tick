@@ -1,5 +1,6 @@
 import { confetti, isCouple } from './confetti.js';
-import { renderDetail, selectTask } from './detail.js';
+import { bindTitle, renderDetail, selectTask, titleOf } from './detail.js';
+import { autoGrow } from './editor.js';
 import { dateLocale, t, t as tr } from './i18n.js'; // tr waar t al een taak is
 import { plainText } from './markdown.js';
 import { renderSidebar } from './sidebar.js';
@@ -104,6 +105,38 @@ function renderNet() {
   net.classList.toggle('offline', state.offline);
 }
 
+// Desktop: de gekozen taak heeft in de lijst een titelveld, zoals in TickTick. Klik je op een titel, dan staat de
+// cursor meteen op de plek waar je klikte.
+let rebuilding = false; // de lijst wordt opnieuw opgebouwd: de blur van het oude veld is geen "klaar met typen"
+
+function titleField(t) {
+  const f = el('textarea', { class: 'title title-edit', rows: '1', 'aria-label': tr('detail.title'), 'aria-current': 'true', maxlength: '500', enterkeyhint: 'done' });
+  f.value = titleOf(t);
+  bindTitle(f, t.id, { skipBlur: () => rebuilding });
+  return f;
+}
+
+/** Hoeveel tekens van de titelknop vóór het klikpunt staan (een klik met het toetsenbord: het einde). */
+function clickOffset(button, e) {
+  const pos = document.caretPositionFromPoint?.(e.clientX, e.clientY);
+  const range = pos ? null : document.caretRangeFromPoint?.(e.clientX, e.clientY);
+  const node = pos ? pos.offsetNode : range?.startContainer;
+  if (!node || !button.contains(node)) return button.textContent.length;
+  const before = document.createRange();
+  before.setStart(button, 0);
+  before.setEnd(node, pos ? pos.offset : range.startOffset);
+  return before.toString().length;
+}
+
+function openTask(e, id) {
+  const at = wide.matches ? clickOffset(e.currentTarget, e) : null;
+  selectTask(id);
+  const f = at == null ? null : $('#list .title-edit');
+  if (!f) return;
+  f.focus({ preventScroll: true });
+  f.setSelectionRange(at, at);
+}
+
 function taskItem(t, children) {
   const selected = state.selected === t.id;
   const done = t.done || state.justDone.has(t.id);
@@ -115,7 +148,8 @@ function taskItem(t, children) {
       'aria-label': state.justDone.has(t.id) ? tr('render.undo') : t.done ? tr('render.reopen') : tr('render.check'),
       onclick: (e) => { if (!done) confetti(e.currentTarget, isCouple(t.share ?? state.open.find((p) => p.id === t.parent_id)?.share)); toggleDone(t); },
     }),
-    el('button', { class: 'title', 'aria-current': selected ? 'true' : false, onclick: () => selectTask(t.id) }, ...highlight(t.title)),
+    selected && !done && wide.matches ? titleField(t)
+      : el('button', { class: 'title', 'aria-current': selected ? 'true' : false, onclick: (e) => openTask(e, t.id) }, ...highlight(t.title)),
   );
   li.append(row);
 
@@ -156,6 +190,21 @@ export function render() {
   renderSidebar();
   renderDetail(); // eerst: kan de keuze wissen als de taak elders verwijderd is
   const root = $('#list');
+  // Typ je in het titelveld van de lijst (opslaan rendert ook), dan blijven focus en cursor staan.
+  const a = document.activeElement;
+  const typing = a instanceof HTMLTextAreaElement && a.classList.contains('title-edit') && root.contains(a)
+    ? { start: a.selectionStart, end: a.selectionEnd, dir: a.selectionDirection } : null;
+  rebuilding = true;
+  try { renderList(root); } finally { rebuilding = false; }
+  const f = root.querySelector('.title-edit');
+  if (!(f instanceof HTMLTextAreaElement)) return;
+  autoGrow(f);
+  if (!typing) return;
+  f.focus({ preventScroll: true });
+  f.setSelectionRange(typing.start, typing.end, typing.dir);
+}
+
+function renderList(root) {
   root.replaceChildren();
   if (state.showTrash) { renderTrash(root); return; }
   if (!state.showDone) renderInvites(root);
