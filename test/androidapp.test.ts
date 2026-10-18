@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { pairIntent, pushAction, settingsIntent } from '../public/applink.js';
+import { pairIntent, pushAction, settingsIntent, startPushAction } from '../public/applink.js';
 import { call } from './helpers';
 
 describe('intent-links voor de Android-app', () => {
@@ -18,6 +18,17 @@ describe('pushAction: wanneer de PWA meldingen aanzet na het koppelen', () => {
   });
   it('nog niet beantwoord: wachten op de app', () => expect(pushAction('default', false)).toBe('wait'));
   it('geweigerd: niets doen', () => expect(pushAction('denied', false)).toBe('none'));
+});
+
+describe('startPushAction: meldingen aanzetten bij elke start van de app', () => {
+  it('toestemming gegeven, geen abonnement: abonneren (ook zonder opnieuw te koppelen, bijvoorbeeld na een update)', () =>
+    expect(startPushAction('granted', false, false)).toBe('subscribe'));
+  it('zelf uitgezet op dit apparaat: niets doen', () => expect(startPushAction('granted', false, true)).toBe('none'));
+  it('al geabonneerd, geweigerd of nog niet beantwoord: niets doen (bij de start wacht hij niet)', () => {
+    expect(startPushAction('granted', true, false)).toBe('none');
+    expect(startPushAction('denied', false, false)).toBe('none');
+    expect(startPushAction('default', false, false)).toBe('none');
+  });
 });
 
 describe('swclick.js: waar een tik op een melding heen gaat', () => {

@@ -3,6 +3,7 @@ import * as db from './db.js';
 import { t as tr } from './i18n.js'; // tr: t is hier meestal een taak
 import { zonedParts, zonedToUtc, getDefaultTime, nextOccurrence, normalizeRule } from './repeat.js';
 import { applyListOp, findList, mergeLists, normName } from './lists.js';
+import { PUSH_OFF_KEY } from './push.js';
 
 const STEP = 1_000_000;
 const UNDO_MS = 3000;
@@ -315,7 +316,7 @@ export async function ensureOwner(userId) {
   // Zonder vorige eigenaar (cache van vóór de accounts) niet, anders verliest elke browser na de update zijn meldingen.
   if (previous) await unsubscribePush();
   await db.clearAll();
-  try { localStorage.removeItem(SETTINGS_CACHE); } catch { /* geen opslag */ }
+  try { localStorage.removeItem(SETTINGS_CACHE); localStorage.removeItem(PUSH_OFF_KEY); } catch { /* geen opslag */ }
   await db.kvSet('owner', userId);
   return true;
 }

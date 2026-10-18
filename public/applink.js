@@ -16,3 +16,15 @@ export const pushAction = (permission, subscribed) => {
   if (subscribed || permission === 'denied') return 'none';
   return permission === 'granted' ? 'subscribe' : 'wait';
 };
+
+/**
+ * Wat doet de PWA met meldingen bij een gewone start in de app (zonder koppelen)? Abonneren als de app toestemming
+ * heeft en er nog geen abonnement is, bijvoorbeeld na een update van een versie die het niet deed. Niet als je het op
+ * dit apparaat zelf uitzette, en niet wachten: zonder toestemming blijft de schakelaar in Instellingen over.
+ * @param {string} permission Notification.permission
+ * @param {boolean} subscribed is er al een push-abonnement
+ * @param {boolean} turnedOff zelf uitgezet op dit apparaat
+ * @returns {'subscribe' | 'none'}
+ */
+export const startPushAction = (permission, subscribed, turnedOff) =>
+  !turnedOff && !subscribed && permission === 'granted' ? 'subscribe' : 'none';
