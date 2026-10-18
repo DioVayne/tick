@@ -30,6 +30,7 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 
 ## Features
 - Tasks with lists, one level of subtasks, drag to sort, and search.
+- Several accounts on one Tick; share a task with someone as one shared task (done is done for everyone) or as a separate copy. Deleted tasks stay in a trash for 30 days.
 - Reminders with web push; a reminder can repeat (daily, weekly, monthly, yearly, with custom rules).
 - Notes in markdown, with clickable checklists.
 - Works offline as an installable web app (PWA); changes sync when you are back online.
