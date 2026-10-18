@@ -260,6 +260,30 @@ body.resizing { cursor: col-resize; user-select: none; }
 .dialog p { margin: 0 0 16px; color: var(--muted); line-height: 1.4; }
 .dialog-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 
+/* Delen: dialoog, deelblok in het detailpaneel, uitnodigingen en het kenmerk in de lijst */
+.share-dialog form { display: grid; gap: 8px; }
+.share-dialog label[for] { font-size: .8125rem; color: var(--muted); }
+.share-modes { border: 0; margin: 4px 0 8px; padding: 0; display: grid; gap: 6px; }
+.share-modes legend { font-size: .8125rem; color: var(--muted); padding: 0; margin-bottom: 4px; }
+.share-mode { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.share-mode:has(input:checked) { border-color: var(--accent); background: var(--sel); }
+.share-mode input { margin-top: 3px; }
+.share-mode span { display: grid; gap: 2px; }
+.share-mode small { color: var(--muted); }
+.dshare { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 8px; display: grid; gap: 6px; justify-items: start; }
+.dshare[hidden] { display: none; }
+.dshare h3 { margin: 0; font-size: .8125rem; font-weight: 600; color: var(--muted); }
+.share-list { list-style: none; margin: 0; padding: 0; width: 100%; }
+.share-list li { display: flex; align-items: center; gap: 8px; min-height: 34px; }
+.share-list .who { flex: 1; word-break: break-word; }
+.share-list .state { color: var(--muted); font-size: .8125rem; }
+button.small { min-height: 30px; padding: 2px 10px; font-size: .8125rem; }
+.invites { display: grid; gap: 8px; margin: 2px 0 10px; }
+.invite { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 10px; background: var(--sel); }
+.invite p { margin: 0; flex: 1 1 200px; word-break: break-word; }
+.invite-buttons { display: flex; gap: 8px; }
+.meta .shared { color: var(--accent); }
+
 /* Ritmemenu (🔁-pil): snelkeuzes en het Aangepast-paneel */
 .rmenu .menu-item.on::after { content: ' ✓'; }
 .rp { display: grid; gap: 8px; padding: 6px; min-width: 230px; }

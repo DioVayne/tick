@@ -7,7 +7,7 @@ const SHELL = [
   '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/push.js', '/style.css', '/sortable.min.js',
   '/markdown.js', '/lists.js', '/editor.js', '/sidebar.js', '/detail.js', '/listpicker.js', '/listmenu.js', '/dialog.js',
   '/repeat.js', '/i18n.js', '/config.js', '/settings.js', '/repeatpicker.js', '/places.js', '/map.js', '/leaflet.js', '/leaflet.css',
-  '/theme.js', '/settingsview.js', '/androidapp.js', '/applink.js', '/swclick.js', '/next.js', '/trash.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/badge-96.png',
+  '/theme.js', '/settingsview.js', '/androidapp.js', '/applink.js', '/swclick.js', '/next.js', '/trash.js', '/share.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/badge-96.png',
 ];
 importScripts('/swclick.js'); // zet self.tickClickTarget
 const NETWORK_TIMEOUT_MS = 4000;
@@ -63,19 +63,24 @@ self.addEventListener('push', (event) => {
       body: data.body,
       icon: '/icon-192.png',
       badge: '/badge-96.png', // wit op transparant: Android tekent de badge als silhouet
-      tag: data.taskId || 'tick',
+      tag: data.taskId || (data.shareId ? 'share-' + data.shareId : 'tick'),
       data,
       // De server stuurt de knoppen vertaald mee; zonder taak geen knoppen.
-      actions: data.taskId ? (data.actions ?? [{ action: 'done', title: '✓' }, { action: 'snooze', title: '+1h' }]) : [],
+      actions: data.taskId || data.shareId ? (data.actions ?? (data.taskId ? [{ action: 'done', title: '✓' }, { action: 'snooze', title: '+1h' }] : [])) : [],
     }),
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
-  const { taskId, url, occurrence } = event.notification.data || {};
+  const { taskId, url, occurrence, shareId } = event.notification.data || {};
   event.notification.close();
   const call = (path, method, body) =>
     fetch(path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  // Uitnodiging om een taak te delen: Accepteren of Weigeren zonder de app te openen.
+  if (shareId && (event.action === 'accept' || event.action === 'decline')) {
+    event.waitUntil(call(`/api/shares/${shareId}/${event.action}`, 'POST', {}));
+    return;
+  }
   if (taskId && event.action === 'done') {
     event.waitUntil(call(`/api/tasks/${taskId}`, 'PATCH', { done: true, ...(occurrence ? { occurrence } : {}) }));
     return;
