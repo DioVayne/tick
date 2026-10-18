@@ -201,11 +201,13 @@ function present(rows: Access[], userId: string, info: Map<string, ShareInfo>) {
   });
 }
 
-/** Eén taak voor de client, na een wijziging. */
-async function presentOne(db: D1Database, userId: string, id: string) {
-  const t = await getAccess(db, userId, id);
+/** Eén taak voor de client, na een wijziging; met `row` als die al net gelezen is. */
+async function presentOne(db: D1Database, userId: string, id: string, row?: Access | null) {
+  const t = row ?? await getAccess(db, userId, id);
   if (!t) throw new HttpError(404, 'err.not_found');
-  return present([t], userId, await shareInfo(db, userId, t.parent_id ?? t.id))[0];
+  // Een subtaak krijgt share: null, en zonder deelrijen is er niets op te zoeken.
+  const info = !t.parent_id && anyShared([t]) ? await shareInfo(db, userId, t.id) : new Map<string, ShareInfo>();
+  return present([t], userId, info)[0];
 }
 
 const MAX_TITLE = 500;
@@ -544,7 +546,7 @@ async function createTask(env: Env, userId: string, z: Zone, b: Record<string, u
   // Alleen null als een ander account dit id net gelijktijdig kreeg (ON CONFLICT DO NOTHING).
   const created = await getTask(env.DB, userId, id);
   if (!created) throw new HttpError(409, 'err.id_taken');
-  return presentOne(env.DB, userId, id);
+  return presentOne(env.DB, userId, id, created);
 }
 
 app.patch('/api/tasks/:id', async (c) => {
@@ -563,6 +565,8 @@ app.patch('/api/tasks/:id', async (c) => {
   let list = 'list' in b ? cleanList(b.list) : null;
   let parentId = t.parent_id;
   if ('parent_id' in b) {
+    // Een deelnemer verhangt geen subtaken: losmaken zou er een hoofdtaak van de eigenaar van maken.
+    if (t.share_id && (b.parent_id ?? null) !== (t.parent_id ?? null)) throw new HttpError(400, 'err.parent_missing');
     const parent = await checkParent(db, userId, b.parent_id, t);
     set('parent_id', parent?.id ?? null);
     parentId = parent?.id ?? null;
@@ -571,7 +575,7 @@ app.patch('/api/tasks/:id', async (c) => {
   // Een deelnemer heeft lijst en volgorde van de hoofdtaak in zijn eigen deelrij; bij zijn subtaken volgt de lijst de ouder.
   const member = !!t.share_id;
   const shareSets: [string, unknown][] = [];
-  if (list !== null && member && !('parent_id' in b)) {
+  if (list !== null && member) {
     if (!t.parent_id) shareSets.push(['list', list]);
     list = null;
   }
@@ -631,9 +635,12 @@ app.patch('/api/tasks/:id', async (c) => {
     const act = rolls(cur) ? sameAt && (!!b.done || !!undoable(cur)) : !!b.done !== !!cur.done;
     if (act) await setDone(db, cur, !!b.done, z);
   }
-  const updated = (await getTask(db, userId, id))!;
-  if ('position' in b) await rebalanceIfNeeded(db, updated, userId);
-  return c.json(await presentOne(db, userId, id));
+  const updated = await getTask(db, userId, id);
+  if ('position' in b && updated) {
+    await rebalanceIfNeeded(db, updated, userId);
+    return c.json(await presentOne(db, userId, id));
+  }
+  return c.json(await presentOne(db, userId, id, updated));
 });
 
 app.delete('/api/tasks/:id', async (c) => {
@@ -645,8 +652,14 @@ app.delete('/api/tasks/:id', async (c) => {
     // Een deelnemer haalt hem alleen uit zijn eigen prullenbak (hij stopt met delen); de eigenaar kan hem nog terugzetten.
     const t = await getTask(db, userId, id, { deleted: true });
     if (!t) throw new HttpError(404, 'err.not_found');
+    // Een subtaak van andermans taak laat hij staan: zijn deelrij hoort bij de hele taak, niet bij de subtaak.
     if (t.user_id === userId) await db.batch(wipeStmts(db, 'id = ?', [id]));
-    else await db.prepare('DELETE FROM task_shares WHERE id = ?').bind(t.share_id).run();
+    else if (!t.parent_id) {
+      await db.batch([
+        db.prepare('DELETE FROM task_shares WHERE id = ?').bind(t.share_id),
+        db.prepare('DELETE FROM reminder_sent WHERE task_id = ? AND user_id = ?').bind(t.id, userId),
+      ]);
+    }
     return c.json({ ok: true });
   }
   const t = await getTask(db, userId, id);

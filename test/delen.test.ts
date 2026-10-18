@@ -212,6 +212,30 @@ describe('taken delen', () => {
     expect(await env.DB.prepare('SELECT 1 FROM tasks WHERE id = ?').bind(t.id).first()).toBeNull();
   });
 
+  it('een subtaak definitief verwijderen door de ontvanger laat zijn deelname staan', async () => {
+    const { t } = await sharedWith(b);
+    const k = await createTask({ title: 'losse subtaak', parent_id: t.id });
+    expect((await callAs(b.cookie, `/api/tasks/${k.id}`, { method: 'DELETE' })).status).toBe(200);
+    expect((await callAs(b.cookie, `/api/tasks/${k.id}?purge=1`, { method: 'DELETE' })).status).toBe(200);
+    expect((await tasksOf(b)).map((x) => x.id)).toContain(t.id);
+    // de subtaak blijft bij de eigenaar terug te zetten
+    expect((await json<Task[]>(await call('/api/tasks?deleted=1'))).map((x) => x.id)).toContain(k.id);
+  });
+
+  it('een ontvanger kan een subtaak van een gedeelde taak niet losmaken', async () => {
+    const { t } = await sharedWith(b);
+    const k = await createTask({ title: 'blijft eronder', parent_id: t.id });
+    expect((await callAs(b.cookie, `/api/tasks/${k.id}`, { method: 'PATCH', json: { parent_id: null, position: 5 } })).status).toBe(400);
+    expect((await openTasks()).find((x) => x.id === k.id)!.parent_id).toBe(t.id);
+  });
+
+  it('een lijst van de ontvanger komt nooit in de lijst van de eigenaar, ook niet met parent_id erbij', async () => {
+    const { t } = await sharedWith(b);
+    expect((await callAs(b.cookie, `/api/tasks/${t.id}`, { method: 'PATCH', json: { list: 'VanB', parent_id: null } })).status).toBe(200);
+    expect((await openTasks()).find((x) => x.id === t.id)!.list).toBe('Thuis');
+    expect((await tasksOf(b)).find((x) => x.id === t.id)!.list).toBe('VanB');
+  });
+
   it('lijsten van de ontvanger: hernoemen, naar Inbox, verwijderen', async () => {
     const u = await createUser({ name: `Lijst ${uniq()}` });
     const { t } = await sharedWith(u);

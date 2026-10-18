@@ -1,6 +1,7 @@
 import { ask } from './dialog.js';
 import { dateLocale, t } from './i18n.js';
 import { el } from './render.js';
+import CONFIG from './settings.js';
 import { emptyTrash, purgeTask, restoreTask, state } from './store.js';
 
 const when = (iso) => new Date(iso).toLocaleString(dateLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -11,13 +12,15 @@ async function sure(title, text, label) {
 }
 
 function trashItem(task) {
-  const shared = task.share && !task.share.mine;
+  // Andermans taak (ook een subtaak ervan): definitief verwijderen haalt hem alleen uit jouw prullenbak, en een
+  // subtaak van andermans taak kan alleen de eigenaar definitief verwijderen.
+  const shared = task.user_id !== CONFIG.userId;
   return el('li', { class: 'task trashed', 'data-id': task.id },
     el('div', { class: 'row' },
       el('span', { class: 'title' }, task.title),
       el('span', { class: 'trash-actions' },
         el('button', { class: 'ghost', type: 'button', onclick: () => restoreTask(task.id) }, t('trash.restore')),
-        el('button', {
+        shared && task.parent_id ? null : el('button', {
           class: 'danger', type: 'button',
           onclick: async () => {
             // Bij andermans taak verdwijnt hij alleen uit jouw prullenbak; dat zegt de bevestiging.

@@ -84,6 +84,14 @@ describe('herinneringen bij een gedeelde taak', () => {
     expect(again.calls.filter((x) => x.taskId === t.id).map((x) => x.userId).sort()).toEqual([ADMIN_ID, b.id].sort());
   });
 
+  it('een subtaak met herinnering gaat ook naar de deelnemer', async () => {
+    const t = await shared(new Date(Date.now() + 3_600_000).toISOString());
+    const k = await json<{ id: string }>(await callAs(b.cookie, '/api/tasks', { method: 'POST', json: { title: 'subtaak met bel', parent_id: t.id, remind_at: minutesAgo(1) } }));
+    const { send, calls } = fakeSender({ [ADMIN_ID]: true, [b.id]: true });
+    await runReminders(env, await loadInstallPrefs(env), send);
+    expect(calls.filter((x) => x.taskId === k.id).map((x) => x.userId).sort()).toEqual([ADMIN_ID, b.id].sort());
+  });
+
   it('een uitnodiging die nog openstaat krijgt geen herinnering', async () => {
     const t = await createTask({ title: 'Nog niet geaccepteerd', remind_at: minutesAgo(1) });
     await call('/api/shares', { method: 'POST', json: { task_id: t.id, to: b.email, mode: 'shared' } });
