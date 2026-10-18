@@ -74,6 +74,7 @@ export type Task = {
   copies: {
     members: { name: string; done: boolean; done_at: string | null; progress: number | null }[];
     pending: { name: string }[];
+    self: { done: number; total: number };
   } | null;
 };
 
