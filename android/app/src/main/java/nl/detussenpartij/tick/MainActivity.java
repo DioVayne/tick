@@ -43,11 +43,15 @@ public class MainActivity extends Activity {
     /**
      * Wat de app bij elke start nodig heeft: periodiek verversen, het kanaal "locatie" (zodat het in de instellingen staat
      * voordat de eerste melding komt) en de snelkoppelingen. Ook vanuit TickLauncherActivity, de gewone ingang.
+     * En de widget opnieuw opbouwen: na "Gedwongen stoppen" (of een systeem dat de app zo stopt) zijn zijn klikacties
+     * weg, en een opbouw vanaf de achtergrond houden sommige launchers tegen (Android 16+, "update deferred"); vanaf de
+     * voorgrond niet.
      */
     static void setUp(Context c) {
         SyncJob.schedulePeriodic(c);
         Notify.ensureChannel(c);
         addShortcuts(c);
+        TaskWidgetProvider.updateAll(c);
     }
 
     /**
@@ -99,7 +103,11 @@ public class MainActivity extends Activity {
 
         Button open = new Button(this);
         open.setText(R.string.open_tick);
-        open.setOnClickListener(v -> startActivity(new Intent(this, TickLauncherActivity.class)));
+        // Dit scherm sluiten: anders komt een tweede Tick bovenop de TWA waar je vandaan kwam (tick://settings).
+        open.setOnClickListener(v -> {
+            startActivity(new Intent(this, TickLauncherActivity.class));
+            finish();
+        });
         root.addView(open);
 
         Button add = new Button(this);

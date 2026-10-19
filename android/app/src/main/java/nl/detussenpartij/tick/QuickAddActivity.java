@@ -71,6 +71,8 @@ public class QuickAddActivity extends Activity {
         setContentView(root);
         title.requestFocus();
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+        // Ook via "Delen" vanuit een andere app: de app staat nu op de voorgrond, zie MainActivity.setUp.
+        TaskWidgetProvider.updateAll(this);
     }
 
     private void refreshRemind() {
