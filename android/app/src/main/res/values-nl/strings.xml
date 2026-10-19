@@ -61,4 +61,21 @@
     <string name="advanced_key">Geavanceerd: sleutel handmatig invullen</string>
     <string name="pair_failed">Koppelen mislukt. Probeer het opnieuw in Tick.</string>
     <string name="shortcut_phone_settings">Telefooninstellingen</string>
+    <!-- Het adres van je Tick (SetupActivity, koppelen vanuit de browser) -->
+    <string name="setup_title">Verbinden met je Tick</string>
+    <string name="setup_help">Vul het adres van je Tick in, het adres dat je in je browser opent.</string>
+    <string name="setup_hint">tick.voorbeeld.nl</string>
+    <string name="setup_next">Verder</string>
+    <string name="setup_checking">Controleren…</string>
+    <string name="setup_invalid">Dat is geen geldig adres. Gebruik https, bijvoorbeeld tick.voorbeeld.nl.</string>
+    <string name="setup_not_tick">Geen Tick gevonden op %s. Controleer het adres. Is je Tick ouder, werk hem dan eerst bij.</string>
+    <string name="setup_unreachable">%s is niet bereikbaar. Controleer het adres en je internetverbinding.</string>
+    <string name="setup_other_way">Of open Tick in de browser op je telefoon, log in en ga naar Instellingen › Apparaten › Android-app verbinden.</string>
+    <string name="pair_confirm_title">Verbinden met %s?</string>
+    <string name="pair_confirm_new">Deze telefoon gaat de Tick op %s gebruiken. Ga alleen verder als dat jouw Tick is.</string>
+    <string name="pair_confirm_switch">Deze telefoon is verbonden met %1$s. Overstappen naar %2$s haalt de taken en locatiemeldingen van die Tick van deze telefoon.</string>
+    <string name="pair_confirm_ok">Verbinden</string>
+    <string name="address_current">Adres: %s</string>
+    <string name="address_none">Nog geen Tick-adres.</string>
+    <string name="address_change">Adres wijzigen</string>
 </resources>

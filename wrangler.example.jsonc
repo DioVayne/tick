@@ -49,9 +49,9 @@
     "TIMEZONE": "UTC"
     // Largest attachment in MB (optional, default 10, at most 100).
     // "MAX_UPLOAD_MB": "10"
-    // Own Android build (optional): its applicationId, so the web app can wake it after a location change.
+    // Only for an Android app you build yourself: its applicationId. The downloaded app (GitHub Releases) needs nothing here.
     // "ANDROID_PACKAGE": "com.example.tick"
-    // SHA-256 fingerprint(s) of your signing key, comma-separated; needed to open the app without an address bar
+    // SHA-256 fingerprint(s) of your own signing key, comma-separated; needed to open your build without an address bar
     // "ANDROID_CERT_SHA256": "AA:BB:…"
   },
   "observability": { "enabled": true }

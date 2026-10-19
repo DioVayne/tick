@@ -61,4 +61,21 @@
     <string name="advanced_key">Advanced: enter the key manually</string>
     <string name="pair_failed">Linking failed. Try again in Tick.</string>
     <string name="shortcut_phone_settings">Phone settings</string>
+    <!-- Het adres van je Tick (SetupActivity, koppelen vanuit de browser) -->
+    <string name="setup_title">Connect to your Tick</string>
+    <string name="setup_help">Enter the address of your Tick, the one you open in your browser.</string>
+    <string name="setup_hint">tick.example.com</string>
+    <string name="setup_next">Continue</string>
+    <string name="setup_checking">Checking…</string>
+    <string name="setup_invalid">That isn\'t a valid address. Use https, for example tick.example.com.</string>
+    <string name="setup_not_tick">No Tick found at %s. Check the address. If your Tick is older, update it first.</string>
+    <string name="setup_unreachable">Couldn\'t reach %s. Check the address and your internet connection.</string>
+    <string name="setup_other_way">Or open Tick in your phone\'s browser, sign in and go to Settings › Devices › Connect the Android app.</string>
+    <string name="pair_confirm_title">Connect to %s?</string>
+    <string name="pair_confirm_new">This phone will use the Tick at %s. Only continue if that\'s your Tick.</string>
+    <string name="pair_confirm_switch">This phone is connected to %1$s. Switching to %2$s removes that Tick\'s tasks and location reminders from this phone.</string>
+    <string name="pair_confirm_ok">Connect</string>
+    <string name="address_current">Address: %s</string>
+    <string name="address_none">No Tick address yet.</string>
+    <string name="address_change">Change address</string>
 </resources>

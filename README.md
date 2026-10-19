@@ -32,7 +32,7 @@ Tick reminds you **where it matters**:
 
 And it's a complete to-do app on top of that: lists, subtasks, repeating reminders, a calendar, sharing with your household, a home-screen widget and offline support.
 
-> **Good to know:** place reminders need the **Android app**, which you build yourself during setup (Claude Code does the work; you need the Android SDK). On an iPhone, or any other device, Tick works as an installable web app with time reminders.
+> **Good to know:** place reminders need the **Android app**. Download the APK from [Releases](https://github.com/DioVayne/tick/releases/latest) on your phone, open it and type the address of your Tick; no Android SDK needed (building it yourself is still possible, see [SETUP.md](SETUP.md#10-optional-android-app)). On an iPhone, or any other device, Tick works as an installable web app with time reminders.
 
 ## Get your own in about 15 minutes
 

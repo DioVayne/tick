@@ -9,13 +9,13 @@ final class Launch {
     private Launch() {}
 
     /**
-     * Opent een taak in de TWA. Het adres ligt op Api.BASE, dezelfde https-oorsprong als DEFAULT_URL, dus de
-     * Browser Helper vertrouwt het en gebruikt het (zie TickLauncherActivity). Zonder sleutel komt er pair=1 bij.
+     * Opent een taak in de TWA. Het adres ligt op Prefs.base, dus TickLauncherActivity neemt het over
+     * (StartUrl.fromIntent). Zonder sleutel komt er pair=1 bij; zonder adres vraagt TickLauncherActivity er eerst om.
      */
     static void task(Context c, String taskId) {
         c.startActivity(new Intent(c, TickLauncherActivity.class)
                 .setAction(Intent.ACTION_VIEW)
-                .setData(Uri.parse(StartUrl.task(Api.BASE, taskId, Prefs.token(c).isEmpty())))
+                .setData(Uri.parse(StartUrl.task(Prefs.base(c), taskId, Prefs.token(c).isEmpty())))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 }

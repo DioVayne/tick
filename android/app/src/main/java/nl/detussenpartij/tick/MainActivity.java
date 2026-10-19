@@ -37,6 +37,7 @@ public class MainActivity extends Activity {
     private TextView result;
     private TextView locStatus;
     private TextView pairStatus;
+    private TextView addressStatus;
     private TextView batteryStatus;
     private Button battery;
 
@@ -100,6 +101,16 @@ public class MainActivity extends Activity {
         pairStatus = new TextView(this);
         pairStatus.setPadding(0, (int) (8 * d), 0, (int) (8 * d));
         root.addView(pairStatus);
+
+        // Het adres van je Tick; wijzigen gaat via hetzelfde scherm als de eerste start.
+        addressStatus = new TextView(this);
+        addressStatus.setPadding(0, 0, 0, (int) (8 * d));
+        root.addView(addressStatus);
+
+        Button address = new Button(this, null, android.R.attr.borderlessButtonStyle);
+        address.setText(R.string.address_change);
+        address.setOnClickListener(v -> startActivity(new Intent(this, SetupActivity.class)));
+        root.addView(address);
 
         Button open = new Button(this);
         open.setText(R.string.open_tick);
@@ -197,6 +208,8 @@ public class MainActivity extends Activity {
     /** Gekoppeld of niet; een 401 (ingetrokken sleutel) maakt de sleutel leeg, dus dit volgt dat vanzelf. */
     private void updatePairStatus() {
         pairStatus.setText(Prefs.token(this).isEmpty() ? R.string.pair_status_not_linked : R.string.pair_status_linked);
+        String base = Prefs.base(this);
+        addressStatus.setText(base.isEmpty() ? getString(R.string.address_none) : getString(R.string.address_current, TickAddress.host(base)));
     }
 
     @Override

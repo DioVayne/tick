@@ -57,15 +57,19 @@ Follow step 11 of SETUP.md:
 3. Deploy again after a yes, and ask the user to open a task: it should show **📎 Add photo or file**. Suggest a billable-usage notification under **Billing** in the dashboard.
 
 ## Android (only if wanted)
-Follow step 10 of SETUP.md:
+Follow step 10 of SETUP.md. Default: the downloaded app, nothing to build or configure.
+1. Make sure this version is deployed (it serves `/api/hello` and vouches for the official app in `assetlinks.json`).
+2. Tell them: on the phone, download the APK from https://github.com/DioVayne/tick/releases/latest, open the app and type their Tick address (or in the phone's browser: **Settings → Devices → Connect the Android app**). After logging in the app links itself. Updates: a new APK from Releases, or Obtainium. Coming from their own build: install the official app next to it, connect it, then uninstall the old one.
+
+Only if they want to build it themselves (own package id, name or icon):
 1. Ask the user to make their own signing key with `keytool -genkeypair -v -keystore tick-release.jks -alias tick -keyalg RSA -keysize 2048 -validity 10000` (from `android/`). They choose the passwords; never invent or type them yourself.
-2. Write `android/tick.properties` with `tickBase` (their URL) and `tickPackage` (ask for a unique id, for example `com.<name>.tick`). The user adds the four signing lines themselves: `tickKeystore`, `tickKeystorePassword`, `tickKeyAlias`, `tickKeyPassword`.
+2. Write `android/tick.properties` with `tickBase` (their URL; optional) and `tickPackage` (ask for a unique id, for example `com.<name>.tick`; never `nl.detussenpartij.tick`). The user adds the four signing lines themselves: `tickKeystore`, `tickKeystorePassword`, `tickKeyAlias`, `tickKeyPassword`.
 3. Build with `gradlew testDebugUnitTest assembleRelease`. Without the signing lines only `assembleDebug` works.
 4. Have the user run `keytool -list -v -keystore tick-release.jks -alias tick` and give you the **SHA256** line.
 5. Add `ANDROID_PACKAGE` and `ANDROID_CERT_SHA256` (that fingerprint) to `vars` in `wrangler.jsonc` and deploy again, after asking.
 6. Tell them: if they have app 1.2 or older (debug key) installed, uninstall it first (Android refuses a different signing key; widget and location need setting up again; linking is automatic after login). Then install the APK and open it; after logging in the app links itself. The same APK works for others on the same Tick (same key). Remove an old Firefox web-app install of Tick or turn off its notifications. Without Chrome (or another TWA browser) the app opens with an address bar.
 
-If the JDK or the Android SDK is missing, say so and stop. Installing them is the user's call.
+If the JDK or the Android SDK is missing for a self-build, say so and suggest the downloaded app instead. Installing them is the user's call.
 
 ## Updating an existing instance
 Run `git pull`, `npm ci`, `npm run db:migrate`, then deploy after a yes, then check with `npx wrangler deployments list`.
