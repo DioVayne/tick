@@ -21,7 +21,7 @@ const MIN_PASSWORD = 8;
 const RESCUE = `npx wrangler d1 execute DB --remote --command "UPDATE users SET password_hash = NULL WHERE role = 'admin'"`;
 const ENV_SECRET = { 'env-api': 'API_TOKEN', 'env-inbox': 'INBOX_TOKEN' };
 
-/** @typedef {{ timeZone: string, reminderTime: string, weekStart: 'mon' | 'sun', defaultLocale: 'en' | 'nl', fallbackWebhook: string | null, fallbackFromEnv: boolean, fallbackOverride: boolean, fallbackEnvSet: boolean, background: string | null }} Settings */
+/** @typedef {{ timeZone: string, reminderTime: string, overdueTime: string | null, weekStart: 'mon' | 'sun', defaultLocale: 'en' | 'nl', fallbackWebhook: string | null, fallbackFromEnv: boolean, fallbackOverride: boolean, fallbackEnvSet: boolean, background: string | null }} Settings */
 
 const S = {
   open: false,
@@ -213,7 +213,7 @@ function cachedSettings() {
     const c = JSON.parse(storeGet(CACHE_KEY) ?? 'null');
     if (c && typeof c === 'object' && typeof c.timeZone === 'string') return c;
   } catch { /* kapotte cache */ }
-  return { timeZone: CONFIG.timeZone, reminderTime: CONFIG.reminderTime, weekStart: CONFIG.weekStart, defaultLocale: CONFIG.defaultLocale, fallbackWebhook: null, fallbackFromEnv: false, fallbackOverride: false, fallbackEnvSet: false, background: null };
+  return { timeZone: CONFIG.timeZone, reminderTime: CONFIG.reminderTime, overdueTime: '09:00', weekStart: CONFIG.weekStart, defaultLocale: CONFIG.defaultLocale, fallbackWebhook: null, fallbackFromEnv: false, fallbackOverride: false, fallbackEnvSet: false, background: null };
 }
 
 async function fetchSettings() {
@@ -263,6 +263,7 @@ function paintHome() {
   paintUsers();
   paintData();
   paintAdvanced();
+  if (S.reg) paintPush(); // de rij voor verlopen taken hangt aan de instellingen
 }
 
 // ---------- 🎨 Weergave ----------
@@ -448,9 +449,35 @@ async function paintPush() {
   paint('push',
     row(t('set.push_label'), sw, t('set.this_device')),
     row('', test),
+    overdueRow(),
     ps.iosNeedsHomeScreen ? el('p', { class: 'hint' }, t('push.ios_hint'))
       : !ps.supported ? el('p', { class: 'hint' }, t('push.unsupported'))
       : ps.permission === 'denied' ? el('p', { class: 'hint' }, t('set.push_blocked')) : null);
+}
+
+/** Dagelijkse melding van verlopen taken: aan/uit en de tijd; geldt voor alle apparaten van deze persoon. */
+function overdueRow() {
+  const s = current();
+  const off = !S.online;
+  const sw = /** @type {HTMLInputElement} */ (el('input', { type: 'checkbox', role: 'switch', class: 'set-switch', 'aria-label': t('set.overdue'), disabled: off }));
+  sw.checked = s.overdueTime !== null && s.overdueTime !== undefined;
+  const time = /** @type {HTMLInputElement} */ (el('input', {
+    type: 'time', class: 'set-time', value: s.overdueTime ?? '09:00', required: true, disabled: off || !sw.checked, 'aria-label': t('set.overdue_time'),
+  }));
+  const revert = () => {
+    const c = current().overdueTime ?? null;
+    sw.checked = c !== null;
+    time.value = c ?? '09:00';
+    time.disabled = off || c === null;
+  };
+  sw.addEventListener('change', async () => {
+    time.disabled = !sw.checked;
+    await save({ overdueTime: sw.checked ? time.value || '09:00' : null }, revert);
+  });
+  time.addEventListener('change', async () => {
+    if (time.value) await save({ overdueTime: time.value }, revert);
+  });
+  return row(t('set.overdue'), [sw, time], homeNote(t('set.overdue_note')));
 }
 
 // ---------- 📱 Apparaten ----------
