@@ -13,6 +13,7 @@ import { closeDrawer } from './sidebar.js';
 import { SETTINGS_CACHE as CACHE_KEY, load } from './store.js';
 import { clearAll } from './db.js';
 import { forgetCachedConfig } from './next.js';
+import { prepare } from './attachments.js';
 
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
@@ -20,7 +21,7 @@ const MIN_PASSWORD = 8;
 const RESCUE = `npx wrangler d1 execute DB --remote --command "UPDATE users SET password_hash = NULL WHERE role = 'admin'"`;
 const ENV_SECRET = { 'env-api': 'API_TOKEN', 'env-inbox': 'INBOX_TOKEN' };
 
-/** @typedef {{ timeZone: string, reminderTime: string, weekStart: 'mon' | 'sun', defaultLocale: 'en' | 'nl', fallbackWebhook: string | null, fallbackFromEnv: boolean, fallbackOverride: boolean, fallbackEnvSet: boolean }} Settings */
+/** @typedef {{ timeZone: string, reminderTime: string, weekStart: 'mon' | 'sun', defaultLocale: 'en' | 'nl', fallbackWebhook: string | null, fallbackFromEnv: boolean, fallbackOverride: boolean, fallbackEnvSet: boolean, background: string | null }} Settings */
 
 const S = {
   open: false,
@@ -201,6 +202,7 @@ function secret(label, value) {
 function setSettings(s) {
   S.settings = s;
   S.online = true;
+  applyBackground(s.background ?? null);
   // De URL uit de installatie is een secret: die komt niet in de cache.
   storeSet(CACHE_KEY, JSON.stringify(s.fallbackFromEnv ? { ...s, fallbackWebhook: null } : s));
 }
@@ -211,7 +213,7 @@ function cachedSettings() {
     const c = JSON.parse(storeGet(CACHE_KEY) ?? 'null');
     if (c && typeof c === 'object' && typeof c.timeZone === 'string') return c;
   } catch { /* kapotte cache */ }
-  return { timeZone: CONFIG.timeZone, reminderTime: CONFIG.reminderTime, weekStart: CONFIG.weekStart, defaultLocale: CONFIG.defaultLocale, fallbackWebhook: null, fallbackFromEnv: false, fallbackOverride: false, fallbackEnvSet: false };
+  return { timeZone: CONFIG.timeZone, reminderTime: CONFIG.reminderTime, weekStart: CONFIG.weekStart, defaultLocale: CONFIG.defaultLocale, fallbackWebhook: null, fallbackFromEnv: false, fallbackOverride: false, fallbackEnvSet: false, background: null };
 }
 
 async function fetchSettings() {
@@ -267,6 +269,7 @@ function paintHome() {
 
 const DISPLAY = {
   theme: { key: 'tick.theme', def: 'auto' },
+  palette: { key: 'tick.palette', def: 'default' },
   font: { key: 'tick.font', def: 'm' },
   density: { key: 'tick.density', def: 'normal' },
 };
@@ -278,23 +281,79 @@ function setDisplay(attr, value) {
   if (value === def) delete root.dataset[attr];
   else root.dataset[attr] = value;
   storeSet(key, value === def ? null : value);
-  if (attr === 'theme') syncThemeColor();
+  if (attr === 'theme' || attr === 'palette') syncThemeColor();
 }
 
-function displayBlock() {
+/** Achtergrondfoto van deze persoon (versie van de server, of null) op <html> zetten en voor de volgende start bewaren. */
+function applyBackground(version) {
+  const root = document.documentElement;
+  if (version) {
+    root.dataset.bg = '';
+    root.style.setProperty('--bg-image', `url(/api/background?v=${encodeURIComponent(version)})`);
+  } else {
+    delete root.dataset.bg;
+    root.style.removeProperty('--bg-image');
+  }
+  storeSet('tick.bg', version || null);
+}
+
+/** Kiest een foto, verkleint die en zet hem als achtergrond; `null` verwijdert de foto. */
+async function setBackground(file) {
+  try {
+    if (file === null) {
+      await request('DELETE', '/api/background');
+      applyBackground(null);
+    } else {
+      const { blob } = await prepare(file);
+      if (!blob.type.startsWith('image/')) { toast(t('set.background_not_image')); return; }
+      const res = await fetch('/api/background', { method: 'PUT', headers: { 'content-type': blob.type }, body: blob });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      applyBackground(data.version);
+    }
+    if (S.settings) S.settings = { ...S.settings, background: storeGet('tick.bg') };
+    toast(t('set.saved'), 'ok');
+  } catch (e) {
+    toast(t('set.save_failed', { reason: offlineText(e) }));
+  }
+  if (S.open) paintDisplay();
+}
+
+function backgroundRow() {
+  if (!CONFIG.attachments) return null;
+  const on = document.documentElement.dataset.bg !== undefined;
+  const input = /** @type {HTMLInputElement} */ (el('input', {
+    type: 'file', accept: 'image/*', hidden: true,
+    onchange: () => { const f = input.files?.[0]; input.value = ''; if (f) setBackground(f); },
+  }));
+  return row(t('set.background'), el('span', { class: 'set-actions' }, input,
+    btn(t('set.background_choose'), () => input.click()),
+    on ? btn(t('set.background_remove'), () => setBackground(null), { kind: 'danger' }) : null),
+  t('set.background_sub'));
+}
+
+function paintDisplay() {
   const ds = document.documentElement.dataset;
-  const sec = block('🎨', t('set.display'), 'display', t('set.this_device'));
-  const preview = el('ul', { class: 'tasks set-preview', 'aria-hidden': 'true' },
-    ...['set.preview_task', 'set.preview_task2'].map((k) => el('li', { class: 'task' },
-      el('div', { class: 'row' }, el('span', { class: 'check' }), el('span', { class: 'title' }, t(k))))));
   paint('display',
     row(t('set.theme'), seg(t('set.theme'), [['auto', t('set.theme_auto')], ['light', t('set.theme_light')], ['dark', t('set.theme_dark')]],
       ds.theme ?? 'auto', (v) => setDisplay('theme', v))),
+    row(t('set.palette'), seg(t('set.palette'), [['default', t('set.palette_default')], ['retro', t('set.palette_retro')]],
+      ds.palette ?? 'default', (v) => setDisplay('palette', v))),
+    backgroundRow(),
     row(t('set.font'), seg(t('set.font'), [['s', t('set.font_s')], ['m', t('set.font_m')], ['l', t('set.font_l')], ['xl', t('set.font_xl')]],
       ds.font ?? 'm', (v) => setDisplay('font', v))),
     row(t('set.density'), seg(t('set.density'), [['compact', t('set.density_compact')], ['normal', t('set.density_normal')], ['roomy', t('set.density_roomy')]],
       ds.density ?? 'normal', (v) => setDisplay('density', v))),
-    preview);
+    displayPreview());
+}
+
+const displayPreview = () => el('ul', { class: 'tasks set-preview', 'aria-hidden': 'true' },
+  ...['set.preview_task', 'set.preview_task2'].map((k) => el('li', { class: 'task' },
+    el('div', { class: 'row' }, el('span', { class: 'check' }), el('span', { class: 'title' }, t(k))))));
+
+function displayBlock() {
+  const sec = block('🎨', t('set.display'), 'display', t('set.this_device'));
+  paintDisplay();
   return sec;
 }
 

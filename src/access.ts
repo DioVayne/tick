@@ -18,7 +18,10 @@ const COLS = "t.*, s.id AS share_id, s.list AS share_list, s.position AS share_p
   "(SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'shared' LIMIT 1) AS has_share, " +
   "(SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'copy' AND x.status = 'pending' LIMIT 1) AS has_copy_invite";
 const JOIN = "LEFT JOIN task_shares s ON s.task_id = COALESCE(t.parent_id, t.id) AND s.to_user = ?1 AND s.status = 'accepted'";
-const VISIBLE = '(t.user_id = ?1 OR s.id IS NOT NULL)';
+// Drie takken die elk een index gebruiken (eigen taken, deelrijen, subtaken van een gedeelde taak). Een OR met
+// `s.id IS NOT NULL` leest de hele tabel tasks bij elke aanvraag, en D1 telt elke gelezen rij mee in de dagelijkse limiet.
+const SHARED_TO_ME = "(SELECT task_id FROM task_shares WHERE to_user = ?1 AND status = 'accepted')";
+const VISIBLE = `(t.user_id = ?1 OR t.id IN ${SHARED_TO_ME} OR t.parent_id IN ${SHARED_TO_ME})`;
 
 /** De taak met jouw deelrij, of null zonder toegang. Standaard alleen buiten de prullenbak, met `deleted` alleen erin. */
 export function getAccess(db: D1Database, userId: string, id: string, opts: { deleted?: boolean } = {}): Promise<Access | null> {
@@ -71,8 +74,8 @@ export type ShareInfo = {
  * Alleen `shared`-rijen; een openstaande kopie telt niet als deelnemer.
  */
 export async function shareInfo(db: D1Database, userId: string, taskId?: string): Promise<Map<string, ShareInfo>> {
-  const scope = taskId ? 's.task_id = ?2' : "s.task_id IN (SELECT id FROM tasks WHERE user_id = ?1 AND parent_id IS NULL " +
-    "UNION SELECT task_id FROM task_shares WHERE to_user = ?1 AND status = 'accepted')";
+  // Vanaf de (weinige) deelrijen werken, niet vanaf alle taken van de eigenaar: shares zijn altijd op een hoofdtaak.
+  const scope = taskId ? 's.task_id = ?2' : `(t.user_id = ?1 OR s.task_id IN ${SHARED_TO_ME})`;
   const { results } = await db.prepare(
     'SELECT s.id, s.task_id, s.to_user, s.status, u.name, o.id AS owner_id, o.name AS owner_name FROM task_shares s ' +
     "JOIN users u ON u.id = s.to_user JOIN tasks t ON t.id = s.task_id JOIN users o ON o.id = t.user_id WHERE s.mode = 'shared' AND " + scope +

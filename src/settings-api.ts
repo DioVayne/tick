@@ -14,9 +14,9 @@ const MAX_WEBHOOK = 2000;
 
 /** Het antwoord van de API; de URL uit FALLBACK_WEBHOOK is een secret en gaat nooit mee (alleen dat hij er is). */
 function view(p: Prefs) {
-  const { timeZone, reminderTime, weekStart, defaultLocale, fallbackFromEnv, fallbackOverride, fallbackEnvSet } = p;
+  const { timeZone, reminderTime, weekStart, defaultLocale, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background } = p;
   const fallbackWebhook = fallbackFromEnv ? null : p.fallbackWebhook;
-  return { timeZone, reminderTime, weekStart, defaultLocale, fallbackWebhook, fallbackFromEnv, fallbackOverride, fallbackEnvSet };
+  return { timeZone, reminderTime, weekStart, defaultLocale, fallbackWebhook, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background };
 }
 
 const validZone = (tz: unknown): tz is string => {

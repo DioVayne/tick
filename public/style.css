@@ -17,6 +17,26 @@
     --bg: #1e1e1e; --card: #282828; --fill: #2a2a2a; --text: #e6e6e6; --muted: #959595; --line: #2e2e2e;
     --accent: #4772fa; --danger: #f85149; --bell: #fbbf24; --ok: #3fb950; --link: #6d90fb; --scrim: rgba(0,0,0,.5);
     --side: #191919; --hover: #262626; --sel: #2e2e2e; --shadow: rgba(0,0,0,.55); --mark: #854d0e; }
+/* Kleurthema (data-palette op <html>, gezet door theme.js), los van licht/donker. Een nieuw thema is een blok licht en een donker (twee keer,
+   net als hierboven). Retro jaren 70: crème, mosterd, verbrand oranje en bruin; AA-contrast op --bg, --side, --fill en --sel. */
+/* Retro jaren 70, uit het palet goudgeel #DAA520, donker goudgeel #B8860B, oranje #FF8C00, sienna #A0522D en peru #CD853F.
+   Oranje is te licht voor witte tekst, dus de tekst op het accent is donkerbruin. AA-contrast op --bg, --side, --fill en --sel. */
+:root[data-palette="retro"] {
+  --bg: #fbefd0; --card: #fff6dc; --fill: #f2dca0; --text: #3a1f0d; --muted: #6e4524; --line: #d9b878;
+  --accent: #ff8c00; --accent-text: #2e1608; --danger: #b3261e; --bell: #8f5200; --ok: #35711b;
+  --link: #a0522d; --toast-bg: #b3261e; --scrim: rgba(58,31,13,.4);
+  --side: #f0d48f; --hover: #f5dfa6; --sel: #e6c470; --shadow: rgba(58,31,13,.22); --mark: #f6c744;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="retro"]:not([data-theme="light"]) {
+    --bg: #2a1708; --card: #38200f; --fill: #46290f; --text: #f6e3b4; --muted: #d2a56a; --line: #5a3a1c;
+    --accent: #ff8c00; --accent-text: #2a1708; --danger: #ff8a7a; --bell: #fbbf24; --ok: #9bcf74; --link: #e8a35c; --scrim: rgba(0,0,0,.55);
+    --side: #211106; --hover: #3f2610; --sel: #563418; --shadow: rgba(0,0,0,.6); --mark: #8a5a00; }
+}
+:root[data-theme="dark"][data-palette="retro"] {
+    --bg: #2a1708; --card: #38200f; --fill: #46290f; --text: #f6e3b4; --muted: #d2a56a; --line: #5a3a1c;
+    --accent: #ff8c00; --accent-text: #2a1708; --danger: #ff8a7a; --bell: #fbbf24; --ok: #9bcf74; --link: #e8a35c; --scrim: rgba(0,0,0,.55);
+    --side: #211106; --hover: #3f2610; --sel: #563418; --shadow: rgba(0,0,0,.6); --mark: #8a5a00; }
 * { box-sizing: border-box; }
 html[data-font="s"] { font-size: 14px; }
 html[data-font="m"] { font-size: 16px; }
@@ -371,6 +391,7 @@ p.set-note { margin: 0 0 8px; }
 .set-btn { min-height: 36px; padding: 4px 12px; font-size: .875rem; }
 .set-btn:disabled, .set-seg button:disabled, .set-select:disabled, .set-control input:disabled, .set-url:disabled { opacity: .55; cursor: default; }
 /* Knoppenrij: één keuze gemarkeerd, de rest neutraal; breekt op smalle schermen netjes af */
+.set-actions { display: inline-flex; flex-wrap: wrap; gap: 8px; }
 .set-seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; }
 .set-seg button { min-height: 36px; padding: 4px 10px; border: 0; border-radius: 0; background: transparent; color: var(--text); font-size: .875rem; }
 .set-seg button + button { border-left: 1px solid var(--line); }
@@ -445,3 +466,18 @@ p.set-note { margin: 0 0 8px; }
 .att-cap { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .875rem; }
 .att-bar .pill { color: #fff; border-color: rgba(255, 255, 255, .4); text-decoration: none; }
 .att-bar .att-viewer-del { border-color: var(--danger); color: #ff8a8a; }
+
+/* Achtergrondfoto (data-bg en --bg-image op <html>, gezet door theme.js): de foto staat op de pagina, de vlakken erop worden doorschijnend. */
+html[data-bg] { background: var(--bg) var(--bg-image) center / cover fixed no-repeat; }
+html[data-bg] body { background: transparent; }
+html[data-bg] #side { background-color: color-mix(in srgb, var(--side) 82%, transparent); backdrop-filter: blur(6px); }
+html[data-bg] #main { background-color: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(6px); border-radius: 12px; }
+html[data-bg] #topbar { background: transparent; }
+html[data-bg] #detail { background-color: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px); }
+
+/* Retro: ronde vormen; de bovenbalk is doorzichtig, zodat alleen het afgeronde takendeel een vlak is. */
+html[data-palette="retro"] button, html[data-palette="retro"] input, html[data-palette="retro"] textarea, html[data-palette="retro"] select,
+html[data-palette="retro"] .set-seg, html[data-palette="retro"] #side .item, html[data-palette="retro"] #side-lists .rename-input { border-radius: 18px; }
+html[data-palette="retro"] .check { border-radius: 50%; border-width: 2px; }
+html[data-palette="retro"] .set-block, html[data-palette="retro"] #main { border-radius: 18px; }
+html[data-palette="retro"] #topbar { background: transparent; }
