@@ -241,6 +241,10 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 .pill input { width: auto; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font-size: .8125rem; }
 .pill input:focus { outline: none; }
 .pill input:disabled { color: var(--muted); }
+/* Wanneer: reminder, verzetten/wissen en ritme als één blok. */
+.pill-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px; max-width: 100%; padding: 2px; border: 1px solid var(--line); border-radius: 8px; }
+.pill-group .pill { background: transparent; }
+.pill-group .pill:hover { background: var(--fill); }
 .desc { margin: 4px 0; }
 .subs { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 8px; }
 .subs h3 { margin: 0 0 4px; font-size: .8125rem; font-weight: 600; color: var(--muted); }
@@ -335,6 +339,9 @@ button.small { min-height: 30px; padding: 2px 10px; font-size: .8125rem; }
 .rp-chip.on { background: var(--accent); color: var(--accent-text); }
 .rp-actions { display: flex; justify-content: space-between; gap: 6px; }
 .rp-done { background: var(--accent); color: var(--accent-text); }
+.rp-until span { color: var(--muted); font-size: .8125rem; }
+.rp-until-date { padding: 6px 8px; font-size: .875rem; }
+.menu > .rp-until { padding: 6px 10px; }
 .rp-chip:focus-visible, .rp-actions .pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 

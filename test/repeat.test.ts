@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ordinal, setLocale } from '../public/i18n.js';
-import { describeRule, nextOccurrence, normalizeRule, parseRule, quickRules, setTimeZone, zonedToUtc } from '../public/repeat.js';
+import { describeRule, nextOccurrence, normalizeRule, occurrencesBetween, parseRule, quickRules, setTimeZone, untilOf, withUntil, zonedToUtc } from '../public/repeat.js';
 
 const ZO_10 = '2026-10-18T08:00:00.000Z'; // zondag 18 okt 2026 10:00 CEST
 const ms = (s: string) => Date.parse(s);
@@ -40,6 +40,32 @@ describe('nextOccurrence', () => {
   });
   it('29 februari valt in een gewoon jaar op 28 februari', () => {
     expect(nextOccurrence('FREQ=YEARLY', '2028-02-29T08:00:00.000Z', ms('2028-03-01T00:00:00Z'))).toBe('2029-02-28T08:00:00.000Z');
+  });
+});
+
+describe('einddatum (UNTIL)', () => {
+  it('normaliseert en valideert', () => {
+    expect(normalizeRule('until=20261101;freq=weekly;byday=su')).toBe('FREQ=WEEKLY;BYDAY=SU;UNTIL=20261101');
+    expect(() => parseRule('FREQ=DAILY;UNTIL=20260231')).toThrow();
+    expect(() => parseRule('FREQ=DAILY;UNTIL=2026-11-01')).toThrow();
+  });
+  it('de einddag telt mee, daarna is er geen volgende keer', () => {
+    const rule = 'FREQ=WEEKLY;BYDAY=SU;UNTIL=20261101';
+    expect(nextOccurrence(rule, ZO_10, ms(ZO_10))).toBe('2026-10-25T09:00:00.000Z');
+    expect(nextOccurrence(rule, ZO_10, ms('2026-10-25T09:00:00Z'))).toBe('2026-11-01T09:00:00.000Z');
+    expect(nextOccurrence(rule, ZO_10, ms('2026-11-01T09:00:00Z'))).toBeNull();
+    expect(occurrencesBetween(rule, ZO_10, ms(ZO_10), ms('2027-01-01T00:00:00Z'))).toHaveLength(3);
+  });
+  it('withUntil en untilOf', () => {
+    expect(withUntil('FREQ=DAILY', '2026-12-31')).toBe('FREQ=DAILY;UNTIL=20261231');
+    expect(withUntil('FREQ=DAILY;UNTIL=20261231', '')).toBe('FREQ=DAILY');
+    expect(untilOf('FREQ=DAILY;UNTIL=20261231')).toBe('2026-12-31');
+    expect(untilOf('FREQ=DAILY')).toBe('');
+  });
+  it('tekst noemt de einddatum', () => {
+    setLocale('nl');
+    expect(describeRule('FREQ=DAILY;UNTIL=20261231', ZO_10)).toBe('Elke dag, t/m 31 dec 2026');
+    setLocale('en');
   });
 });
 

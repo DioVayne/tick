@@ -43,6 +43,23 @@ describe('herhalende taken', () => {
     expect((await patch(t.id, { repeat: 'onzin' })).status).toBe(400);
   });
 
+  it('met een einddatum rondt de laatste keer de taak af', async () => {
+    const t = await createTask({ title: 'twee keer', remind_at: '2099-10-18T10:00:00', repeat: WEKELIJKS + ';until=20991025' });
+    expect(t.repeat?.rule).toBe('FREQ=WEEKLY;BYDAY=SU;UNTIL=20991025');
+    const u = await json<Task>(await patch(t.id, { done: true }));
+    expect(u.done).toBe(false);
+    expect(u.repeat?.at).toBe(ZO2);
+    const v = await json<Task>(await patch(t.id, { done: true }));
+    expect(v.done).toBe(true);
+    expect(v.remind_at).toBe(ZO2);
+  });
+
+  it('een einddatum die al voorbij is geeft 400', async () => {
+    const res = await call('/api/tasks', { method: 'POST', json: { title: 'x', remind_at: '2020-01-05T10:00:00', repeat: 'FREQ=DAILY;UNTIL=20200110' } });
+    expect(res.status).toBe(400);
+    expect((await json<{ error: string }>(res)).error).toMatch(/end date/);
+  });
+
   it('ritme instellen via PATCH gebruikt de reminder van de taak', async () => {
     const t = await createTask({ title: 'later', remind_at: '2099-10-18T10:00:00' });
     const u = await json<Task>(await patch(t.id, { repeat: WEKELIJKS }));

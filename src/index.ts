@@ -372,6 +372,7 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
   const ts = now();
   if (done) {
     const next = inZone(z, () => nextOccurrence(t.repeat_rule!, t.repeat_start!, Math.max(Date.now(), Date.parse(t.repeat_at!))));
+    if (next === null) return plainDone(db, t, true); // voorbij de einddatum: de laatste keer rondt de taak gewoon af
     const { results: kids } = await db.prepare('SELECT id, done_at FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 1 AND deleted_at IS NULL')
       .bind(t.id, t.user_id).all<{ id: string; done_at: string | null }>();
     // Elke stap overschrijft de stand: ongedaan maken draait altijd de laatste stap terug.
@@ -406,7 +407,10 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
  * (bij herhalen: echt doorschoof); heropenen geeft altijd false.
  */
 async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone): Promise<boolean> {
-  if (rolls(t)) return rollRepeat(db, t, done, z);
+  return rolls(t) ? rollRepeat(db, t, done, z) : plainDone(db, t, done);
+}
+
+async function plainDone(db: D1Database, t: TaskRow, done: boolean): Promise<boolean> {
   const ts = now();
   const stmts = [db.prepare(`UPDATE tasks SET done = ?, done_at = ?, updated_at = ? WHERE id = ?${done ? ' AND done = 0' : ''}`).bind(done ? 1 : 0, done ? ts : null, ts, t.id)];
   if (done) {
