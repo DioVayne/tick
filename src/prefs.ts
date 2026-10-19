@@ -23,6 +23,8 @@ export type UserPrefs = {
   fallbackOverride: boolean;
   /** FALLBACK_WEBHOOK is gezet en geldt voor deze persoon (alleen de beheerder; alleen ja/nee, de URL is een secret). */
   fallbackEnvSet: boolean;
+  /** Versie van de achtergrondfoto (zie background.ts), null als er geen is. */
+  background: string | null;
 };
 
 export type Prefs = InstallPrefs & UserPrefs;
@@ -73,6 +75,7 @@ export async function loadUserPrefs(env: Env, user: Pick<User, 'id' | 'role'>): 
     fallbackFromEnv: !override && !!envHook,
     fallbackOverride: override,
     fallbackEnvSet: !!envHook,
+    background: env.FILES ? row.get('background') || null : null,
   };
 }
 

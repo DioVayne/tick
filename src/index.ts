@@ -23,6 +23,7 @@ import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
 import { sharesApi } from './shares';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
+import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxUpload, sweepAttachments } from './attachments';
 
 export type Env = {
@@ -185,6 +186,7 @@ app.route('/api/export', exportApi);
 app.route('/api/import', importApi);
 app.route('/api/shares', sharesApi);
 app.route('/api', attachmentsApi);
+app.route('/api/background', backgroundApi);
 
 const now = () => new Date().toISOString();
 /** Taak als JSON voor de client: 0/1 wordt boolean, de loc_*-kolommen worden één location-object en de repeat_*-kolommen één repeat-object (repeat_prev en copy_group blijven op de server). */
@@ -765,7 +767,8 @@ app.get('/api/lists', async (c) => {
   // Een gedeelde taak telt mee in de lijst van de deelnemer (zijn deelrij); subtaken in de lijst van hun ouder bij hem.
   const { results } = await c.env.DB.prepare('SELECT COALESCE(s.list, t.list) AS name, SUM(t.done = 0) AS open FROM tasks t ' +
     "LEFT JOIN task_shares s ON s.task_id = COALESCE(t.parent_id, t.id) AND s.to_user = ?1 AND s.status = 'accepted' " +
-    'WHERE (t.user_id = ?1 OR s.id IS NOT NULL) AND t.deleted_at IS NULL GROUP BY 1')
+    'WHERE (t.user_id = ?1 OR t.id IN (SELECT task_id FROM task_shares WHERE to_user = ?1 AND status = \'accepted\') ' +
+    'OR t.parent_id IN (SELECT task_id FROM task_shares WHERE to_user = ?1 AND status = \'accepted\')) AND t.deleted_at IS NULL GROUP BY 1')
     .bind(c.get('auth').userId).all<{ name: string; open: number }>();
   const lists = results.map((r) => ({ name: r.name, open: r.open }));
   // Inbox is vast en moet er ook zijn zonder taken.

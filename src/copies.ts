@@ -49,9 +49,11 @@ export async function copiesFor(db: D1Database, userId: string, rows: Access[]):
     stmts.push(db.prepare(
       'SELECT t.id, t.copy_group, t.user_id, u.name, t.done, t.done_at, t.description, t.repeat_rule, t.repeat_at, ' +
       '(SELECT json_group_array(k.done) FROM tasks k WHERE k.parent_id = t.id AND k.deleted_at IS NULL) AS kids ' +
-      'FROM tasks t JOIN users u ON u.id = t.user_id ' +
-      'WHERE (t.copy_group IN (SELECT value FROM json_each(?)) OR t.id IN (SELECT value FROM json_each(?))) ' +
-      'AND t.parent_id IS NULL AND t.deleted_at IS NULL',
+      // CROSS JOIN en INDEXED BY leggen het plan vast: zonder statistieken scant SQLite anders de hele tabel tasks
+      // (de gedeeltelijke index op copy_group telt als te duur), en D1 telt elke gelezen rij mee in de dagelijkse limiet.
+      'FROM (SELECT id FROM tasks INDEXED BY idx_tasks_copy_group WHERE copy_group IN (SELECT value FROM json_each(?)) ' +
+      'UNION SELECT value FROM json_each(?)) g CROSS JOIN tasks t ON t.id = g.id CROSS JOIN users u ON u.id = t.user_id ' +
+      'WHERE t.parent_id IS NULL AND t.deleted_at IS NULL',
     ).bind(JSON.stringify(groups), JSON.stringify(invited)));
   }
   if (invited.length) {
