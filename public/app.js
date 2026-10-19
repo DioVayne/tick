@@ -4,11 +4,12 @@ import { t } from './i18n.js';
 import { closeTask, detailReady, flushPending, selectTask } from './detail.js';
 import { openListMenu } from './listmenu.js';
 import { $, el, fromLocalInput, prefillOnOpen, render, status, toast } from './render.js';
+import { closeCalendar, hideCalendar, isCalendarOpen, openCalendar, refreshCalendar } from './calendarview.js';
 import { closeSettings, hideSettings, isSettingsOpen, openSettings } from './settingsview.js';
-import { onListContext, setupSidebar } from './sidebar.js';
+import { closeDrawer, onListContext, setupSidebar } from './sidebar.js';
 import { addTask, init, load, on, state } from './store.js';
 
-on('change', render);
+on('change', () => { render(); refreshCalendar(); });
 on('error', toast);
 setupSidebar();
 onListContext(openListMenu);
@@ -24,7 +25,13 @@ $('#add').addEventListener('submit', (e) => {
 });
 
 // Instellingen: een eigen pagina in de middenkolom (meldingen, thema en uitloggen staan daar).
-$('#btn-settings').addEventListener('click', () => openSettings({ push: true }));
+$('#btn-settings').addEventListener('click', () => { hideCalendar(); openSettings({ push: true }); });
+// Kalender: maandraster en agenda van taken met een datum.
+$('#btn-calendar').addEventListener('click', () => {
+  if (isCalendarOpen()) { closeDrawer(); return; }
+  hideSettings();
+  openCalendar({ push: true });
+});
 
 // ---------- zoeken ----------
 let searchTimer;
@@ -76,8 +83,15 @@ init(CONFIG.userId).then(() => {
 // De instellingen hebben ook een eigen history-item: terug sluit ze, vooruit opent ze weer (zonder de taak te raken).
 window.addEventListener('popstate', (e) => {
   if (document.body.classList.contains('map-open')) return;
-  if (e.state?.settings) { openSettings({ push: false }); return; }
+  if (e.state?.settings) { hideCalendar(); openSettings({ push: false }); return; }
+  if (e.state?.calendar) {
+    hideSettings();
+    if (!isCalendarOpen()) openCalendar({ push: false });
+    selectTask(null, { push: false }); // terug vanuit een taak die over de kalender lag
+    return;
+  }
   if (isSettingsOpen()) { hideSettings(); return; }
+  if (isCalendarOpen() && !e.state?.task) { hideCalendar(); return; }
   selectTask(e.state?.task ?? null, { push: false });
 });
 
@@ -93,6 +107,7 @@ document.addEventListener('keydown', (e) => {
 $('#side').addEventListener('click', (e) => {
   if (!(e.target instanceof Element)) return;
   if (isSettingsOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeSettings();
+  if (isCalendarOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeCalendar();
   if (!state.selected) return;
   const b = e.target.closest('button[data-list], #btn-done, #btn-trash');
   if (!b) return;
@@ -102,6 +117,7 @@ $('#side').addEventListener('click', (e) => {
 $('#newlist-input').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !e.target.value.trim()) return;
   if (isSettingsOpen()) closeSettings();
+  if (isCalendarOpen()) closeCalendar();
   if (state.selected) closeTask();
 }, true);
 
@@ -139,6 +155,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').cat
 navigator.serviceWorker?.addEventListener('message', (e) => {
   if (e.data?.type !== 'open-task' || !e.data.id) return;
   if (isSettingsOpen()) hideSettings();
+  hideCalendar();
   selectTask(e.data.id);
   document.querySelector(`li.task[data-id="${CSS.escape(e.data.id)}"]`)?.scrollIntoView({ block: 'center' });
 });

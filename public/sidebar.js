@@ -39,7 +39,7 @@ export function renderSidebar() {
   if ($('#side-lists .rename-input')) { updateHeader(); return; }
   const all = lists();
   // Met de instellingen open is geen lijst gekozen in de zijbalk; ⚙ Instellingen is dan gemarkeerd.
-  const current = (name) => !settingsOpen() && !state.showDone && !state.showTrash && state.list === name;
+  const current = (name) => !settingsOpen() && !calendarOpen() && !state.showDone && !state.showTrash && state.list === name;
   const item = (name, label, count) =>
     el('button', {
       class: 'item' + (current(name) ? ' on' : ''),
@@ -57,13 +57,16 @@ export function renderSidebar() {
 }
 
 const settingsOpen = () => document.body.classList.contains('settings-open');
+const calendarOpen = () => document.body.classList.contains('calendar-open');
 
 function updateHeader() {
   const open = settingsOpen();
-  $('#btn-done').setAttribute('aria-pressed', String(state.showDone && !open));
-  $('#btn-trash').setAttribute('aria-pressed', String(state.showTrash && !open));
+  const cal = calendarOpen();
+  $('#btn-done').setAttribute('aria-pressed', String(state.showDone && !open && !cal));
+  $('#btn-trash').setAttribute('aria-pressed', String(state.showTrash && !open && !cal));
+  $('#btn-calendar').setAttribute('aria-pressed', String(cal));
   $('#btn-settings')?.setAttribute('aria-pressed', String(open));
-  $('#title').textContent = open ? t('set.title') : state.showTrash ? t('ui.trash') : state.showDone ? t('ui.completed') : state.list ?? t('ui.all');
+  $('#title').textContent = open ? t('set.title') : cal ? t('cal.title') : state.showTrash ? t('ui.trash') : state.showDone ? t('ui.completed') : state.list ?? t('ui.all');
   // Afgerond toont alle lijsten; een nieuwe taak gaat daar naar Inbox, net als bij Alle.
   $('#add-title').placeholder = state.list && !state.showDone && !state.showTrash ? t('sidebar.add_to_list', { list: state.list }) : t('ui.new_task_placeholder');
 }
