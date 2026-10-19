@@ -42,22 +42,31 @@ A to-do app you host yourself on Cloudflare: tasks, lists, reminders with push n
 
 ![The settings page](docs/screenshots/settings.png)
 
+**📱 The Android widget** puts your open tasks on your home screen. Tick one off right in the widget (you get 3 seconds to undo), tap a task to open it in the app, or tap ➕ for quick add with an optional reminder. The widget refreshes in the background (or tap ↻), shows when it last synced, and you can resize it and set its text size and line spacing (long-press it, then *Widget settings*). Sharing text from another app to Tick turns it into a task.
+
+**More in the app:** a 📅 calendar with a month grid and an agenda of every task with a date (repeating tasks show their coming dates too), 📌 pinning to keep a task at the top of its list, repeats that run until an end date, a daily notification for overdue tasks with *Done* and *Tomorrow* buttons, colour themes (such as *Retro 70s*) and your own background photo.
+
 **Settings** live in the app itself: theme, text size and spacing (with a live preview), language and time zone, notifications, your password, keys for your phone and automations, and backup, restore and TickTick import.
 
 *The screenshots use made-up demo tasks.*
 
 ## Features
 - **Location reminders**: get a notification when you arrive at or leave a place, set on a map (with the Android app).
-- Tasks with lists, one level of subtasks, drag to sort, and search.
-- Several accounts on one Tick; share a task with someone as one shared task (done is done for everyone) or as a separate copy. They accept or decline the invitation, and reminders on a shared task go to everyone on it.
+- Tasks with lists, one level of subtasks, drag to sort, search, and pinning to keep a task at the top of its list.
+- Several accounts on one Tick; share a task with someone as one shared task (done is done for everyone) or as a separate copy. They accept or decline the invitation, and reminders on a shared task go to everyone on it. Copies stay linked: you see how far the others are and get a notification when one of them is done.
 - A trash: deleted tasks stay there for 30 days; restore them, delete them for good, or empty the trash.
-- Reminders with web push; a reminder can repeat (daily, weekly, monthly, yearly, with custom rules). A new reminder starts at the next whole hour.
+- Reminders with web push; a reminder can repeat (daily, weekly, monthly, yearly, with custom rules), forever or until an end date. A new reminder starts at the next whole hour.
+- A daily notification for overdue tasks (09:00 by default, or switch it off), with *Done* and *Tomorrow* buttons.
+- A calendar: month grid and agenda of your tasks with a date, including the coming dates of repeating tasks.
 - Notes in markdown, with clickable checklists.
 - Optional attachments: photos and files on a task, stored in Cloudflare R2. Photos are scaled down and lose their EXIF data (such as the location) before upload.
 - Works offline as an installable web app (PWA); changes sync when you are back online.
 - Desktop layout with a sidebar and detail panel, where you edit a task's title right in the list; a full-screen task view on mobile.
 - Confetti when you tick off a task (not when your device asks for reduced motion).
+- Colour themes (default or *Retro 70s*, each in light and dark) and an optional background photo of your own.
 - Optional Android app: location reminders, a home-screen widget and quick add. Notifications show up as Tick instead of Chrome, and you link the app with one tap on *Link* in the web app.
+- **Home-screen widget** (Android): your open tasks on the home screen, tick off with 3 seconds to undo, tap to open a task in the app, quick add with a reminder, resizable, with its own text size and line spacing.
+- **Claude (MCP):** an MCP server at `/mcp`, so Claude Code or Claude Desktop can list, add, change, check off, snooze and delete your tasks with a key of its own (see step 12 of [SETUP.md](SETUP.md)).
 - An inbox API for automations (`POST /api/inbox` with its own token).
 - A settings page in the app: display (theme, text size, spacing), language per device, time zone, password, keys for your phone and automations, a view of your devices, and backup, restore and TickTick import. After the install you rarely need the config again.
 - English and Dutch; your own time zone.
