@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Klein icoon voor meldingen van de PWA in de statusbalk (alleen de vorm telt) -->
+<!-- Klein icoon voor meldingen in de statusbalk (alleen de vorm telt): de speld uit ic_launcher_foreground, met het
+     vinkje uitgespaard (de omtrek van de streep uit scripts/make-icons.mjs, evenOdd). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <path
-        android:pathData="M5,12.5 L10,17.5 L19,7"
-        android:strokeWidth="3"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+    <group
+        android:translateX="-4.41"
+        android:translateY="-4.67"
+        android:scaleX="0.0641"
+        android:scaleY="0.0641">
+        <path
+            android:fillType="evenOdd"
+            android:pathData="M256,104 C184,104 132,158 132,226 C132,312 256,416 256,416 C256,416 380,312 380,226 C380,158 328,104 256,104 Z M216.73,213.27 L241.3,237.8 L300.62,171.95 A18,18 0 0,1 327.38,196.05 L242.7,290.1 L191.27,238.73 A18,18 0 0,1 216.73,213.27 Z"
+            android:fillColor="#FFFFFF" />
+    </group>
 </vector>

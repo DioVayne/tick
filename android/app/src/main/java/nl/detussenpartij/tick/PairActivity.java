@@ -58,11 +58,14 @@ public class PairActivity extends Activity {
     }
 
     private void done(boolean linked) {
-        if (isFinishing() || isDestroyed()) return;
         if (!linked) {
+            // Ook als je het scherm intussen verliet: de melding gaat via de app-context, dus die komt toch.
             failed(getApplicationContext());
             finish();
-        } else if (Build.VERSION.SDK_INT >= 33
+            return;
+        }
+        if (isFinishing() || isDestroyed()) return;
+        if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
         } else {
