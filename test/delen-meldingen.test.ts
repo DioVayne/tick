@@ -92,6 +92,23 @@ describe('herinneringen bij een gedeelde taak', () => {
     expect(calls.filter((x) => x.taskId === k.id).map((x) => x.userId).sort()).toEqual([ADMIN_ID, b.id].sort());
   });
 
+  it('stoppen met delen wist ook de bezorgrijen van de subtaken (opnieuw delen meldt ze weer)', async () => {
+    for (const leave of ['stop', 'purge'] as const) {
+      const t = await createTask({ title: `Weer delen ${leave}`, remind_at: new Date(Date.now() + 3_600_000).toISOString() });
+      const s = await json<{ id: string }>(await call('/api/shares', { method: 'POST', json: { task_id: t.id, to: b.email, mode: 'shared' } }));
+      await callAs(b.cookie, `/api/shares/${s.id}/accept`, { method: 'POST', json: {} });
+      const k = await json<{ id: string }>(await call('/api/tasks', { method: 'POST', json: { title: 'sub', parent_id: t.id, remind_at: minutesAgo(1) } }));
+      await runReminders(env, await loadInstallPrefs(env), fakeSender({ [ADMIN_ID]: true, [b.id]: true }).send);
+      expect((await sentRows(k.id)).map((r) => r.user_id)).toContain(b.id);
+      if (leave === 'stop') await callAs(b.cookie, `/api/shares/${s.id}`, { method: 'DELETE' });
+      else {
+        await call(`/api/tasks/${t.id}`, { method: 'DELETE' });
+        expect((await callAs(b.cookie, `/api/tasks/${t.id}?purge=1`, { method: 'DELETE' })).status).toBe(200);
+      }
+      expect((await sentRows(k.id)).map((r) => r.user_id)).not.toContain(b.id);
+    }
+  });
+
   it('een uitnodiging die nog openstaat krijgt geen herinnering', async () => {
     const t = await createTask({ title: 'Nog niet geaccepteerd', remind_at: minutesAgo(1) });
     await call('/api/shares', { method: 'POST', json: { task_id: t.id, to: b.email, mode: 'shared' } });

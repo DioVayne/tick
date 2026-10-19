@@ -54,13 +54,19 @@ export async function loadInstallPrefs(env: Env): Promise<InstallPrefs> {
   };
 }
 
+type SettingRow = { key: string; value: string };
+
+/** De rijen van `user_settings` van één persoon; los te starten, zodat de auth ze al kan ophalen terwijl hij de sessie controleert. */
+export async function userSettingRows(db: D1Database, userId: string): Promise<SettingRow[]> {
+  return (await db.prepare('SELECT key, value FROM user_settings WHERE user_id = ?').bind(userId).all<SettingRow>()).results;
+}
+
 /**
- * Leest de instellingen van één persoon met één query. Volgorde: rij, dan config, dan de ingebouwde standaard.
+ * Leest de instellingen van één persoon met één query (of met `rows` als die al onderweg zijn). Volgorde: rij, dan config, dan de ingebouwde standaard.
  * FALLBACK_WEBHOOK hoort bij de beheerder: voor een lid telt hij nooit.
  */
-export async function loadUserPrefs(env: Env, user: Pick<User, 'id' | 'role'>): Promise<UserPrefs> {
-  const { results } = await env.DB.prepare('SELECT key, value FROM user_settings WHERE user_id = ?').bind(user.id)
-    .all<{ key: string; value: string }>();
+export async function loadUserPrefs(env: Env, user: Pick<User, 'id' | 'role'>, rows?: Promise<SettingRow[]>): Promise<UserPrefs> {
+  const results = await (rows ?? userSettingRows(env.DB, user.id));
   const row = new Map(results.map((r) => [r.key, r.value]));
   const zone = row.get('timezone');
   const time = row.get('reminder_time');

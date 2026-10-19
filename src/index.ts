@@ -9,7 +9,7 @@ import { normLocale, translate } from '../public/i18n.js';
 import { cleanLocation, cleanPlace, locColumns, locFromRow, type Place } from './location';
 import { repeatColumns, repeatFromRow, todayDefaultIso } from './repeat';
 import { nextOccurrence } from '../public/repeat.js';
-import { loadInstallPrefs, loadUserPrefs, requestLocale, type InstallPrefs, type Prefs } from './prefs';
+import { loadInstallPrefs, loadUserPrefs, requestLocale, type InstallPrefs, type Prefs, userSettingRows } from './prefs';
 import { findLoginUser, getUser, touchLastSeen, type User } from './users';
 import { inZone, localToUtcIso, type Zone } from './time';
 import { runReminders, sendToAll } from './push';
@@ -21,7 +21,7 @@ import { deviceApi, devicesApi } from './devices';
 import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
-import { sharesApi } from './shares';
+import { leaveShareStmts, sharesApi } from './shares';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxUpload, sweepAttachments } from './attachments';
@@ -143,7 +143,18 @@ app.post('/logout', (c) => {
   return c.json({ ok: true });
 });
 
+/** De userId uit het sessiecookie, nog niet gecontroleerd: alleen om alvast de instellingen op te halen. */
+function cookieUserId(req: Request): string | null {
+  const token = req.headers.get('cookie')?.match(new RegExp(`(?:^|; )${COOKIE}=([^;]+)`))?.[1];
+  return token?.split('.')[1] || null;
+}
+
 app.use('*', async (c, next) => {
+  // Tegelijk met de sessiecontrole al de instellingen van die gebruiker: dat scheelt een ronde naar D1. Ze tellen pas
+  // als de sessie geldig blijkt en bij dezelfde gebruiker hoort; anders vervalt de prefetch.
+  const guess = cookieUserId(c.req.raw);
+  const prefetch = guess ? userSettingRows(c.env.DB, guess) : null;
+  prefetch?.catch(() => {}); // niet gebruikt of mislukt: geen onafgehandelde rejection
   const found = await authorize(c.req.raw, c.env, c.get('install'));
   if (found) {
     const { user: known, ...auth } = found;
@@ -157,7 +168,8 @@ app.use('*', async (c, next) => {
     await touchLastSeen(c.env.DB, user);
     c.set('auth', auth);
     c.set('user', user);
-    const prefs: Prefs = { ...c.get('install'), ...await loadUserPrefs(c.env, user) };
+    const rows = prefetch && guess === user.id ? prefetch : undefined;
+    const prefs: Prefs = { ...c.get('install'), ...await loadUserPrefs(c.env, user, rows) };
     // Tijdberekeningen krijgen prefs (timeZone, reminderTime) per aanroep mee; geen globale zone over een await.
     c.set('prefs', prefs);
     await next();
@@ -712,12 +724,7 @@ app.delete('/api/tasks/:id', async (c) => {
     if (!t) throw new HttpError(404, 'err.not_found');
     // Een subtaak van andermans taak laat hij staan: zijn deelrij hoort bij de hele taak, niet bij de subtaak.
     if (t.user_id === userId) await db.batch(wipeStmts(db, 'id = ?', [id]));
-    else if (!t.parent_id) {
-      await db.batch([
-        db.prepare('DELETE FROM task_shares WHERE id = ?').bind(t.share_id),
-        db.prepare('DELETE FROM reminder_sent WHERE task_id = ? AND user_id = ?').bind(t.id, userId),
-      ]);
-    }
+    else if (!t.parent_id) await db.batch(leaveShareStmts(db, t.share_id!, t.id, userId));
     return c.json({ ok: true });
   }
   const t = await getTask(db, userId, id);
