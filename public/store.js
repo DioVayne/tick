@@ -214,37 +214,40 @@ export function sync() {
   return syncing;
 }
 
-let loadSeq = 0;
-/** Eerst de outbox versturen, dan de lijst van de server halen. Offline blijft de lokale lijst staan. */
-export async function load() {
-  const seq = ++loadSeq;
+let loading = null; // de ronde die nu loopt
+let again = null; // de ene ronde daarna, voor iedereen die intussen om een load vroeg
+
+/**
+ * Eerst de outbox versturen, dan de lijst van de server halen. Offline blijft de lokale lijst staan.
+ * Loopt er al een ronde, dan volgt er na afloop precies één nieuwe: snel na elkaar afvinken of typen geeft zo niet
+ * per wijziging een volledige ronde. Wie wacht, krijgt de stand van na zijn aanvraag.
+ */
+export function load() {
+  if (!loading) return (loading = loadOnce().finally(() => { loading = null; }));
+  again ??= loading.then(() => { again = null; return load(); });
+  return again;
+}
+
+/** Een fout bij lijsten of uitnodigingen houdt de taken niet tegen (dan null: de oude stand blijft); offline wel. */
+const soft = (p) => p.catch((e) => { if (e instanceof Offline) throw e; return null; });
+
+async function loadOnce() {
   await sync();
   try {
-    const open = await request('GET', '/api/tasks');
-    // Afgeronde taken laden we maar tot 200, dus daarin zoekt de server.
+    // Alles tegelijk: elk verzoek is een ronde over het netwerk. Afgeronde taken laden we maar tot 200, dus daarin zoekt de server.
     const q = state.query.trim();
-    const done = state.showDone ? await request('GET', '/api/tasks?done=1&limit=200' + (q ? '&q=' + encodeURIComponent(q) : '')) : state.done;
-    // Een fout in de lijsten mag het verversen van de taken niet tegenhouden; de oude lijsten blijven dan staan.
-    let serverLists = null;
-    try {
-      serverLists = await request('GET', '/api/lists');
-    } catch (e) {
-      if (e instanceof Offline) throw e;
-    }
-    // Net als de lijsten: een fout bij de uitnodigingen houdt de taken niet tegen.
-    let invites = state.invites;
-    try {
-      invites = await request('GET', '/api/shares/incoming');
-    } catch (e) {
-      if (e instanceof Offline) throw e;
-    }
+    const [open, done, serverLists, invites] = await Promise.all([
+      request('GET', '/api/tasks'),
+      state.showDone ? request('GET', '/api/tasks?done=1&limit=200' + (q ? '&q=' + encodeURIComponent(q) : '')) : null,
+      soft(request('GET', '/api/lists')),
+      soft(request('GET', '/api/shares/incoming')),
+    ]);
     const owned = await ownerReady; // false: de lokale gegevens kunnen van een ander zijn, dan niet lezen of schrijven
     const queued = owned ? await db.outboxAll() : [];
-    if (seq !== loadSeq) return; // inmiddels is er een nieuwere load gestart
     state.open = open;
-    state.done = done;
+    if (done) state.done = done;
     if (serverLists) state.serverLists = serverLists;
-    state.invites = invites;
+    if (invites) state.invites = invites;
     state.offline = false;
     state.pending = queued.length;
     if (owned) {
@@ -253,7 +256,6 @@ export async function load() {
     }
     queued.forEach(applyLocal); // wat de server nog niet heeft, bijvoorbeeld na een serverfout
   } catch (e) {
-    if (seq !== loadSeq) return;
     if (e instanceof Offline) state.offline = true;
     else report(tr('store.load_failed', { reason: e.message }));
   }

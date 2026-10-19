@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // De Workers-runtime heeft geen IndexedDB: db.js valt dan terug op geheugen, en dat lezen we hier uit.
 import { nextOccurrence } from '../public/repeat.js';
 import * as db from '../public/db.js';
-import { deleteList, ensureOwner, init, renameList, state, sync, toggleDone, update } from '../public/store.js';
+import { deleteList, ensureOwner, init, load, renameList, state, sync, toggleDone, update } from '../public/store.js';
 
 describe('store: lijst-ops', () => {
   it('een lijst die alleen in deze sessie bestaat, hernoemen of verwijderen geeft geen outbox-op', async () => {
@@ -155,5 +155,36 @@ describe('store: push-abonnement bij een eigenaarwissel', () => {
     await db.clearAll(); await db.kvSet('owner', 'user-a');
     expect(await ensureOwner('user-b')).toBe(true);
     expect(await db.kvGet('owner')).toBe('user-b');
+  });
+});
+
+describe('store: verversen', () => {
+  const fakeServer = (delayMs = 0) => {
+    const calls: string[] = [];
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any, opts: any) => {
+      calls.push(`${opts?.method ?? 'GET'} ${String(input)}`);
+      await new Promise((r) => setTimeout(r, delayMs));
+      return new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    return { calls, spy };
+  };
+  afterEach(() => vi.restoreAllMocks());
+
+  it('drie snelle wijzigingen geven hoogstens twee keer GET /api/tasks, en alle PATCHes gaan mee', async () => {
+    await db.clearAll(); await ensureOwner('user-load');
+    state.open = ['l1', 'l2', 'l3'].map((id, i) => ({ id, title: id, list: 'Inbox', parent_id: null, position: i, done: false, done_at: null })) as any;
+    const { calls } = fakeServer(20);
+    await Promise.all(['l1', 'l2', 'l3'].map((id) => update(id, { title: id + '!' })));
+    expect(calls.filter((c) => c === 'GET /api/tasks')).toHaveLength(2);
+    expect(calls.filter((c) => c.startsWith('PATCH'))).toHaveLength(3);
+    expect(await db.outboxAll()).toEqual([]);
+  });
+
+  it('de verzoeken van één ronde starten tegelijk', async () => {
+    const { calls } = fakeServer(30);
+    const done = load();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(calls).toEqual(expect.arrayContaining(['GET /api/tasks', 'GET /api/lists', 'GET /api/shares/incoming']));
+    await done;
   });
 });

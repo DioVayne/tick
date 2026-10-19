@@ -292,6 +292,7 @@ function enableSorting(root) {
           update(evt.item.dataset.id, { list: target });
           return;
         }
+        if (evt.oldIndex === evt.newIndex) return; // op dezelfde plek losgelaten: niets te bewaren
         const items = [...ul.children];
         const idx = evt.newIndex;
         const pos = (li) => state.open.find((t) => t.id === li.dataset.id)?.position;

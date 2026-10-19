@@ -176,9 +176,17 @@ sharesApi.delete('/:id', async (c) => {
   const s = await db.prepare('SELECT s.id, s.task_id, s.to_user FROM task_shares s JOIN tasks t ON t.id = s.task_id WHERE s.id = ? AND (s.to_user = ?2 OR t.user_id = ?2)')
     .bind(c.req.param('id'), userId).first<{ id: string; task_id: string; to_user: string }>();
   if (!s) throw new HttpError(404, 'err.not_found');
-  await db.batch([
-    db.prepare('DELETE FROM task_shares WHERE id = ?').bind(s.id),
-    db.prepare('DELETE FROM reminder_sent WHERE task_id = ? AND user_id = ?').bind(s.task_id, s.to_user),
-  ]);
+  await db.batch(leaveShareStmts(db, s.id, s.task_id, s.to_user));
   return c.json({ ok: true });
 });
+
+/**
+ * Statements die een deelrij wissen, met de bezorgrijen van die persoon voor de taak en haar subtaken: deelt iemand
+ * de taak later opnieuw, dan telt een herinnering niet meer als al bij hem bezorgd.
+ */
+export function leaveShareStmts(db: D1Database, shareId: string, taskId: string, userId: string): D1PreparedStatement[] {
+  return [
+    db.prepare('DELETE FROM task_shares WHERE id = ?').bind(shareId),
+    db.prepare('DELETE FROM reminder_sent WHERE user_id = ?1 AND (task_id = ?2 OR task_id IN (SELECT id FROM tasks WHERE parent_id = ?2))').bind(userId, taskId),
+  ];
+}

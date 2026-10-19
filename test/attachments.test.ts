@@ -84,7 +84,7 @@ describe('bijlagen', () => {
     expect((await json<{ error: string }>(big)).error).toContain('10 MB');
     for (let i = 0; i < MAX_FILES; i++) expect((await upload(t.id, bytes(1), { name: `${i}.png`, type: 'image/png' })).status).toBe(201);
     expect((await upload(t.id, bytes(1))).status).toBe(400);
-  });
+  }, 120_000); // 10 MB plus 21 uploads: in de volledige run, met alle bestanden tegelijk, ruim boven de 30 s
 
   it('html, svg en onbekende types komen terug als download, nooit met hun eigen type', async () => {
     const t = await createTask({ title: `Gevaarlijk ${uniq()}` });
