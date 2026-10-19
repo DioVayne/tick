@@ -471,8 +471,16 @@ p.set-note { margin: 0 0 8px; }
 html[data-bg] { background: var(--bg) var(--bg-image) center / cover fixed no-repeat; }
 html[data-bg] body { background: transparent; }
 html[data-bg] #side { background-color: color-mix(in srgb, var(--side) 82%, transparent); backdrop-filter: blur(6px); }
-html[data-bg] #main { background-color: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(6px); border-radius: 12px; }
+html[data-bg] #main { background-color: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(6px); border-radius: 18px;
+  width: auto; max-width: min(720px, calc(100% - 24px)); margin: 0 auto 12px; }
+@media (min-width: 1024px) {
+  html[data-bg] #main { max-width: none; margin: 0 12px 12px; }
+  html[data-bg] #topbar { padding: 12px 12px 6px; }
+}
 html[data-bg] #topbar { background: transparent; }
+/* De titel en het menuknopje staan los op de foto: een eigen vlak, anders hangt de leesbaarheid af van de foto. */
+html[data-bg] #title, html[data-bg] #btn-menu { background-color: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(6px); border-radius: 18px; }
+html[data-bg] #title { padding: 3px 14px; }
 html[data-bg] #detail { background-color: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px); }
 
 /* Retro: ronde vormen; de bovenbalk is doorzichtig, zodat alleen het afgeronde takendeel een vlak is. */
