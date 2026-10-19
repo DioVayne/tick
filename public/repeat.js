@@ -239,6 +239,28 @@ export function nextOccurrence(rule, startIso, afterMs) {
   throw new Error('no next occurrence found for rule: ' + rule);
 }
 
+/**
+ * Alle keren van het schema in [fromMs, toMs), als UTC-milliseconden, hoogstens `cap` stuks.
+ * @param {string} rule
+ * @param {string} startIso
+ * @param {number} fromMs
+ * @param {number} toMs
+ * @param {number} [cap]
+ * @returns {number[]}
+ */
+export function occurrencesBetween(rule, startIso, fromMs, toMs, cap = 400) {
+  const out = [];
+  let after = fromMs - 1;
+  while (out.length < cap) {
+    let ms;
+    try { ms = Date.parse(nextOccurrence(rule, startIso, after)); } catch { break; }
+    if (ms >= toMs) break;
+    out.push(ms);
+    after = ms;
+  }
+  return out;
+}
+
 /** Sleutel `<base>_one` of `<base>_many`, met n ingevuld. */
 const every = (base, n, vars = {}) => t(`${base}_${n === 1 ? 'one' : 'many'}`, { n, ...vars });
 
