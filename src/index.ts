@@ -62,7 +62,7 @@ export type TaskRow = {
   loc_name: string | null; loc_lat: number | null; loc_lng: number | null; loc_radius: number | null;
   loc_trigger: string | null; loc_notified: number;
   repeat_rule: string | null; repeat_start: string | null; repeat_at: string | null; repeat_prev: string | null;
-  deleted_at: string | null; copy_group: string | null;
+  deleted_at: string | null; copy_group: string | null; pinned: number;
 };
 
 export type AppEnv = {
@@ -208,11 +208,16 @@ function asBool(t: TaskRow) {
     ...rest,
     done: !!t.done,
     notified: !!t.notified,
+    pinned: !!t.pinned,
     location: locFromRow(t),
     location_notified: !!loc_notified,
     repeat: repeatFromRow(t),
   };
 }
+
+/** Volgorde van open taken: vastgepind eerst, daarna de positie. */
+const byPin = (a: { pinned: boolean; position: number }, b: { pinned: boolean; position: number }) =>
+  Number(b.pinned) - Number(a.pinned) || a.position - b.position;
 
 /**
  * Taken voor de client zoals `userId` ze ziet: lijst en volgorde uit zijn deelrij, en `share` op de hoofdtaak
@@ -220,7 +225,7 @@ function asBool(t: TaskRow) {
  */
 function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, copies: Map<string, Copies>, files = new Map<string, Attachment[]>()) {
   return rows.map((r) => {
-    const { share_id, share_list, share_position, has_share, has_copy_invite, ...t } = overlay(r);
+    const { share_id, share_list, share_position, share_pinned, has_share, has_copy_invite, ...t } = overlay(r);
     const s = t.parent_id ? undefined : info.get(t.id);
     return {
       ...asBool(t), share: s ? { ...s, mine: s.owner.id === userId } : null, copies: (!t.parent_id && copies.get(t.id)) || null,
@@ -561,7 +566,7 @@ app.get('/api/tasks', async (c) => {
   }
   // Sorteren na overlay: een deelnemer heeft zijn eigen positie in zijn deelrij.
   const rows = await visibleTasks(db, userId, `t.done = 0 AND t.deleted_at IS NULL${search.sql}`, search.binds);
-  const out = present(rows, userId, ...await extras(c.env, userId, rows)).sort((a, b) => a.position - b.position);
+  const out = present(rows, userId, ...await extras(c.env, userId, rows)).sort(byPin);
   return c.json(out);
 });
 
@@ -640,6 +645,7 @@ app.patch('/api/tasks/:id', async (c) => {
     set('parent_id', parent?.id ?? null);
     parentId = parent?.id ?? null;
     if (parent) list = parent.list;
+    if (parent && !('pinned' in b)) set('pinned', 0); // een subtaak pint niet
   }
   // Een deelnemer heeft lijst en volgorde van de hoofdtaak in zijn eigen deelrij; bij zijn subtaken volgt de lijst de ouder.
   const member = !!t.share_id;
@@ -654,6 +660,12 @@ app.patch('/api/tasks/:id', async (c) => {
     if (!Number.isFinite(p)) throw new HttpError(400, 'err.must_be_number', { field: 'position' });
     if (member && !t.parent_id) shareSets.push(['position', p]);
     else set('position', p);
+  }
+  if ('pinned' in b) {
+    if (typeof b.pinned !== 'boolean') throw new HttpError(400, 'err.must_be_bool', { field: 'pinned' });
+    if (b.pinned && parentId) throw new HttpError(400, 'err.only_parents_pin');
+    if (member && !t.parent_id) shareSets.push(['pinned', b.pinned ? 1 : 0]);
+    else set('pinned', b.pinned ? 1 : 0);
   }
   // Ritme: instellen zet remind_at op de eerste keer; uitzetten, de reminder wissen of een subtaak worden wist het.
   // Alleen de reminder verzetten laat repeat_* staan. Elke wijziging van remind_at of repeat wist repeat_prev.

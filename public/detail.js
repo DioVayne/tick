@@ -384,6 +384,11 @@ function build(t, readOnly) {
       }, subInput));
   }
 
+  // Vastpinnen: alleen een open hoofdtaak.
+  const pin = t.parent_id || readOnly ? null : el('button', {
+    class: 'dpin', type: 'button',
+    onclick: () => { const task = current(id); if (task) save(update(id, { pinned: !task.pinned })); },
+  }, '📌');
   const crumb = t.parent_id ? el('button', { class: 'crumb', type: 'button', onclick: () => selectTask(t.parent_id) }) : null;
   const back = el('button', { class: 'dback', type: 'button', onclick: closeTask });
   const status = el('span', { class: 'dstatus', role: 'status' });
@@ -412,7 +417,7 @@ function build(t, readOnly) {
   $('#detail').replaceChildren(...[
     back,
     crumb,
-    el('div', { class: 'dhead' }, check, title),
+    el('div', { class: 'dhead' }, check, title, pin),
     el('div', { class: 'pills' }, el('div', { class: 'pill-group when' }, remindPill, plusHour, clearRemind, repeatPill), locPill, clearLoc, listPill),
     desc,
     filesBox,
@@ -421,7 +426,7 @@ function build(t, readOnly) {
     shareBox,
     el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, reopen, del)),
   ].filter(Boolean));
-  view = { filesBox, shareBox, copiesBox, id, readOnly, title, titleSize, remind, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
+  view = { filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remind, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
 }
 
 function fill(t) {
@@ -431,6 +436,11 @@ function fill(t) {
   if (v.crumb) v.crumb.textContent = '‹ ' + (current(t.parent_id)?.title ?? tr('detail.parent_task'));
   v.check.setAttribute('aria-checked', String(done));
   v.check.setAttribute('aria-label', state.justDone.has(t.id) ? tr('render.undo') : done ? tr('render.reopen') : tr('render.check'));
+  if (v.pin) {
+    v.pin.setAttribute('aria-pressed', String(!!t.pinned));
+    v.pin.title = tr(t.pinned ? 'detail.unpin' : 'detail.pin');
+    v.pin.setAttribute('aria-label', v.pin.title);
+  }
 
   // Het veld waarin je typt (focus of nog niet opgeslagen) blijft staan; de rest volgt de server.
   if (document.activeElement !== v.title && !hasPending(t.id, 'title') && v.title.value !== t.title) v.title.value = t.title;

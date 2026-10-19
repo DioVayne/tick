@@ -151,6 +151,10 @@ function taskItem(t, children) {
     }),
     selected && !done && wide.matches ? titleField(t)
       : el('button', { class: 'title', 'aria-current': selected ? 'true' : false, onclick: (e) => openTask(e, t.id) }, ...highlight(t.title)),
+    // Rechts in de rij; een klik maakt de taak los.
+    t.pinned && !t.parent_id && !done
+      ? el('button', { class: 'pinned', type: 'button', title: tr('detail.unpin'), 'aria-label': tr('detail.unpin'), onclick: () => update(t.id, { pinned: false }) }, '📌')
+      : null,
   );
   li.append(row);
 
@@ -184,11 +188,14 @@ function taskItem(t, children) {
   return li;
 }
 
+/** Vastgepinde hoofdtaken staan bovenaan, elk deel in zijn eigen volgorde. */
+const pinnedOf = (t) => !!t?.pinned && !t.parent_id;
+
 /** Open taken, plus net afgevinkte die tijdens de ongedaan-maken-periode zichtbaar blijven. */
 function openTasks() {
   const shown = state.open.filter((t) => !t.done || state.justDone.has(t.id));
   for (const { task } of state.justDone.values()) if (!shown.some((t) => t.id === task.id)) shown.push(task);
-  return shown.sort((a, b) => a.position - b.position);
+  return shown.sort((a, b) => Number(pinnedOf(b)) - Number(pinnedOf(a)) || a.position - b.position);
 }
 
 export function render() {
@@ -277,11 +284,15 @@ function stopListDrop() {
   return hit?.dataset.list ?? null;
 }
 
+const findOpen = (id) => state.open.find((t) => t.id === id);
+
 function enableSorting(root) {
   root.querySelectorAll('ul.tasks').forEach((ul) => {
     new Sortable(ul, {
       handle: '.grip', animation: 150, delay: 0, direction: 'vertical',
       onStart: (evt) => { if (ul.dataset.parent === '' && wide.matches) startListDrop(evt.item.dataset.id); },
+      // Slepen blijft binnen het eigen deel: een vastgepinde taak niet tussen de andere, en andersom.
+      onMove: (evt) => pinnedOf(findOpen(evt.dragged.dataset.id)) === pinnedOf(findOpen(evt.related.dataset.id)),
       onEnd: (evt) => {
         const target = stopListDrop();
         if (target) {
@@ -293,9 +304,11 @@ function enableSorting(root) {
           return;
         }
         if (evt.oldIndex === evt.newIndex) return; // op dezelfde plek losgelaten: niets te bewaren
-        const items = [...ul.children];
-        const idx = evt.newIndex;
-        const pos = (li) => state.open.find((t) => t.id === li.dataset.id)?.position;
+        // Alleen de buren in hetzelfde deel (vastgepind of niet) tellen voor de nieuwe positie.
+        const pinned = pinnedOf(findOpen(evt.item.dataset.id));
+        const items = [...ul.children].filter((li) => pinnedOf(findOpen(li.dataset.id)) === pinned);
+        const idx = items.indexOf(evt.item);
+        const pos = (li) => findOpen(li.dataset.id)?.position;
         const prev = idx > 0 ? pos(items[idx - 1]) : null;
         const next = idx < items.length - 1 ? pos(items[idx + 1]) : null;
         let p;

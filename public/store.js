@@ -348,7 +348,7 @@ export async function init(userId) {
 
 // ---------- acties ----------
 const newTask = (fields) => ({
-  id: crypto.randomUUID(), description: '', remind_at: null, notified: false, location: null, location_notified: false, done: false, done_at: null, source: 'app', ...fields,
+  id: crypto.randomUUID(), description: '', remind_at: null, notified: false, location: null, location_notified: false, pinned: false, done: false, done_at: null, source: 'app', ...fields,
 });
 
 /** Nieuwe taak bovenaan; de server bepaalt bij het versturen de definitieve positie. */

@@ -5,7 +5,7 @@ import type { TaskRow } from './index';
  * voor de hoofdtaak (`COALESCE(parent_id, id)`) met jou als ontvanger. Een taak zonder toegang bestaat voor jou niet.
  */
 export type Access = TaskRow & {
-  share_id: string | null; share_list: string | null; share_position: number | null; has_share: number | null; has_copy_invite: number | null;
+  share_id: string | null; share_list: string | null; share_position: number | null; share_pinned: number | null; has_share: number | null; has_copy_invite: number | null;
 };
 
 /** Afstand tussen posities na aanmaken of herverdelen; slepen halveert het gat. */
@@ -14,7 +14,7 @@ export const STEP = 1_000_000;
 // ?1 is altijd de gebruiker; een gewone ? daarna krijgt het volgende nummer (?2, ?3, …).
 // has_share: de taak heeft deelrijen (dan is shareInfo nodig); zonder één zo'n taak slaat de route die query over.
 // has_copy_invite: er staat een kopie-uitnodiging open (dan is copiesFor nodig, ook zonder groep).
-const COLS = "t.*, s.id AS share_id, s.list AS share_list, s.position AS share_position, " +
+const COLS = "t.*, s.id AS share_id, s.list AS share_list, s.position AS share_position, s.pinned AS share_pinned, " +
   "(SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'shared' LIMIT 1) AS has_share, " +
   "(SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'copy' AND x.status = 'pending' LIMIT 1) AS has_copy_invite";
 const JOIN = "LEFT JOIN task_shares s ON s.task_id = COALESCE(t.parent_id, t.id) AND s.to_user = ?1 AND s.status = 'accepted'";
@@ -39,10 +39,11 @@ export async function visibleTasks(db: D1Database, userId: string, where: string
 /** Of er bij deze rijen een gedeelde taak zit; anders hoeft shareInfo niet te draaien. */
 export const anyShared = (rows: Access[]) => rows.some((r) => r.share_id || r.has_share);
 
-/** Lijst en volgorde van de ontvanger: de hoofdtaak krijgt die uit zijn deelrij, een subtaak de lijst van haar ouder bij hem. */
+/** Lijst, volgorde en pin van de ontvanger: de hoofdtaak krijgt die uit zijn deelrij, een subtaak de lijst van haar ouder bij hem. */
 export function overlay(t: Access): Access {
   if (!t.share_id) return t;
-  return { ...t, list: t.share_list ?? t.list, position: t.parent_id ? t.position : t.share_position ?? t.position };
+  if (t.parent_id) return { ...t, list: t.share_list ?? t.list };
+  return { ...t, list: t.share_list ?? t.list, position: t.share_position ?? t.position, pinned: t.share_pinned ?? 0 };
 }
 
 /** De laagste positie in jouw volgorde van open hoofdtaken: je eigen taken plus je deelnames. */
