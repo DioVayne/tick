@@ -16,6 +16,10 @@ export type InstallPrefs = {
 export type UserPrefs = {
   timeZone: string;
   reminderTime: string;
+  /** Tijd (HH:MM) voor de dagelijkse melding van verlopen taken; null = uit. */
+  overdueTime: string | null;
+  /** Lokale datum (YYYY-MM-DD) waarop de verlopen taken voor het laatst zijn gemeld. */
+  overdueDay: string | null;
   weekStart: 'mon' | 'sun';
   fallbackWebhook: string | null;
   fallbackFromEnv: boolean;
@@ -70,12 +74,15 @@ export async function loadUserPrefs(env: Env, user: Pick<User, 'id' | 'role'>, r
   const row = new Map(results.map((r) => [r.key, r.value]));
   const zone = row.get('timezone');
   const time = row.get('reminder_time');
+  const overdue = row.get('overdue_time');
   const envHook = user.role === 'admin' ? env.FALLBACK_WEBHOOK || null : null;
   // Een rij gaat voor de secret, ook een lege (= uit); zonder rij geldt FALLBACK_WEBHOOK (alleen voor de beheerder).
   const override = row.has('fallback_webhook');
   return {
     timeZone: validZone(zone) ? zone : validZone(env.TIMEZONE) ? env.TIMEZONE : 'UTC',
     reminderTime: validTime(time) ? time : '09:00',
+    overdueTime: overdue === 'off' ? null : validTime(overdue) ? overdue : '09:00',
+    overdueDay: row.get('overdue_day') || null,
     weekStart: row.get('week_start') === 'sun' ? 'sun' : 'mon',
     fallbackWebhook: (override ? row.get('fallback_webhook') : envHook) || null,
     fallbackFromEnv: !override && !!envHook,

@@ -13,6 +13,7 @@ import { loadInstallPrefs, loadUserPrefs, requestLocale, type InstallPrefs, type
 import { findLoginUser, getUser, touchLastSeen, type User } from './users';
 import { inZone, localToUtcIso, type Zone } from './time';
 import { runReminders, sendToAll } from './push';
+import { localNow, runOverdue } from './overdue';
 import { settingsApi } from './settings-api';
 import { accountApi } from './account';
 import { usersApi } from './users-api';
@@ -868,6 +869,17 @@ app.post('/api/tasks/:id/snooze', async (c) => {
   return c.json({ ok: true, remind_at: at });
 });
 
+// Naar morgen (knop in de melding van een verlopen taak): morgen in de zone van de eigenaar, op diens standaardtijd.
+// Net als snoozen blijft het ritme staan en verzet het de herinnering voor iedereen.
+app.post('/api/tasks/:id/tomorrow', async (c) => {
+  const t = await getTask(c.env.DB, c.get('auth').userId, c.req.param('id'));
+  if (!t) throw new HttpError(404, 'err.not_found');
+  const z = await ownerZone(c, t);
+  const at = localToUtcIso(localNow(z, Date.now()).tomorrow, z);
+  await c.env.DB.prepare('UPDATE tasks SET remind_at = ?, notified = 0, repeat_prev = NULL, updated_at = ? WHERE id = ?').bind(at, now(), t.id).run();
+  return c.json({ ok: true, remind_at: at });
+});
+
 // Endpoint voor automations (INBOX_TOKEN): title, notes, due, list en repeat. De Nederlandse velden
 // titel/omschrijving/datum blijven werken voor bestaande koppelingen.
 app.post('/api/inbox', async (c) => {
@@ -985,7 +997,9 @@ export default {
   scheduled: (_e: ScheduledController, env: Env, ctx: ExecutionContext) => {
     ctx.waitUntil((async () => {
       // runReminders leest per taak de instellingen van de eigenaar; er zit geen globale zone tussen.
-      await runReminders(env, await loadInstallPrefs(env));
+      const install = await loadInstallPrefs(env);
+      await runReminders(env, install);
+      await runOverdue(env, install);
       await purgeTrash(env.DB, Date.now());
       // Na het wissen: de bijlagen van taken die nu weg zijn, ook in R2.
       await sweepAttachments(env, Date.now());

@@ -13,7 +13,7 @@ export type Payload = {
   /** Vervangt de tag van de melding (zelfde tag = vervangt de vorige); zonder tag de taak of uitnodiging. */
   tag?: string;
   /** Knoppen in de melding, al vertaald: de service worker kent de taal niet. */
-  actions?: { action: 'done' | 'snooze' | 'accept' | 'decline'; title: string }[];
+  actions?: { action: 'done' | 'snooze' | 'tomorrow' | 'accept' | 'decline'; title: string }[];
 };
 
 /**
@@ -79,6 +79,20 @@ export function reminderPayload(t: { id: string; title: string; description: str
     { action: 'snooze', title: translate(locale, 'push.snooze') },
   ];
   return { title: t.title, body: t.description.slice(0, 140), taskId: t.id, url: '/', actions, ...(t.repeat_at ? { occurrence: t.repeat_at } : {}) };
+}
+
+/** Pushbericht voor een verlopen taak (dagelijkse ronde): afvinken of naar morgen; tikken opent de taak om zelf te plannen. */
+export function overduePayload(t: { id: string; title: string; description: string; repeat_at?: string | null }, locale?: string): Payload {
+  const actions: Payload['actions'] = [
+    { action: 'done', title: translate(locale, 'push.done') },
+    { action: 'tomorrow', title: translate(locale, 'push.tomorrow') },
+  ];
+  return {
+    title: translate(locale, 'push.overdue', { title: t.title }), body: t.description.slice(0, 140), taskId: t.id, url: '/', actions,
+    // Eigen tag: gaat ook af als de oude melding van deze taak er nog staat.
+    tag: `overdue-${t.id}`,
+    ...(t.repeat_at ? { occurrence: t.repeat_at } : {}),
+  };
 }
 
 const RETRY_WINDOW_MS = 15 * 60_000;

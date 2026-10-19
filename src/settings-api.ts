@@ -14,9 +14,9 @@ const MAX_WEBHOOK = 2000;
 
 /** Het antwoord van de API; de URL uit FALLBACK_WEBHOOK is een secret en gaat nooit mee (alleen dat hij er is). */
 function view(p: Prefs) {
-  const { timeZone, reminderTime, weekStart, defaultLocale, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background } = p;
+  const { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background } = p;
   const fallbackWebhook = fallbackFromEnv ? null : p.fallbackWebhook;
-  return { timeZone, reminderTime, weekStart, defaultLocale, fallbackWebhook, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background };
+  return { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackWebhook, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background };
 }
 
 const validZone = (tz: unknown): tz is string => {
@@ -74,6 +74,13 @@ settingsApi.patch('/', async (c) => {
     if (typeof body.reminderTime !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(body.reminderTime)) throw new HttpError(400, 'err.invalid_time');
     next.reminderTime = body.reminderTime;
     writes.push(['reminder_time', body.reminderTime]);
+  }
+  if ('overdueTime' in body) {
+    // null = uit; een tijd (HH:MM) = elke dag op die tijd de verlopen taken melden.
+    const v = body.overdueTime as string | null;
+    if (v !== null && (typeof v !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(v))) throw new HttpError(400, 'err.invalid_time');
+    next.overdueTime = v;
+    writes.push(['overdue_time', v ?? 'off']);
   }
   if ('weekStart' in body) {
     if (body.weekStart !== 'mon' && body.weekStart !== 'sun') throw new HttpError(400, 'err.invalid_week_start');
