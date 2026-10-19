@@ -149,6 +149,19 @@ Photos and files on a task. They are stored in Cloudflare R2, and R2 only switch
 
 Photos are scaled down in the browser before upload, which also strips their EXIF data (such as where the photo was taken). Attachments only work online. Against surprises: set up a billable-usage notification under **Billing** in the dashboard.
 
+## 12. Optional: Claude (MCP)
+Tick has an MCP server at `/mcp`, so Claude can list, add, change, check off, snooze and delete your tasks. It cannot touch accounts, keys or settings. Make a key for it: **Settings → Advanced → Keys → New key**, kind *Full*, name `Claude` (so you can revoke it on its own).
+
+Claude Code:
+```bash
+claude mcp add --transport http tick https://tick.example.com/mcp --header "Authorization: Bearer tick_..."
+```
+Claude Desktop (through `mcp-remote`, because its own connectors need OAuth): in `claude_desktop_config.json`
+```json
+{ "mcpServers": { "tick": { "command": "npx", "args": ["mcp-remote", "https://tick.example.com/mcp", "--header", "Authorization: Bearer tick_..."] } } }
+```
+claude.ai and the Claude phone app are not supported yet (they need OAuth).
+
 ## Updating
 ```bash
 git pull

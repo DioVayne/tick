@@ -26,6 +26,7 @@ import { leaveShareStmts, sharesApi } from './shares';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxUpload, sweepAttachments } from './attachments';
+import { mcpApi } from './mcp';
 
 export type Env = {
   DB: D1Database;
@@ -200,6 +201,8 @@ app.route('/api/import', importApi);
 app.route('/api/shares', sharesApi);
 app.route('/api', attachmentsApi);
 app.route('/api/background', backgroundApi);
+// De MCP-tools roepen deze app zelf aan (met dezelfde sleutel); pas bij een request, dus alle routes staan er dan.
+app.route('/mcp', mcpApi((req, env, ctx) => Promise.resolve(app.fetch(req, env, ctx))));
 
 const now = () => new Date().toISOString();
 /** Taak als JSON voor de client: 0/1 wordt boolean, de loc_*-kolommen worden één location-object en de repeat_*-kolommen één repeat-object (repeat_prev en copy_group blijven op de server). */
