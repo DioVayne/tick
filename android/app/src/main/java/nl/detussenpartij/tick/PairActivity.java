@@ -2,6 +2,7 @@ package nl.detussenpartij.tick;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -12,9 +13,10 @@ import android.widget.Toast;
 import org.json.JSONArray;
 
 /**
- * tick://pair?code=…: de PWA geeft een eenmalige koppelcode door. Doorzichtig: de app wisselt de code op de achtergrond
- * in voor een sleutel, vraagt zo nodig om meldingen en sluit; daarna staat de TWA er weer. Mislukt het, dan toont de
- * PWA zelf een knop om het opnieuw te proberen.
+ * tick://pair?code=…&base=…: de PWA geeft een eenmalige koppelcode en haar adres door (vanuit de app, of vanuit de
+ * browser op de telefoon). Is het adres nieuw of anders, dan vraagt de app eerst of dat klopt. Doorzichtig: de app
+ * wisselt de code op de achtergrond in voor een sleutel, vraagt zo nodig om meldingen en sluit; daarna staat de TWA
+ * (of de browser) er weer. Mislukt het, dan toont de PWA zelf een knop om het opnieuw te proberen.
  */
 public class PairActivity extends Activity {
     private static final int REQ_NOTIFICATIONS = 1;
@@ -22,19 +24,44 @@ public class PairActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        String code = PairLink.code(getIntent().getDataString());
-        if (code == null) {
+        String data = getIntent().getDataString();
+        String code = PairLink.code(data);
+        // Het adres uit de link (nieuwere PWA), anders het adres dat de app al heeft.
+        String linked = PairLink.base(data);
+        String current = Prefs.base(this);
+        String base = linked != null ? linked : current;
+        if (code == null || base.isEmpty()) {
             failed(getApplicationContext());
             finish();
             return;
         }
+        if (TickAddress.sameOrigin(current, base)) {
+            redeem(code, base, false);
+            return;
+        }
+        // Een andere (of eerste) Tick: eerst vragen. Zo kan een willekeurige link de app niet naar een andere server sturen.
+        String host = TickAddress.host(base);
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.pair_confirm_title, host))
+                .setMessage(current.isEmpty() ? getString(R.string.pair_confirm_new, host)
+                        : getString(R.string.pair_confirm_switch, TickAddress.host(current), host))
+                .setPositiveButton(R.string.pair_confirm_ok, (dlg, w) -> redeem(code, base, true))
+                .setNegativeButton(android.R.string.cancel, (dlg, w) -> finish())
+                .setOnCancelListener(dlg -> finish())
+                .show();
+    }
+
+    /** Wisselt de code in bij base. Bij een andere Tick gaat de oude sleutel niet mee, en pas na succes het nieuwe adres in. */
+    private void redeem(String code, String base, boolean switching) {
         final Context app = getApplicationContext();
         new Thread(() -> {
             boolean ok;
             try {
                 String before = Prefs.userId(app);
-                Api.Redeemed r = Api.redeem(app, code, Build.MODEL, Prefs.token(app));
-                if (CacheWipe.shouldWipe(before, r.userId, CacheWipe.Reason.REDEEM)) {
+                Api.Redeemed r = Api.redeem(base, code, Build.MODEL, switching ? null : Prefs.token(app));
+                if (switching) {
+                    SetupActivity.useAddress(app, base);
+                } else if (CacheWipe.shouldWipe(before, r.userId, CacheWipe.Reason.REDEEM)) {
                     // Een andere persoon: zijn cache en geofences mogen niet blijven staan.
                     Prefs.wipeAccountData(app);
                     Geo.apply(app, new JSONArray(), true);

@@ -10,7 +10,7 @@ You only do this once. Afterwards you change everything in the app itself (**⚙
 - A Cloudflare account. The free plan is enough: Workers, D1, Cron Triggers and Rate Limiting. Tick uses one cron trigger; the free plan allows 5 per account, so if you already have 5, the deploy reports *"reached the Workers Free limit of 5 cron triggers"* and reminders will not be sent until you free one up.
   No credit card needed: only the optional attachments (step 11) ask for a payment method on file.
 - Node.js 22 or newer, and git.
-- Optional: Claude Code. Optional for the Android app: JDK 17+ and the Android SDK.
+- Optional: Claude Code. The Android app is a download; only building it yourself needs JDK 17+ and the Android SDK.
 
 ## 1. Get the code
 ```bash
@@ -102,6 +102,18 @@ curl -X POST https://tick.example.com/api/inbox \
 
 ## 10. Optional: Android app
 The app opens your Tick full-screen (a Trusted Web Activity) and adds a widget with your task list, quick add, and location reminders (notify me when I arrive at or leave a place). Notifications of the web app show up as notifications of the app.
+
+**Download it (recommended).** No computer or Android SDK needed.
+1. Deploy this version of Tick first (step 5 or [Updating](#updating)): the app checks your address with `/api/hello`, and `/.well-known/assetlinks.json` vouches for the official app, so it opens without an address bar. You don't need to set anything for that.
+2. On your phone, download `Tick-x.y.z.apk` from [GitHub Releases](https://github.com/DioVayne/tick/releases/latest) and open it. Android asks once to allow installing apps from your browser.
+3. Open the app and type the address of your Tick (for example `tick.example.com`). Log in; the app links itself and turns on notifications.
+   Or the other way round: open your Tick in the phone's browser, log in and tap **Settings → Devices → Connect the Android app**. That opens the app with your address already filled in (or the download page if the app isn't installed yet).
+4. Add the widget from your home screen. Afterwards the phone shows up under **Settings → Devices** with its notification and location status.
+5. For location reminders turn on location notifications in the app and choose **Allow all the time** in the permission screen.
+
+Updates: download the new APK from Releases and install it over the old one. [Obtainium](https://obtainium.imranr.dev) can do that for you: add `https://github.com/DioVayne/tick` as a source. To use another Tick later, open **Phone settings → Change address**; the app then forgets the tasks and location reminders of the old one.
+
+**Or build it yourself** (JDK 17+ and the Android SDK; for your own package id, name or icon, or if you'd rather not install someone else's APK):
 1. Make your own signing key, once (from `android/`; `keytool` comes with the JDK). Choose a password and keep the file and the password safe: an update must be signed with the same key.
    ```bash
    keytool -genkeypair -v -keystore tick-release.jks -alias tick -keyalg RSA -keysize 2048 -validity 10000
@@ -116,7 +128,7 @@ The app opens your Tick full-screen (a Trusted Web Activity) and adds a widget w
    tickKeyAlias=tick
    tickKeyPassword=your-key-password
    ```
-   `tickPackage` must be a unique application id of your own. `tickKeystore` is relative to `android/` (or an absolute path). Without the four signing lines `assembleDebug` still works, but `assembleRelease` refuses.
+   `tickPackage` must be a unique application id of your own (not `nl.detussenpartij.tick`, that is the official app). `tickBase` is optional: with it the app starts on your address, without it the app asks, like the downloaded one. `tickKeystore` is relative to `android/` (or an absolute path). Without the four signing lines `assembleDebug` still works, but `assembleRelease` refuses.
 3. Build (from `android/`; on Windows `gradlew.bat`):
    ```bash
    ./gradlew testDebugUnitTest assembleRelease
@@ -126,16 +138,22 @@ The app opens your Tick full-screen (a Trusted Web Activity) and adds a widget w
    ```bash
    keytool -list -v -keystore tick-release.jks -alias tick
    ```
-5. Add `"ANDROID_PACKAGE": "com.yourname.tick"` and `"ANDROID_CERT_SHA256": "AA:BB:…"` (that fingerprint) to `vars` in `wrangler.jsonc` and deploy again. With both, `/.well-known/assetlinks.json` links the app to your domain, so it opens without an address bar, and the web app can wake the app right after you set a place.
-6. Install the APK and open the app. Log in; the app links itself to your Tick and turns on notifications. Add the widget from your home screen. Afterwards the phone shows up under **Settings → Devices** with its notification and location status.
-7. For location reminders turn on location notifications in the app and choose **Allow all the time** in the permission screen.
+5. Add `"ANDROID_PACKAGE": "com.yourname.tick"` and `"ANDROID_CERT_SHA256": "AA:BB:…"` (that fingerprint) to `vars` in `wrangler.jsonc` and deploy again. With both, `/.well-known/assetlinks.json` also vouches for your build, so it opens without an address bar.
+6. Install the APK and continue with step 3 above.
 
 Good to know:
+- **Switching from your own build to the downloaded app:** the official app has its own package id, so it installs next to your build. Install it, connect it (step 3), set up the widget and location again, then uninstall your own build. You can remove `ANDROID_PACKAGE` and `ANDROID_CERT_SHA256` afterwards.
 - Coming from app 1.2 or older (signed with a debug key)? Uninstall it first — Android refuses to update an app signed with a different key. Set up the widget and location again afterwards; linking happens by itself after you log in.
 - To test a debug build, add the debug key's SHA-256 to `ANDROID_CERT_SHA256` after a comma.
-- You can share the APK with others who use the same Tick: it is signed with the same key, so it matches `ANDROID_CERT_SHA256`.
 - Installed Tick in Firefox as a web app before? Remove that installation, or turn off its notifications, or you get every notification twice.
-- The app needs Chrome (or another browser that supports Trusted Web Activities). Without one it opens with an address bar.
+- The app needs Chrome (or another browser that supports Trusted Web Activities). Without one it opens with an address bar. It also opens with an address bar if your Tick runs an older version without the official app in `assetlinks.json`.
+
+### Releasing the Android app (maintainers)
+The official APK is built by [.github/workflows/android-release.yml](.github/workflows/android-release.yml) when you push a tag `android-v<versionName>`. It needs the project's release key, which only the maintainer holds:
+1. Once: make the key (`keytool -genkeypair -v -keystore tick-official.jks -alias tick -keyalg RSA -keysize 4096 -validity 10000`), keep it and its passwords in a password manager **and** an offline backup. Losing it means no more updates for anyone who installed the app; leaking it means someone can publish a fake update.
+2. Once: add four repository secrets (**Settings → Secrets and variables → Actions**): `TICK_KEYSTORE_BASE64` (the file as base64, e.g. `base64 -w0 tick-official.jks`), `TICK_KEYSTORE_PASSWORD`, `TICK_KEY_ALIAS`, `TICK_KEY_PASSWORD`.
+3. Once: put the key's SHA-256 fingerprint (`keytool -list -v -keystore tick-official.jks -alias tick`) in `OFFICIAL_APP.certs` in `src/assetlinks.ts`. The workflow refuses to publish an APK whose signature isn't there.
+4. Each release: raise `versionCode` and `versionName` in `android/app/build.gradle`, merge, then `git tag android-v1.5.0 && git push origin android-v1.5.0`. The workflow runs the JUnit tests, builds, checks the signature and attaches `Tick-1.5.0.apk` to a new release.
 
 ## 11. Optional: attachments
 Photos and files on a task. They are stored in Cloudflare R2, and R2 only switches on once your account has a payment method on file, even though Tick stays within the free tier (10 GB storage) for a long time. Without this step Tick works the same, just without attachments; you can add it any time later.

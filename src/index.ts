@@ -47,7 +47,7 @@ export type Env = {
   TIMEZONE?: string;
   /** Taal van de app: en (standaard) of nl. */
   LOCALE?: string;
-  /** applicationId van een eigen Android-build; zonder deze waarde probeert de PWA de app niet te wekken. */
+  /** applicationId van een eigen Android-build (optioneel); de officiële app (OFFICIAL_APP) kent Tick zelf al. */
   ANDROID_PACKAGE?: string;
   /** SHA-256-vingerafdruk(ken) van de ondertekeningssleutel, gescheiden door komma's; nodig voor assetlinks.json. */
   ANDROID_CERT_SHA256?: string;
@@ -109,6 +109,8 @@ async function asset(c: Context<AppEnv>) {
   return new Response(res.body, res);
 }
 
+// Zonder inlog: de Android-app kijkt hiermee of het ingetypte adres een Tick is.
+app.get('/api/hello', (c) => c.json({ app: 'tick' }));
 app.get('/.well-known/assetlinks.json', (c) => c.json(assetLinks(c.env.ANDROID_PACKAGE, c.env.ANDROID_CERT_SHA256)));
 app.get('/login', async (c) => {
   // De overgang: zolang de beheerder geen e-mailadres heeft, zegt de pagina dat het veld leeg mag (verraadt één bit).

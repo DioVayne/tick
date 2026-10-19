@@ -17,6 +17,19 @@ final class StartUrl {
         return base + "/?app=android&task=" + URLEncoder.encode(taskId, StandardCharsets.UTF_8) + pair(needsPair);
     }
 
+    /**
+     * Het adres uit een intent (een taak uit Launch.task of een link naar je Tick): alleen als het op base ligt, anders de
+     * gewone start. De app opent zo nooit een andere site schermvullend. Zonder sleutel komt er pair=1 bij.
+     */
+    static String fromIntent(String base, String url, boolean needsPair) {
+        if (!TickAddress.sameOrigin(base, url)) return launch(base, needsPair);
+        if (!needsPair || url.matches(".*[?&]pair=[^&#]*.*")) return url;
+        int hash = url.indexOf('#');
+        String head = hash < 0 ? url : url.substring(0, hash);
+        String tail = hash < 0 ? "" : url.substring(hash);
+        return head + (head.contains("?") ? "&" : "?") + "pair=1" + tail;
+    }
+
     private static String pair(boolean needsPair) {
         return needsPair ? "&pair=1" : "";
     }

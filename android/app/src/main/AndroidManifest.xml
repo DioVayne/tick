@@ -21,20 +21,13 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/AppTheme">
 
-        <!-- Digital Asset Links: de app hoort bij ${tickBase} (zie /.well-known/assetlinks.json) -->
-        <meta-data
-            android:name="asset_statements"
-            android:resource="@string/asset_statements" />
-
-        <!-- Het app-icoon: de PWA schermvullend als Trusted Web Activity -->
+        <!-- Het app-icoon: de PWA schermvullend als Trusted Web Activity. Het adres staat niet in het manifest maar in de
+             app (Prefs.base); Chrome controleert het met /.well-known/assetlinks.json van je Tick. -->
         <activity
             android:name=".TickLauncherActivity"
             android:exported="true"
             android:alwaysRetainTaskState="true"
             android:theme="@style/LauncherTheme">
-            <meta-data
-                android:name="android.support.customtabs.trusted.DEFAULT_URL"
-                android:value="${tickBase}/?app=android" />
             <meta-data
                 android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
                 android:resource="@color/icon_bg" />
@@ -54,8 +47,10 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Chrome geeft webmeldingen alleen door aan een app die adressen van de site kan openen. Zonder autoVerify
-                 openen links op Android 12+ gewoon in de browser. -->
+            <!-- Chrome geeft webmeldingen alleen door aan een app die adressen van de site kan openen. Een eigen build
+                 noemt hier zijn host; de algemene app kent het adres pas later en gebruikt host "*" (één host-regel, dus
+                 Android ziet hem niet als browser). Zonder autoVerify openen links op Android 12+ gewoon in de browser,
+                 en TickLauncherActivity opent alleen adressen op je eigen Tick (StartUrl.fromIntent). -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -75,14 +70,16 @@
                 android:resource="@xml/filepaths" />
         </provider>
 
-        <!-- Browser Helper zet bij elke start de snelkoppeling "Site-instellingen" aan; zonder deze activity crasht de app -->
+        <!-- Browser Helper zet bij elke start de snelkoppeling "Site-instellingen" aan en start daarvoor
+             ManageDataLauncherActivity bij naam; zonder die naam crasht de app. De alias met die naam opent
+             TickManageDataActivity, die het adres uit de app haalt in plaats van uit het manifest. -->
         <activity
+            android:name=".TickManageDataActivity"
+            android:exported="false" />
+        <activity-alias
             android:name="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
-            android:exported="false">
-            <meta-data
-                android:name="android.support.customtabs.trusted.MANAGE_SPACE_URL"
-                android:value="${tickBase}/" />
-        </activity>
+            android:targetActivity=".TickManageDataActivity"
+            android:exported="false" />
 
         <!-- Meldingen van de PWA (web push) verschijnen als meldingen van deze app -->
         <service
@@ -98,6 +95,12 @@
             </intent-filter>
         </service>
 
+        <!-- Het adres van je Tick: bij de eerste start van de algemene app en via "Adres wijzigen" -->
+        <activity
+            android:name=".SetupActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- "Tick op deze telefoon": de instellingen van de app, ook via tick://settings vanuit de PWA -->
         <activity
             android:name=".MainActivity"
@@ -110,7 +113,8 @@
             </intent-filter>
         </activity>
 
-        <!-- tick://pair?code=...: de PWA geeft een eenmalige koppelcode; de app wisselt hem in voor een sleutel -->
+        <!-- tick://pair?code=...&base=...: de PWA geeft een eenmalige koppelcode en haar adres; de app wisselt de code in
+             voor een sleutel -->
         <activity
             android:name=".PairActivity"
             android:exported="true"
