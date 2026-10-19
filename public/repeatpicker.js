@@ -1,8 +1,9 @@
 import { el } from './render.js';
 import { ordinal, t } from './i18n.js';
-import { zonedParts, buildRule, customState, quickRules, shortDay, chipDays } from './repeat.js';
+import { zonedParts, buildRule, customState, quickRules, shortDay, chipDays, withUntil, untilOf } from './repeat.js';
 
-// Ritmemenu onder de 🔁-pil: Niet herhalen, de snelkeuzes en "Aangepast…" (een paneel in hetzelfde menu).
+// Ritmemenu onder de 🔁-pil: Niet herhalen, de snelkeuzes, "Aangepast…" (een paneel in hetzelfde menu) en de einddatum.
+// Een snelkeuze houdt de einddatum van het huidige ritme.
 
 // De waarden blijven de interne eenheden van buildRule/customState; alleen de labels zijn vertaald.
 const EENHEID = ['dag', 'week', 'maand', 'jaar'];
@@ -22,13 +23,24 @@ export function openRepeatPicker(anchor, task, onPick, remindAt) {
   const start = remindAt ?? task.remind_at ?? task.repeat?.start ?? new Date().toISOString();
   const current = task.repeat?.rule ?? null;
   const pick = (rule) => { close(); onPick(rule); };
+  const s0 = zonedParts(Date.parse(start));
+  const firstDay = `${String(s0.y).padStart(4, '0')}-${String(s0.m).padStart(2, '0')}-${String(s0.d).padStart(2, '0')}`;
+  // Datumveld voor de einddatum (t/m); leeg = geen einde.
+  const untilField = (value, onChange) => {
+    const input = el('input', { class: 'rp-until-date', type: 'date', min: firstDay, value, 'aria-label': t('rep.ends'), title: t('rep.ends_hint') });
+    if (onChange) input.addEventListener('change', () => onChange(input.value));
+    return { input, row: el('label', { class: 'rp-row rp-until' }, el('span', {}, t('rep.ends')), input) };
+  };
+  const keepUntil = (rule) => (current ? withUntil(rule, untilOf(current)) : rule);
 
   const item = (label, onclick, extra = '') => el('button', { class: 'menu-item' + extra, type: 'button', role: 'menuitem', onclick }, label);
   const list = () => [
     item(t('rep.none'), () => pick(null), current ? '' : ' on'),
-    ...quickRules(start).map((q) => item(q.label, () => pick(q.rule), q.rule === current ? ' on' : '')),
+    ...quickRules(start).map((q) => item(q.label, () => pick(keepUntil(q.rule)), keepUntil(q.rule) === current ? ' on' : '')),
     el('div', { class: 'menu-sep' }),
     item(t('rep.custom'), () => { menu.replaceChildren(panel()); menu.setAttribute('role', 'dialog'); place(menu, anchor); focusFirst(); }, ' muted'),
+    // Alleen bij een bestaand ritme: de einddatum direct aanpassen.
+    ...(current ? [untilField(untilOf(current), (v) => pick(withUntil(current, v))).row] : []),
   ];
 
   function panel() {
@@ -70,10 +82,11 @@ export function openRepeatPicker(anchor, task, onPick, remindAt) {
     n.addEventListener('input', sync);
     sync();
 
-    const klaar = () => pick(buildRule({ interval: Number(n.value), unit: /** @type {any} */ (unit.value), days: [...days], monthMode: /** @type {any} */ (mode.value) }, start));
+    const until = untilField(untilOf(current));
+    const klaar = () => pick(withUntil(buildRule({ interval: Number(n.value), unit: /** @type {any} */ (unit.value), days: [...days], monthMode: /** @type {any} */ (mode.value) }, start), until.input.value));
     return el('div', { class: 'rp' },
       el('div', { class: 'rp-row' }, el('span', {}, t('rep.every')), n, unit),
-      weeks, months,
+      weeks, months, until.row,
       el('div', { class: 'rp-actions' },
         el('button', { class: 'pill mini', type: 'button', onclick: () => pick(null) }, t('rep.none')),
         el('button', { class: 'pill rp-done', type: 'button', onclick: klaar }, t('rep.done'))));

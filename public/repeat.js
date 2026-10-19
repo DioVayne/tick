@@ -11,7 +11,8 @@ const longDay = (wd) => t(`wd.long.${wd}`);
 const shortMonth = (m) => t(`month.short.${m - 1}`);
 
 /** @typedef {{ wd: number, n: number | null }} ByDay  wd: 0 = maandag t/m 6 = zondag */
-/** @typedef {{ freq: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY', interval: number, byday: ByDay[], bymonthday: number | null }} Rule */
+/** @typedef {{ y: number, m: number, d: number }} Day  een kalenderdag, `m` 1-12 */
+/** @typedef {{ freq: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY', interval: number, byday: ByDay[], bymonthday: number | null, until: Day | null }} Rule  until: laatste dag (t/m, wandklok) */
 
 /** @param {string} timeZone */
 const formatter = (timeZone) => new Intl.DateTimeFormat('en-US', {
@@ -129,7 +130,7 @@ export function parseRule(s) {
   }
   const freq = kv.FREQ;
   if (freq !== 'DAILY' && freq !== 'WEEKLY' && freq !== 'MONTHLY' && freq !== 'YEARLY') throw bad(s);
-  for (const k of Object.keys(kv)) if (!['FREQ', 'INTERVAL', 'BYDAY', 'BYMONTHDAY'].includes(k)) throw bad(s);
+  for (const k of Object.keys(kv)) if (!['FREQ', 'INTERVAL', 'BYDAY', 'BYMONTHDAY', 'UNTIL'].includes(k)) throw bad(s);
   let interval = 1;
   if ('INTERVAL' in kv) {
     if (!/^\d{1,2}$/.test(kv.INTERVAL)) throw bad(s);
@@ -159,11 +160,46 @@ export function parseRule(s) {
     bymonthday = Number(kv.BYMONTHDAY);
     if (bymonthday < 1 || bymonthday > 31) throw bad(s);
   }
-  return { freq, interval, byday, bymonthday };
+  /** @type {Day | null} */
+  let until = null;
+  if ('UNTIL' in kv) {
+    const m = /^(\d{4})(\d{2})(\d{2})$/.exec(kv.UNTIL);
+    if (!m) throw bad(s);
+    until = { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) };
+    if (until.m < 1 || until.m > 12 || until.d < 1 || until.d > daysIn(until.y, until.m)) throw bad(s);
+  }
+  return { freq, interval, byday, bymonthday, until };
+}
+
+const pad = (n, w = 2) => String(n).padStart(w, '0');
+
+/**
+ * Een ritme met een andere einddatum (YYYY-MM-DD, t/m die dag), of zonder (null/leeg).
+ * @param {string} rule
+ * @param {string | null | undefined} untilDate
+ * @returns {string}
+ */
+export function withUntil(rule, untilDate) {
+  const r = parseRule(rule);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(untilDate || '');
+  r.until = m ? { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) } : null;
+  return normalizeRule(formatRule(r));
 }
 
 /**
- * Canonieke tekst: FREQ;INTERVAL (alleen >1);BYDAY;BYMONTHDAY.
+ * De einddatum van een ritme als YYYY-MM-DD (voor een datumveld), of '' zonder einde.
+ * @param {string | null | undefined} rule
+ * @returns {string}
+ */
+export function untilOf(rule) {
+  try {
+    const u = rule ? parseRule(rule).until : null;
+    return u ? `${pad(u.y, 4)}-${pad(u.m)}-${pad(u.d)}` : '';
+  } catch { return ''; }
+}
+
+/**
+ * Canonieke tekst: FREQ;INTERVAL (alleen >1);BYDAY;BYMONTHDAY;UNTIL (YYYYMMDD).
  * @param {Rule} r
  * @returns {string}
  */
@@ -172,6 +208,7 @@ export function formatRule(r) {
   if (r.interval > 1) out.push('INTERVAL=' + r.interval);
   if (r.byday.length) out.push('BYDAY=' + [...r.byday].sort((a, b) => a.wd - b.wd).map((b) => (b.n ?? '') + CODES[b.wd]).join(','));
   if (r.bymonthday !== null) out.push('BYMONTHDAY=' + r.bymonthday);
+  if (r.until) out.push('UNTIL=' + pad(r.until.y, 4) + pad(r.until.m) + pad(r.until.d));
   return out.join(';');
 }
 
@@ -215,10 +252,11 @@ function candidates(rule, idx, s) {
 
 /**
  * Eerste keer van het schema die op of na `startIso` valt en strikt later is dan `afterMs`, als ISO UTC.
+ * null als die na de einddatum (UNTIL) zou vallen: de reeks is dan klaar.
  * @param {string} rule
  * @param {string} startIso
  * @param {number} afterMs
- * @returns {string}
+ * @returns {string | null}
  */
 export function nextOccurrence(rule, startIso, afterMs) {
   const r = parseRule(rule);
@@ -227,10 +265,12 @@ export function nextOccurrence(rule, startIso, afterMs) {
   const s = zonedParts(startMs);
   const startIdx = periodIndex(r.freq, s);
   const first = periodIndex(r.freq, zonedParts(Math.max(startMs, afterMs)));
+  const last = r.until ? dayNum(r.until.y, r.until.m, r.until.d) : Infinity;
   for (let i = 0; i < 1000; i++) {
     const idx = first + i;
     if ((idx - startIdx) % r.interval !== 0) continue;
     for (const dn of candidates(r, idx, s).sort((a, b) => a - b)) {
+      if (dn > last) return null;
       const c = fromDayNum(dn);
       const ms = zonedToUtc(c.y, c.m, c.d, s.h, s.mi);
       if (ms >= startMs && ms > afterMs) return new Date(ms).toISOString();
@@ -252,8 +292,10 @@ export function occurrencesBetween(rule, startIso, fromMs, toMs, cap = 400) {
   const out = [];
   let after = fromMs - 1;
   while (out.length < cap) {
-    let ms;
-    try { ms = Date.parse(nextOccurrence(rule, startIso, after)); } catch { break; }
+    let next;
+    try { next = nextOccurrence(rule, startIso, after); } catch { break; }
+    if (next === null) break;
+    const ms = Date.parse(next);
     if (ms >= toMs) break;
     out.push(ms);
     after = ms;
@@ -272,6 +314,12 @@ const every = (base, n, vars = {}) => t(`${base}_${n === 1 ? 'one' : 'many'}`, {
  */
 export function describeRule(rule, startIso) {
   const r = parseRule(rule);
+  const text = describeRhythm(r, startIso);
+  return r.until ? t('rep.until', { rule: text, d: r.until.d, month: shortMonth(r.until.m), y: r.until.y }) : text;
+}
+
+/** @param {Rule} r @param {string} startIso */
+function describeRhythm(r, startIso) {
   const s = zonedParts(Date.parse(startIso));
   const i = r.interval;
   switch (r.freq) {
@@ -317,7 +365,7 @@ export function buildRule(k, startIso) {
   const s = zonedParts(Date.parse(startIso));
   const interval = Math.min(99, Math.max(1, Math.round(Number(k.interval)) || 1));
   /** @type {Rule} */
-  const r = { freq: 'DAILY', interval, byday: [], bymonthday: null };
+  const r = { freq: 'DAILY', interval, byday: [], bymonthday: null, until: null };
   if (k.unit === 'week') {
     r.freq = 'WEEKLY';
     const days = [...new Set(k.days?.length ? k.days : [s.wd])];

@@ -85,6 +85,7 @@ function applyLocal(op) {
       const p = zonedParts(Date.now());
       const start = fields.remind_at ?? t.remind_at ?? new Date(zonedToUtc(p.y, p.m, p.d, getDefaultTime().h, getDefaultTime().mi)).toISOString();
       const at = nextOccurrence(rule, start, Date.now() - 1);
+      if (at === null) throw new Error('einddatum voorbij');
       t.repeat = { rule, start, at };
       t.remind_at = at;
       t.notified = false;
@@ -92,11 +93,13 @@ function applyLocal(op) {
   }
   if ('location' in fields) t.location_notified = false;
   if ('list' in fields) for (const x of state.open) if (x.parent_id === t.id) x.list = fields.list;
-  if (done === true && !t.done && t.repeat && !t.parent_id) {
-    // Herhalende taak: schuift door naar de volgende keer en blijft open (alleen als dit de verwachte keer is).
-    if (occurrence !== undefined && occurrence !== t.repeat.at) return;
-    const now = Date.parse(op.at);
-    const next = nextOccurrence(t.repeat.rule, t.repeat.start, Math.max(now, Date.parse(t.repeat.at)));
+  // Herhalende taak: schuift door naar de volgende keer en blijft open (alleen als dit de verwachte keer is).
+  // Na de einddatum is er geen volgende keer en rondt afvinken de taak gewoon af.
+  const rolling = done === true && !t.done && t.repeat && !t.parent_id;
+  if (rolling && occurrence !== undefined && occurrence !== t.repeat.at) return;
+  const now = Date.parse(op.at);
+  const next = rolling ? nextOccurrence(t.repeat.rule, t.repeat.start, Math.max(now, Date.parse(t.repeat.at))) : null;
+  if (rolling && next !== null) {
     const kids = [...state.open, ...state.done].filter((x) => x.parent_id === t.id && x.done);
     // Elke stap overschrijft de stand: ongedaan maken draait de laatste stap terug (zoals op de server).
     undoRepeat.set(t.id, {

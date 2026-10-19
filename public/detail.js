@@ -413,7 +413,7 @@ function build(t, readOnly) {
     back,
     crumb,
     el('div', { class: 'dhead' }, check, title),
-    el('div', { class: 'pills' }, remindPill, plusHour, clearRemind, repeatPill, locPill, clearLoc, listPill),
+    el('div', { class: 'pills' }, el('div', { class: 'pill-group when' }, remindPill, plusHour, clearRemind, repeatPill), locPill, clearLoc, listPill),
     desc,
     filesBox,
     subs,
