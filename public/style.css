@@ -100,6 +100,8 @@ li.task.sortable-ghost { opacity: .4; }
 textarea.title-edit { display: block; min-width: 0; min-height: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none; outline: none; padding: 8.5px 2px; line-height: 1.4; resize: none; overflow: hidden; overflow-wrap: anywhere; cursor: text; }
 .meta { font-size: .75rem; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; padding: 0 10px 6px 60px; margin-top: -6px; }
 .meta .bell { color: var(--bell); }
+.row .pinned { flex: none; margin-left: auto; padding: 2px 4px; border: 0; border-radius: 6px; background: transparent; font-size: .75rem; line-height: 1; cursor: pointer; }
+.row .pinned:hover { background: var(--fill); }
 .meta .bell.past { color: var(--danger); }
 .net { margin: 0 0 6px; font-size: .8125rem; color: var(--muted); text-align: center; }
 .net.offline { color: var(--bell); }
@@ -228,6 +230,9 @@ textarea.editor { min-height: 120px; resize: none; overflow: hidden; font-size: 
 .crumb { display: block; max-width: 100%; min-height: 28px; padding: 2px 0; margin-bottom: 4px; background: transparent; color: var(--link); font-size: .875rem; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dhead { display: flex; align-items: flex-start; gap: 10px; }
 .dhead .check { margin-top: 4px; }
+.dpin { flex: none; width: 32px; height: 32px; margin-top: 2px; margin-left: auto; padding: 0; border: 0; border-radius: 6px; background: transparent; font-size: 1rem; opacity: .35; filter: grayscale(1); }
+.dpin:hover { opacity: .7; }
+.dpin[aria-pressed="true"] { opacity: 1; filter: none; background: var(--fill); }
 textarea.dt { flex: 1; min-width: 0; min-height: 0; border: 0; background: transparent; padding: 4px; border-radius: 6px; font-size: 1.125rem; font-weight: 600; line-height: 1.35; resize: none; overflow: hidden; overflow-wrap: anywhere; }
 textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 12px; }

@@ -11,7 +11,7 @@ import { readTickTickText, tickTickRows } from '../public/ticktick.js';
 const TASK_COLUMNS: (keyof TaskRow)[] = [
   'id', 'title', 'description', 'list', 'parent_id', 'position', 'remind_at', 'notified', 'done', 'done_at', 'source',
   'created_at', 'updated_at', 'loc_name', 'loc_lat', 'loc_lng', 'loc_radius', 'loc_trigger', 'loc_notified',
-  'repeat_rule', 'repeat_start', 'repeat_at', 'repeat_prev',
+  'repeat_rule', 'repeat_start', 'repeat_at', 'repeat_prev', 'pinned',
 ];
 const PLACE_COLUMNS = ['id', 'name', 'lat', 'lng', 'radius', 'created_at', 'updated_at'] as const;
 
@@ -40,7 +40,7 @@ const isObj = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.i
 const isStr = (v: unknown) => typeof v === 'string';
 const isId = (v: unknown) => typeof v === 'string' && v !== '';
 /** Kolommen met NOT NULL; een null of ontbrekende waarde laat de DB-standaard gelden. */
-const NOT_NULL = new Set(['title', 'description', 'list', 'position', 'notified', 'done', 'source', 'created_at', 'updated_at', 'loc_notified']);
+const NOT_NULL = new Set(['title', 'description', 'list', 'position', 'notified', 'done', 'source', 'created_at', 'updated_at', 'loc_notified', 'pinned']);
 const isNum = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
 const invalid = () => new HttpError(400, 'err.backup_invalid');
 
