@@ -213,17 +213,29 @@ body.settings-open #btn-search, body.settings-open #search, body.calendar-open #
 #resizer, #detail { display: none; }
 #side { background: var(--side); border-right: 1px solid var(--line); padding: max(12px, env(safe-area-inset-top)) 8px 12px; display: flex; flex-direction: column; overflow-y: auto; }
 .brand { margin: 4px 8px 8px; font-size: 1.25rem; }
-#side-lists { display: grid; gap: 1px; }
-#side .item { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 38px; padding: 6px 12px; border-radius: 8px; background: transparent; color: var(--text); text-align: left; font-size: .9375rem; }
-#side .item:hover { background: var(--hover); }
-#side .item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Zijbalk in blokken: Alle en Inbox, de eigen lijsten (met Nieuwe lijst), en Kalender/Afgerond/Prullenbak. */
+#side { --side-blk: color-mix(in srgb, var(--side), var(--text) 5%); }
+#side-lists { display: grid; gap: 0; }
+.side-grp { display: grid; gap: 1px; padding: 4px; border-radius: 10px; background: var(--side-blk); }
+.side-h { margin: 14px 10px 6px; color: var(--muted); font-size: .75rem; }
+.side-mine { border-radius: 10px 10px 0 0; padding-bottom: 0; }
+.side-mine:empty { padding: 2px 0 0; }
+#side-new { padding: 1px 4px 4px; border-radius: 0 0 10px 10px; background: var(--side-blk); }
+.side-more { margin-top: 14px; }
+#side .item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 6px 10px; border-radius: 7px; background: transparent; color: var(--text); text-align: left; font-size: .9375rem; }
+#side .item:hover { background: color-mix(in srgb, var(--side), var(--text) 10%); }
+#side .item .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #side .item .count { color: var(--muted); font-size: .8125rem; }
-#side .item.on, #side .item[aria-pressed="true"] { background: var(--sel); color: var(--text); font-weight: 500; }
+#side .ico { flex: none; width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#side .dot { flex: none; width: 9px; height: 9px; margin: 0 4.5px; border-radius: 50%; background: var(--dot, var(--muted)); }
+/* De gekozen lijst: hetzelfde accentrandje met gloed als een gekozen taak */
+#side .item.on, #side .item[aria-pressed="true"] { background: color-mix(in srgb, var(--side-blk), var(--accent) 12%); color: var(--text); font-weight: 500;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 20%, transparent); }
+#side .item.on .ico, #side .item[aria-pressed="true"] .ico { stroke: var(--accent); }
 #side .item.muted { color: var(--muted); }
 #side .item.drop { outline: 2px dashed var(--accent); outline-offset: -2px; background: var(--sel); }
 #side [hidden] { display: none; }
 #side .sep { border-top: 1px solid var(--line); margin: 10px 6px; }
-#side-lists .sep { margin: 4px 6px; border-color: transparent; }
 .side-foot { margin-top: auto; padding-top: 12px; display: grid; gap: 1px; }
 .newlist { margin: 1px 0; }
 .scrim { display: none; }

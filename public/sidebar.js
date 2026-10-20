@@ -40,20 +40,49 @@ export function renderSidebar() {
   const all = lists();
   // Met de instellingen open is geen lijst gekozen in de zijbalk; ⚙ Instellingen is dan gemarkeerd.
   const current = (name) => !settingsOpen() && !calendarOpen() && !state.showDone && !state.showTrash && state.list === name;
-  const item = (name, label, count) =>
+  const item = (name, label, count, lead) =>
     el('button', {
       class: 'item' + (current(name) ? ' on' : ''),
       'data-list': name ?? '',
       'aria-current': current(name) ? 'true' : false,
-    }, el('span', { class: 'name' }, label), el('span', { class: 'count' }, String(count)));
+    }, lead, el('span', { class: 'name' }, label), el('span', { class: 'count' }, String(count)));
   // Een lijst die alleen afgeronde taken heeft staat er gewoon met 0.
   const total = all.reduce((n, l) => n + l.open, 0);
+  const inbox = all.find((l) => l.name === 'Inbox');
+  // Blokken: Alle en Inbox, dan de eigen lijsten (met Nieuwe lijst eronder, in #side-new), elk met een vaste kleur.
   $('#side-lists').replaceChildren(
-    item(null, t('ui.all'), total),
-    el('div', { class: 'sep' }),
-    ...all.map((l) => item(l.name, l.name, l.open)),
+    el('div', { class: 'side-grp' },
+      item(null, t('ui.all'), total, icon(ALL)),
+      inbox ? item(inbox.name, inbox.name, inbox.open, icon(INBOX)) : null),
+    el('p', { class: 'side-h' }, t('ui.lists')),
+    el('div', { class: 'side-grp side-mine' }, ...all.filter((l) => l !== inbox).map((l) => item(l.name, l.name, l.open, dot(l.name)))),
   );
   updateHeader();
+}
+
+const ALL = 'M4 6h2M4 12h2M4 18h2M9 6h11M9 12h11M9 18h11';
+const INBOX = 'M4 13h4l1 3h6l1-3h4M4 13l2-8h12l2 8v6H4z';
+
+/** Een lijnicoon (zoals Kalender, Afgerond en Prullenbak in index.html). */
+function icon(d) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'ico');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', d);
+  svg.append(path);
+  return svg;
+}
+
+// Lijsten hebben geen eigen kleur: de naam kiest er vast een uit deze reeks (leesbaar op licht en donker).
+const DOTS = ['#1d9e75', '#7f77dd', '#d4537e', '#e8a317', '#378add', '#d85a30', '#639922', '#14a3b8'];
+function dot(name) {
+  let h = 0;
+  for (const c of name.toLowerCase()) h = (h * 31 + c.codePointAt(0)) >>> 0;
+  const span = el('span', { class: 'dot', 'aria-hidden': 'true' });
+  span.style.setProperty('--dot', DOTS[h % DOTS.length]); // CSSOM: geen style-attribuut (CSP)
+  return span;
 }
 
 const settingsOpen = () => document.body.classList.contains('settings-open');
