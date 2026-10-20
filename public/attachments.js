@@ -272,7 +272,7 @@ export function fillAttachmentsBox(box, task, readOnly) {
       })) : null,
       readOnly ? null : el('div', { class: 'att-add' },
         el('button', {
-          type: 'button', class: 'pill', disabled: state.offline,
+          type: 'button', class: 'pill secbtn', disabled: state.offline,
           title: state.offline ? t('att.offline') : false,
           onclick: () => input.click(),
         }, '📎 ' + t('att.add')),

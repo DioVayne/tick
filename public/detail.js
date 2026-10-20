@@ -283,15 +283,27 @@ function build(t, readOnly) {
   });
   titleSize.observe(title);
 
-  const remind = el('input', { type: 'datetime-local', 'aria-label': tr('ui.reminder'), disabled: readOnly });
+  // required: een leeg veld is dan :invalid, en dan toont de CSS een uitleg in plaats van dd-mm-jjjj --:--.
+  const remind = el('input', { type: 'datetime-local', 'aria-label': tr('ui.reminder'), disabled: readOnly, required: true });
+  // Was het leeg bij de klik, dan meteen de kiezer open (de uitleg ligt over het veld, dus anders gebeurt er niets).
+  let wasEmpty = false;
+  remind.addEventListener('pointerdown', () => { wasEmpty = !remind.value; });
+  remind.addEventListener('click', () => {
+    if (!wasEmpty) return;
+    wasEmpty = false;
+    try { remind.showPicker(); } catch { /* al open, of niet ondersteund */ }
+  });
   const remindChanged = () => {
     setPending(id, 'remind_at', fromLocalInput(remind.value));
     showStatus();
+    // Een net gekozen datum: herhalen meteen aanbieden, niet pas na het opslaan.
+    if (view?.id === id) view.repeatRow.hidden = view.repeatPill.hidden || (!remind.value && !current(id)?.repeat);
   };
   remind.addEventListener('change', remindChanged);
   prefillOnOpen(remind, remindChanged);
   remind.addEventListener('blur', flushSoon);
-  const remindPill = el('label', { class: 'pill remind', title: tr('ui.reminder') }, el('span', { 'aria-hidden': 'true' }, '🔔'), remind);
+  const remindPill = el('label', { class: 'pill remind', title: tr('ui.reminder') },
+    el('span', { 'aria-hidden': 'true' }, '🔔'), remind, el('span', { class: 'ph', 'aria-hidden': 'true' }, tr('detail.set_reminder')));
   // Verzetten en wissen winnen van een gekozen, nog niet opgeslagen tijd (die anders na de klik alsnog zou gaan).
   const plusHour = el('button', { class: 'pill mini', type: 'button', onclick: () => { dropField(id, 'remind_at'); save(snooze(id, 60)); } }, tr('push.snooze'));
   const clearRemind = el('button', {
@@ -411,6 +423,8 @@ function build(t, readOnly) {
     },
   }, tr('detail.delete'));
 
+  // Herhalen hoort bij een datum: de rij verschijnt pas als er een reminder (of al een ritme) is; zie fill().
+  const repeatRow = el('div', { class: 'prow', hidden: true }, repeatPill);
   const filesBox = el('section', { class: 'dfiles', hidden: true });
   const shareBox = el('section', { class: 'dshare', hidden: true });
   const copiesBox = el('section', { class: 'dcopies', hidden: true });
@@ -421,17 +435,19 @@ function build(t, readOnly) {
     // Wanneer, ritme, plek en lijst: één blok met een rij per eigenschap.
     el('div', { class: 'dprops' },
       el('div', { class: 'prow when' }, remindPill, plusHour, clearRemind),
-      el('div', { class: 'prow', hidden: repeatPill.hidden }, repeatPill),
+      repeatRow,
       el('div', { class: 'prow' }, locPill, clearLoc),
       el('div', { class: 'prow' }, listPill)),
     desc,
+    readOnly ? null : el('p', { class: 'md-hint' }, tr('detail.markdown_hint') + ' ',
+      el('a', { href: 'https://www.markdownguide.org/cheat-sheet/', target: '_blank', rel: 'noopener' }, tr('detail.markdown_link'))),
     subs,
     filesBox,
     copiesBox,
     shareBox,
     el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, reopen, del)),
   ].filter(Boolean));
-  view = { filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remind, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
+  view = { repeatRow, filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remind, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
 }
 
 function fill(t) {
@@ -455,11 +471,13 @@ function fill(t) {
   const past = remindAt && new Date(remindAt) < new Date();
   v.remindPill.classList.toggle('b', !!remindAt && !past);
   v.remindPill.classList.toggle('past', !!past);
+  v.remindPill.classList.toggle('none', !remindAt);
   v.remindPill.title = remindAt ? tr('detail.reminder_at', { when: fmt(remindAt) }) : tr('ui.reminder');
   v.plusHour.hidden = done || !remindAt;
   v.clearRemind.hidden = done || !remindAt;
   const rep = t.repeat;
   v.repeatLabel.textContent = '🔁 ' + (rep ? describeRule(rep.rule, rep.start) : tr('rep.none'));
+  v.repeatRow.hidden = v.repeatPill.hidden || (!remindAt && !rep);
   // Al gemeld: de plek doet niets meer tot hij opnieuw gekozen wordt.
   v.locLabel.textContent = t.location ? locationLabel(t.location) + (t.location_notified ? tr('detail.already_notified') : '') : tr('detail.no_location');
   v.clearLoc.hidden = done || !t.location;
