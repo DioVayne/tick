@@ -1,7 +1,24 @@
 // Intent-links naar de Android-app. Geen imports, zodat de tests dit bestand los kunnen laden.
 
-/** Geeft de eenmalige koppelcode aan de app. */
-export const pairIntent = (pkg, code) => `intent://pair?code=${encodeURIComponent(code)}#Intent;scheme=tick;package=${pkg};end`;
+/** De officiële Android-app (GitHub Releases); ook nodig in src/assetlinks.ts. */
+export const OFFICIAL_PACKAGE = 'nl.detussenpartij.tick';
+
+/** Waar je de officiële app downloadt; daar gaat Chrome heen als de app er (nog) niet is. */
+export const RELEASES_URL = 'https://github.com/DioVayne/tick/releases/latest';
+
+/**
+ * Geeft de eenmalige koppelcode en het adres van deze Tick aan de app. Met fallback opent Chrome dat adres als de app
+ * niet geïnstalleerd is.
+ */
+export const pairIntent = (pkg, code, base, fallback) => `intent://pair?code=${encodeURIComponent(code)}`
+  + (base ? `&base=${encodeURIComponent(base)}` : '')
+  + `#Intent;scheme=tick;package=${pkg};`
+  + (fallback ? `S.browser_fallback_url=${encodeURIComponent(fallback)};` : '')
+  + 'end';
+
+/** Het package van de app uit document.referrer van een TWA-start (android-app://<package>/), of null. */
+export const packageFromReferrer = (referrer) =>
+  /^android-app:\/\/([A-Za-z][\w]*(?:\.[A-Za-z][\w]*)+)(?:\/|$)/.exec(referrer ?? '')?.[1] ?? null;
 
 /** Opent de instellingen van de app (meldingen, locatie). */
 export const settingsIntent = (pkg) => `intent://settings#Intent;scheme=tick;package=${pkg};end`;

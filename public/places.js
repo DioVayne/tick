@@ -1,7 +1,7 @@
 import { Offline, request } from './api.js';
 import { kvGet, kvSet } from './db.js';
 import { t } from './i18n.js';
-import CONFIG from './settings.js';
+import { knownAppPackage } from './androidapp.js';
 
 // Favoriete plekken, het label van een plek en het wekken van de Android-app.
 
@@ -43,11 +43,12 @@ export const geocode = (q) => request('GET', '/api/geocode?q=' + encodeURICompon
  * Chrome de fallback-URL, dus gewoon Tick. `since` is de updated_at die we nu van de taak kennen.
  */
 export function wakeAndroidApp(taskId, since) {
-  // Alleen met een eigen Android-build (ANDROID_PACKAGE); anders zou Chrome de fallback-URL openen.
-  if (!/Android/i.test(navigator.userAgent) || !CONFIG.androidPackage) return;
+  // Alleen als er een app bekend is (gezien op deze telefoon, of ANDROID_PACKAGE); anders zou Chrome de fallback-URL openen.
+  const pkg = knownAppPackage();
+  if (!/Android/i.test(navigator.userAgent) || !pkg) return;
   const fallback = encodeURIComponent(location.origin + '/');
   // Zonder taak: gewoon één keer verversen (bijvoorbeeld een plek die een ander op een gedeelde taak zette).
   const query = taskId ? `?task=${encodeURIComponent(taskId)}&since=${encodeURIComponent(since)}` : '';
   location.href = `intent://sync${query}`
-    + `#Intent;scheme=tick;package=${CONFIG.androidPackage};S.browser_fallback_url=${fallback};end`;
+    + `#Intent;scheme=tick;package=${pkg};S.browser_fallback_url=${fallback};end`;
 }

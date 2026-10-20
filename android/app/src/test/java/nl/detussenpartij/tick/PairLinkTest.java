@@ -13,4 +13,13 @@ public class PairLinkTest {
         assertNull(PairLink.code("tick://sync?code=abc"));
         assertNull(PairLink.code("tick://pair"));
     }
+    @Test public void leestAdres() {
+        assertEquals("https://t.example", PairLink.base("tick://pair?code=abc&base=https%3A%2F%2Ft.example%2F"));
+        assertEquals("abc", PairLink.code("tick://pair?code=abc&base=https%3A%2F%2Ft.example"));
+    }
+    @Test public void zonderOfOngeldigAdres() {
+        assertNull(PairLink.base("tick://pair?code=abc"));
+        assertNull(PairLink.base("tick://pair?code=abc&base=http%3A%2F%2Ft.example"));
+        assertNull(PairLink.base("tick://sync?base=https%3A%2F%2Ft.example"));
+    }
 }

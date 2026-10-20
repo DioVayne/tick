@@ -1,10 +1,30 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { LOC_BAR_SNOOZE_MS, locationProblems, pairIntent, problemKey, pushAction, settingsIntent, showLocationBar, startPushAction } from '../public/applink.js';
+import { LOC_BAR_SNOOZE_MS, OFFICIAL_PACKAGE, RELEASES_URL, locationProblems, packageFromReferrer, pairIntent, problemKey, pushAction, settingsIntent, showLocationBar, startPushAction } from '../public/applink.js';
+import { OFFICIAL_APP } from '../src/assetlinks';
 import { call } from './helpers';
 
 describe('intent-links voor de Android-app', () => {
   it('bouwt het koppel-intent met gecodeerde code', () =>
     expect(pairIntent('com.example.tick', 'a+b/c')).toBe('intent://pair?code=a%2Bb%2Fc#Intent;scheme=tick;package=com.example.tick;end'));
+
+  it('geeft het adres van de Tick mee, en zo nodig een downloadpagina als de app er niet is', () => {
+    expect(pairIntent('com.example.tick', 'abc', 'https://t.example')).toBe(
+      'intent://pair?code=abc&base=https%3A%2F%2Ft.example#Intent;scheme=tick;package=com.example.tick;end');
+    expect(pairIntent(OFFICIAL_PACKAGE, 'abc', 'https://t.example', RELEASES_URL)).toBe(
+      `intent://pair?code=abc&base=https%3A%2F%2Ft.example#Intent;scheme=tick;package=${OFFICIAL_PACKAGE};`
+      + `S.browser_fallback_url=${encodeURIComponent(RELEASES_URL)};end`);
+  });
+
+  it('leest het package van de app uit de referrer van een TWA-start', () => {
+    expect(packageFromReferrer('android-app://nl.detussenpartij.tick/')).toBe('nl.detussenpartij.tick');
+    expect(packageFromReferrer('android-app://com.example.tick')).toBe('com.example.tick');
+    expect(packageFromReferrer('https://t.example/')).toBeNull();
+    expect(packageFromReferrer('android-app://geen-package/')).toBeNull();
+    expect(packageFromReferrer('android-app://com.example.tick;end/')).toBeNull();
+    expect(packageFromReferrer('')).toBeNull();
+  });
+
+  it('de officiële app heeft hetzelfde package als in assetlinks', () => expect(OFFICIAL_PACKAGE).toBe(OFFICIAL_APP.pkg));
 
   it('bouwt het intent voor de telefooninstellingen', () =>
     expect(settingsIntent('com.example.tick')).toBe('intent://settings#Intent;scheme=tick;package=com.example.tick;end'));

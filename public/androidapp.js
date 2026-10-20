@@ -1,7 +1,8 @@
 // Tick draait in de Android-app (een Trusted Web Activity die /?app=android opent). Hier: koppelen met de app via een
-// eenmalige code in een intent-link, web push aanzetten en dubbele meldingen signaleren.
+// eenmalige code in een intent-link (ook vanuit de browser op de telefoon), web push aanzetten en dubbele meldingen
+// signaleren.
 import { request } from './api.js';
-import { locationProblems, pairIntent, problemKey, pushAction, settingsIntent, showLocationBar, startPushAction } from './applink.js';
+import { OFFICIAL_PACKAGE, RELEASES_URL, locationProblems, packageFromReferrer, pairIntent, problemKey, pushAction, settingsIntent, showLocationBar, startPushAction } from './applink.js';
 import { t } from './i18n.js';
 import { enablePush, pushState, pushTurnedOff } from './push.js';
 import { wakeAndroidApp } from './places.js';
@@ -10,6 +11,7 @@ import CONFIG from './settings.js';
 
 const APP_KEY = 'tick.app';
 const DUP_KEY = 'tick.dupHint';
+const PKG_KEY = 'tick.appPkg';
 const LOC_KEY = 'tick.locBarDismissed';
 const POLL_MS = 1000;
 const CODE_TTL_MS = 2 * 60 * 1000;
@@ -20,9 +22,24 @@ export function isInApp() {
   try { return sessionStorage.getItem(APP_KEY) === 'android'; } catch { return false; }
 }
 
+/**
+ * Het package van de Android-app op deze telefoon: zoals gezien bij de laatste start in de app (de TWA deelt
+ * localStorage met Chrome, dus de browser weet het ook), anders ANDROID_PACKAGE van een eigen build, anders null.
+ */
+export function knownAppPackage() {
+  try {
+    const pkg = localStorage.getItem(PKG_KEY);
+    if (pkg) return pkg;
+  } catch { /* geen opslag */ }
+  return CONFIG.androidPackage || null;
+}
+
+/** Het package om een intent naar te sturen; zonder bekende app de officiële. */
+const appPackage = () => knownAppPackage() ?? OFFICIAL_PACKAGE;
+
 /** Opent de instellingen van de app (meldingen, locatie). */
 export function openPhoneSettings() {
-  if (CONFIG.androidPackage) location.href = settingsIntent(CONFIG.androidPackage);
+  location.href = settingsIntent(appPackage());
 }
 
 /**
@@ -35,6 +52,11 @@ export function initAndroidApp(params, { openDevices } = {}) {
   if (params.get('app') === 'android' || document.referrer.startsWith('android-app://')) {
     try { sessionStorage.setItem(APP_KEY, 'android'); } catch { /* geen opslag */ }
   }
+  // Welke app (officieel of een eigen build): alleen bij onze eigen start-URL, niet bij een link uit een andere app.
+  const pkg = params.get('app') === 'android' ? packageFromReferrer(document.referrer) : null;
+  if (pkg) {
+    try { localStorage.setItem(PKG_KEY, pkg); } catch { /* geen opslag */ }
+  }
   const pair = params.get('pair') === '1';
   if (params.has('app') || params.has('pair')) {
     const url = new URL(location.href);
@@ -42,8 +64,8 @@ export function initAndroidApp(params, { openDevices } = {}) {
     url.searchParams.delete('pair');
     history.replaceState(history.state, '', url.pathname + url.search + url.hash);
   }
-  if (!isInApp() || !CONFIG.androidPackage) return;
-  if (pair) pairApp(CONFIG.androidPackage, openDevices).catch(() => { /* de knop in Instellingen blijft de terugvalroute */ });
+  if (!isInApp()) return;
+  if (pair) pairApp(appPackage(), openDevices).catch(() => { /* de knop in Instellingen blijft de terugvalroute */ });
   else {
     // Al gekoppeld (ook na een update van de app): meldingen aanzetten als de app toestemming heeft en ze nog uit staan.
     startAppPush().catch(() => { /* de schakelaar in Instellingen blijft over */ });
@@ -74,20 +96,41 @@ function bar(text, label, onClick) {
  */
 async function pairApp(pkg, openDevices) {
   const { id, code, expires_at: expires } = await request('POST', '/api/pair');
-  const intent = pairIntent(pkg, code);
-  const deadline = Math.min(Date.parse(expires) || Infinity, Date.now() + CODE_TTL_MS);
+  const intent = pairIntent(pkg, code, location.origin);
   const notice = bar(t('app.pair_hint'), t('app.pair_button'), () => { location.href = intent; });
   try {
-    while (Date.now() < deadline) {
-      await sleep(POLL_MS);
-      let used = false;
-      try { used = (await request('GET', `/api/pair/${id}`)).used; } catch { /* offline of 404: blijven peilen tot het verloopt */ }
-      if (used) { await enableAppPush(); await hintDuplicates(openDevices); return; }
-    }
+    if (await waitForPair(id, expires)) { await enableAppPush(); await hintDuplicates(openDevices); return; }
     toast(t('app.pair_failed'));
   } finally {
     notice.remove();
   }
+}
+
+/**
+ * Vanuit de browser op een Android-telefoon (Instellingen › Apparaten): geeft de Tick-app het adres van deze Tick en
+ * een koppelcode in één link. Zonder app opent Chrome de downloadpagina. Alleen na een tik op een knop: dan mag de
+ * navigatie naar het intent meteen.
+ * @param {() => void} [onDone] na het koppelen, bijvoorbeeld de lijst met apparaten opnieuw tonen
+ */
+export async function connectApp(onDone) {
+  const { id, code, expires_at: expires } = await request('POST', '/api/pair');
+  location.href = pairIntent(appPackage(), code, location.origin, RELEASES_URL);
+  if (await waitForPair(id, expires)) {
+    toast(t('app.connected'));
+    onDone?.();
+  }
+}
+
+/** Peilt tot de app de code heeft ingewisseld (true) of tot hij verloopt (false). */
+async function waitForPair(id, expires) {
+  const deadline = Math.min(Date.parse(expires) || Infinity, Date.now() + CODE_TTL_MS);
+  while (Date.now() < deadline) {
+    await sleep(POLL_MS);
+    try {
+      if ((await request('GET', `/api/pair/${id}`)).used) return true;
+    } catch { /* offline of 404: blijven peilen tot het verloopt */ }
+  }
+  return false;
 }
 
 /**
@@ -161,7 +204,7 @@ export function startLocationBar({ hasLocationTasks, openDevices }) {
     const noNotif = list.some((p) => !p.status.notifications);
     const why = noLoc && noNotif ? t('locbar.why_both') : noLoc ? t('locbar.why_location') : t('locbar.why_notifications');
     const fix = () => {
-      if (isInApp() && CONFIG.androidPackage) openPhoneSettings();
+      if (isInApp()) openPhoneSettings();
       else openDevices?.();
     };
     const hide = () => {
@@ -201,7 +244,7 @@ export function startLocationBar({ hasLocationTasks, openDevices }) {
 export function offerAppSync() {
   // Niet alleen isInApp(): een tik op een melding opent een nieuw venster zonder ?app=android. Zonder app opent de
   // fallback gewoon Tick.
-  if (!/Android/i.test(navigator.userAgent) || !CONFIG.androidPackage || document.querySelector('.appbar.geo')) return;
+  if (!/Android/i.test(navigator.userAgent) || !knownAppPackage() || document.querySelector('.appbar.geo')) return;
   const b = bar(t('geo.wake_hint'), t('geo.wake_button'), () => { b.remove(); wakeAndroidApp(null); });
   b.classList.add('geo');
   setTimeout(() => b.remove(), 60_000);

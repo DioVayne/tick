@@ -12,6 +12,19 @@ final class Prefs {
         return c.getSharedPreferences("tick", Context.MODE_PRIVATE);
     }
 
+    /**
+     * Het adres van je Tick (https://host, zonder pad), of leeg als de app het nog niet weet. Een eigen build met
+     * tickBase begint met dat adres; de algemene app vraagt het bij de eerste start (SetupActivity) of krijgt het uit
+     * de koppellink.
+     */
+    static String base(Context c) {
+        return sp(c).getString("base", BuildConfig.TICK_BASE);
+    }
+
+    static void setBase(Context c, String base) {
+        sp(c).edit().putString("base", base).commit();
+    }
+
     static String token(Context c) {
         return sp(c).getString("token", "");
     }

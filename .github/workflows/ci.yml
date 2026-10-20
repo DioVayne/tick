@@ -17,3 +17,15 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      # Zonder tickBase: de algemene app, zoals de release.
+      - run: bash ./gradlew --no-daemon testDebugUnitTest assembleDebug
+        working-directory: android
