@@ -10,7 +10,7 @@ import { openRepeatPicker } from './repeatpicker.js';
 import { openMap } from './map.js';
 import { renderMarkdown } from './markdown.js';
 import { locationLabel, wakeAndroidApp } from './places.js';
-import { $, el, fmt, fromLocalInput, render, toLocalInput } from './render.js';
+import { $, checkOff, el, fmt, fromLocalInput, render, toLocalInput } from './render.js';
 import { addSubtask, findDone, remove, snooze, state, toggleDone, update, updateQueued } from './store.js';
 import { fillShareBox } from './share.js';
 
@@ -367,7 +367,7 @@ function build(t, readOnly) {
       flushPending();
       const task = current(id);
       if (task && !task.done && !state.justDone.has(task.id)) confetti(e.currentTarget, isCouple(task.share ?? findTask(task.parent_id)?.share));
-      if (task) toggleDone(task);
+      if (task) checkOff(task);
     },
   });
 
@@ -508,7 +508,7 @@ function fill(t) {
           el('button', {
             class: 'check', role: 'checkbox', 'aria-checked': String(kDone), disabled: done,
             'aria-label': state.justDone.has(k.id) ? tr('render.undo') : kDone ? tr('render.reopen') : tr('render.check'),
-            onclick: (e) => { if (!kDone) confetti(e.currentTarget, isCouple(t.share)); toggleDone(current(k.id) ?? k); }, // de rij kan ouder zijn dan de taak na een verversing
+            onclick: (e) => { if (!kDone) confetti(e.currentTarget, isCouple(t.share)); checkOff(current(k.id) ?? k); }, // de rij kan ouder zijn dan de taak na een verversing
           }),
           el('button', { class: 'subtitle', type: 'button', onclick: () => selectTask(k.id) }, k.title));
       }));
