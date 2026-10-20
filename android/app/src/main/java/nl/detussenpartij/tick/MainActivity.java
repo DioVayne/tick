@@ -52,6 +52,11 @@ public class MainActivity extends Activity {
         Notify.ensureChannel(c);
         addShortcuts(c);
         TaskWidgetProvider.updateAll(c);
+        // Na "Gedwongen stoppen" werken de geofences niet meer, terwijl de signature nog zegt dat ze staan.
+        if (Geo.permitted(c) && !Geo.intentAlive(c)) {
+            Prefs.setGeoSig(c, null);
+            Geo.applyFromCache(c, true);
+        }
     }
 
     /**
