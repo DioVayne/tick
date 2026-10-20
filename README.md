@@ -48,9 +48,11 @@ Claude asks a few questions (language, time zone, Android app or not), sets ever
 ## A quick tour
 
 <p>
-  <img src="docs/screenshots/demo.gif" width="260" alt="A short demo on a phone: add a task, open Buy groceries and its location picker, tick a task off with confetti, and switch to the Personal list">
+  <img src="docs/screenshots/demo.gif" width="280" alt="Demo of Tick on a phone: add the task Buy screws, link it to the hardware store on a map with an on-arrival reminder, then tick it off from the Android notification that appears on arrival">
   <img src="docs/screenshots/mobile-menu.png" width="260" alt="The menu on a phone: All and Inbox, the lists Home, Personal and Work each with their own colour, then Calendar, Completed and Trash">
 </p>
+
+<sub>The notification in the demo is a mock-up of what the Tick Android app shows when you arrive at a place; everything else is the real app. <a href="docs/screenshots/demo.mp4">Watch it as a video</a>.</sub>
 
 **On your phone** Tick is an installable app that also works offline: changes you make without a connection sync once you are back online. Add a task, give it a time or a place, tick it off and a little burst of confetti comes out of the checkbox. The Android app adds a **home-screen widget**: tick tasks off right there (with 3 seconds to undo) or add one with ➕.
 
