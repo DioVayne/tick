@@ -1,20 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { assetLinks } from '../src/assetlinks';
+import { OFFICIAL_APP, assetLinks } from '../src/assetlinks';
 import { call } from './helpers';
 
 const FP = 'AB:'.repeat(31) + 'CD';
+// Zonder officiële app, om alleen de eigen build te testen.
+const NONE = { pkg: '', certs: '' };
 
 describe('assetlinks', () => {
   it('geeft de verklaring voor package en vingerafdrukken', () => {
-    expect(assetLinks('com.example.tick', ` ${FP.toLowerCase()} , ${FP}`)).toEqual([{
+    expect(assetLinks('com.example.tick', ` ${FP.toLowerCase()} , ${FP}`, NONE)).toEqual([{
       relation: ['delegate_permission/common.handle_all_urls'],
       target: { namespace: 'android_app', package_name: 'com.example.tick', sha256_cert_fingerprints: [FP] },
     }]);
   });
   it('zonder package of zonder geldige vingerafdruk een lege lijst', () => {
-    expect(assetLinks('', FP)).toEqual([]);
-    expect(assetLinks('com.example.tick', '')).toEqual([]);
-    expect(assetLinks('com.example.tick', 'geen-vingerafdruk')).toEqual([]);
+    expect(assetLinks('', FP, NONE)).toEqual([]);
+    expect(assetLinks('com.example.tick', '', NONE)).toEqual([]);
+    expect(assetLinks('com.example.tick', 'geen-vingerafdruk', NONE)).toEqual([]);
   });
   it('de officiële app staat erbij, ook zonder eigen build', () => {
     const official = { pkg: 'nl.example.official', certs: FP };
@@ -32,6 +34,12 @@ describe('assetlinks', () => {
     }]);
     // Zonder vingerafdruk van de officiële app (nog geen release-sleutel): alleen de eigen build.
     expect(assetLinks('com.example.tick', FP, { pkg: 'nl.example.official', certs: '' })).toEqual([statement('com.example.tick')]);
+  });
+  it('standaard staat de officiële app met de release-vingerafdruk erin', () => {
+    expect(assetLinks(undefined, undefined)).toEqual([{
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: { namespace: 'android_app', package_name: OFFICIAL_APP.pkg, sha256_cert_fingerprints: [OFFICIAL_APP.certs] },
+    }]);
   });
   it('/api/hello werkt zonder inlog en zegt dat dit een Tick is', async () => {
     const res = await call('/api/hello', { auth: null });
