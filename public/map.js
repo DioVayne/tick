@@ -1,9 +1,11 @@
 import { Offline } from './api.js';
 import { t } from './i18n.js';
-import { RADIUS, deletePlace, formatRadius, geocode, loadPlaces, renamePlace, savePlace } from './places.js';
+import { ask } from './dialog.js';
+import { RADIUS, deletePlace, formatRadius, geocode, loadPlaces, renamePlace, savePlace, updatePlace } from './places.js';
 import { el, toast } from './render.js';
 
-// Schermvullend kaartscherm om een plek voor een taak te kiezen. De pin staat vast in het midden; je schuift de kaart eronder.
+// Schermvullend kaartscherm om een plek voor een taak te kiezen, of (vanuit de instellingen) een favoriete plek toe te
+// voegen of te wijzigen. De pin staat vast in het midden; je schuift de kaart eronder.
 
 const NL = [52.2, 5.3];
 const ZOOM = 15;
@@ -42,7 +44,15 @@ function placeError(e) {
 let isOpen = false;
 
 /** Opent het kaartscherm. Geeft de gekozen plek ({ name, lat, lng, radius, trigger }), of undefined bij Sluiten. */
-export async function openMap(task) {
+export const openMap = (task) => openScreen({ loc: task.location ?? null, place: undefined });
+
+/**
+ * Kaartscherm voor een favoriete plek: `null` voegt er een toe, een plek wijzigt of verwijdert die.
+ * Geeft true als er iets is opgeslagen of verwijderd.
+ */
+export const editPlace = async (place) => !!(await openScreen({ loc: place, place }));
+
+async function openScreen(mode) {
   if (navigator.onLine === false) {
     toast(t('map.map_online_only'));
     return undefined;
@@ -51,7 +61,7 @@ export async function openMap(task) {
   isOpen = true;
   try {
     const L = await loadLeaflet();
-    return await new Promise((resolve) => buildScreen(L, task, resolve));
+    return await new Promise((resolve) => buildScreen(L, mode, resolve));
   } catch {
     // Ging het mis halverwege het opbouwen, dan mag het scherm niet half blijven staan.
     document.querySelector('.mapscreen')?.remove();
@@ -63,8 +73,9 @@ export async function openMap(task) {
   }
 }
 
-function buildScreen(L, task, resolve) {
-  const loc = task.location;
+/** mode.place: undefined bij een taak; null (nieuw) of een plek bij het beheren van favorieten. */
+function buildScreen(L, { loc, place }, resolve) {
+  const managing = place !== undefined;
   let radius = loc?.radius ?? RADIUS.default;
   let trigger = loc?.trigger ?? 'enter';
   let userMoved = false; // na een eigen actie springt de kaart niet meer naar je huidige locatie
@@ -80,9 +91,17 @@ function buildScreen(L, task, resolve) {
   const rangeLabel = el('span', {}, radiusText(radius));
   const enterBtn = el('button', { type: 'button', class: 'ghost' }, t('map.on_arrive'));
   const exitBtn = el('button', { type: 'button', class: 'ghost' }, t('map.on_leave'));
-  const name = el('input', { value: loc?.name ?? '', placeholder: t('map.pinned_place'), maxlength: 100, autocomplete: 'off' });
+  const name = el('input', { value: loc?.name ?? '', placeholder: managing ? t('map.favorite_name') : t('map.pinned_place'), maxlength: 100, autocomplete: 'off' });
+  const actions = managing
+    ? [el('button', { type: 'button', onclick: saveManaged }, t('map.save')),
+      place ? el('button', { type: 'button', class: 'danger', onclick: deleteManaged }, t('map.delete')) : null,
+      el('button', { type: 'button', class: 'ghost', onclick: () => close(undefined) }, t('map.cancel'))]
+    : [el('button', { type: 'button', onclick: use }, t('map.use_place')),
+      el('button', { type: 'button', class: 'ghost', onclick: saveFavorite }, t('map.save_favorite')),
+      el('button', { type: 'button', class: 'ghost', onclick: () => close(undefined) }, t('map.close'))];
+  const title = managing ? (place ? t('map.edit_place') : t('map.new_place')) : t('map.choose_place');
 
-  const screen = el('div', { class: 'mapscreen', role: 'dialog', 'aria-modal': 'true', 'aria-label': t('map.choose_place'), tabindex: '-1' },
+  const screen = el('div', { class: 'mapscreen', role: 'dialog', 'aria-modal': 'true', 'aria-label': title, tabindex: '-1' },
     el('form', { class: 'mapsearch', onsubmit: (e) => { e.preventDefault(); search(); } },
       query, el('button', { type: 'submit' }, t('map.search_button'))),
     results,
@@ -90,12 +109,9 @@ function buildScreen(L, task, resolve) {
     el('div', { class: 'mappanel' },
       chips,
       el('label', {}, rangeLabel, range),
-      el('div', { class: 'seg', role: 'group', 'aria-label': t('map.when') }, enterBtn, exitBtn),
+      managing ? null : el('div', { class: 'seg', role: 'group', 'aria-label': t('map.when') }, enterBtn, exitBtn),
       el('label', {}, t('map.name'), name),
-      el('div', { class: 'actions' },
-        el('button', { type: 'button', onclick: use }, t('map.use_place')),
-        el('button', { type: 'button', class: 'ghost', onclick: saveFavorite }, t('map.save_favorite')),
-        el('button', { type: 'button', class: 'ghost', onclick: () => close(undefined) }, t('map.close')))),
+      el('div', { class: 'actions' }, ...actions)),
   );
   document.body.append(screen);
   document.body.classList.add('map-open');
@@ -239,7 +255,36 @@ function buildScreen(L, task, resolve) {
     refreshPlaces();
   }
 
-  refreshPlaces();
+  // Bij het beheren van een favoriet horen de knoppen van de andere favorieten er niet bij.
+  if (!managing) refreshPlaces();
+
+  /** Favoriet opslaan vanuit de instellingen; het scherm blijft open als het niet lukt. */
+  async function saveManaged() {
+    const n = name.value.trim();
+    if (!n) { toast(t('map.name_needed')); name.focus(); return; }
+    const p = { name: n, ...center(), radius };
+    try {
+      if (place) await updatePlace(place.id, p);
+      else await savePlace(p);
+    } catch (e) {
+      placeError(e);
+      return;
+    }
+    close(true);
+  }
+
+  async function deleteManaged() {
+    const yes = await ask({ title: t('map.confirm_delete', { name: place.name }), text: t('map.delete_note'), buttons: [
+      { label: t('map.delete'), value: 'yes', kind: 'danger' }, { label: t('map.cancel'), value: null, kind: 'ghost' }] });
+    if (!yes) return;
+    try {
+      await deletePlace(place.id);
+    } catch (e) {
+      placeError(e);
+      return;
+    }
+    close(true);
+  }
 
   // ---------- klaar ----------
   function center() {
@@ -274,7 +319,7 @@ function buildScreen(L, task, resolve) {
   }
 
   function onKey(e) {
-    if (e.key !== 'Escape') return;
+    if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
     if (e.target === query && query.value) { // net als het zoekveld van de lijst: eerst alleen leegmaken
       query.value = '';
       results.hidden = true;

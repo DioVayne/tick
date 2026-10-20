@@ -14,6 +14,8 @@ import { SETTINGS_CACHE as CACHE_KEY, load } from './store.js';
 import { clearAll } from './db.js';
 import { forgetCachedConfig } from './next.js';
 import { prepare } from './attachments.js';
+import { formatRadius, loadPlaces } from './places.js';
+import { editPlace } from './map.js';
 
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
@@ -129,14 +131,23 @@ function select(label, options, current, onChange, disabled = false) {
   return s;
 }
 
-/** Een blok met icoon en titel; de inhoud staat in een eigen deel dat apart opnieuw getekend kan worden. */
-function block(icon, title, part, sub) {
+/**
+ * Een uitklapbaar blok met icoon en titel; dicht als de pagina opengaat. De inhoud staat in een eigen deel dat apart
+ * opnieuw getekend kan worden; `extra` komt onder dat deel (bijvoorbeeld tussenkopjes met hun eigen delen).
+ */
+function block(icon, title, part, sub, ...extra) {
   const body = el('div', { class: 'set-body' });
   S.parts[part] = body;
-  return el('section', { class: 'set-block', 'aria-labelledby': `set-h-${part}` },
-    el('h2', { id: `set-h-${part}` }, el('span', { class: 'set-icon', 'aria-hidden': 'true' }, icon), title, sub ? el('span', { class: 'set-sub' }, sub) : null),
-    body);
+  const subEl = el('span', { class: 'set-sub' }, sub ?? '');
+  S.parts[`${part}-sub`] = subEl;
+  return el('details', { class: 'set-block' },
+    el('summary', {}, el('span', { class: 'set-icon', 'aria-hidden': 'true' }, icon), el('span', { class: 'set-title' }, title), subEl),
+    el('div', { class: 'set-content' }, body, ...extra));
 }
+
+/** Een groep blokken onder een klein kopje. */
+const group = (label, ...blocks) => el('section', { class: 'set-group', 'aria-label': label },
+  el('h2', { class: 'set-group-h' }, label), el('div', { class: 'set-list' }, ...blocks.filter(Boolean)));
 
 const paint = (part, ...nodes) => S.parts[part]?.replaceChildren(...nodes.flat().filter(Boolean));
 
@@ -194,7 +205,7 @@ async function copy(text, node) {
 function secret(label, value) {
   const code = el('code', {}, value);
   return el('div', { class: 'set-secret' }, el('span', { class: 'set-secret-label' }, label), code,
-    el('button', { type: 'button', class: 'set-btn', onclick: () => copy(value, code) }, t('set.copy')));
+    el('button', { type: 'button', class: 'set-btn tint', onclick: () => copy(value, code) }, t('set.copy')));
 }
 
 // ---------- instellingen van de installatie ----------
@@ -259,6 +270,7 @@ async function save(patch, revert) {
 /** Alles wat van de server of de installatie afhangt opnieuw tekenen. */
 function paintHome() {
   paintLangTime();
+  paintPlaces();
   paintAccount();
   paintUsers();
   paintData();
@@ -356,6 +368,23 @@ function displayBlock() {
   const sec = block('🎨', t('set.display'), 'display', t('set.this_device'));
   paintDisplay();
   return sec;
+}
+
+// ---------- 📍 Locaties ----------
+
+/** Favoriete plekken: lijst met Wijzigen per plek en een knop om er een toe te voegen (beide openen de kaart). */
+async function paintPlaces() {
+  let places;
+  try { places = await loadPlaces(); } catch (e) { places = null; if (S.open) paint('places', note(offlineText(e))); }
+  if (!S.open || !places) return;
+  const off = !S.online;
+  const edit = async (p) => { if (await editPlace(p)) paintPlaces(); };
+  if (S.parts['places-sub']) S.parts['places-sub'].textContent = !places.length ? '' : places.length === 1 ? t('set.places_one') : t('set.places_count', { count: fmtNum(places.length) });
+  paint('places',
+    places.length ? places.map((p) => row(p.name, btn(t('set.place_edit'), () => edit(p), { disabled: off }), formatRadius(p.radius)))
+      : note(t('set.no_places')),
+    el('div', { class: 'set-foot' }, btn(t('set.place_add'), () => edit(null), { kind: 'tint', disabled: off })),
+    off && S.loaded ? note(t('set.online_only')) : null);
 }
 
 // ---------- 🌍 Taal en tijd ----------
@@ -520,7 +549,7 @@ function browserRow(b) {
 async function paintDevices() {
   const ps = await pushState(S.reg);
   const mine = ps.subscribed ? (await S.reg?.pushManager.getSubscription().catch(() => null))?.endpoint : null;
-  const pair = btn(t('set.pair'), pairPhone, { kind: '', disabled: !S.online });
+  const pair = btn(t('set.pair'), pairPhone, { kind: 'primary', disabled: !S.online });
   let rest;
   try {
     const d = await request('GET', '/api/devices');
@@ -538,7 +567,7 @@ async function paintDevices() {
   const phoneSettings = isInApp() ? row('', btn(t('set.phone_settings'), openPhoneSettings), null) : null;
   // In de browser op een Android-telefoon: de Tick-app verbinden (adres en koppelcode in één link), of hem downloaden.
   const connect = !isInApp() && /Android/i.test(navigator.userAgent)
-    ? row('', btn(t('set.connect_app'), () => connectApp(paintDevices).catch((e) => toast(offlineText(e))), { kind: '', disabled: !S.online }), t('set.connect_app_note'))
+    ? row('', btn(t('set.connect_app'), () => connectApp(paintDevices).catch((e) => toast(offlineText(e))), { kind: 'tint', disabled: !S.online }), t('set.connect_app_note'))
     : null;
   paint('devices', thisBrowserRow(ps), ...rest, phoneSettings, connect, row('', pair, t('set.pair_note')));
 }
@@ -594,7 +623,7 @@ function passwordForm() {
   next.minLength = MIN_PASSWORD;
   const form = /** @type {HTMLFormElement} */ (el('form', { class: 'set-form', hidden: true },
     field(t('set.pw_current'), cur), field(t('set.pw_new'), next), field(t('set.pw_again'), again),
-    el('div', {}, el('button', { type: 'submit', class: 'set-btn' }, t('set.save'))),
+    el('div', {}, el('button', { type: 'submit', class: 'set-btn tint' }, t('set.save'))),
     CONFIG.isAdmin ? el('p', { class: 'set-note' }, t('set.pw_rescue'), ' ', el('code', {}, RESCUE)) : null));
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -638,7 +667,7 @@ function profileForm(off) {
   email.value = a?.email ?? '';
   const form = /** @type {HTMLFormElement} */ (el('form', { class: 'set-form' },
     field(t('set.name'), name), field(t('set.email'), email),
-    el('div', {}, el('button', { type: 'submit', class: 'set-btn', disabled: off || !a }, t('set.save')))));
+    el('div', {}, el('button', { type: 'submit', class: 'set-btn primary', disabled: off || !a }, t('set.save')))));
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     // Een leeg e-mailadres sturen we niet mee: de server weigert dat, en de beheerder mag er (nog) geen hebben.
@@ -680,7 +709,7 @@ function paintAccount() {
 /** Toont een eenmalige link (uitnodiging of reset) met Kopiëren en, waar het kan, Delen (bijvoorbeeld naar WhatsApp). */
 async function showLink(title, text, url) {
   const share = typeof navigator.share === 'function'
-    ? el('div', {}, btn(t('set.share'), () => navigator.share({ url }).catch(() => { /* geannuleerd */ }), { kind: '' }))
+    ? el('div', {}, btn(t('set.share'), () => navigator.share({ url }).catch(() => { /* geannuleerd */ }), { kind: 'tint' }))
     : null;
   await modal({
     title,
@@ -723,7 +752,7 @@ function userRow(u) {
 
 async function paintUsers() {
   if (!CONFIG.isAdmin || !S.parts.accounts) return;
-  const add = btn(t('set.invite'), invite, { kind: '', disabled: !S.online });
+  const add = btn(t('set.invite'), invite, { kind: 'primary', disabled: !S.online });
   let rows;
   try {
     if (!S.loaded) return; // de instellingen tekenen dit opnieuw zodra ze er zijn
@@ -819,13 +848,10 @@ function paintData() {
 function advancedBlock() {
   const keys = el('div', { class: 'set-keys' });
   const webhook = el('div', {});
-  const body = el('div', { class: 'set-body' });
-  S.parts.advanced = body;
   S.parts.keys = keys;
   S.parts.webhook = webhook;
-  return el('details', { class: 'set-block set-adv' },
-    el('summary', {}, el('span', { class: 'set-icon', 'aria-hidden': 'true' }, '🛠'), t('set.advanced'), el('span', { class: 'set-sub' }, t('set.advanced_sub'))),
-    body, el('h3', { class: 'set-h3' }, t('set.keys')), keys, el('h3', { class: 'set-h3' }, t('set.webhook')), webhook);
+  return block('🛠', t('set.advanced'), 'advanced', t('set.advanced_sub'),
+    el('h3', { class: 'set-h3' }, t('set.keys')), keys, el('h3', { class: 'set-h3' }, t('set.webhook')), webhook);
 }
 
 function paintAdvanced() {
@@ -866,7 +892,7 @@ function paintWebhook() {
   const resetBtn = own ? btn(t('set.webhook_reset'), async () => { if (await save({ fallbackWebhook: null })) paintWebhook(); }, { disabled: off }) : null;
   paint('webhook',
     note(homeNote(s.fallbackFromEnv ? t('set.webhook_from_install_note') : t('set.webhook_note'))),
-    el('div', { class: 'set-inline' }, input, btn(t('set.save'), saveIt, { kind: '', disabled: off }), test, offBtn, resetBtn),
+    el('div', { class: 'set-inline' }, input, btn(t('set.save'), saveIt, { kind: 'primary', disabled: off }), test, offBtn, resetBtn),
     own && S.online ? note(t('set.webhook_reset_note')) : null);
 }
 
@@ -914,7 +940,7 @@ async function newKey() {
 }
 
 async function paintKeys() {
-  const add = btn(t('set.new_key_button'), newKey, { disabled: !S.online });
+  const add = btn(t('set.new_key_button'), newKey, { kind: 'tint', disabled: !S.online });
   let rows;
   try {
     if (!S.loaded) return; // de instellingen tekenen dit opnieuw zodra ze er zijn
@@ -924,7 +950,7 @@ async function paintKeys() {
       ...r.keys.map((k) => row(`${k.name}`, btn(t('set.revoke'), () => revokeKey(k), { kind: 'danger' }),
         [kindLabel(k.kind), `…${k.hint}`, t('set.created', { date: fmtDate(k.created_at) }), lastUsed(k.last_used_at)].join(' · '))),
       ...(CONFIG.isAdmin ? r.env : []).map((k) => el('div', {},
-        row(t('set.env_key', { kind: kindLabel(k.kind) }), btn(k.off ? t('set.switch_on') : t('set.switch_off'), () => toggleEnv(k), { kind: k.off ? '' : 'danger' }),
+        row(t('set.env_key', { kind: kindLabel(k.kind) }), btn(k.off ? t('set.switch_on') : t('set.switch_off'), () => toggleEnv(k), { kind: k.off ? 'tint' : 'danger' }),
           [k.off ? t('set.env_is_off') : lastUsed(k.last_used_at), t('set.env_remove')].join(' · ')),
         el('p', { class: 'set-note' }, el('code', {}, `npx wrangler secret delete ${ENV_SECRET[k.id] ?? ''}`)))),
     ];
@@ -942,14 +968,16 @@ function build() {
   S.parts = {};
   const root = el('div', { id: 'settings', class: 'settings' },
     el('button', { type: 'button', class: 'set-back', onclick: () => closeSettings() }, t('set.back')),
-    displayBlock(),
-    block('🌍', t('set.langtime'), 'langtime'),
-    block('🔔', t('set.notifications'), 'push'),
-    block('📱', t('set.devices'), 'devices'),
-    block('👤', t('set.account'), 'account'),
-    CONFIG.isAdmin ? block('👥', t('set.accounts'), 'accounts') : null,
-    block('💾', t('set.data'), 'data'),
-    advancedBlock());
+    group(t('set.group_use'), displayBlock(), block('📍', t('set.places'), 'places')),
+    group(t('set.group_you'),
+      block('🔔', t('set.notifications'), 'push'),
+      block('🌍', t('set.langtime'), 'langtime'),
+      block('👤', t('set.account'), 'account'),
+      block('📱', t('set.devices'), 'devices')),
+    group(t('set.group_admin'),
+      CONFIG.isAdmin ? block('👥', t('set.accounts'), 'accounts') : null,
+      block('💾', t('set.data'), 'data'),
+      advancedBlock()));
   return root;
 }
 
@@ -997,10 +1025,10 @@ export function closeSettings() {
 }
 
 
-// Esc buiten een veld sluit de pagina (niet als er een dialoog of het uitschuifmenu open is).
+// Esc buiten een veld sluit de pagina (niet als er een dialoog, de kaart of het uitschuifmenu open is).
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !S.open) return;
-  if (document.querySelector('dialog[open]') || document.body.classList.contains('drawer-open')) return;
+  if (document.querySelector('dialog[open]') || document.body.classList.contains('drawer-open') || document.body.classList.contains('map-open')) return;
   if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable]')) return;
   e.stopPropagation();
   closeSettings();
