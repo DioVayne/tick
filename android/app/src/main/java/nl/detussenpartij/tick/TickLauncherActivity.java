@@ -21,7 +21,10 @@ public class TickLauncherActivity extends LauncherActivity {
         if (Prefs.base(this).isEmpty()) {
             startActivity(new Intent(this, SetupActivity.class));
             finish();
+            return;
         }
+        // Meteen verversen, ook de apparaatstatus: zo ziet Tick direct of locatiemeldingen hier werken (de balk bovenin).
+        if (!Prefs.token(this).isEmpty()) SyncJob.syncSoon(this, null, null, 0);
     }
 
     @Override

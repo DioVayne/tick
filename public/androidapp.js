@@ -2,15 +2,17 @@
 // eenmalige code in een intent-link (ook vanuit de browser op de telefoon), web push aanzetten en dubbele meldingen
 // signaleren.
 import { request } from './api.js';
-import { OFFICIAL_PACKAGE, RELEASES_URL, packageFromReferrer, pairIntent, pushAction, settingsIntent, startPushAction } from './applink.js';
+import { OFFICIAL_PACKAGE, RELEASES_URL, locationProblems, packageFromReferrer, pairIntent, problemKey, pushAction, settingsIntent, showLocationBar, startPushAction } from './applink.js';
 import { t } from './i18n.js';
 import { enablePush, pushState, pushTurnedOff } from './push.js';
+import { wakeAndroidApp } from './places.js';
 import { el, toast } from './render.js';
 import CONFIG from './settings.js';
 
 const APP_KEY = 'tick.app';
 const DUP_KEY = 'tick.dupHint';
 const PKG_KEY = 'tick.appPkg';
+const LOC_KEY = 'tick.locBarDismissed';
 const POLL_MS = 1000;
 const CODE_TTL_MS = 2 * 60 * 1000;
 const PUSH_WAIT_MS = 60 * 1000;
@@ -168,4 +170,82 @@ async function hintDuplicates(openDevices) {
   if (browsers.filter((b) => /Android/i.test(b.user_agent ?? '')).length < 2) return;
   try { localStorage.setItem(DUP_KEY, '1'); } catch { /* geen opslag: dan nog eenmaal per sessie */ }
   const b = bar(t('app.duplicate_hint'), t('app.duplicate_open'), () => { b.remove(); openDevices?.(); });
+}
+
+/**
+ * Balk bovenin de lijst als locatiemeldingen op een gekoppelde telefoon niet werken (geen locatie "altijd" of
+ * meldingen uit). Wegklikken kan; bij een andere status of na een paar dagen komt hij terug.
+ * Peilt bij de start en elke keer dat Tick weer in beeld komt (bijvoorbeeld terug uit de telefooninstellingen).
+ * @param {{ hasLocationTasks: () => boolean, openDevices?: () => void }} opts
+ * @returns {() => void} opnieuw beoordelen, zonder op te halen (na een wijziging in de taken)
+ */
+export function startLocationBar({ hasLocationTasks, openDevices }) {
+  let problems = [];
+  let fetchedAt = 0;
+  /** @type {HTMLElement | null} */
+  let node = null;
+  let shown = '';
+
+  const dismissed = () => {
+    try { return JSON.parse(localStorage.getItem(LOC_KEY) ?? 'null'); } catch { return null; }
+  };
+  const update = () => {
+    const show = showLocationBar({ problems, inApp: isInApp(), hasLocationTasks: hasLocationTasks(), dismissed: dismissed(), now: Date.now() });
+    const key = show ? JSON.stringify(problems) : '';
+    if (key === shown) return; // ongewijzigd: niet opnieuw opbouwen (een knop houdt zijn focus)
+    shown = key;
+    node?.remove();
+    node = show ? locationBar(problems) : null;
+    if (node) document.getElementById('net')?.after(node);
+  };
+  const locationBar = (list) => {
+    const names = [...new Set(list.map((p) => p.status.name || p.name || t('set.phone_install')))].join(', ');
+    const noLoc = list.some((p) => p.status.location !== 'always');
+    const noNotif = list.some((p) => !p.status.notifications);
+    const why = noLoc && noNotif ? t('locbar.why_both') : noLoc ? t('locbar.why_location') : t('locbar.why_notifications');
+    const fix = () => {
+      if (isInApp()) openPhoneSettings();
+      else openDevices?.();
+    };
+    const hide = () => {
+      try { localStorage.setItem(LOC_KEY, JSON.stringify({ key: problemKey(problems), at: Date.now() })); } catch { /* geen opslag: alleen nu weg */ }
+      node?.remove();
+      node = null;
+      shown = '';
+    };
+    return el('div', { class: 'locbar', role: 'alert' },
+      el('p', {}, el('strong', {}, t('locbar.title', { phone: names })), ' ', why),
+      el('div', { class: 'locbar-actions' },
+        el('button', { type: 'button', class: 'small', onclick: fix }, t('locbar.fix')),
+        el('button', { type: 'button', class: 'small ghost', onclick: hide }, t('locbar.hide'))));
+  };
+  const refresh = async () => {
+    if (Date.now() - fetchedAt < 5000) return;
+    fetchedAt = Date.now();
+    try {
+      problems = locationProblems((await request('GET', '/api/devices')).phones);
+      update();
+    } catch { /* offline: de laatst bekende stand blijft staan */ }
+  };
+  refresh();
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    refresh();
+    // Terug uit de instellingen van de app: die meldt de nieuwe status pas na een sync, dus even later nog eens.
+    setTimeout(refresh, 8000);
+  });
+  return update;
+}
+
+/**
+ * Een ander zette een plek op een gedeelde taak (melding met geo=1). De Android-app hoort dat anders pas bij zijn
+ * volgende verversing; met een tik (een intent zonder tik ziet Chrome als redirect) wekken we hem nu.
+ */
+export function offerAppSync() {
+  // Niet alleen isInApp(): een tik op een melding opent een nieuw venster zonder ?app=android. Zonder app opent de
+  // fallback gewoon Tick.
+  if (!/Android/i.test(navigator.userAgent) || !knownAppPackage() || document.querySelector('.appbar.geo')) return;
+  const b = bar(t('geo.wake_hint'), t('geo.wake_button'), () => { b.remove(); wakeAndroidApp(null); });
+  b.classList.add('geo');
+  setTimeout(() => b.remove(), 60_000);
 }

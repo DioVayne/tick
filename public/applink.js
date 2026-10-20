@@ -45,3 +45,28 @@ export const pushAction = (permission, subscribed) => {
  */
 export const startPushAction = (permission, subscribed, turnedOff) =>
   !turnedOff && !subscribed && permission === 'granted' ? 'subscribe' : 'none';
+
+/** Zo lang blijft de locatiebalk weg na wegklikken (bij dezelfde status). */
+export const LOC_BAR_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * Telefoons waarop locatiemeldingen niet werken: geen locatietoegang "altijd" of meldingen uit. Een telefoon zonder
+ * gemelde status (oude app) telt niet mee: daar weten we het niet.
+ * @param {{ key_id: string, status: { location: string, notifications: boolean } | null }[]} phones uit GET /api/devices
+ */
+export const locationProblems = (phones) =>
+  phones.filter((p) => p.status && (p.status.location !== 'always' || !p.status.notifications));
+
+/** Sleutel voor het wegklikken: verandert zodra een telefoon een andere status meldt, dan komt de balk terug. */
+export const problemKey = (problems) =>
+  problems.map((p) => `${p.key_id}:${p.status.location}:${p.status.notifications}`).sort().join('|');
+
+/**
+ * Toont Tick de balk "locatiemeldingen werken niet"? In de app altijd (daar verwacht je ze), elders alleen als er een
+ * open taak met een plek is. Weggeklikt: niet bij dezelfde status, tot LOC_BAR_SNOOZE_MS voorbij is.
+ * @param {{ problems: any[], inApp: boolean, hasLocationTasks: boolean, dismissed: { key: string, at: number } | null, now: number }} s
+ */
+export const showLocationBar = ({ problems, inApp, hasLocationTasks, dismissed, now }) => {
+  if (!problems.length || !(inApp || hasLocationTasks)) return false;
+  return !(dismissed && dismissed.key === problemKey(problems) && now - dismissed.at < LOC_BAR_SNOOZE_MS);
+};

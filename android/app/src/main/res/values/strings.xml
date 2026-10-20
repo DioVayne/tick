@@ -26,11 +26,12 @@
     <string name="loc_missing_location">location</string>
     <string name="loc_missing_background">allow location all the time</string>
     <string name="loc_background_title">Allow location all the time</string>
-    <string name="loc_background_text">Tick notifies you about a task when you arrive at or leave a place, even when the app is closed. On the next screen, choose Permissions, then Location and then <b>Allow all the time</b>.</string>
+    <string name="loc_background_text">Tick notifies you about a task when you arrive at or leave a place, even when the app is closed. Android asks for this separately: on the next screen, choose <b>Allow all the time</b>.</string>
     <string name="loc_done_failed">Completing failed (%s). Tap Complete to try again.</string>
     <string name="loc_missing_system_location">location turned on on the phone</string>
     <string name="loc_missing_channel">notification category Location notifications on</string>
     <string name="loc_settings_hint">Turn on the permission in the settings of Tick.</string>
+    <string name="loc_settings_hint_background">Choose Permissions, then Location and then Allow all the time.</string>
     <string name="main_token_hint">API key</string>
     <string name="main_save_test">Save and test</string>
     <string name="main_busy">Working…</string>

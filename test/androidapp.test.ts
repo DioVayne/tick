@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { OFFICIAL_PACKAGE, RELEASES_URL, packageFromReferrer, pairIntent, pushAction, settingsIntent, startPushAction } from '../public/applink.js';
+import { LOC_BAR_SNOOZE_MS, OFFICIAL_PACKAGE, RELEASES_URL, locationProblems, packageFromReferrer, pairIntent, problemKey, pushAction, settingsIntent, showLocationBar, startPushAction } from '../public/applink.js';
 import { OFFICIAL_APP } from '../src/assetlinks';
 import { call } from './helpers';
 
@@ -75,6 +75,36 @@ describe('swclick.js: waar een tik op een melding heen gaat', () => {
     expect(clickTarget({ url: '/?task=t2' }, [])).toEqual({ open: '/?task=t2' });
     expect(clickTarget({ url: '/' }, [win])).toEqual({ focus: win });
   });
+  it('geo=1 (een plek van een ander) gaat mee naar een open venster', () => {
+    expect(clickTarget({ url: '/?task=t3&geo=1' }, [win])).toEqual({ focus: win, message: { type: 'open-task', id: 't3', geo: true } });
+    expect(clickTarget({ url: '/?task=t3&geo=1' }, [])).toEqual({ open: '/?task=t3&geo=1' });
+  });
   it('codeert het taak-id in het adres', () =>
     expect(clickTarget({ taskId: 'a&b' }, [])).toEqual({ open: '/?task=a%26b' }));
+});
+
+describe('locatiebalk: wanneer Tick waarschuwt dat locatiemeldingen niet werken', () => {
+  const phone = (key_id: string, location: string, notifications = true) => ({ key_id, status: { location, notifications } });
+  const now = 1_000_000_000;
+
+  it('telt telefoons zonder altijd-locatie of zonder meldingen; zonder status niet', () => {
+    const phones = [phone('a', 'always'), phone('b', 'foreground'), phone('c', 'off'), phone('d', 'always', false), { key_id: 'e', status: null }];
+    expect(locationProblems(phones).map((p) => p.key_id)).toEqual(['b', 'c', 'd']);
+  });
+
+  it('in de app altijd, elders alleen met een taak met een plek', () => {
+    const problems = [phone('b', 'off')];
+    expect(showLocationBar({ problems, inApp: true, hasLocationTasks: false, dismissed: null, now })).toBe(true);
+    expect(showLocationBar({ problems, inApp: false, hasLocationTasks: false, dismissed: null, now })).toBe(false);
+    expect(showLocationBar({ problems, inApp: false, hasLocationTasks: true, dismissed: null, now })).toBe(true);
+    expect(showLocationBar({ problems: [], inApp: true, hasLocationTasks: true, dismissed: null, now })).toBe(false);
+  });
+
+  it('weggeklikt blijft weg, tot de status verandert of de tijd om is', () => {
+    const problems = [phone('b', 'off')];
+    const dismissed = { key: problemKey(problems), at: now };
+    expect(showLocationBar({ problems, inApp: true, hasLocationTasks: true, dismissed, now: now + 1000 })).toBe(false);
+    expect(showLocationBar({ problems, inApp: true, hasLocationTasks: true, dismissed, now: now + LOC_BAR_SNOOZE_MS + 1 })).toBe(true);
+    expect(showLocationBar({ problems: [phone('b', 'foreground')], inApp: true, hasLocationTasks: true, dismissed, now: now + 1000 })).toBe(true);
+  });
 });

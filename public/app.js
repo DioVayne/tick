@@ -1,5 +1,5 @@
 import CONFIG from './settings.js'; // eerst: taal en tijdzone
-import { initAndroidApp } from './androidapp.js';
+import { initAndroidApp, offerAppSync, startLocationBar } from './androidapp.js';
 import { t } from './i18n.js';
 import { closeTask, detailReady, flushPending, selectTask } from './detail.js';
 import { openListMenu } from './listmenu.js';
@@ -58,11 +58,14 @@ document.addEventListener('keydown', (e) => {
 // ---------- start ----------
 const params = new URLSearchParams(location.search);
 initAndroidApp(params, { openDevices: () => openSettings() }); // haalt ?app en ?pair uit de adresbalk
+const updateLocationBar = startLocationBar({ hasLocationTasks: () => state.open.some((t) => t.location), openDevices: () => openSettings() });
+on('change', updateLocationBar);
 if (params.has('add')) $('#add-title').focus();
 // Uit een uitnodigingsmelding: de balk met Accepteren en Weigeren in beeld.
 const openShare = params.get('share');
 if (openShare) history.replaceState(null, '', '/');
 const openTask = params.get('task');
+if (openTask && params.get('geo') === '1') offerAppSync();
 if (openTask) {
   state.selected = openTask;
   history.replaceState(null, '', '/');
@@ -154,6 +157,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').cat
 // Een tik op een melding terwijl Tick al open is: de service worker vraagt ons de taak te tonen.
 navigator.serviceWorker?.addEventListener('message', (e) => {
   if (e.data?.type !== 'open-task' || !e.data.id) return;
+  if (e.data.geo) offerAppSync();
   if (isSettingsOpen()) hideSettings();
   hideCalendar();
   selectTask(e.data.id);

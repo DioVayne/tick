@@ -47,6 +47,8 @@ export function wakeAndroidApp(taskId, since) {
   const pkg = knownAppPackage();
   if (!/Android/i.test(navigator.userAgent) || !pkg) return;
   const fallback = encodeURIComponent(location.origin + '/');
-  location.href = `intent://sync?task=${encodeURIComponent(taskId)}&since=${encodeURIComponent(since)}`
+  // Zonder taak: gewoon één keer verversen (bijvoorbeeld een plek die een ander op een gedeelde taak zette).
+  const query = taskId ? `?task=${encodeURIComponent(taskId)}&since=${encodeURIComponent(since)}` : '';
+  location.href = `intent://sync${query}`
     + `#Intent;scheme=tick;package=${pkg};S.browser_fallback_url=${fallback};end`;
 }
