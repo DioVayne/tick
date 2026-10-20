@@ -22,7 +22,7 @@ import { deviceApi, devicesApi } from './devices';
 import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
-import { leaveShareStmts, sharesApi } from './shares';
+import { leaveShareStmts, notifyShareDone, sharesApi } from './shares';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxUpload, sweepAttachments } from './attachments';
@@ -449,11 +449,17 @@ async function plainDone(db: D1Database, t: TaskRow, done: boolean): Promise<boo
   return done && res.meta.changes > 0;
 }
 
-/** Na echt afvinken van een hoofdtaak in een kopiegroep: melding aan de anderen, op de achtergrond. */
+/**
+ * Na echt afvinken van een hoofdtaak: melding aan de andere leden van de kopiegroep en aan de anderen die de taak
+ * delen, op de achtergrond.
+ */
 async function copyDone(c: Context<AppEnv>, t: TaskRow) {
-  if (!t.copy_group || t.parent_id) return;
-  const sending = notifyCopyDone(c.env, t, c.get('user').name, c.get('install').defaultLocale)
-    .catch((e) => console.warn('kopie klaar melden mislukt', (e as Error).message));
+  if (t.parent_id) return;
+  const user = c.get('user'), locale = c.get('install').defaultLocale;
+  const sending = Promise.all([
+    t.copy_group && notifyCopyDone(c.env, t, user.name, locale).catch((e) => console.warn('kopie klaar melden mislukt', (e as Error).message)),
+    notifyShareDone(c.env, t, c.get('auth').userId, user.name, locale).catch((e) => console.warn('gedeelde taak klaar melden mislukt', (e as Error).message)),
+  ]);
   try { c.executionCtx.waitUntil(sending); } catch { await sending; }
 }
 
