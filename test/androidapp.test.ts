@@ -55,6 +55,10 @@ describe('swclick.js: waar een tik op een melding heen gaat', () => {
     expect(clickTarget({ url: '/?task=t2' }, [])).toEqual({ open: '/?task=t2' });
     expect(clickTarget({ url: '/' }, [win])).toEqual({ focus: win });
   });
+  it('geo=1 (een plek van een ander) gaat mee naar een open venster', () => {
+    expect(clickTarget({ url: '/?task=t3&geo=1' }, [win])).toEqual({ focus: win, message: { type: 'open-task', id: 't3', geo: true } });
+    expect(clickTarget({ url: '/?task=t3&geo=1' }, [])).toEqual({ open: '/?task=t3&geo=1' });
+  });
   it('codeert het taak-id in het adres', () =>
     expect(clickTarget({ taskId: 'a&b' }, [])).toEqual({ open: '/?task=a%26b' }));
 });

@@ -4,6 +4,7 @@ import { request } from './api.js';
 import { locationProblems, pairIntent, problemKey, pushAction, settingsIntent, showLocationBar, startPushAction } from './applink.js';
 import { t } from './i18n.js';
 import { enablePush, pushState, pushTurnedOff } from './push.js';
+import { wakeAndroidApp } from './places.js';
 import { el, toast } from './render.js';
 import CONFIG from './settings.js';
 
@@ -191,4 +192,17 @@ export function startLocationBar({ hasLocationTasks, openDevices }) {
     setTimeout(refresh, 8000);
   });
   return update;
+}
+
+/**
+ * Een ander zette een plek op een gedeelde taak (melding met geo=1). De Android-app hoort dat anders pas bij zijn
+ * volgende verversing; met een tik (een intent zonder tik ziet Chrome als redirect) wekken we hem nu.
+ */
+export function offerAppSync() {
+  // Niet alleen isInApp(): een tik op een melding opent een nieuw venster zonder ?app=android. Zonder app opent de
+  // fallback gewoon Tick.
+  if (!/Android/i.test(navigator.userAgent) || !CONFIG.androidPackage || document.querySelector('.appbar.geo')) return;
+  const b = bar(t('geo.wake_hint'), t('geo.wake_button'), () => { b.remove(); wakeAndroidApp(null); });
+  b.classList.add('geo');
+  setTimeout(() => b.remove(), 60_000);
 }

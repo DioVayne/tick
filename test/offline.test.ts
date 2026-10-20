@@ -63,9 +63,9 @@ describe('app-shell', () => {
     for (const path of shell) expect((await call(path)).status, path).toBe(200);
   });
 
-  it('de cacheversie is opgehoogd voor de locatiebalk', async () => {
+  it('de cacheversie is opgehoogd voor de plek-melding op gedeelde taken', async () => {
     const sw = await (await call('/sw.js')).text();
-    expect(sw.match(/const CACHE = '([^']+)'/)![1]).toBe('tick-shell-v23');
+    expect(sw.match(/const CACHE = '([^']+)'/)![1]).toBe('tick-shell-v24');
   });
 
   it('elke module die de shell importeert zit zelf ook in de shell (anders is de app offline leeg)', async () => {

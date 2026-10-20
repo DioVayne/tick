@@ -26,11 +26,12 @@
     <string name="loc_missing_location">locatie</string>
     <string name="loc_missing_background">locatie altijd toestaan</string>
     <string name="loc_background_title">Locatie altijd toestaan</string>
-    <string name="loc_background_text">Tick meldt een taak als je bij een plek aankomt of er vertrekt, ook als de app dicht is. Kies daarvoor in het volgende scherm Rechten, dan Locatie en dan <b>Altijd toestaan</b>.</string>
+    <string name="loc_background_text">Tick meldt een taak als je bij een plek aankomt of er vertrekt, ook als de app dicht is. Android vraagt dat apart: kies op het volgende scherm <b>Altijd toestaan</b>.</string>
     <string name="loc_done_failed">Afvinken mislukt (%s). Tik op Afvinken om het opnieuw te proberen.</string>
     <string name="loc_missing_system_location">locatie aan op de telefoon</string>
     <string name="loc_missing_channel">meldingscategorie Locatiemeldingen aan</string>
     <string name="loc_settings_hint">Zet de toestemming aan in de instellingen van Tick.</string>
+    <string name="loc_settings_hint_background">Kies Rechten, dan Locatie en dan Altijd toestaan.</string>
     <string name="main_token_hint">API-sleutel</string>
     <string name="main_save_test">Opslaan en testen</string>
     <string name="main_busy">Bezig...</string>

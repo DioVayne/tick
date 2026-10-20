@@ -46,6 +46,8 @@ export function wakeAndroidApp(taskId, since) {
   // Alleen met een eigen Android-build (ANDROID_PACKAGE); anders zou Chrome de fallback-URL openen.
   if (!/Android/i.test(navigator.userAgent) || !CONFIG.androidPackage) return;
   const fallback = encodeURIComponent(location.origin + '/');
-  location.href = `intent://sync?task=${encodeURIComponent(taskId)}&since=${encodeURIComponent(since)}`
+  // Zonder taak: gewoon één keer verversen (bijvoorbeeld een plek die een ander op een gedeelde taak zette).
+  const query = taskId ? `?task=${encodeURIComponent(taskId)}&since=${encodeURIComponent(since)}` : '';
+  location.href = `intent://sync${query}`
     + `#Intent;scheme=tick;package=${CONFIG.androidPackage};S.browser_fallback_url=${fallback};end`;
 }
