@@ -15,13 +15,24 @@ setupSidebar();
 onListContext(openListMenu);
 
 prefillOnOpen($('#add-remind'));
-$('#add').addEventListener('submit', (e) => {
-  e.preventDefault();
+/** Maakt de taak uit het invoerveld; met open=true gaat hij meteen open in het detailpaneel. */
+function submitAdd(open) {
   const title = $('#add-title').value.trim();
-  if (!title) return;
-  addTask(title, fromLocalInput($('#add-remind').value), (!state.showDone && !state.showTrash && state.list) || 'Inbox');
+  if (!title) { $('#add-title').focus(); return; }
+  const id = addTask(title, fromLocalInput($('#add-remind').value), (!state.showDone && !state.showTrash && state.list) || 'Inbox');
   $('#add-title').value = '';
   $('#add-remind').value = '';
+  if (open) {
+    $('#add-title').blur();
+    selectTask(id);
+  }
+}
+$('#add').addEventListener('submit', (e) => { e.preventDefault(); submitAdd(false); });
+$('#add-open').addEventListener('click', () => submitAdd(true));
+$('#add-title').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || !e.shiftKey || e.isComposing) return;
+  e.preventDefault();
+  submitAdd(true);
 });
 
 // Instellingen: een eigen pagina in de middenkolom (meldingen, thema en uitloggen staan daar).
