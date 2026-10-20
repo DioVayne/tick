@@ -32,7 +32,7 @@ Tick reminds you **where it matters**:
 
 And it's a complete to-do app on top of that: lists, subtasks, repeating reminders, a calendar, sharing with your household, a home-screen widget and offline support.
 
-> **Good to know:** place reminders need the **Android app**. Download the APK from [Releases](https://github.com/DioVayne/tick/releases/latest) on your phone, open it and type the address of your Tick; no Android SDK needed (building it yourself is still possible, see [SETUP.md](SETUP.md#10-optional-android-app)). On an iPhone, or any other device, Tick works as an installable web app with time reminders.
+> **Good to know:** place reminders need the **Android app**. On your phone, [download the app](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk), open it and type the address of your Tick. No Android SDK needed, and the app tells you when there is an update. Building it yourself is still possible, see [SETUP.md](SETUP.md#10-optional-android-app). On an iPhone, or any other device, Tick works as an installable web app with time reminders.
 
 ## Get your own in about 15 minutes
 
@@ -84,7 +84,7 @@ Claude asks a few questions (language, time zone, Android app or not), sets ever
 - Desktop layout with a sidebar and detail panel, where you edit a task's title right in the list; a full-screen task view on mobile.
 - Confetti when you tick off a task (not when your device asks for reduced motion).
 - Colour themes (default or *Retro 70s*, each in light and dark) and an optional background photo of your own.
-- Optional Android app: location reminders, a home-screen widget and quick add. Notifications show up as Tick instead of Chrome, and you link the app with one tap on *Link* in the web app.
+- Optional Android app: location reminders, a home-screen widget and quick add. Download it from [GitHub Releases](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk); it checks for updates once a day and notifies you. Notifications show up as Tick instead of Chrome, and you link the app with one tap on *Link* in the web app.
 - **Home-screen widget** (Android): your open tasks on the home screen, tick off with 3 seconds to undo, tap to open a task in the app, quick add with a reminder, resizable, with its own text size and line spacing.
 - **Claude (MCP):** an MCP server at `/mcp`, so Claude Code or Claude Desktop can list, add, change, check off, snooze and delete your tasks with a key of its own (see step 12 of [SETUP.md](SETUP.md)).
 - An inbox API for automations (`POST /api/inbox` with its own token).
