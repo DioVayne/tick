@@ -67,6 +67,8 @@ function updateHeader() {
   $('#btn-calendar').setAttribute('aria-pressed', String(cal));
   $('#btn-settings')?.setAttribute('aria-pressed', String(open));
   $('#title').textContent = open ? t('set.title') : cal ? t('cal.title') : state.showTrash ? t('ui.trash') : state.showDone ? t('ui.completed') : state.list ?? t('ui.all');
+  // Alleen een eigen lijst heeft een menu achter de titel; Alle, Inbox en de andere weergaven niet.
+  /** @type {HTMLButtonElement} */ ($('#title')).disabled = open || cal || state.showTrash || state.showDone || !state.list || state.list === 'Inbox';
   // Afgerond toont alle lijsten; een nieuwe taak gaat daar naar Inbox, net als bij Alle.
   $('#add-title').placeholder = state.list && !state.showDone && !state.showTrash ? t('sidebar.add_to_list', { list: state.list }) : t('ui.new_task_placeholder');
 }

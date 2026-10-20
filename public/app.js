@@ -45,25 +45,61 @@ $('#btn-calendar').addEventListener('click', () => {
 });
 
 // ---------- zoeken ----------
+// Een vergrootglas in de kop; het zoekveld verschijnt pas bij gebruik (ook met /) en neemt dan de plek van de titel.
 let searchTimer;
-$('#search').addEventListener('input', (e) => {
-  state.query = e.target.value;
+const search = /** @type {HTMLInputElement} */ ($('#search'));
+function openSearch() {
+  search.hidden = false;
+  document.body.classList.add('search-open');
+  $('#btn-search').setAttribute('aria-expanded', 'true');
+  search.focus();
+}
+function closeSearch() {
+  if (search.value) {
+    search.value = '';
+    search.dispatchEvent(new Event('input'));
+  }
+  search.hidden = true;
+  document.body.classList.remove('search-open');
+  $('#btn-search').setAttribute('aria-expanded', 'false');
+}
+$('#btn-search').addEventListener('click', () => {
+  if (search.hidden) openSearch();
+  else { closeSearch(); $('#btn-search').focus(); }
+});
+search.addEventListener('input', () => {
+  state.query = search.value;
   clearTimeout(searchTimer);
   // Open taken filteren we direct; in afgerond zoekt de server, met een korte pauze na het typen.
   if (state.showDone) searchTimer = setTimeout(load, 250);
   else render();
 });
-$('#search').addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && e.target.value) {
-    e.target.value = '';
-    e.target.dispatchEvent(new Event('input'));
-  }
+search.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  e.stopPropagation(); // niet ook het paneel sluiten
+  if (search.value) {
+    search.value = '';
+    search.dispatchEvent(new Event('input'));
+  } else { closeSearch(); $('#btn-search').focus(); }
 });
+// Leeg en weggeklikt: het veld klapt weer in. Niet als je op het vergrootglas klikt, dat sluit zelf.
+search.addEventListener('blur', (e) => {
+  if (!search.value && e.relatedTarget !== $('#btn-search')) closeSearch();
+});
+// / zoekt, N maakt een nieuwe taak (niet als je al in een veld typt).
 document.addEventListener('keydown', (e) => {
-  if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+  if (e.key !== '/' && e.key !== 'n' && e.key !== 'N') return;
+  if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable], dialog')) return;
+  if (document.body.matches('.settings-open, .calendar-open, .map-open')) return;
   e.preventDefault();
-  $('#search').focus();
+  if (e.key === '/') openSearch();
+  else $('#add-title').focus();
+});
+
+// Het lijstmenu (hernoemen, verplaatsen, verwijderen) zit ook achter de titel van de lijst.
+$('#title').addEventListener('click', (e) => {
+  if (state.list && state.list !== 'Inbox') openListMenu(state.list, /** @type {HTMLElement} */ (e.currentTarget));
 });
 
 // ---------- start ----------
