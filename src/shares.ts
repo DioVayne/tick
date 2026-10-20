@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { AppEnv, Env, TaskRow } from './index';
 import { HttpError } from './errors';
 import { getAccess, STEP, topMin } from './access';
-import { postWebhook, sendToAll, type Payload } from './push';
+import { postWebhook, sendToAll, type Payload, type Sender } from './push';
 import { loadUserPrefs } from './prefs';
 import { getUser } from './users';
 import { translate } from '../public/i18n.js';
@@ -47,6 +47,28 @@ async function notifyInvite(env: Env, shareId: string, toUser: string, fromName:
   const user = await getUser(env.DB, toUser);
   const hook = user && (await loadUserPrefs(env, user)).fallbackWebhook;
   if (hook) await postWebhook(hook, { ...make(defaultLocale), actions: undefined });
+}
+
+/**
+ * Push "{name} heeft hem afgevinkt ✓" naar de eigenaar en de geaccepteerde deelnemers van een gedeelde hoofdtaak,
+ * behalve naar wie afvinkte. Zonder abonnement via de eigen fallback-webhook (zoals bij uitnodigingen).
+ */
+export async function notifyShareDone(env: Env, task: TaskRow, actorId: string, actorName: string, defaultLocale: 'en' | 'nl', send: Sender = sendToAll): Promise<void> {
+  if (task.parent_id) return;
+  const { results } = await env.DB.prepare(
+    "SELECT ? AS uid UNION SELECT to_user FROM task_shares WHERE task_id = ? AND mode = 'shared' AND status = 'accepted'",
+  ).bind(task.user_id, task.id).all<{ uid: string }>();
+  for (const { uid } of results) {
+    if (uid === actorId) continue;
+    const make = (locale: string): Payload => ({
+      title: translate(locale, 'share.push_done', { name: actorName }), body: task.title, url: `/?task=${task.id}`, tag: `share-${task.id}`, actions: [],
+    });
+    const { total } = await send(env, uid, make, defaultLocale);
+    if (total) continue;
+    const user = await getUser(env.DB, uid);
+    const hook = user && (await loadUserPrefs(env, user)).fallbackWebhook;
+    if (hook) await postWebhook(hook, { ...make(defaultLocale), actions: undefined });
+  }
 }
 
 sharesApi.post('/', async (c) => {
