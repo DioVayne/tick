@@ -22,7 +22,7 @@ import { deviceApi, devicesApi } from './devices';
 import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
-import { leaveShareStmts, notifyShareDone, sharesApi } from './shares';
+import { leaveShareStmts, notifyShareDone, notifyShareLocation, sharesApi } from './shares';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxUpload, sweepAttachments } from './attachments';
@@ -449,6 +449,14 @@ async function plainDone(db: D1Database, t: TaskRow, done: boolean): Promise<boo
   return done && res.meta.changes > 0;
 }
 
+/** Nieuwe of andere plek op een gedeelde hoofdtaak: melding aan de anderen die hem delen, op de achtergrond. */
+async function placeShared(c: Context<AppEnv>, t: TaskRow) {
+  if (t.parent_id) return;
+  const sending = notifyShareLocation(c.env, t, c.get('auth').userId, c.get('user').name, c.get('install').defaultLocale)
+    .catch((e) => console.warn('plek op gedeelde taak melden mislukt', (e as Error).message));
+  try { c.executionCtx.waitUntil(sending); } catch { await sending; }
+}
+
 /**
  * Na echt afvinken van een hoofdtaak: melding aan de andere leden van de kopiegroep en aan de anderen die de taak
  * delen, op de achtergrond.
@@ -696,9 +704,13 @@ app.patch('/api/tasks/:id', async (c) => {
     else if (newRemind !== undefined) set('repeat_prev', null);
   }
   // Elke nieuwe locatie telt weer als nog niet gemeld.
+  let newPlace = false;
   if ('location' in b) {
-    for (const [col, v] of Object.entries(locColumns(cleanLocation(b.location)))) set(col, v);
+    const cols = locColumns(cleanLocation(b.location));
+    for (const [col, v] of Object.entries(cols)) set(col, v);
     set('loc_notified', 0);
+    // Alleen een echt andere plek (niet een nieuwe naam) is een melding aan de anderen waard.
+    newPlace = cols.loc_lat !== null && ['loc_lat', 'loc_lng', 'loc_radius', 'loc_trigger'].some((col) => (t as Record<string, unknown>)[col] !== cols[col]);
   }
   if ('location_notified' in b) {
     if (typeof b.location_notified !== 'boolean') throw new HttpError(400, 'err.must_be_bool', { field: 'location_notified' });
@@ -728,6 +740,7 @@ app.patch('/api/tasks/:id', async (c) => {
     if (act && await setDone(db, cur, !!b.done, await ownerZone(c, cur))) await copyDone(c, cur);
   }
   const updated = await getTask(db, userId, id);
+  if (newPlace && updated) await placeShared(c, updated);
   if ('position' in b && updated) {
     await rebalanceIfNeeded(db, updated, userId);
     return c.json(await presentOne(c.env, userId, id));

@@ -50,25 +50,39 @@ async function notifyInvite(env: Env, shareId: string, toUser: string, fromName:
 }
 
 /**
- * Push "{name} heeft hem afgevinkt ✓" naar de eigenaar en de geaccepteerde deelnemers van een gedeelde hoofdtaak,
- * behalve naar wie afvinkte. Zonder abonnement via de eigen fallback-webhook (zoals bij uitnodigingen).
+ * Push naar de eigenaar en de geaccepteerde deelnemers van een gedeelde hoofdtaak, behalve naar wie het deed.
+ * Zonder abonnement via de eigen fallback-webhook (zoals bij uitnodigingen).
  */
-export async function notifyShareDone(env: Env, task: TaskRow, actorId: string, actorName: string, defaultLocale: 'en' | 'nl', send: Sender = sendToAll): Promise<void> {
+async function notifyShareMembers(env: Env, task: TaskRow, actorId: string, make: (locale: string) => Payload, defaultLocale: 'en' | 'nl', send: Sender): Promise<void> {
   if (task.parent_id) return;
   const { results } = await env.DB.prepare(
     "SELECT ? AS uid UNION SELECT to_user FROM task_shares WHERE task_id = ? AND mode = 'shared' AND status = 'accepted'",
   ).bind(task.user_id, task.id).all<{ uid: string }>();
   for (const { uid } of results) {
     if (uid === actorId) continue;
-    const make = (locale: string): Payload => ({
-      title: translate(locale, 'share.push_done', { name: actorName }), body: task.title, url: `/?task=${task.id}`, tag: `share-${task.id}`, actions: [],
-    });
     const { total } = await send(env, uid, make, defaultLocale);
     if (total) continue;
     const user = await getUser(env.DB, uid);
     const hook = user && (await loadUserPrefs(env, user)).fallbackWebhook;
     if (hook) await postWebhook(hook, { ...make(defaultLocale), actions: undefined });
   }
+}
+
+/** Push "{name} heeft hem afgevinkt ✓" naar de anderen die de taak delen. */
+export function notifyShareDone(env: Env, task: TaskRow, actorId: string, actorName: string, defaultLocale: 'en' | 'nl', send: Sender = sendToAll): Promise<void> {
+  return notifyShareMembers(env, task, actorId, (locale) => ({
+    title: translate(locale, 'share.push_done', { name: actorName }), body: task.title, url: `/?task=${task.id}`, tag: `share-${task.id}`, actions: [],
+  }), defaultLocale, send);
+}
+
+/**
+ * Push "{name} gaf een gedeelde taak een plek" naar de anderen die de taak delen. Hun Android-app hoort een nieuwe
+ * plek anders pas bij zijn volgende verversing; met geo=1 biedt Tick in de app aan om hem meteen te wekken.
+ */
+export function notifyShareLocation(env: Env, task: TaskRow, actorId: string, actorName: string, defaultLocale: 'en' | 'nl', send: Sender = sendToAll): Promise<void> {
+  return notifyShareMembers(env, task, actorId, (locale) => ({
+    title: translate(locale, 'share.push_location', { name: actorName }), body: task.title, url: `/?task=${task.id}&geo=1`, tag: `share-loc-${task.id}`, actions: [],
+  }), defaultLocale, send);
 }
 
 sharesApi.post('/', async (c) => {
