@@ -351,12 +351,13 @@ const newTask = (fields) => ({
   id: crypto.randomUUID(), description: '', remind_at: null, notified: false, location: null, location_notified: false, pinned: false, done: false, done_at: null, source: 'app', ...fields,
 });
 
-/** Nieuwe taak bovenaan; de server bepaalt bij het versturen de definitieve positie. */
+/** Nieuwe taak bovenaan; de server bepaalt bij het versturen de definitieve positie. Geeft het id terug (staat direct lokaal). */
 export function addTask(title, remind_at, list) {
   const tops = state.open.filter((t) => !t.done);
   const position = tops.length ? Math.min(...tops.map((t) => t.position)) - STEP : 0;
   const task = newTask({ title, remind_at, list, parent_id: null, position });
-  return mutate({ type: 'create', task, body: { id: task.id, title, remind_at, list } });
+  mutate({ type: 'create', task, body: { id: task.id, title, remind_at, list } });
+  return task.id;
 }
 
 /** Nieuwe subtaak onderaan, in de lijst van de parent. Werkt ook als de parent zelf nog offline is aangemaakt. */
