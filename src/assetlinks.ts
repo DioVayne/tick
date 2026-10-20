@@ -2,9 +2,9 @@ const FINGERPRINT = /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/;
 
 /**
  * De officiële Android-app (GitHub Releases). Elke Tick vertrouwt hem, zodat hij zonder adresbalk opent zonder dat je
- * iets instelt. De vingerafdruk is die van de release-sleutel; leeg zolang die er nog niet is (dan alleen een eigen build).
+ * iets instelt. De vingerafdruk is die van de release-sleutel (de release-workflow controleert de APK hiertegen).
  */
-export const OFFICIAL_APP = { pkg: 'nl.detussenpartij.tick', certs: '' };
+export const OFFICIAL_APP = { pkg: 'nl.detussenpartij.tick', certs: '23:DE:94:99:96:1B:4A:C6:31:1C:E1:03:74:7E:BC:D6:82:C8:95:66:EC:BF:DF:6A:2B:C8:5E:C4:60:A0:6E:38' };
 
 /** De vingerafdrukken uit een lijst met komma's, in hoofdletters en zonder dubbele; ongeldige vallen weg (met een log). */
 function fingerprints(certs: string | undefined): string[] {
