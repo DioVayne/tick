@@ -1,5 +1,6 @@
 import { t } from './i18n.js';
 import { $, el, render } from './render.js';
+import { listColor } from './lists.js';
 import { createList, lists, load, loadTrash, state } from './store.js';
 
 let contextHandler = () => {};
@@ -55,7 +56,7 @@ export function renderSidebar() {
       item(null, t('ui.all'), total, icon(ALL)),
       inbox ? item(inbox.name, inbox.name, inbox.open, icon(INBOX)) : null),
     el('p', { class: 'side-h' }, t('ui.lists')),
-    el('div', { class: 'side-grp side-mine' }, ...all.filter((l) => l !== inbox).map((l) => item(l.name, l.name, l.open, dot(l.name)))),
+    el('div', { class: 'side-grp side-mine' }, ...all.filter((l) => l !== inbox).map((l) => item(l.name, l.name, l.open, dot(l.name, all.map((x) => x.name))))),
   );
   updateHeader();
 }
@@ -75,13 +76,10 @@ function icon(d) {
   return svg;
 }
 
-// Lijsten hebben geen eigen kleur: de naam kiest er vast een uit deze reeks (leesbaar op licht en donker).
-const DOTS = ['#1d9e75', '#7f77dd', '#d4537e', '#e8a317', '#378add', '#d85a30', '#639922', '#14a3b8'];
-function dot(name) {
-  let h = 0;
-  for (const c of name.toLowerCase()) h = (h * 31 + c.codePointAt(0)) >>> 0;
+/** Het kleurbolletje van een eigen lijst (de kleur volgt uit de naam, zie listColor). */
+function dot(name, names) {
   const span = el('span', { class: 'dot', 'aria-hidden': 'true' });
-  span.style.setProperty('--dot', DOTS[h % DOTS.length]); // CSSOM: geen style-attribuut (CSP)
+  span.style.setProperty('--dot', listColor(name, names) ?? ''); // CSSOM: geen style-attribuut (CSP)
   return span;
 }
 
