@@ -1,5 +1,6 @@
 # De officiële Android-app: bij een tag android-v1.2.3 bouwen, testen, ondertekenen met de release-sleutel en als
-# Tick-1.2.3.apk aan een GitHub Release hangen. Zie SETUP.md › "Releasing the Android app" voor de sleutel en de secrets.
+# Tick-1.2.3.apk (en Tick.apk) aan een GitHub Release hangen. Zie SETUP.md › "Releasing the Android app" voor de
+# sleutel en de secrets.
 name: Android release
 
 on:
@@ -60,4 +61,7 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "android-v$VERSION" "$APK" --title "Tick for Android $VERSION" --generate-notes
+        # Ook als Tick.apk: .../releases/latest/download/Tick.apk blijft zo altijd de nieuwste (de updatemelding in de app).
+        run: |
+          cp "$APK" "$(dirname "$APK")/Tick.apk"
+          gh release create "android-v$VERSION" "$APK" "$(dirname "$APK")/Tick.apk" --title "Tick for Android $VERSION" --generate-notes

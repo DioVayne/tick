@@ -105,13 +105,13 @@ The app opens your Tick full-screen (a Trusted Web Activity) and adds a widget w
 
 **Download it (recommended).** No computer or Android SDK needed.
 1. Deploy this version of Tick first (step 5 or [Updating](#updating)): the app checks your address with `/api/hello`, and `/.well-known/assetlinks.json` vouches for the official app, so it opens without an address bar. You don't need to set anything for that.
-2. On your phone, download `Tick-x.y.z.apk` from [GitHub Releases](https://github.com/DioVayne/tick/releases/latest) and open it. Android asks once to allow installing apps from your browser.
+2. On your phone, download the app from https://github.com/DioVayne/tick/releases/latest/download/Tick.apk and open it. Android asks once to allow installing apps from your browser.
 3. Open the app and type the address of your Tick (for example `tick.example.com`). Log in; the app links itself and turns on notifications.
    Or the other way round: open your Tick in the phone's browser, log in and tap **Settings → Devices → Connect the Android app**. That opens the app with your address already filled in (or the download page if the app isn't installed yet).
 4. Add the widget from your home screen. Afterwards the phone shows up under **Settings → Devices** with its notification and location status.
 5. For location reminders turn on location notifications in the app and choose **Allow all the time** in the permission screen.
 
-Updates: download the new APK from Releases and install it over the old one. [Obtainium](https://obtainium.imranr.dev) can do that for you: add `https://github.com/DioVayne/tick` as a source. To use another Tick later, open **Phone settings → Change address**; the app then forgets the tasks and location reminders of the old one.
+Updates: the app checks once a day and shows a notification when there is a new version; tap it, then open the downloaded file. You can also download the newest APK yourself: https://github.com/DioVayne/tick/releases/latest/download/Tick.apk. [Obtainium](https://obtainium.imranr.dev) can do that for you: add `https://github.com/DioVayne/tick` as a source. To use another Tick later, open **Phone settings → Change address**; the app then forgets the tasks and location reminders of the old one.
 
 **Or build it yourself** (JDK 17+ and the Android SDK; for your own package id, name or icon, or if you'd rather not install someone else's APK):
 1. Make your own signing key, once (from `android/`; `keytool` comes with the JDK). Choose a password and keep the file and the password safe: an update must be signed with the same key.
@@ -153,7 +153,7 @@ The official APK is built by [.github/workflows/android-release.yml](.github/wor
 1. Once: make the key (`keytool -genkeypair -v -keystore tick-official.jks -alias tick -keyalg RSA -keysize 4096 -validity 10000`), keep it and its passwords in a password manager **and** an offline backup. Losing it means no more updates for anyone who installed the app; leaking it means someone can publish a fake update.
 2. Once: add four repository secrets (**Settings → Secrets and variables → Actions**): `TICK_KEYSTORE_BASE64` (the file as base64, e.g. `base64 -w0 tick-official.jks`), `TICK_KEYSTORE_PASSWORD`, `TICK_KEY_ALIAS`, `TICK_KEY_PASSWORD`.
 3. Once: put the key's SHA-256 fingerprint (`keytool -list -v -keystore tick-official.jks -alias tick`) in `OFFICIAL_APP.certs` in `src/assetlinks.ts`. The workflow refuses to publish an APK whose signature isn't there.
-4. Each release: raise `versionCode` and `versionName` in `android/app/build.gradle`, merge, then `git tag android-v1.5.0 && git push origin android-v1.5.0`. The workflow runs the JUnit tests, builds, checks the signature and attaches `Tick-1.5.0.apk` to a new release.
+4. Each release: raise `versionCode` and `versionName` in `android/app/build.gradle`, merge, then `git tag android-v1.5.0 && git push origin android-v1.5.0`. The workflow runs the JUnit tests, builds, checks the signature and attaches `Tick-1.5.0.apk` and `Tick.apk` to a new release. Installed apps notice the new version within a day.
 
 ## 11. Optional: attachments
 Photos and files on a task. They are stored in Cloudflare R2, and R2 only switches on once your account has a payment method on file, even though Tick stays within the free tier (10 GB storage) for a long time. Without this step Tick works the same, just without attachments; you can add it any time later.
