@@ -79,7 +79,7 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 #add #add-when:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
 #add button { min-height: 32px; padding: 4px 12px; font-size: .875rem; }
 #add:not(:focus-within):has(#add-title:placeholder-shown) > :not(#add-title, .add-key) { display: none; }
-ul.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+ul.tasks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 ul.sub { margin-left: 24px; padding-bottom: 2px; gap: 0; }
 /* Elke taak een eigen vlak; subtaken liggen in het vlak van hun hoofdtaak */
 li.task { border-radius: 8px; background: var(--fill); }
@@ -96,6 +96,8 @@ li.task.sortable-ghost { opacity: .4; }
 @media (hover: hover) { .grip { opacity: 0; transition: opacity .1s; } .row:hover > .grip, .grip:focus-visible { opacity: 1; } }
 .check { width: 18px; height: 18px; min-width: 18px; min-height: 18px; padding: 0; border-radius: 4px; border: 1.5px solid var(--muted); background: transparent; margin: 0 4px; }
 .check { position: relative; transition: background .15s, border-color .15s; }
+/* Het vakje blijft klein, maar je raakt het in een vlak van 44×44 */
+.check::before { content: ""; position: absolute; inset: -13px; }
 .check[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
 .check[aria-checked="true"]::after {
   content: ""; position: absolute; left: 4.5px; top: 1px; width: 4.5px; height: 9px;
@@ -106,7 +108,8 @@ li.task.sortable-ghost { opacity: .4; }
 .done .title { text-decoration: line-through; color: var(--muted); }
 /* Titelveld van de gekozen taak (desktop): even hoog als de knop, de tekst op dezelfde plek. */
 textarea.title-edit { display: block; min-width: 0; min-height: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none; outline: none; padding: 8.5px 2px; line-height: 1.4; resize: none; overflow: hidden; overflow-wrap: anywhere; cursor: text; }
-.meta { font-size: .75rem; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; padding: 0 10px 6px 60px; margin-top: -6px; }
+.meta { font-size: .75rem; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; padding: 0 10px 6px 60px; margin-top: -6px; overflow-wrap: anywhere; }
+.meta > * { min-width: 0; }
 .meta .bell { color: var(--bell); }
 .row .pinned { flex: none; margin-left: auto; padding: 2px 4px; border: 0; border-radius: 6px; background: transparent; font-size: .75rem; line-height: 1; cursor: pointer; }
 .row .pinned:hover { background: var(--fill); }
@@ -135,6 +138,8 @@ li.trashed .meta { padding-left: 10px; margin-top: 0; }
 .trash-actions button { min-height: 34px; padding: 4px 10px; font-size: .8125rem; }
 .toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); translate: -50% 0; z-index: 20; max-width: calc(100% - 32px); background: var(--toast-bg); color: #fff; padding: 10px 14px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.25); font-size: .875rem; }
 .toast[hidden] { display: none; }
+.toast:has(button) { display: flex; align-items: center; gap: 14px; padding: 4px 6px 4px 14px; }
+.toast button { flex: none; white-space: nowrap; min-height: 40px; padding: 4px 10px; background: transparent; color: inherit; font-weight: 600; text-decoration: underline; }
 html { overscroll-behavior-y: contain; }
 .ptr { position: fixed; top: env(safe-area-inset-top); left: 50%; z-index: 10; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--card); border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,.2); color: var(--muted); pointer-events: none; }
 .ptr.ready { color: var(--accent); }
@@ -239,6 +244,8 @@ body.settings-open #btn-search, body.settings-open #search, body.calendar-open #
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 20%, transparent); }
 #side .item.on .ico, #side .item[aria-pressed="true"] .ico { stroke: var(--accent); }
 #side .item.muted { color: var(--muted); }
+/* Met een vinger: de items van het menu even hoog als een vingertop */
+@media (pointer: coarse) { #side .item { min-height: 44px; } }
 #side .item.drop { outline: 2px dashed var(--accent); outline-offset: -2px; background: var(--sel); }
 #side [hidden] { display: none; }
 #side .sep { border-top: 1px solid var(--line); margin: 10px 6px; }
@@ -434,7 +441,7 @@ body.calendar-open #main > :not(#calendar):not(#net) { display: none; }
 .cal-empty { color: var(--muted); }
 .cal-morebtn { justify-self: start; min-height: 36px; margin-top: 8px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); }
 .cal-nav:focus-visible, .cal-mode:focus-visible, .cal-chip:focus-visible, .cal-num:focus-visible, .cal-item:focus-visible, .cal-more:focus-visible, .cal-morebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-@media (max-width: 600px) { .cal-cell { min-height: 4rem; } .cal-chip .cal-name { display: none; } .cal-chip { height: 6px; padding: 0; } .cal-chip .cal-time { display: none; } }
+@media (max-width: 600px) { .cal-cell { min-height: 4rem; } .cal-chip .cal-name { display: none; } .cal-chip { height: 6px; min-height: 0; padding: 0; background: var(--accent); } .cal-chip .cal-time { display: none; } }
 /* Groepen (klein kopje) met daaronder één lijst van uitklapbare blokken; een open blok krijgt een lichte tint. */
 .settings { --tint: color-mix(in srgb, var(--accent) 14%, var(--card)); --open: color-mix(in srgb, var(--accent) 4%, var(--card));
   display: grid; gap: 4px; padding: 2px 0 24px; }

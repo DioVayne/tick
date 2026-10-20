@@ -6,7 +6,7 @@ import { applyListOp, findList, mergeLists, normName } from './lists.js';
 import { PUSH_OFF_KEY } from './push.js';
 
 const STEP = 1_000_000;
-const UNDO_MS = 3000;
+export const UNDO_MS = 5000;
 const REPEAT_UNDO_MS = 15 * 60_000; // zo lang kan een doorgeschoven herhaling nog terug (zoals op de server)
 
 // Oude stand van een doorgeschoven herhalende taak, alleen in het geheugen: id -> { next, at, remind_at, notified, location_notified, kids, ms }.
@@ -14,7 +14,7 @@ const undoRepeat = new Map();
 
 // Net afgevinkte taken (justDone): blijven even zichtbaar (doorgestreept) zodat je ze kunt terugzetten en de lijst niet verspringt.
 export const state = {
-  open: [], done: [], showDone: false, list: null, selected: null, justDone: new Map(), query: '',
+  open: [], done: [], showDone: false, doneLoading: false, list: null, selected: null, justDone: new Map(), query: '',
   // Prullenbak: alleen online opgehaald (null = nog niet geladen of offline).
   showTrash: false, trash: /** @type {any[] | null} */ (null),
   // Openstaande uitnodigingen om een taak te delen (alleen online opgehaald).
@@ -245,7 +245,7 @@ async function loadOnce() {
     const owned = await ownerReady; // false: de lokale gegevens kunnen van een ander zijn, dan niet lezen of schrijven
     const queued = owned ? await db.outboxAll() : [];
     state.open = open;
-    if (done) state.done = done;
+    if (done) { state.done = done; state.doneLoading = false; } // een eerdere ronde zonder Afgerond laat "Laden…" staan
     if (serverLists) state.serverLists = serverLists;
     if (invites) state.invites = invites;
     state.offline = false;
@@ -258,6 +258,7 @@ async function loadOnce() {
   } catch (e) {
     if (e instanceof Offline) state.offline = true;
     else report(tr('store.load_failed', { reason: e.message }));
+    if (state.showDone) state.doneLoading = false;
   }
   changed();
 }

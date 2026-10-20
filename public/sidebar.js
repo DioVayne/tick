@@ -185,6 +185,7 @@ export function setupSidebar() {
 
   $('#btn-done').addEventListener('click', () => {
     state.showDone = true;
+    state.doneLoading = true;
     state.showTrash = false;
     closeDrawer();
     render();

@@ -6,7 +6,7 @@ import { dateLocale, t, t as tr } from './i18n.js'; // tr waar t al een taak is
 import { listColor } from './lists.js';
 import { plainText } from './markdown.js';
 import { renderSidebar } from './sidebar.js';
-import { listNames, state, toggleDone, update } from './store.js';
+import { UNDO_MS, listNames, state, toggleDone, update } from './store.js';
 import { renderTrash, shareLabel, shareNames } from './trash.js';
 import { renderInvites } from './share.js';
 
@@ -32,12 +32,27 @@ const toastEl = el('div', { class: 'toast', role: 'alert', hidden: true });
 document.body.append(toastEl);
 let toastTimer;
 /** @param {string} msg @param {'ok'} [kind] */
-export function toast(msg, kind) {
-  toastEl.textContent = msg;
+// Met action ({ label, run, ms }) staat er een knop naast, bijvoorbeeld "Ongedaan maken".
+export function toast(msg, kind, action) {
+  toastEl.replaceChildren(el('span', {}, msg));
+  if (action) {
+    toastEl.append(el('button', { type: 'button', onclick: () => { toastEl.hidden = true; action.run(); } }, action.label));
+  }
   toastEl.classList.toggle('ok', kind === 'ok');
   toastEl.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { toastEl.hidden = true; }, 4000);
+  toastTimer = setTimeout(() => { toastEl.hidden = true; }, action?.ms ?? 4000);
+}
+
+/** Afvinken of terugzetten; na afvinken een melding met "Ongedaan maken" zolang dat kan. */
+export function checkOff(task) {
+  const fresh = !task.done && !state.justDone.has(task.id);
+  toggleDone(task);
+  if (!fresh) return;
+  toast(tr('render.checked_off'), 'ok', {
+    label: tr('render.undo'), ms: UNDO_MS,
+    run: () => { if (state.justDone.has(task.id)) toggleDone(task); },
+  });
 }
 
 // ---------- tijd ----------
@@ -138,7 +153,7 @@ function taskItem(t, children) {
     el('button', {
       class: 'check', role: 'checkbox', 'aria-checked': String(done),
       'aria-label': state.justDone.has(t.id) ? tr('render.undo') : t.done ? tr('render.reopen') : tr('render.check'),
-      onclick: (e) => { if (!done) confetti(e.currentTarget, isCouple(t.share ?? state.open.find((p) => p.id === t.parent_id)?.share)); toggleDone(t); },
+      onclick: (e) => { if (!done) confetti(e.currentTarget, isCouple(t.share ?? state.open.find((p) => p.id === t.parent_id)?.share)); checkOff(t); },
     }),
     selected && !done && wide.matches ? titleField(t)
       : el('button', { class: 'title', 'aria-current': selected ? 'true' : false, onclick: (e) => openTask(e, t.id) }, ...highlight(t.title)),
@@ -234,7 +249,7 @@ function renderList(root) {
   const tops = visible.filter((t) => !t.parent_id || !ids.has(t.parent_id));
   if (!tops.length) {
     const empty = q ? t('render.nothing_found')
-      : state.showDone ? (state.offline ? t('render.done_offline') : t('render.nothing_done'))
+      : state.showDone ? (state.offline ? t('render.done_offline') : state.doneLoading ? t('render.loading') : t('render.nothing_done'))
       : t('render.nothing_to_do');
     root.append(el('p', { class: 'empty' }, empty));
     return;
