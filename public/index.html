@@ -17,7 +17,9 @@
   <div id="app">
     <header id="topbar">
       <button id="btn-menu" class="ghost" data-i18n-attr="aria-label:ui.menu" aria-label="Menu" aria-controls="side" aria-expanded="false">☰</button>
-      <h1 id="title" data-i18n="ui.all">All</h1>
+      <h1><button id="title" class="titlebtn" type="button" aria-haspopup="menu" disabled data-i18n="ui.all">All</button></h1>
+      <input id="search" class="search" type="search" data-i18n-attr="placeholder:ui.search_placeholder;aria-label:ui.search" placeholder="Search…" aria-label="Search" autocomplete="off" enterkeyhint="search" hidden>
+      <button id="btn-search" class="iconbtn" type="button" data-i18n-attr="aria-label:ui.search;title:ui.search_title" aria-label="Search" title="Search ( / )" aria-controls="search" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     </header>
     <aside id="side" data-i18n-attr="aria-label:ui.lists" aria-label="Lists">
       <h2 class="brand">Tick</h2>
@@ -37,9 +39,9 @@
     <div class="scrim"></div>
     <main id="main">
       <p id="net" class="net" role="status" hidden></p>
-      <input id="search" class="search" type="search" data-i18n-attr="placeholder:ui.search_placeholder;aria-label:ui.search" placeholder="Search…  ( / )" aria-label="Search" autocomplete="off" enterkeyhint="search">
       <form id="add" autocomplete="off">
         <input id="add-title" data-i18n-attr="placeholder:ui.new_task_placeholder;aria-label:ui.new_task" placeholder="New task…" aria-label="New task" required>
+        <kbd class="add-key" aria-hidden="true">N</kbd>
         <input id="add-remind" type="datetime-local" data-i18n-attr="aria-label:ui.reminder;title:ui.reminder" aria-label="Reminder" title="Reminder">
         <button type="submit" data-i18n="ui.add">Add</button>
         <button id="add-open" type="button" class="ghost" data-i18n="ui.add_details" data-i18n-attr="title:ui.add_details_title" title="Add and open the details (Shift+Enter)">Details</button>

@@ -4,19 +4,22 @@ import { sameName } from './lists.js';
 import { el } from './render.js';
 import { deleteList, listNames, lists, renameList, state } from './store.js';
 
-// Menu bij een lijst in de zijbalk: hernoemen, samenvoegen met…, verwijderen…
+// Menu bij een lijst in de zijbalk en achter de titel: hernoemen, taken verplaatsen naar, verwijderen
 
 let closeOpen = null;
+/** Geopend vanaf de titel boven de lijst: hernoemen gebeurt daar, en daar gaat de focus ook weer heen. */
+let fromTitle = false;
 
 const openCount = (name) => lists().find((l) => l.name === name)?.open ?? 0;
 
 /**
  * @param {string} name
- * @param {HTMLElement} anchor het lijstknopje in de zijbalk
+ * @param {HTMLElement} anchor het lijstknopje in de zijbalk, of de titel boven de lijst
  */
 export function openListMenu(name, anchor) {
   if (!name || name === 'Inbox') return; // vaste lijsten hebben geen menu
   closeOpen?.();
+  fromTitle = anchor.id === 'title';
 
   const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': `Lijst "${name}"` });
   const item = (label, onclick) => el('button', { class: 'menu-item', type: 'button', role: 'menuitem', onclick }, label);
@@ -24,7 +27,7 @@ export function openListMenu(name, anchor) {
   const showMain = () => {
     menu.replaceChildren(
       item(t('lists.rename'), () => { close(); startRename(name, anchor); }),
-      item(t('lists.merge_with'), showTargets),
+      item(t('lists.move_tasks'), showTargets),
       item(t('lists.delete'), () => { close(); confirmDelete(name); }),
     );
     focusFirst();
@@ -55,7 +58,7 @@ export function openListMenu(name, anchor) {
     /** @type {HTMLElement} */ (items[next]).focus();
   };
   // Het ⋯-knopje opent het menu opnieuw, dus dat sluiten we hier niet eerst.
-  const onDown = (e) => { if (!menu.contains(e.target) && !e.target.closest?.('.list-more')) close(); };
+  const onDown = (e) => { if (!menu.contains(e.target) && !e.target.closest?.('.list-more, #title')) close(); };
   function close() {
     if (closeOpen !== close) return;
     closeOpen = null;
@@ -86,7 +89,7 @@ function place(menu, anchor) {
 /** De naam wordt op zijn plek een invoerveld. */
 function startRename(name, anchor) {
   // Na een render bestaat de knop misschien niet meer; zoek hem opnieuw.
-  const button = /** @type {HTMLElement} */ ([...document.querySelectorAll('#side-lists button[data-list]')]
+  const button = /** @type {HTMLElement} */ (fromTitle ? anchor : [...document.querySelectorAll('#side-lists button[data-list]')]
     .find((b) => /** @type {HTMLElement} */ (b).dataset.list === name) ?? anchor);
   const input = el('input', { class: 'rename-input', value: name, maxlength: '100', 'aria-label': 'Nieuwe naam', autocomplete: 'off' });
   let finished = false;
@@ -133,9 +136,9 @@ async function commitRename(name, value) {
 
 async function confirmMerge(name, target) {
   const answer = await ask({
-    title: t('lists.merge_title'),
+    title: t('lists.move_title'),
     text: t('lists.merge_confirm', { n: openCount(name), name, target }),
-    buttons: [{ label: t('lists.merge'), value: 'merge', kind: 'primary' }, { label: t('dialog.cancel'), value: null, kind: 'ghost' }],
+    buttons: [{ label: t('lists.move'), value: 'merge', kind: 'primary' }, { label: t('dialog.cancel'), value: null, kind: 'ghost' }],
   });
   if (answer === 'merge') renameList(name, target);
   focusList(answer === 'merge' ? target : name);
@@ -162,6 +165,8 @@ async function confirmDelete(name) {
  * Na een render is de knop vervangen, dus opnieuw opzoeken; '' is Alle.
  */
 function focusList(name) {
+  const title = /** @type {HTMLButtonElement} */ (document.getElementById('title'));
+  if (fromTitle && !title.disabled) { title.focus(); return; }
   const buttons = /** @type {HTMLElement[]} */ ([...document.querySelectorAll('#side-lists button[data-list]')]);
   (buttons.find((b) => b.dataset.list === name) ?? buttons[0])?.focus();
 }

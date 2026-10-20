@@ -62,24 +62,30 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 .chips { display: flex; gap: 6px; overflow-x: auto; padding: 6px 0; }
 .chips button { background: var(--card); color: var(--text); border: 1px solid var(--line); white-space: nowrap; min-height: 34px; padding: 4px 12px; border-radius: 999px; }
 .chips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-/* Invoerbalk zoals TickTick: één gevuld vlak met een +; reminder en knop verschijnen pas bij gebruik. */
-#add { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 6px 0 12px; padding: 3px 6px 3px 12px; border-radius: 8px; background: var(--fill); }
-#add::before { content: "+"; color: var(--muted); font-size: 1.375rem; line-height: 1; font-weight: 300; }
-#add:focus-within { outline: 1px solid var(--accent); }
+/* Nieuwe taak: een getinte knop met een rond plusje; bij typen een gewoon veld, reminder en knoppen verschijnen dan pas. */
+#add { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 6px 0 14px; padding: 4px 8px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 13%, transparent); cursor: text; }
+#add::before { content: "+"; flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-size: 1.125rem; line-height: 1; }
+#add:focus-within { background: var(--fill); outline: 1px solid var(--accent); }
 #add input { border: 0; background: transparent; padding: 7px 4px; }
 #add input:focus { outline: none; }
+#add-title::placeholder { color: var(--link); font-weight: 600; opacity: 1; }
+#add:focus-within #add-title::placeholder { color: var(--muted); font-weight: 400; }
+.add-key { flex: none; margin-right: 2px; padding: 2px 6px; border: 1px solid color-mix(in srgb, var(--link) 45%, transparent); border-radius: 4px; color: var(--link); font: .75rem/1.2 system-ui, sans-serif; }
+#add:focus-within .add-key, #add:has(#add-title:not(:placeholder-shown)) .add-key { display: none; }
+@media (hover: none) { .add-key { display: none; } }
 #add-title { flex: 1 1 180px; min-width: 0; }
 #add-remind { flex: 0 1 auto; width: auto; min-width: 0; color: var(--muted); font-size: .875rem; }
 #add button { min-height: 32px; padding: 4px 12px; font-size: .875rem; }
-#add:not(:focus-within):has(#add-title:placeholder-shown) > :not(#add-title) { display: none; }
-ul.tasks { list-style: none; margin: 0; padding: 0; }
-ul.sub { margin-left: 24px; padding-bottom: 2px; }
-/* Taken als regels met een scheidingslijn, geen kaartjes */
-li.task { border-bottom: 1px solid var(--line); border-radius: 6px; }
-ul.sub > li.task:last-child { border-bottom: 0; }
-li.task:has(> .row:hover) { background: var(--hover); }
-/* De gekozen taak: accentrand en een lichte accenttint */
-li.task.sel, li.task.sel:has(> .row:hover) { background: var(--sel); border-bottom-color: transparent; }
+#add:not(:focus-within):has(#add-title:placeholder-shown) > :not(#add-title, .add-key) { display: none; }
+ul.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+ul.sub { margin-left: 24px; padding-bottom: 2px; gap: 0; }
+/* Elke taak een eigen vlak; subtaken liggen in het vlak van hun hoofdtaak */
+li.task { border-radius: 8px; background: var(--fill); }
+ul.sub > li.task { background: transparent; }
+li.task:has(> .row:hover) { background: color-mix(in srgb, var(--fill), var(--text) 5%); }
+/* De gekozen taak: een dun accentrandje met een zachte gloed */
+li.task.sel, li.task.sel:has(> .row:hover) { background: color-mix(in srgb, var(--fill), var(--accent) 8%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 22%, transparent); }
 li.task.sortable-chosen { background: var(--card); box-shadow: 0 6px 18px var(--shadow); }
 li.task.sortable-ghost { opacity: .4; }
 .row { display: flex; align-items: center; gap: 6px; padding: var(--row-pad) 6px; }
@@ -110,7 +116,7 @@ textarea.title-edit { display: block; min-width: 0; min-height: 0; margin: 0; bo
 .locbar p { margin: 0; flex: 1 1 220px; }
 .locbar strong { color: var(--bell); }
 .locbar-actions { display: flex; gap: 8px; }
-.search { margin: 2px 0 6px; border: 0; background: var(--fill); }
+.search { margin: 0; border: 0; background: var(--fill); }
 mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1px; }
 .status { color: var(--muted); font-size: .8125rem; text-align: center; min-height: 20px; }
 .empty { text-align: center; color: var(--muted); padding: 32px 0; }
@@ -190,6 +196,20 @@ textarea.editor { min-height: 120px; resize: none; overflow: hidden; font-size: 
 #main { padding: 8px 8px 80px; max-width: 720px; margin: 0 auto; min-width: 0; }
 #topbar { display: flex; align-items: center; gap: 8px; padding: max(8px, env(safe-area-inset-top)) 8px 0; max-width: 720px; margin: 0 auto; }
 #btn-menu { width: 40px; padding: 0; font-size: 1.25rem; border: 0; }
+#topbar h1 { flex: 1; min-width: 0; }
+/* De titel is bij een eigen lijst ook de knop voor het lijstmenu (▾); elders gewone tekst. */
+.titlebtn { display: block; max-width: 100%; min-height: 36px; margin-left: -6px; padding: 2px 6px; background: transparent; color: var(--text); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.titlebtn:not(:disabled):hover { background: var(--hover); }
+.titlebtn:not(:disabled)::after { content: " ▾"; color: var(--muted); font-size: .75em; font-weight: 400; }
+.titlebtn:disabled { cursor: default; }
+.titlebtn[hidden] { display: none; }
+#topbar .rename-input { min-height: 36px; padding: 4px 8px; border: 1px solid var(--accent); font-size: 1.125rem; font-weight: 600; }
+/* Zoeken: een vergrootglas; open neemt het veld de plek van de titel */
+.iconbtn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 0; background: var(--fill); color: var(--muted); }
+.iconbtn:hover, .iconbtn[aria-expanded="true"] { color: var(--text); }
+#topbar .search { flex: 1; min-width: 0; height: 36px; padding: 6px 10px; }
+body.search-open:not(.settings-open):not(.calendar-open) #topbar h1 { display: none; }
+body.settings-open #btn-search, body.settings-open #search, body.calendar-open #btn-search, body.calendar-open #search { display: none; }
 #resizer, #detail { display: none; }
 #side { background: var(--side); border-right: 1px solid var(--line); padding: max(12px, env(safe-area-inset-top)) 8px 12px; display: flex; flex-direction: column; overflow-y: auto; }
 .brand { margin: 4px 8px 8px; font-size: 1.25rem; }
@@ -239,7 +259,6 @@ textarea.editor { min-height: 120px; resize: none; overflow: hidden; font-size: 
 .dpin[aria-pressed="true"] { opacity: 1; filter: none; background: var(--fill); }
 textarea.dt { flex: 1; min-width: 0; min-height: 0; border: 0; background: transparent; padding: 4px; border-radius: 6px; font-size: 1.125rem; font-weight: 600; line-height: 1.35; resize: none; overflow: hidden; overflow-wrap: anywhere; }
 textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
-.pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 12px; }
 .pill { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; min-height: 30px; padding: 3px 10px; border: 0; border-radius: 6px; background: var(--fill); color: var(--text); font-size: .8125rem; }
 .pill .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pill.b { color: var(--bell); }
@@ -250,19 +269,27 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 .pill input { width: auto; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font-size: .8125rem; }
 .pill input:focus { outline: none; }
 .pill input:disabled { color: var(--muted); }
-/* Wanneer: reminder, verzetten/wissen en ritme als één blok. */
-.pill-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px; max-width: 100%; padding: 2px; border: 1px solid var(--line); border-radius: 8px; }
-.pill-group .pill { background: transparent; }
-.pill-group .pill:hover { background: var(--fill); }
-.desc { margin: 4px 0; }
-.subs { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 8px; }
+/* Eigenschappen: één blok, een rij per eigenschap (reminder met verzetten/wissen, ritme, plek, lijst). */
+.dprops { display: grid; gap: 2px; margin: 12px 0 8px; border-radius: 10px; overflow: hidden; }
+.prow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 3px 4px; background: var(--fill); }
+.prow .pill { background: transparent; }
+.prow .pill:not(.mini) { flex: 1 1 auto; justify-content: flex-start; }
+.prow .pill:not(:disabled):hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+/* De onderdelen eronder: elk een eigen vlak, zonder scheidingslijnen */
+.desc, .subs, .dfiles, .dshare, .dcopies { margin-top: 8px; padding: 8px 12px; border-radius: 10px; background: var(--fill); }
+.desc { padding: 2px 10px; }
+.desc textarea.editor { border: 0; background: transparent; padding: 6px 2px; }
+.desc textarea.editor:focus { outline: none; }
+.desc:focus-within { outline: 1px solid var(--accent); }
 .subs h3 { margin: 0 0 4px; font-size: .8125rem; font-weight: 600; color: var(--muted); }
 .subs ul { list-style: none; margin: 0; padding: 0; }
 .subs li { display: flex; align-items: center; gap: 8px; }
 .subs .subtitle { flex: 1; min-height: 34px; padding: 4px 2px; background: transparent; color: var(--text); text-align: left; word-break: break-word; }
 .subs li.done .subtitle { text-decoration: line-through; color: var(--muted); }
 .subs input { border: 0; background: transparent; padding: 6px 2px; font-size: .9375rem; }
-.dfoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: .8125rem; }
+.dfoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; color: var(--muted); font-size: .8125rem; }
+.dfoot button.danger { border-color: transparent; }
+.dfoot button.danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .dfoot .actions { display: flex; gap: 8px; }
 .dfoot button { min-height: 32px; padding: 4px 10px; font-size: .8125rem; }
 #resizer:hover, body.resizing #resizer { background: var(--accent); }
@@ -307,7 +334,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 .share-mode input[type="radio"] { width: auto; flex: none; margin: 3px 0 0; padding: 0; accent-color: var(--accent); }
 .share-mode span { display: grid; gap: 2px; }
 .share-mode small { color: var(--muted); }
-.dshare { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 8px; display: grid; gap: 6px; justify-items: start; }
+.dshare { display: grid; gap: 6px; justify-items: start; }
 .dshare[hidden] { display: none; }
 .dshare h3 { margin: 0; font-size: .8125rem; font-weight: 600; color: var(--muted); }
 .share-list { list-style: none; margin: 0; padding: 0; width: 100%; }
@@ -327,7 +354,7 @@ button.small { min-height: 30px; padding: 2px 10px; font-size: .8125rem; }
 .copy-pill.done { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
 .copy-bar { display: inline-block; flex: none; width: 28px; height: 4px; border-radius: 2px; overflow: hidden; background: color-mix(in srgb, var(--accent) 22%, transparent); }
 .copy-bar > i { display: block; height: 100%; width: calc(var(--p, 0) * 100%); background: var(--accent); }
-.dcopies { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 8px; display: grid; gap: 6px; }
+.dcopies { display: grid; gap: 6px; }
 .dcopies[hidden] { display: none; }
 .dcopies h3 { margin: 0; font-size: .8125rem; font-weight: 600; color: var(--muted); }
 .copy-list { list-style: none; margin: 0; padding: 0; }
@@ -473,7 +500,7 @@ p.set-note { margin: 0 0 8px; }
 .confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1000; }
 
 /* Bijlagen in het detailpaneel */
-.dfiles { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 8px; display: grid; gap: 8px; }
+.dfiles { display: grid; gap: 8px; }
 .dfiles[hidden] { display: none; }
 .dfiles h3 { margin: 0; font-size: .8125rem; font-weight: 600; color: var(--muted); }
 .att-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; }
