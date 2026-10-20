@@ -63,9 +63,9 @@ describe('app-shell', () => {
     for (const path of shell) expect((await call(path)).status, path).toBe(200);
   });
 
-  it('de cacheversie is opgehoogd voor het verbinden van de Android-app vanuit de browser', async () => {
+  it('de cacheversie is opgehoogd voor de opvallendere koppelbalk', async () => {
     const sw = await (await call('/sw.js')).text();
-    expect(sw.match(/const CACHE = '([^']+)'/)![1]).toBe('tick-shell-v25');
+    expect(sw.match(/const CACHE = '([^']+)'/)![1]).toBe('tick-shell-v26');
   });
 
   it('elke module die de shell importeert zit zelf ook in de shell (anders is de app offline leeg)', async () => {

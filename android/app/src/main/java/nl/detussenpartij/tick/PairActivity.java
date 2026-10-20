@@ -15,11 +15,13 @@ import org.json.JSONArray;
 /**
  * tick://pair?code=…&base=…: de PWA geeft een eenmalige koppelcode en haar adres door (vanuit de app, of vanuit de
  * browser op de telefoon). Is het adres nieuw of anders, dan vraagt de app eerst of dat klopt. Doorzichtig: de app
- * wisselt de code op de achtergrond in voor een sleutel, vraagt zo nodig om meldingen en sluit; daarna staat de TWA
- * (of de browser) er weer. Mislukt het, dan toont de PWA zelf een knop om het opnieuw te proberen.
+ * wisselt de code op de achtergrond in voor een sleutel, vraagt zo nodig om locatie, meldingen en de batterij
+ * (PairSteps) en sluit; daarna staat de TWA (of de browser) er weer. Mislukt het, dan toont de PWA zelf een knop om het opnieuw te proberen.
  */
 public class PairActivity extends Activity {
     private static final int REQ_NOTIFICATIONS = 1;
+    private static final int REQ_LOCATION = 2;
+    private static final int REQ_BACKGROUND = 3;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -92,23 +94,72 @@ public class PairActivity extends Activity {
             return;
         }
         if (isFinishing() || isDestroyed()) return;
-        if (Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
-        } else {
-            askBatteryAndFinish();
+        next(PairSteps.first(notificationsGranted(), granted(Manifest.permission.ACCESS_FINE_LOCATION),
+                granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION)));
+    }
+
+    /** Eén stap na het koppelen (zie PairSteps); elke stap gaat via een systeemvraag of dialoog naar de volgende. */
+    private void next(PairSteps.Step step) {
+        if (isFinishing() || isDestroyed()) return;
+        switch (step) {
+            case LOCATION:
+                // Eerst uitleggen waarom: anders komt de locatievraag van Android uit het niets.
+                new AlertDialog.Builder(this)
+                        .setTitle(R.string.pair_loc_title)
+                        .setMessage(R.string.pair_loc_text)
+                        .setPositiveButton(R.string.pair_loc_ok, (dlg, w) -> requestPermissions(foregroundPermissions(), REQ_LOCATION))
+                        .setNegativeButton(R.string.pair_loc_later, (dlg, w) -> next(PairSteps.skipLocation(notificationsGranted())))
+                        .setOnCancelListener(dlg -> next(PairSteps.skipLocation(notificationsGranted())))
+                        .show();
+                break;
+            case BACKGROUND:
+                // "Altijd toestaan" staat nooit in de eerste systeemvraag; deze vraag opent het locatiescherm van Tick.
+                new AlertDialog.Builder(this)
+                        .setTitle(R.string.loc_background_title)
+                        .setMessage(getText(R.string.loc_background_text))
+                        .setPositiveButton(android.R.string.ok, (dlg, w) -> requestPermissions(
+                                new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, REQ_BACKGROUND))
+                        .setNegativeButton(android.R.string.cancel, (dlg, w) -> askBatteryAndFinish())
+                        .setOnCancelListener(dlg -> askBatteryAndFinish())
+                        .show();
+                break;
+            case NOTIFICATIONS:
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
+                break;
+            default:
+                askBatteryAndFinish();
         }
+    }
+
+    private boolean granted(String permission) {
+        return checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean notificationsGranted() {
+        return Build.VERSION.SDK_INT < 33 || granted(Manifest.permission.POST_NOTIFICATIONS);
+    }
+
+    /** Locatie en meldingen in één systeemvraag, zoals in "Tick op deze telefoon". */
+    private String[] foregroundPermissions() {
+        return notificationsGranted()
+                ? new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}
+                : new String[]{Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION};
     }
 
     @Override
     public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(code, permissions, results);
-        if (code == REQ_NOTIFICATIONS) {
-            // De meldingsstatus is net veranderd: opnieuw melden (DeviceStatus stuurt alleen als het anders is).
-            final Context app = getApplicationContext();
-            new Thread(() -> DeviceStatus.report(app)).start();
-            askBatteryAndFinish();
-        }
+        // De status is net veranderd: opnieuw melden (DeviceStatus stuurt alleen als het anders is), en met
+        // locatie de geofences meteen zetten.
+        final Context app = getApplicationContext();
+        new Thread(() -> {
+            if (Geo.permitted(app)) Geo.applyFromCache(app, true);
+            DeviceStatus.report(app);
+        }).start();
+        boolean background = granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+        if (code == REQ_LOCATION) next(PairSteps.afterLocation(granted(Manifest.permission.ACCESS_FINE_LOCATION), background));
+        else askBatteryAndFinish();
     }
 
     /** Na het koppelen ook de batterijvraag: zonder vrijstelling verversen widget en locatiemeldingen op sommige telefoons niet. */

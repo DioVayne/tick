@@ -83,8 +83,8 @@ async function startAppPush() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function bar(text, label, onClick) {
-  const b = el('div', { class: 'appbar', role: 'status' }, el('span', {}, text), el('button', { type: 'button', onclick: onClick }, label));
+function bar(text, label, onClick, kind = '') {
+  const b = el('div', { class: `appbar ${kind}`.trim(), role: 'status' }, el('span', {}, text), el('button', { type: 'button', onclick: onClick }, label));
   document.body.append(b);
   return b;
 }
@@ -97,13 +97,17 @@ function bar(text, label, onClick) {
 async function pairApp(pkg, openDevices) {
   const { id, code, expires_at: expires } = await request('POST', '/api/pair');
   const intent = pairIntent(pkg, code, location.origin);
-  const notice = bar(t('app.pair_hint'), t('app.pair_button'), () => { location.href = intent; });
+  const notice = bar(t('app.pair_hint'), t('app.pair_button'), () => { location.href = intent; }, 'pair');
+  let used;
   try {
-    if (await waitForPair(id, expires)) { await enableAppPush(); await hintDuplicates(openDevices); return; }
-    toast(t('app.pair_failed'));
+    used = await waitForPair(id, expires);
   } finally {
+    // Meteen weg zodra de app gekoppeld is; niet pas na het wachten op de meldingstoestemming.
     notice.remove();
   }
+  if (!used) { toast(t('app.pair_failed')); return; }
+  await enableAppPush();
+  await hintDuplicates(openDevices);
 }
 
 /**

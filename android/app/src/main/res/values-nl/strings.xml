@@ -76,6 +76,10 @@
     <string name="pair_confirm_new">Deze telefoon gaat de Tick op %s gebruiken. Ga alleen verder als dat jouw Tick is.</string>
     <string name="pair_confirm_switch">Deze telefoon is verbonden met %1$s. Overstappen naar %2$s haalt de taken en locatiemeldingen van die Tick van deze telefoon.</string>
     <string name="pair_confirm_ok">Verbinden</string>
+    <string name="pair_loc_title">Locatiemeldingen</string>
+    <string name="pair_loc_text">Tick kan je aan een taak herinneren als je ergens aankomt of weggaat. Daarvoor vraagt Android zo om je locatie.</string>
+    <string name="pair_loc_ok">Doorgaan</string>
+    <string name="pair_loc_later">Niet nu</string>
     <string name="address_current">Adres: %s</string>
     <string name="address_none">Nog geen Tick-adres.</string>
     <string name="address_change">Adres wijzigen</string>
