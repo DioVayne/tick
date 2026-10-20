@@ -27,8 +27,8 @@ android {
         applicationId tickSetting('tickPackage') ?: 'com.example.tick'
         minSdk 31
         targetSdk 36
-        versionCode 9
-        versionName '1.4.4'
+        versionCode 10
+        versionName '1.4.5'
         // Adres van de API; voor testen op de emulator: -PtickBase=http://localhost:8787 (met adb reverse)
         buildConfigField 'String', 'TICK_BASE', "\"${tickBase}\""
         manifestPlaceholders = [tickHost: tickHost, tickScheme: tickScheme, tickBase: tickBase]
