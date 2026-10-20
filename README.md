@@ -15,7 +15,9 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/location.png" width="300" alt="The location picker on a phone: a map of Amsterdam with the chosen place and its radius, two favorite places, a radius slider, and the choice between on arrival and on leaving">
+  <img src="docs/screenshots/mobile-home.png" width="250" alt="The task list on a phone, in dark mode: Buy groceries at the top with a time, the supermarket and a housemate it is shared with">
+  <img src="docs/screenshots/mobile-location.png" width="250" alt="The location picker on a phone: a map of Amsterdam with the chosen place and its radius, two favorite places, a radius slider, and the choice between on arrival and on leaving">
+  <img src="docs/screenshots/mobile-task.png" width="250" alt="The open task Buy groceries on a phone: a reminder at 17:30, the supermarket at 150 m on arrival, and a shopping checklist">
 </p>
 
 ## Why Tick?
@@ -32,7 +34,8 @@ Tick reminds you **where it matters**:
 
 And it's a complete to-do app on top of that: lists, subtasks, repeating reminders, a calendar, sharing with your household, a home-screen widget and offline support.
 
-> **Good to know:** place reminders need the **Android app**. On your phone, [download the app](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk), open it and type the address of your Tick. No Android SDK needed, and the app tells you when there is an update. Building it yourself is still possible, see [SETUP.md](SETUP.md#10-optional-android-app). On an iPhone, or any other device, Tick works as an installable web app with time reminders.
+> [!NOTE]
+> Place reminders need the **Android app**. On your phone, [download the app](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk), open it and type the address of your Tick. No Android SDK needed, and the app tells you when there is an update. Building it yourself is still possible, see [SETUP.md](SETUP.md#10-optional-android-app). On an iPhone, or any other device, Tick works as an installable web app with time reminders.
 
 ## Get your own in about 15 minutes
 
@@ -44,16 +47,16 @@ Claude asks a few questions (language, time zone, Android app or not), sets ever
 
 ## A quick tour
 
-![Tick in light mode: the task "Buy groceries" is open with a location reminder at the supermarket, 150 m, on arrival](docs/screenshots/desktop-light.png)
-
-**On the desktop:** your lists on the left, the tasks in the middle, the open task on the right. "Buy groceries" here has its 📍 supermarket, and its checklist lives right in the notes. Tick something off and a little burst of confetti comes out of the checkbox.
-
 <p>
-  <img src="docs/screenshots/mobile-list.png" width="260" alt="The task list on a phone">
-  <img src="docs/screenshots/mobile-task.png" width="260" alt="An open task on a phone">
+  <img src="docs/screenshots/demo.gif" width="260" alt="A short demo on a phone: add a task, open Buy groceries and its location picker, tick a task off with confetti, and switch to the Personal list">
+  <img src="docs/screenshots/mobile-menu.png" width="260" alt="The menu on a phone: All and Inbox, the lists Home, Personal and Work each with their own colour, then Calendar, Completed and Trash">
 </p>
 
-**On your phone** Tick is an installable app that also works offline: changes you make without a connection sync once you are back online. The Android app adds a **home-screen widget**: tick tasks off right there (with 3 seconds to undo) or add one with ➕.
+**On your phone** Tick is an installable app that also works offline: changes you make without a connection sync once you are back online. Add a task, give it a time or a place, tick it off and a little burst of confetti comes out of the checkbox. The Android app adds a **home-screen widget**: tick tasks off right there (with 3 seconds to undo) or add one with ➕.
+
+![Tick in light mode on the desktop: the task "Buy groceries" is open with a reminder at 17:30 and a location reminder at the supermarket, 150 m, on arrival](docs/screenshots/desktop-light.png)
+
+**On the desktop:** your lists on the left, the tasks in the middle, the open task on the right. "Buy groceries" here has a time *and* its 📍 supermarket, and its checklist lives right in the notes.
 
 ![Tick on the desktop in dark mode with a task shared between two people](docs/screenshots/desktop-dark.png)
 
