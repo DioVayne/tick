@@ -80,6 +80,10 @@
     <string name="pair_loc_text">Tick kan je aan een taak herinneren als je ergens aankomt of weggaat. Daarvoor vraagt Android zo om je locatie.</string>
     <string name="pair_loc_ok">Doorgaan</string>
     <string name="pair_loc_later">Niet nu</string>
+    <!-- Updatemelding (Updates.java) -->
+    <string name="update_channel">App-updates</string>
+    <string name="update_title">Tick %s is beschikbaar</string>
+    <string name="update_text">Tik om de update te downloaden en open daarna het bestand om hem te installeren. Je taken en instellingen blijven.</string>
     <string name="address_current">Adres: %s</string>
     <string name="address_none">Nog geen Tick-adres.</string>
     <string name="address_change">Adres wijzigen</string>
