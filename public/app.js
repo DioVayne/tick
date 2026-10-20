@@ -3,7 +3,8 @@ import { initAndroidApp, offerAppSync, startLocationBar } from './androidapp.js'
 import { t } from './i18n.js';
 import { closeTask, detailReady, flushPending, selectTask } from './detail.js';
 import { openListMenu } from './listmenu.js';
-import { $, el, fromLocalInput, prefillOnOpen, render, status, toast } from './render.js';
+import { openDatePicker } from './datepicker.js';
+import { $, el, fmt, fromLocalInput, render, status, toast } from './render.js';
 import { closeCalendar, hideCalendar, isCalendarOpen, openCalendar, refreshCalendar } from './calendarview.js';
 import { closeSettings, hideSettings, isSettingsOpen, openSettings } from './settingsview.js';
 import { closeDrawer, onListContext, setupSidebar } from './sidebar.js';
@@ -14,14 +15,25 @@ on('error', toast);
 setupSidebar();
 onListContext(openListMenu);
 
-prefillOnOpen($('#add-remind'));
+// Reminder voor de nieuwe taak: de waarde staat in een verborgen veld, het knopje toont hem.
+function setAddRemind(value) {
+  $('#add-remind').value = value ?? '';
+  $('#add-when').textContent = '🔔' + (value ? ' ' + fmt(fromLocalInput(value)) : '');
+  $('#add-when').classList.toggle('on', !!value);
+}
+$('#add-when').addEventListener('click', () => {
+  openDatePicker($('#add-when'), $('#add-remind').value, (value) => {
+    setAddRemind(value);
+    $('#add-title').focus(); // het invoerveld blijft open, met de gekozen datum erin
+  });
+});
 /** Maakt de taak uit het invoerveld; met open=true gaat hij meteen open in het detailpaneel. */
 function submitAdd(open) {
   const title = $('#add-title').value.trim();
   if (!title) { $('#add-title').focus(); return; }
   const id = addTask(title, fromLocalInput($('#add-remind').value), (!state.showDone && !state.showTrash && state.list) || 'Inbox');
   $('#add-title').value = '';
-  $('#add-remind').value = '';
+  setAddRemind(null);
   if (open) {
     $('#add-title').blur();
     selectTask(id);

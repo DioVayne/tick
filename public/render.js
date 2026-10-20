@@ -3,9 +3,10 @@ import { copyPills } from './copies.js';
 import { bindTitle, renderDetail, selectTask, titleOf } from './detail.js';
 import { autoGrow } from './editor.js';
 import { dateLocale, t, t as tr } from './i18n.js'; // tr waar t al een taak is
+import { listColor } from './lists.js';
 import { plainText } from './markdown.js';
 import { renderSidebar } from './sidebar.js';
-import { state, toggleDone, update } from './store.js';
+import { listNames, state, toggleDone, update } from './store.js';
 import { renderTrash, shareLabel, shareNames } from './trash.js';
 import { renderInvites } from './share.js';
 
@@ -47,16 +48,6 @@ export const toLocalInput = (iso) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 export const fromLocalInput = (v) => (v ? new Date(v).toISOString() : null);
-/** Een leeg tijdveld toont in de kiezer vandaag als gekozen; vul daarom bij openen het volgende hele uur in. */
-export function prefillOnOpen(input, onPrefill) {
-  input.addEventListener('pointerdown', () => {
-    if (input.value || input.disabled) return;
-    const d = new Date();
-    d.setHours(d.getHours() + 1, 0, 0, 0);
-    input.value = toLocalInput(d.toISOString());
-    onPrefill?.();
-  });
-}
 export const fmt = (iso) =>
   new Date(iso).toLocaleString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -151,6 +142,8 @@ function taskItem(t, children) {
     }),
     selected && !done && wide.matches ? titleField(t)
       : el('button', { class: 'title', 'aria-current': selected ? 'true' : false, onclick: (e) => openTask(e, t.id) }, ...highlight(t.title)),
+    // Waar taken uit meer lijsten samen staan (Alle, Afgerond): de lijst als pilletje in zijn kleur. Subtaken volgen hun hoofdtaak.
+    !t.parent_id && (!state.list || state.showDone) ? listPill(t.list) : null,
     // Rechts in de rij; een klik maakt de taak los.
     t.pinned && !t.parent_id && !done
       ? el('button', { class: 'pinned', type: 'button', title: tr('detail.unpin'), 'aria-label': tr('detail.unpin'), onclick: () => update(t.id, { pinned: false }) }, '📌')
@@ -174,7 +167,6 @@ function taskItem(t, children) {
     const label = tr('att.count', { n: t.attachments.length });
     meta.push(el('span', { class: 'att', title: label, 'aria-label': label }, '📎 ' + t.attachments.length));
   }
-  if (!state.list && t.list !== 'Inbox') meta.push(el('span', {}, t.list));
   // Zonder markdowntekens; zoeken gebeurt wel in de ruwe tekst.
   const plain = t.description ? plainText(t.description) : '';
   if (plain.trim()) meta.push(el('span', {}, ...highlight(snippet(plain))));
@@ -186,6 +178,13 @@ function taskItem(t, children) {
     li.append(ul);
   }
   return li;
+}
+
+function listPill(name) {
+  const pill = el('span', { class: 'lpill' }, name);
+  const color = listColor(name, listNames());
+  if (color) pill.style.setProperty('--lc', color); // CSSOM: geen style-attribuut (CSP)
+  return pill;
 }
 
 /** Vastgepinde hoofdtaken staan bovenaan, elk deel in zijn eigen volgorde. */

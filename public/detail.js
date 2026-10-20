@@ -1,6 +1,7 @@
 import { bindDrop, fillAttachmentsBox } from './attachments.js';
 import { confetti, isCouple } from './confetti.js';
 import { fillCopiesBox } from './copies.js';
+import { openDatePicker } from './datepicker.js';
 import { autoGrow, createEditor } from './editor.js';
 import { t as tr } from './i18n.js'; // tr: t is hier een taak
 import { openListPicker } from './listpicker.js';
@@ -9,7 +10,7 @@ import { openRepeatPicker } from './repeatpicker.js';
 import { openMap } from './map.js';
 import { renderMarkdown } from './markdown.js';
 import { locationLabel, wakeAndroidApp } from './places.js';
-import { $, el, fmt, fromLocalInput, prefillOnOpen, render, toLocalInput } from './render.js';
+import { $, el, fmt, fromLocalInput, render, toLocalInput } from './render.js';
 import { addSubtask, findDone, remove, snooze, state, toggleDone, update, updateQueued } from './store.js';
 import { fillShareBox } from './share.js';
 
@@ -283,27 +284,21 @@ function build(t, readOnly) {
   });
   titleSize.observe(title);
 
-  // required: een leeg veld is dan :invalid, en dan toont de CSS een uitleg in plaats van dd-mm-jjjj --:--.
-  const remind = el('input', { type: 'datetime-local', 'aria-label': tr('ui.reminder'), disabled: readOnly, required: true });
-  // Was het leeg bij de klik, dan meteen de kiezer open (de uitleg ligt over het veld, dus anders gebeurt er niets).
-  let wasEmpty = false;
-  remind.addEventListener('pointerdown', () => { wasEmpty = !remind.value; });
-  remind.addEventListener('click', () => {
-    if (!wasEmpty) return;
-    wasEmpty = false;
-    try { remind.showPicker(); } catch { /* al open, of niet ondersteund */ }
-  });
-  const remindChanged = () => {
-    setPending(id, 'remind_at', fromLocalInput(remind.value));
-    showStatus();
-    // Een net gekozen datum: herhalen meteen aanbieden, niet pas na het opslaan.
-    if (view?.id === id) view.repeatRow.hidden = view.repeatPill.hidden || (!remind.value && !current(id)?.repeat);
-  };
-  remind.addEventListener('change', remindChanged);
-  prefillOnOpen(remind, remindChanged);
-  remind.addEventListener('blur', flushSoon);
-  const remindPill = el('label', { class: 'pill remind', title: tr('ui.reminder') },
-    el('span', { 'aria-hidden': 'true' }, '🔔'), remind, el('span', { class: 'ph', 'aria-hidden': 'true' }, tr('detail.set_reminder')));
+  // De reminder kies je in de eigen datumkiezer (met weekdagen); wissen daar is hetzelfde als Wissen ernaast.
+  const remindLabel = el('span', { class: 'lbl' });
+  const remindPill = el('button', {
+    class: 'pill remind', type: 'button', 'aria-haspopup': 'dialog', disabled: readOnly,
+    onclick: () => {
+      const task = current(id);
+      if (!task) return;
+      openDatePicker(remindPill, toLocalInput(remindOf(task)), (value) => {
+        if (value === null) { dropField(id, 'remind_at'); save(update(id, { remind_at: null })); return; }
+        setPending(id, 'remind_at', fromLocalInput(value));
+        flushSoon();
+        render(); // de knop en Herhalen meteen bijwerken, niet pas na het opslaan
+      });
+    },
+  }, el('span', { 'aria-hidden': 'true' }, '🔔'), remindLabel);
   // Verzetten en wissen winnen van een gekozen, nog niet opgeslagen tijd (die anders na de klik alsnog zou gaan).
   const plusHour = el('button', { class: 'pill mini', type: 'button', onclick: () => { dropField(id, 'remind_at'); save(snooze(id, 60)); } }, tr('push.snooze'));
   const clearRemind = el('button', {
@@ -447,7 +442,7 @@ function build(t, readOnly) {
     shareBox,
     el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, reopen, del)),
   ].filter(Boolean));
-  view = { repeatRow, filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remind, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
+  view = { repeatRow, filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remindLabel, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
 }
 
 function fill(t) {
@@ -467,7 +462,7 @@ function fill(t) {
   if (document.activeElement !== v.title && !hasPending(t.id, 'title') && v.title.value !== t.title) v.title.value = t.title;
   autoGrow(v.title);
   const remindAt = remindOf(t);
-  if (document.activeElement !== v.remind) v.remind.value = toLocalInput(remindAt);
+  v.remindLabel.textContent = remindAt ? fmt(remindAt) : tr('detail.set_reminder');
   const past = remindAt && new Date(remindAt) < new Date();
   v.remindPill.classList.toggle('b', !!remindAt && !past);
   v.remindPill.classList.toggle('past', !!past);

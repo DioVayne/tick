@@ -74,7 +74,9 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 #add:focus-within .add-key, #add:has(#add-title:not(:placeholder-shown)) .add-key { display: none; }
 @media (hover: none) { .add-key { display: none; } }
 #add-title { flex: 1 1 180px; min-width: 0; }
-#add-remind { flex: 0 1 auto; width: auto; min-width: 0; color: var(--muted); font-size: .875rem; }
+#add #add-when { background: transparent; color: var(--muted); padding: 4px 8px; }
+#add #add-when.on { color: var(--bell); }
+#add #add-when:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
 #add button { min-height: 32px; padding: 4px 12px; font-size: .875rem; }
 #add:not(:focus-within):has(#add-title:placeholder-shown) > :not(#add-title, .add-key) { display: none; }
 ul.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -108,6 +110,10 @@ textarea.title-edit { display: block; min-width: 0; min-height: 0; margin: 0; bo
 .meta .bell { color: var(--bell); }
 .row .pinned { flex: none; margin-left: auto; padding: 2px 4px; border: 0; border-radius: 6px; background: transparent; font-size: .75rem; line-height: 1; cursor: pointer; }
 .row .pinned:hover { background: var(--fill); }
+/* De lijst van een taak als pilletje in de kleur van die lijst (Inbox grijs); rechts in de rij. */
+.lpill { flex: none; max-width: 40%; margin-left: auto; padding: 1px 8px; border-radius: 999px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem;
+  color: color-mix(in srgb, var(--lc, var(--muted)) 70%, var(--text)); background: color-mix(in srgb, var(--lc, var(--muted)) 18%, transparent); }
+.lpill + .pinned { margin-left: 0; }
 .meta .bell.past { color: var(--danger); }
 .net { margin: 0 0 6px; font-size: .8125rem; color: var(--muted); text-align: center; }
 .net.offline { color: var(--bell); }
@@ -285,11 +291,7 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 .dprops { display: grid; gap: 2px; margin: 12px 0 8px; border-radius: 10px; overflow: hidden; }
 .prow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 3px 4px; background: var(--fill); }
 .prow .pill { background: transparent; }
-/* Lege reminder: een uitleg in plaats van dd-mm-jjjj --:--; het (onzichtbare) veld ligt eroverheen voor de klik. */
-.pill.remind { position: relative; }
-.pill.remind .ph { display: none; color: var(--muted); }
-.pill.remind:has(input:invalid):not(:focus-within) .ph, .pill.remind.none:has(input:disabled) .ph { display: inline; }
-.pill.remind:has(input:invalid):not(:focus-within) input, .pill.remind.none:has(input:disabled) input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.pill.remind.none { color: var(--muted); }
 .prow .pill:not(.mini) { flex: 1 1 auto; justify-content: flex-start; }
 .prow .pill:not(:disabled):hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
 /* De onderdelen eronder: elk een eigen vlak, zonder scheidingslijnen */
@@ -578,3 +580,30 @@ html[data-palette="retro"] #topbar { background: transparent; }
 /* Knoppen in de blokken van het detailpaneel (bestand toevoegen, delen): klein, met een rand, los van het vlak. */
 button.secbtn { min-height: 32px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font-size: .8125rem; }
 button.secbtn:not(:disabled):hover { border-color: var(--muted); background: var(--bg); }
+
+/* Datumkiezer (datepicker.js): op een breed scherm onder de knop, op een smal scherm van onderen */
+.dpick { position: fixed; margin: 0; width: min(340px, calc(100vw - 16px)); padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--text); box-shadow: 0 10px 30px var(--shadow); }
+.dpick::backdrop { background: transparent; }
+.dpick.sheet { inset: auto 0 0; width: 100%; max-width: 100%; padding-bottom: calc(16px + env(safe-area-inset-bottom)); border-radius: 16px 16px 0 0; }
+.dpick.sheet::backdrop { background: var(--scrim); }
+.dp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.dp-month { font-weight: 600; }
+.dp-month::first-letter { text-transform: uppercase; }
+.dp-nav { width: 36px; height: 36px; min-height: 36px; padding: 0; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); font-size: 1.25rem; line-height: 1; }
+.dp-wd, .dp-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; text-align: center; }
+.dp-wd span { padding: 4px 0; color: var(--muted); font-size: .75rem; }
+.dp-day { justify-self: center; width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; background: transparent; color: var(--text); font-size: .9375rem; }
+.dp-day:hover { background: var(--hover); }
+.dp-day.past, .dp-day.out { color: var(--muted); }
+.dp-day.out { opacity: .55; }
+.dp-day.today { color: var(--link); font-weight: 700; }
+.dp-day[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); font-weight: 600; opacity: 1; }
+.dp-times { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+.dp-times button { min-height: 34px; padding: 4px 10px; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); font-size: .875rem; }
+.dp-times button[aria-pressed="true"] { outline: 1px solid var(--accent); color: var(--link); }
+.dp-times .dp-other, .dp-own { margin-left: auto; }
+.dp-own { width: auto; min-height: 34px; padding: 4px 8px; }
+.dp-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
+.dp-sum { color: var(--muted); font-size: .875rem; }
+.dp-actions { display: flex; gap: 8px; }
+.dp-actions .dp-clear { background: transparent; color: var(--danger); }
