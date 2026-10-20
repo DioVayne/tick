@@ -72,6 +72,7 @@ public class SyncJob extends JobService {
         new Thread(() -> {
             Log.i("Tick", "SyncJob " + params.getJobId() + ": verversen");
             if (!Prefs.token(app).isEmpty()) Sync.refresh(app);
+            Updates.checkIfDue(app);
             if (params.getJobId() == MANUAL) {
                 TaskWidgetProvider.manualRefreshFinished(app);
                 jobFinished(params, false);

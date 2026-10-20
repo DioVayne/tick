@@ -25,6 +25,24 @@ final class Prefs {
         sp(c).edit().putString("base", base).commit();
     }
 
+    /** Moment (ms) waarop de app voor het laatst op GitHub naar een nieuwere versie keek, of 0. */
+    static long updateCheckedAt(Context c) {
+        return sp(c).getLong("updateCheckedAt", 0);
+    }
+
+    static void setUpdateCheckedAt(Context c, long ms) {
+        sp(c).edit().putLong("updateCheckedAt", ms).apply();
+    }
+
+    /** De laatste versie waarvoor al een updatemelding kwam, of leeg. */
+    static String updateNotified(Context c) {
+        return sp(c).getString("updateNotified", "");
+    }
+
+    static void setUpdateNotified(Context c, String version) {
+        sp(c).edit().putString("updateNotified", version).apply();
+    }
+
     static String token(Context c) {
         return sp(c).getString("token", "");
     }
