@@ -5,11 +5,11 @@
 <h1 align="center">Tick</h1>
 
 <p align="center">
-  <b>The to-do list that knows where you are.</b><br>
+  <b>The to-do list that knows where you are*.</b><br>
   Your shopping list pops up as you walk into the supermarket.<br>
   The screws, the moment you park at the hardware store. The parcel, as you step out the door.
 </p>
-
+<p align="center"><sup>*Remember <a href="https://www.howtogeek.com/google-killed-an-essential-keep-notes-feature-but-its-part-of-a-bigger-problem/" target="_blank">Google Keep</a> had this feature until they killed it for no reason?</sup></p>
 <p align="center">
   📍 Reminders by place <i>and</i> time · 💸 No subscription · 🔒 Your own server · ✈️ Works offline
 </p>
