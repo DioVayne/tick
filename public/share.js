@@ -124,9 +124,9 @@ export function fillShareBox(box, task, readOnly) {
       action));
   }
   box.replaceChildren(...[
-    el('h3', {}, t('share.members')),
+    el('h3', {}, rows.length ? t('share.members') : t('share.heading')),
     rows.length ? el('ul', { class: 'share-list' }, ...rows) : null,
-    owner && !readOnly ? el('button', { class: 'ghost', type: 'button', onclick: () => openShareDialog(task) }, '👥 ' + t('share.button')) : null,
+    owner && !readOnly ? el('button', { class: 'ghost secbtn', type: 'button', onclick: () => openShareDialog(task) }, '👥 ' + t(rows.length ? 'share.button' : 'share.with_someone')) : null,
   ].filter(Boolean));
 }
 
