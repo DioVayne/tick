@@ -31,6 +31,7 @@ export async function loadPlaces() {
 // Wijzigen kan alleen online; een fout gaat door naar de aanroeper, die een toast toont.
 export const savePlace = ({ name, lat, lng, radius }) => request('POST', '/api/places', { name, lat, lng, radius });
 export const renamePlace = (id, name) => request('PATCH', `/api/places/${id}`, { name });
+export const updatePlace = (id, { name, lat, lng, radius }) => request('PATCH', `/api/places/${id}`, { name, lat, lng, radius });
 export async function deletePlace(id) {
   await request('DELETE', `/api/places/${id}`);
 }
