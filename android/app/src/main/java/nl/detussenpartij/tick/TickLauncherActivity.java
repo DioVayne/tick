@@ -15,6 +15,8 @@ public class TickLauncherActivity extends LauncherActivity {
         super.onCreate(state);
         // Het icoon is de gewone ingang (MainActivity zie je alleen via de instellingen): hier ook alles klaarzetten.
         MainActivity.setUp(this);
+        // Meteen verversen, ook de apparaatstatus: zo ziet Tick direct of locatiemeldingen hier werken (de balk bovenin).
+        if (!Prefs.token(this).isEmpty()) SyncJob.syncSoon(this, null, null, 0);
     }
 
     @Override
