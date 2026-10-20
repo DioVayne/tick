@@ -76,6 +76,10 @@
     <string name="pair_confirm_new">This phone will use the Tick at %s. Only continue if that\'s your Tick.</string>
     <string name="pair_confirm_switch">This phone is connected to %1$s. Switching to %2$s removes that Tick\'s tasks and location reminders from this phone.</string>
     <string name="pair_confirm_ok">Connect</string>
+    <string name="pair_loc_title">Location reminders</string>
+    <string name="pair_loc_text">Tick can remind you of a task when you arrive at or leave a place. For that, Android will now ask for your location.</string>
+    <string name="pair_loc_ok">Continue</string>
+    <string name="pair_loc_later">Not now</string>
     <string name="address_current">Address: %s</string>
     <string name="address_none">No Tick address yet.</string>
     <string name="address_change">Change address</string>
