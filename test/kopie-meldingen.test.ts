@@ -106,7 +106,9 @@ describe('melding bij afvinken in een kopiegroep', () => {
       expect((await patch(g.b, { done: true }, d)).status).toBe(200);
       await vi.waitFor(() => expect(hits(HOOK_C)).toHaveLength(1));
       expect(hits(HOOK_C)[0].title).toBe('D is done ✓');
-      expect(hits()).toEqual([]); // B zit op het afgevinkte exemplaar
+      // B zit op het afgevinkte exemplaar: geen kopiemelding, wel die van de gedeelde taak (D deelt B's exemplaar).
+      await vi.waitFor(() => expect(hits()).toHaveLength(1));
+      expect(hits()[0]).toMatchObject({ title: 'D ticked this off ✓', tag: `share-${g.b}` });
     } finally {
       await userSettingStmt(env.DB, c.id, 'fallback_webhook', null).run();
     }

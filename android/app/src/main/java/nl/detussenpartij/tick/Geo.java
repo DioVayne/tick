@@ -34,6 +34,16 @@ final class Geo {
     }
 
     /**
+     * Na "Gedwongen stoppen" annuleert Android alle PendingIntents van de app; de geofences staan dan nog bij
+     * Play-diensten, maar kunnen ons niet meer bereiken. Zonder levende PendingIntent moet alles opnieuw gezet worden.
+     */
+    static boolean intentAlive(Context c) {
+        Context app = c.getApplicationContext();
+        return PendingIntent.getBroadcast(app, 4, new Intent(app, GeofenceReceiver.class),
+                PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_MUTABLE) != null;
+    }
+
+    /**
      * Registreert de geofences opnieuw als de set veranderd is (of bij force, zoals na een herstart).
      * Zonder permissie haalt hij alles weg.
      */

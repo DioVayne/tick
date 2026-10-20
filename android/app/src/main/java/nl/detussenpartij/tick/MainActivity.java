@@ -33,6 +33,7 @@ import java.util.List;
 /** "Tick op deze telefoon": koppelstatus, locatiemeldingen, widget en (ingeklapt) de sleutel met de hand. Ook via tick://settings. */
 public class MainActivity extends Activity {
     private static final int REQ_FOREGROUND = 1;
+    private static final int REQ_BACKGROUND = 2;
 
     private TextView result;
     private TextView locStatus;
@@ -53,6 +54,11 @@ public class MainActivity extends Activity {
         Notify.ensureChannel(c);
         addShortcuts(c);
         TaskWidgetProvider.updateAll(c);
+        // Na "Gedwongen stoppen" werken de geofences niet meer, terwijl de signature nog zegt dat ze staan.
+        if (Geo.permitted(c) && !Geo.intentAlive(c)) {
+            Prefs.setGeoSig(c, null);
+            Geo.applyFromCache(c, true);
+        }
     }
 
     /**
@@ -273,9 +279,11 @@ public class MainActivity extends Activity {
             new AlertDialog.Builder(this)
                     .setTitle(R.string.loc_background_title)
                     .setMessage(getText(R.string.loc_background_text))
-                    // Direct naar de instellingen van de app: daar komt de systeemvraag vanaf Android 11 ook op uit,
-                    // en zo werkt het ook als "Altijd toestaan" eerder geweigerd is. onResume ziet het resultaat.
-                    .setPositiveButton(android.R.string.ok, (dlg, w) -> openAppSettings())
+                    // "Altijd toestaan" staat nooit in de eerste systeemvraag. Vanaf Android 11 opent deze vraag
+                    // meteen het locatiescherm van Tick, met die keuze erop. Weigert Android hem (twee keer
+                    // geweigerd), dan valt onRequestPermissionsResult terug op de instellingen van de app.
+                    .setPositiveButton(android.R.string.ok, (dlg, w) -> requestPermissions(
+                            new String[] {Manifest.permission.ACCESS_BACKGROUND_LOCATION}, REQ_BACKGROUND))
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();
         } else if (Notify.channelBlocked(this)) {
@@ -302,11 +310,21 @@ public class MainActivity extends Activity {
                 // Eerder geweigerd: Android vraagt het niet nog eens, dus naar de instellingen van de app.
                 openAppSettings();
             }
+        } else if (code == REQ_BACKGROUND) {
+            if (granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                enableLocation(); // volgende stap, of de geofences zetten
+            } else if (!shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                openAppSettings(R.string.loc_settings_hint_background);
+            }
         }
     }
 
     private void openAppSettings() {
-        Toast.makeText(this, R.string.loc_settings_hint, Toast.LENGTH_LONG).show();
+        openAppSettings(R.string.loc_settings_hint);
+    }
+
+    private void openAppSettings(int hint) {
+        Toast.makeText(this, hint, Toast.LENGTH_LONG).show();
         startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", getPackageName(), null)));
     }
 
