@@ -1,0 +1,63 @@
+# De officiële Android-app: bij een tag android-v1.2.3 bouwen, testen, ondertekenen met de release-sleutel en als
+# Tick-1.2.3.apk aan een GitHub Release hangen. Zie SETUP.md › "Releasing the Android app" voor de sleutel en de secrets.
+name: Android release
+
+on:
+  push:
+    tags: ['android-v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Tag matches versionName
+        run: |
+          v="${VERSION#android-v}"
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+          grep -q "versionName '$v'" android/app/build.gradle || { echo "::error::android/app/build.gradle has no versionName '$v'"; exit 1; }
+
+      - name: Release key
+        env:
+          TICK_KEYSTORE_BASE64: ${{ secrets.TICK_KEYSTORE_BASE64 }}
+        run: |
+          [ -n "$TICK_KEYSTORE_BASE64" ] || { echo "::error::Secret TICK_KEYSTORE_BASE64 is missing"; exit 1; }
+          echo "$TICK_KEYSTORE_BASE64" | base64 -d > android/release.jks
+
+      # Wachtwoorden via ORG_GRADLE_PROJECT_*, niet op de opdrachtregel (die is zichtbaar in de proceslijst).
+      - name: Test and build
+        working-directory: android
+        env:
+          ORG_GRADLE_PROJECT_tickPackage: nl.detussenpartij.tick
+          ORG_GRADLE_PROJECT_tickKeystore: release.jks
+          ORG_GRADLE_PROJECT_tickKeystorePassword: ${{ secrets.TICK_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_tickKeyAlias: ${{ secrets.TICK_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_tickKeyPassword: ${{ secrets.TICK_KEY_PASSWORD }}
+        run: bash ./gradlew --no-daemon testDebugUnitTest assembleRelease
+
+      # De app moet passen bij de vingerafdruk die elke Tick in assetlinks.json zet (OFFICIAL_APP in src/assetlinks.ts);
+      # anders opent hij overal met een adresbalk.
+      - name: Signature matches src/assetlinks.ts
+        run: |
+          apk="${RUNNER_TEMP:-/tmp}/Tick-$VERSION.apk"
+          cp "$(find /tmp/tick-android-build/app/outputs/apk/release -name '*.apk' | head -1)" "$apk"
+          echo "APK=$apk" >> "$GITHUB_ENV"
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+          fp="$("$apksigner" verify --print-certs "$apk" | sed -n 's/.*SHA-256 digest: //p' | head -1 | tr a-f A-F | sed 's/../&:/g; s/:$//')"
+          echo "Signing certificate SHA-256: $fp"
+          grep -q "$fp" src/assetlinks.ts || { echo "::error::Fingerprint $fp is not in OFFICIAL_APP in src/assetlinks.ts"; exit 1; }
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "android-v$VERSION" "$APK" --title "Tick for Android $VERSION" --generate-notes

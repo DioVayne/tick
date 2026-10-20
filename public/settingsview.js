@@ -2,7 +2,7 @@
 // terug (ook de Android-terugknop) en Esc hem sluiten. 📱-delen gelden voor dit apparaat en werken offline;
 // 🏠-delen gelden voor de hele installatie en tonen offline de laatst bekende waarde, uitgeschakeld.
 import { Offline, request } from './api.js';
-import { isInApp, openPhoneSettings } from './androidapp.js';
+import { connectApp, isInApp, openPhoneSettings } from './androidapp.js';
 import { ask } from './dialog.js';
 import { dateLocale, t } from './i18n.js';
 import { disablePush, enablePush, pushState, resubscribeLocale } from './push.js';
@@ -535,8 +535,12 @@ async function paintDevices() {
     rest = [note(offlineText(e))];
   }
   if (!S.open) return;
-  const phoneSettings = isInApp() && CONFIG.androidPackage ? row('', btn(t('set.phone_settings'), openPhoneSettings), null) : null;
-  paint('devices', thisBrowserRow(ps), ...rest, phoneSettings, row('', pair, t('set.pair_note')));
+  const phoneSettings = isInApp() ? row('', btn(t('set.phone_settings'), openPhoneSettings), null) : null;
+  // In de browser op een Android-telefoon: de Tick-app verbinden (adres en koppelcode in één link), of hem downloaden.
+  const connect = !isInApp() && /Android/i.test(navigator.userAgent)
+    ? row('', btn(t('set.connect_app'), () => connectApp(paintDevices).catch((e) => toast(offlineText(e))), { kind: '', disabled: !S.online }), t('set.connect_app_note'))
+    : null;
+  paint('devices', thisBrowserRow(ps), ...rest, phoneSettings, connect, row('', pair, t('set.pair_note')));
 }
 
 /** Vraagt een naam (en eventueel de soort) voor een nieuwe sleutel; null bij annuleren. */

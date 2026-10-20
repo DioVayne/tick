@@ -2,16 +2,19 @@ plugins {
     id 'com.android.application'
 }
 
-// Instellingen van je eigen build: -PtickBase=... -PtickPackage=... of dezelfde sleutels in android/tick.properties
-// (niet in git). tickBase is het adres van je Tick; tickPackage het unieke applicationId van je app.
+// Instellingen van je build: -PtickBase=... -PtickPackage=... of dezelfde sleutels in android/tick.properties (niet in
+// git). Beide zijn optioneel. Zonder tickBase is het de algemene app: die vraagt het adres van je Tick bij de eerste
+// start (of krijgt het uit de koppellink). Met tickBase begint de app met dat adres. tickPackage is het unieke
+// applicationId; de officiële app (GitHub Releases) is nl.detussenpartij.tick, met de release-sleutel van het project.
 def tickProps = new Properties()
 def tickFile = rootProject.file('tick.properties')
 if (tickFile.exists()) tickFile.withInputStream { tickProps.load(it) }
 def tickSetting = { String key -> project.findProperty(key) ?: tickProps.getProperty(key) }
-def tickBase = tickSetting('tickBase')
-if (!tickBase) throw new GradleException('Set the address of your Tick: -PtickBase=https://your-tick.example or tickBase=... in android/tick.properties')
-def tickHost = new URI(tickBase).host
-def tickScheme = new URI(tickBase).scheme
+def tickBase = (tickSetting('tickBase') ?: '').trim().replaceAll('/+$', '')
+if (tickBase && !(tickBase ==~ /^https?:\/\/[^\/?#]+$/)) throw new GradleException('tickBase must look like https://your-tick.example (no path)')
+// Een eigen build opent alleen links naar zijn eigen host; de algemene app kent die nog niet (zie het manifest).
+def tickHost = tickBase ? new URI(tickBase).host : '*'
+def tickScheme = tickBase ? new URI(tickBase).scheme : 'https'
 
 // Release-ondertekening, ook uit tick.properties (de keystore zelf hoort niet in git). Zonder deze vier werkt
 // assembleDebug gewoon en weigert assembleRelease met de melding hieronder.
@@ -27,15 +30,11 @@ android {
         applicationId tickSetting('tickPackage') ?: 'com.example.tick'
         minSdk 31
         targetSdk 36
-        versionCode 10
-        versionName '1.4.5'
-        // Adres van de API; voor testen op de emulator: -PtickBase=http://localhost:8787 (met adb reverse)
+        versionCode 11
+        versionName '1.5.0'
+        // Beginadres (leeg in de algemene app); voor testen op de emulator: -PtickBase=http://localhost:8787 (met adb reverse)
         buildConfigField 'String', 'TICK_BASE', "\"${tickBase}\""
-        manifestPlaceholders = [tickHost: tickHost, tickScheme: tickScheme, tickBase: tickBase]
-        // Digital Asset Links vanuit de app; de site verwijst terug via /.well-known/assetlinks.json
-        resValue 'string', 'asset_statements',
-            '[{\\"relation\\":[\\"delegate_permission/common.handle_all_urls\\"],' +
-            '\\"target\\":{\\"namespace\\":\\"web\\",\\"site\\":\\"' + tickBase + '\\"}}]'
+        manifestPlaceholders = [tickHost: tickHost, tickScheme: tickScheme]
     }
 
     signingConfigs {
