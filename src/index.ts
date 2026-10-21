@@ -231,7 +231,7 @@ const byPin = (a: { pinned: boolean; position: number }, b: { pinned: boolean; p
  */
 function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, copies: Map<string, Copies>, files = new Map<string, Attachment[]>()) {
   return rows.map((r) => {
-    const { share_id, share_list, share_position, share_pinned, has_share, has_copy_invite, ...t } = overlay(r);
+    const { share_id, share_list, share_position, share_pinned, share_loc_notified, has_share, has_copy_invite, ...t } = overlay(r);
     const s = t.parent_id ? undefined : info.get(t.id);
     return {
       ...asBool(t), share: s ? { ...s, mine: s.owner.id === userId } : null, copies: (!t.parent_id && copies.get(t.id)) || null,
@@ -374,6 +374,8 @@ const UNDO_LIMIT_MS = 15 * 60_000;
 type RepeatPrev = {
   remind_at: string | null; repeat_at: string; next: string; kids: { id: string; done_at: string | null }[]; at: string;
   notified: number; loc_notified: number;
+  /** Deelrijen die de plek al gemeld hadden; ontbreekt in een stand van vóór migratie 0015. */
+  shares_loc?: string[];
 };
 
 /** Open hoofdtaak met ritme: afvinken schuift door in plaats van af te ronden. */
@@ -398,9 +400,11 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
     if (next === null) return plainDone(db, t, true); // voorbij de einddatum: de laatste keer rondt de taak gewoon af
     const { results: kids } = await db.prepare('SELECT id, done_at FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 1 AND deleted_at IS NULL')
       .bind(t.id, t.user_id).all<{ id: string; done_at: string | null }>();
+    const { results: sharesLoc } = await db.prepare('SELECT id FROM task_shares WHERE task_id = ? AND loc_notified = 1').bind(t.id).all<{ id: string }>();
     // Elke stap overschrijft de stand: ongedaan maken draait altijd de laatste stap terug.
     const prev = JSON.stringify({
       remind_at: t.remind_at, repeat_at: t.repeat_at!, next, kids, at: ts, notified: t.notified, loc_notified: t.loc_notified,
+      shares_loc: sharesLoc.map((r) => r.id),
     } satisfies RepeatPrev);
     const [res] = await db.batch([
       db.prepare('UPDATE tasks SET remind_at = ?, repeat_at = ?, notified = 0, loc_notified = CASE WHEN loc_lat IS NULL THEN loc_notified ELSE 0 END, ' +
@@ -408,6 +412,9 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
       // Alleen als de parent hierboven echt is doorgeschoven (repeat_at en updated_at van deze stap).
       db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE parent_id = ? AND user_id = ? AND done = 1 AND id IN (SELECT value FROM json_each(?)) ' +
         'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_at = ? AND updated_at = ?)').bind(ts, t.id, t.user_id, JSON.stringify(kids.map((k) => k.id)), t.id, next, ts),
+      // De volgende keer meldt de plek weer bij iedereen die de taak deelt.
+      db.prepare('UPDATE task_shares SET loc_notified = 0 WHERE task_id = ? AND loc_notified = 1 ' +
+        'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND loc_lat IS NOT NULL AND repeat_at = ? AND updated_at = ?)').bind(t.id, t.id, next, ts),
     ]);
     return res.meta.changes > 0;
   }
@@ -417,6 +424,8 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
     // Eerst de subtaken, zolang repeat_prev nog als bewijs in de parent staat.
     ...prev.kids.map((k) => db.prepare('UPDATE tasks SET done = 1, done_at = ?, updated_at = ? WHERE id = ? AND parent_id = ? AND user_id = ? AND done = 0 ' +
       'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_prev = ?)').bind(k.done_at, ts, k.id, t.id, t.user_id, t.id, t.repeat_prev)),
+    db.prepare('UPDATE task_shares SET loc_notified = 1 WHERE task_id = ? AND id IN (SELECT value FROM json_each(?)) ' +
+      'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_prev = ?)').bind(t.id, JSON.stringify(prev.shares_loc ?? []), t.id, t.repeat_prev),
     db.prepare('UPDATE tasks SET remind_at = ?, repeat_at = ?, notified = ?, loc_notified = ?, repeat_prev = NULL, updated_at = ? WHERE id = ? AND repeat_prev = ?')
       .bind(prev.remind_at, prev.repeat_at, prev.notified, prev.loc_notified, ts, t.id, t.repeat_prev),
   ]);
@@ -705,20 +714,26 @@ app.patch('/api/tasks/:id', async (c) => {
     if (clear) for (const [col, v] of Object.entries(repeatColumns(null, null, z))) set(col, v);
     else if (newRemind !== undefined) set('repeat_prev', null);
   }
-  // Elke nieuwe locatie telt weer als nog niet gemeld.
+  // Elke nieuwe locatie telt weer als nog niet gemeld, voor de eigenaar en voor elke deelnemer.
   let newPlace = false;
+  let resetShares = false;
   if ('location' in b) {
     const cols = locColumns(cleanLocation(b.location));
     for (const [col, v] of Object.entries(cols)) set(col, v);
     set('loc_notified', 0);
+    resetShares = !t.parent_id;
     // Alleen een echt andere plek (niet een nieuwe naam) is een melding aan de anderen waard.
     newPlace = cols.loc_lat !== null && ['loc_lat', 'loc_lng', 'loc_radius', 'loc_trigger'].some((col) => (t as Record<string, unknown>)[col] !== cols[col]);
   }
   if ('location_notified' in b) {
     if (typeof b.location_notified !== 'boolean') throw new HttpError(400, 'err.must_be_bool', { field: 'location_notified' });
-    set('loc_notified', b.location_notified ? 1 : 0);
+    // Gemeld is per persoon: een deelnemer houdt het op een gedeelde hoofdtaak bij in zijn deelrij.
+    if (member && !t.parent_id) shareSets.push(['loc_notified', b.location_notified ? 1 : 0]);
+    else set('loc_notified', b.location_notified ? 1 : 0);
   }
   if (!sets.length && !shareSets.length && !('done' in b)) throw new HttpError(400, 'err.nothing_to_change');
+  // Vóór de eigen deelrij, zodat een location_notified in dezelfde PATCH het laatste woord heeft.
+  if (resetShares) await db.prepare('UPDATE task_shares SET loc_notified = 0 WHERE task_id = ?').bind(id).run();
   if (shareSets.length) {
     await db.prepare(`UPDATE task_shares SET ${shareSets.map(([col]) => `${col} = ?`).join(', ')} WHERE id = ?`)
       .bind(...shareSets.map(([, v]) => v), t.share_id).run();
