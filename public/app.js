@@ -82,9 +82,10 @@ $('#btn-search').addEventListener('click', () => {
 search.addEventListener('input', () => {
   state.query = search.value;
   clearTimeout(searchTimer);
-  // Open taken filteren we direct; in afgerond zoekt de server, met een korte pauze na het typen.
-  if (state.showDone) searchTimer = setTimeout(load, 250);
-  else render();
+  // Open taken filteren we direct; afgeronde zoekt de server, met een korte pauze na het typen (ook buiten Afgerond:
+  // die treffers komen onder de open taken).
+  if (!state.showDone) render();
+  if (state.showDone || state.query.trim()) searchTimer = setTimeout(load, 250);
 });
 search.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;

@@ -101,11 +101,10 @@ function snippet(description) {
 
 // ---------- weergave ----------
 
-/** "offline · 3 wijzigingen wachten" zolang er iets niet bij de server is. */
+/** "Wordt opgeslagen…" zolang er iets niet bij de server is; offline "offline" of "Nog niet opgeslagen – geen verbinding". */
 function renderNet() {
-  const n = state.pending;
-  const waiting = n ? t(n === 1 ? 'render.pending_one' : 'render.pending_many', { n }) : '';
-  const text = [state.offline ? t('render.offline') : '', waiting].filter(Boolean).join(' · ');
+  const waiting = state.pending > 0;
+  const text = state.offline ? t(waiting ? 'render.pending_offline' : 'render.offline') : waiting ? t('render.pending') : '';
   const net = $('#net');
   net.textContent = text;
   net.hidden = !text;
@@ -149,7 +148,7 @@ function taskItem(t, children) {
   const done = t.done || state.justDone.has(t.id);
   const li = el('li', { class: 'task' + (done ? ' done' : '') + (selected ? ' sel' : ''), 'data-id': t.id });
   const row = el('div', { class: 'row' },
-    done || state.query.trim() ? null : el('span', { class: 'grip', 'aria-hidden': 'true' }, '⋮⋮'),
+    done || state.query.trim() ? null : el('span', { class: 'grip', 'aria-hidden': 'true', title: tr('render.drag'), 'aria-label': tr('render.drag') }, '⋮⋮'),
     el('button', {
       class: 'check', role: 'checkbox', 'aria-checked': String(done),
       'aria-label': tr(state.justDone.has(t.id) ? 'render.undo_named' : t.done ? 'render.reopen_named' : 'render.check_named', { title: t.title }),
@@ -161,7 +160,7 @@ function taskItem(t, children) {
     !t.parent_id && (!state.list || state.showDone) ? listPill(t.list) : null,
     // Rechts in de rij; een klik maakt de taak los.
     t.pinned && !t.parent_id && !done
-      ? el('button', { class: 'pinned', type: 'button', title: tr('detail.unpin'), 'aria-label': tr('detail.unpin'), onclick: () => update(t.id, { pinned: false }) }, '📌')
+      ? el('button', { class: 'pinned', type: 'button', title: tr('render.pinned'), 'aria-label': tr('render.pinned'), onclick: () => update(t.id, { pinned: false }) }, '📌')
       : null,
   );
   li.append(row);
@@ -200,6 +199,21 @@ function listPill(name) {
   const color = listColor(name, listNames());
   if (color) pill.style.setProperty('--lc', color); // CSSOM: geen style-attribuut (CSP)
   return pill;
+}
+
+/** De taken zonder parent in de lijst zelf: een subtaak zonder haar parent staat los. */
+function topTasks(tasks) {
+  const ids = new Set(tasks.map((t) => t.id));
+  return tasks.filter((t) => !t.parent_id || !ids.has(t.parent_id));
+}
+
+/** Een <ul> met de taken, subtaken onder hun parent (als die erbij is). */
+function taskList(tasks) {
+  const byParent = new Map();
+  for (const t of tasks) if (t.parent_id) (byParent.get(t.parent_id) ?? byParent.set(t.parent_id, []).get(t.parent_id)).push(t);
+  const ul = el('ul', { class: 'tasks', 'data-parent': '' });
+  topTasks(tasks).forEach((t) => ul.append(taskItem(t, byParent.get(t.id))));
+  return ul;
 }
 
 /** Vastgepinde hoofdtaken staan bovenaan, elk deel in zijn eigen volgorde. */
@@ -243,20 +257,22 @@ function renderList(root) {
     const hit = new Set(visible.filter((t) => matches(t, q)).flatMap((t) => (t.parent_id ? [t.id, t.parent_id] : [t.id])));
     visible = visible.filter((t) => hit.has(t.id));
   }
-  const byParent = new Map();
-  for (const t of visible) if (t.parent_id) (byParent.get(t.parent_id) ?? byParent.set(t.parent_id, []).get(t.parent_id)).push(t);
   const ids = new Set(visible.map((t) => t.id));
-  const tops = visible.filter((t) => !t.parent_id || !ids.has(t.parent_id));
-  if (!tops.length) {
+  // Zoeken buiten Afgerond: daaronder de afgeronde treffers van de server (alleen als ze bij deze zoekterm horen;
+  // offline of mislukt: geen). Wat al bij de open taken staat, zoals een net afgevinkte taak, niet nog eens.
+  const doneHits = q && !state.showDone && state.doneHits?.q === state.query.trim()
+    ? state.doneHits.tasks.filter((t) => t.done && !ids.has(t.id) && !state.justDone.has(t.id) && (!state.list || t.list === state.list))
+    : [];
+  const tops = topTasks(visible);
+  if (!tops.length && !doneHits.length) {
     const empty = q ? t('render.nothing_found')
       : state.showDone ? (state.offline ? t('render.done_offline') : state.doneLoading ? t('render.loading') : t('render.nothing_done'))
       : t('render.nothing_to_do');
     root.append(el('p', { class: 'empty' }, empty));
     return;
   }
-  const ul = el('ul', { class: 'tasks', 'data-parent': '' });
-  tops.forEach((t) => ul.append(taskItem(t, byParent.get(t.id))));
-  root.append(ul);
+  if (tops.length) root.append(taskList(visible));
+  if (doneHits.length) root.append(el('h2', { class: 'list-head' }, t('ui.completed')), taskList(doneHits));
   if (!state.showDone && !q) enableSorting(root); // in een gefilterde lijst zou slepen posities verkeerd berekenen
 }
 

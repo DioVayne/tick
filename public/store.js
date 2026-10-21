@@ -15,6 +15,8 @@ const undoRepeat = new Map();
 // Net afgevinkte taken (justDone): blijven even zichtbaar (doorgestreept) zodat je ze kunt terugzetten en de lijst niet verspringt.
 export const state = {
   open: [], done: [], showDone: false, doneLoading: false, list: null, selected: null, justDone: new Map(), query: '',
+  // Afgeronde treffers bij zoeken buiten Afgerond (de server zoekt): { q, tasks } voor de zoekterm q, of null.
+  doneHits: /** @type {{ q: string, tasks: any[] } | null} */ (null),
   // Prullenbak: alleen online opgehaald (null = nog niet geladen of offline).
   showTrash: false, trash: /** @type {any[] | null} */ (null),
   // Openstaande uitnodigingen om een taak te delen (alleen online opgehaald).
@@ -236,11 +238,14 @@ async function loadOnce() {
   try {
     // Alles tegelijk: elk verzoek is een ronde over het netwerk. Afgeronde taken laden we maar tot 200, dus daarin zoekt de server.
     const q = state.query.trim();
-    const [open, done, serverLists, invites] = await Promise.all([
+    // Zoeken buiten Afgerond: de afgeronde treffers komen onder de open taken. Mislukt dat, dan alleen de open treffers.
+    const hitQ = !state.showDone && q ? q : '';
+    const [open, done, serverLists, invites, hits] = await Promise.all([
       request('GET', '/api/tasks'),
       state.showDone ? request('GET', '/api/tasks?done=1&limit=200' + (q ? '&q=' + encodeURIComponent(q) : '')) : null,
       soft(request('GET', '/api/lists')),
       soft(request('GET', '/api/shares/incoming')),
+      hitQ ? soft(request('GET', '/api/tasks?done=1&limit=50&q=' + encodeURIComponent(hitQ))) : null,
     ]);
     const owned = await ownerReady; // false: de lokale gegevens kunnen van een ander zijn, dan niet lezen of schrijven
     const queued = owned ? await db.outboxAll() : [];
@@ -248,6 +253,8 @@ async function loadOnce() {
     if (done) { state.done = done; state.doneLoading = false; } // een eerdere ronde zonder Afgerond laat "Laden…" staan
     if (serverLists) state.serverLists = serverLists;
     if (invites) state.invites = invites;
+    // Alleen als de zoekterm intussen niet veranderd is: een trage ronde zet geen oude treffers over nieuwere heen.
+    if (hitQ && state.query.trim() === hitQ) state.doneHits = { q: hitQ, tasks: hits ? hits.map(keepDone) : [] };
     state.offline = false;
     state.pending = queued.length;
     if (owned) {
@@ -256,11 +263,24 @@ async function loadOnce() {
     }
     queued.forEach(applyLocal); // wat de server nog niet heeft, bijvoorbeeld na een serverfout
   } catch (e) {
-    if (e instanceof Offline) state.offline = true;
-    else report(tr('store.load_failed', { reason: e.message }));
+    if (e instanceof Offline) {
+      state.offline = true;
+      state.doneHits = null; // zoeken toont offline alleen de open treffers
+    } else report(tr('store.load_failed', { reason: e.message }));
     if (state.showDone) state.doneLoading = false;
   }
   changed();
+}
+
+/**
+ * Een afgeronde treffer als hetzelfde object als in state.done (bijgewerkt, of erbij): het detailpaneel vindt hem dan,
+ * en heropenen past de taak aan die ook in de treffers staat.
+ */
+function keepDone(t) {
+  const known = state.done.find((x) => x.id === t.id);
+  if (known) return Object.assign(known, t);
+  state.done.push(t);
+  return t;
 }
 
 /**
