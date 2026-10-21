@@ -17,6 +17,7 @@ import { forgetCachedConfig } from './next.js';
 import { prepare } from './attachments.js';
 import { formatRadius, loadPlaces } from './places.js';
 import { editPlace } from './map.js';
+import { timeButton } from './timepicker.js';
 
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
@@ -429,7 +430,7 @@ function paintLangTime() {
     tz.value = z;
     tz.dispatchEvent(new Event('change'));
   }, { disabled: off });
-  const time = /** @type {HTMLInputElement} */ (el('input', { type: 'time', class: 'set-time', value: s.reminderTime, required: true, disabled: off, 'aria-label': t('set.reminder_time') }));
+  const time = timeButton({ value: s.reminderTime, label: t('set.reminder_time'), disabled: off });
   time.addEventListener('change', async () => {
     if (!time.value) return;
     if (await save({ reminderTime: time.value }, () => { time.value = current().reminderTime; })) setDefaultTime(time.value);
@@ -491,9 +492,7 @@ function overdueRow() {
   const off = !S.online;
   const sw = /** @type {HTMLInputElement} */ (el('input', { type: 'checkbox', role: 'switch', class: 'set-switch', 'aria-label': t('set.overdue'), disabled: off }));
   sw.checked = s.overdueTime !== null && s.overdueTime !== undefined;
-  const time = /** @type {HTMLInputElement} */ (el('input', {
-    type: 'time', class: 'set-time', value: s.overdueTime ?? '09:00', required: true, disabled: off || !sw.checked, 'aria-label': t('set.overdue_time'),
-  }));
+  const time = timeButton({ value: s.overdueTime ?? '09:00', label: t('set.overdue_time'), disabled: off || !sw.checked });
   const revert = () => {
     const c = current().overdueTime ?? null;
     sw.checked = c !== null;

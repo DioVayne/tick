@@ -138,3 +138,15 @@ export function agenda(tasks, nowMs, days) {
   const list = [...map.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([key, items]) => ({ key, ms: items[0].ms, items }));
   return { overdue, days: list };
 }
+
+/**
+ * Een getypte tijd als 'HH:MM', of null als het geen tijd is. Ruim: "7" is 07:00, "715" en "7.15" zijn 07:15,
+ * "1915" en "19:15" zijn 19:15.
+ */
+export function parseTime(text) {
+  const s = String(text).trim().replace(/[:.\s]/, '');
+  if (!/^\d{1,4}$/.test(s)) return null;
+  const h = Number(s.length <= 2 ? s : s.slice(0, -2));
+  const m = Number(s.length <= 2 ? 0 : s.slice(-2));
+  return h <= 23 && m <= 59 ? `${pad(h)}:${pad(m)}` : null;
+}

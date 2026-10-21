@@ -2,9 +2,13 @@ import { HttpError } from './errors';
 
 export type Loc = { name: string; lat: number; lng: number; radius: number; trigger: 'enter' | 'exit' };
 
-export const RADIUS_MIN = 100;
+// Onder 200 m geeft de onnauwkeurigheid van de locatie binnenshuis valse meldingen bij vertrek.
+export const RADIUS_MIN = 200;
 export const RADIUS_MAX = 2000;
-export const RADIUS_DEFAULT = 500;
+// Vertrek: klein, dan meldt Android het eerder. Aankomst: groter, zodat je er met de auto niet doorheen rijdt.
+export const RADIUS_DEFAULT = { enter: 500, exit: 200 } as const;
+/** Straal voor een favoriet zonder straal; een favoriet heeft geen trigger. */
+export const PLACE_RADIUS_DEFAULT = RADIUS_DEFAULT.enter;
 export const MAX_LOC_NAME = 100;
 
 export type Place = { id: string; name: string; lat: number; lng: number; radius: number };
@@ -43,9 +47,9 @@ export function cleanLocation(v: unknown): Loc | null {
   const name = cleanName(o.name, p);
   const lat = cleanLat(o.lat, p);
   const lng = cleanLng(o.lng, p);
-  const radius = cleanRadius(o.radius ?? RADIUS_DEFAULT, p);
   const trigger = o.trigger ?? 'enter';
   if (trigger !== 'enter' && trigger !== 'exit') throw new HttpError(400, 'err.trigger');
+  const radius = cleanRadius(o.radius ?? RADIUS_DEFAULT[trigger], p);
   return { name, lat, lng, radius, trigger };
 }
 
@@ -57,7 +61,7 @@ export function cleanPlace(v: unknown, partial: boolean): Partial<Omit<Place, 'i
   if (!partial || 'name' in o) out.name = cleanName(o.name, '');
   if (!partial || 'lat' in o) out.lat = cleanLat(o.lat, '');
   if (!partial || 'lng' in o) out.lng = cleanLng(o.lng, '');
-  if (!partial || 'radius' in o) out.radius = cleanRadius(partial ? o.radius : o.radius ?? RADIUS_DEFAULT, '');
+  if (!partial || 'radius' in o) out.radius = cleanRadius(partial ? o.radius : o.radius ?? PLACE_RADIUS_DEFAULT, '');
   return out;
 }
 

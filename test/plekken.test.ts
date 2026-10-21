@@ -46,7 +46,7 @@ describe('favoriete plekken', () => {
   it('valideert zoals een locatie', async () => {
     const ok = { name: 'Geldig', lat: 51, lng: 5 };
     expect((await post({ ...ok, lat: 91 })).status).toBe(400);
-    expect((await post({ ...ok, radius: 50 })).status).toBe(400);
+    expect((await post({ ...ok, radius: 150 })).status).toBe(400);
     expect((await post({ ...ok, name: '' })).status).toBe(400);
     const p = await json<Place>(await post({ ...ok, name: 'Met-trigger', trigger: 'exit' }));
     expect(p).not.toHaveProperty('trigger');

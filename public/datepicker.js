@@ -3,9 +3,11 @@ import { dateLocale, t } from './i18n.js';
 import { narrow, place } from './popover.js';
 import { el } from './render.js';
 import { chipDays, getDefaultTime } from './repeat.js';
+import { timeGrid } from './timepicker.js';
 
 // Eigen datum- en tijdkiezer: snelknoppen (vandaag, morgen, volgende week), een maand met de weekdagen erboven
-// (in de volgorde van "week begint op"), drie vaste tijden of een eigen tijd.
+// (in de volgorde van "week begint op"), het tijdveld en drie vaste tijden. Het tijdveld opent de tijdkiezer op de
+// plek van de maand, zodat de knoppen onderaan in beeld blijven.
 // Op een smal scherm schuift hij van onderen in beeld, op een breed scherm staat hij onder de knop.
 // Werkt met lokale tijd als 'YYYY-MM-DDTHH:MM' (zoals een datetime-local-veld, zie toLocalInput/fromLocalInput
 // in render.js); daarom rekent ook "nu" hier met de klok van het apparaat. null is wissen.
@@ -32,7 +34,6 @@ export function openDatePicker(anchor, value, onPick) {
   let time = value ? value.slice(11, 16) : start.time;
   let month = fromKey(day);
   month.setDate(1);
-  let ownOpen = !TIMES.includes(time);
 
   const locale = dateLocale();
   const fmtMonth = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' });
@@ -42,14 +43,16 @@ export function openDatePicker(anchor, value, onPick) {
 
   const title = el('span', { class: 'dp-month', 'aria-live': 'polite' });
   const grid = el('div', { class: 'dp-grid' });
-  const times = el('div', { class: 'dp-times' });
-  const own = /** @type {HTMLInputElement} */ (el('input', { type: 'time', class: 'dp-own', 'aria-label': t('dp.time') }));
-  // Tijdens het typen het veld niet opnieuw opbouwen: dan gaat de focus weg en wordt "10" 01:00.
-  own.addEventListener('input', () => { if (own.value) { time = own.value; markTimes(); drawSummary(); } });
+  const timeValue = el('b', {});
+  const timeField = el('button', { type: 'button', class: 'dp-field', 'aria-expanded': 'false', onclick: () => showTime(calArea.hidden ? false : true) },
+    el('span', { class: 'dp-field-ico', 'aria-hidden': 'true' }, '🕒'),
+    el('span', { class: 'dp-field-main' }, el('small', {}, t('dp.time')), timeValue),
+    el('span', { class: 'dp-field-act' }, t('dp.change'), ' ›'));
   const timeButtons = TIMES.map((tm) => el('button', {
-    type: 'button', onclick: () => { time = tm; ownOpen = false; drawTimes(); },
+    type: 'button', onclick: () => { time = tm; tgrid.set(tm); drawTimes(); },
   }, tm));
-  const other = el('button', { class: 'dp-other', type: 'button', onclick: () => { ownOpen = true; drawTimes(); own.focus(); } }, t('dp.other_time'));
+  const times = el('div', { class: 'dp-times', role: 'group', 'aria-label': t('dp.quick_times') }, el('span', { class: 'dp-times-label' }, t('dp.quick')), ...timeButtons);
+  const tgrid = timeGrid(time, (tm) => { time = tm; drawTimes(); });
   const quickButtons = /** @type {const} */ ([['today', 'dp.today'], ['tomorrow', 'dp.tomorrow'], ['nextWeek', 'dp.next_week']])
     .map(([k, label]) => el('button', { type: 'button', 'data-day': quick[k], onclick: () => pickQuick(quick[k]) }, t(label)));
   const summary = el('span', { class: 'dp-sum' });
@@ -59,20 +62,28 @@ export function openDatePicker(anchor, value, onPick) {
   const weekdays = el('div', { class: 'dp-wd', 'aria-hidden': 'true' },
     ...chipDays(weekStart).map((wd) => el('span', {}, fmtWeekday.format(new Date(2024, 0, 1 + wd)))));
 
-  const dialog = /** @type {HTMLDialogElement} */ (el('dialog', { class: 'dpick' + (narrow.matches ? ' sheet' : ''), 'aria-label': t('dp.title') },
-    el('div', { class: 'dp-quick' }, ...quickButtons),
+  const calArea = el('div', { class: 'dp-cal' },
     el('div', { class: 'dp-head' },
       el('button', { class: 'dp-nav', type: 'button', 'aria-label': t('dp.prev'), onclick: () => shift(-1) }, '‹'),
       title,
       el('button', { class: 'dp-nav', type: 'button', 'aria-label': t('dp.next'), onclick: () => shift(1) }, '›')),
     weekdays,
-    grid,
+    grid);
+  const timeArea = el('div', { class: 'dp-timearea', hidden: true },
+    tgrid.root,
+    el('button', { type: 'button', class: 'dp-back', onclick: () => showTime(false) }, '‹ ', t('dp.back_calendar')));
+
+  const dialog = /** @type {HTMLDialogElement} */ (el('dialog', { class: 'dpick' + (narrow.matches ? ' sheet' : ''), 'aria-label': t('dp.title') },
+    el('div', { class: 'dp-quick' }, ...quickButtons),
+    calArea,
+    timeArea,
+    timeField,
     times,
     el('div', { class: 'dp-foot' },
       summary,
       el('div', { class: 'dp-actions' },
         value ? el('button', { class: 'dp-clear', type: 'button', onclick: () => finish(null) }, t('dp.clear')) : null,
-        el('button', { type: 'button', onclick: () => finish(`${day}T${time}`) }, t('dp.done'))))));
+        el('button', { type: 'button', onclick: () => { if (tgrid.commit()) finish(`${day}T${time}`); } }, t('dp.done'))))));
 
   function drawDays() {
     title.textContent = fmtMonth.format(month);
@@ -92,17 +103,18 @@ export function openDatePicker(anchor, value, onPick) {
     drawSummary();
   }
 
-  function markTimes() {
+  function drawTimes() {
+    timeValue.textContent = time;
     timeButtons.forEach((b, i) => b.setAttribute('aria-pressed', String(TIMES[i] === time)));
+    drawSummary();
   }
 
-  /** Alleen bij wisselen tussen "Anders…" en het tijdveld komen er andere knoppen; verder blijven ze staan. */
-  function drawTimes() {
-    own.value = time;
-    markTimes();
-    const last = ownOpen ? own : other;
-    if (times.lastChild !== last) times.replaceChildren(...timeButtons, last);
-    drawSummary();
+  /** Tijdkiezer of maand: ze staan op dezelfde plek. */
+  function showTime(open) {
+    calArea.hidden = open;
+    timeArea.hidden = !open;
+    timeField.setAttribute('aria-expanded', String(open));
+    if (open) { tgrid.set(time); tgrid.focus(); } else /** @type {HTMLElement | null} */ (grid.querySelector('[aria-pressed="true"]'))?.focus();
   }
 
   function drawSummary() {
@@ -121,7 +133,7 @@ export function openDatePicker(anchor, value, onPick) {
   /** Snelknop: de dag, en bij Vandaag met een tijd die al geweest is het volgende hele uur (als dat nog vandaag is). */
   function pickQuick(key) {
     pick(key);
-    if (key === today && time <= nowTime && start.day === today) { time = start.time; ownOpen = !TIMES.includes(time); drawTimes(); }
+    if (key === today && time <= nowTime && start.day === today) { time = start.time; tgrid.set(time); drawTimes(); }
   }
 
   // Pijltjes verplaatsen de gekozen dag (een dag of een week), Enter op een dag is al een klik.

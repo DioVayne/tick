@@ -176,7 +176,8 @@ html { overscroll-behavior-y: contain; }
 @keyframes ptr-spin { to { rotate: 360deg; } }
 /* Kaartscherm: schermvullend, net onder de toast zodat meldingen zichtbaar blijven */
 body.map-open { overflow: hidden; }
-.mapscreen { position: fixed; inset: 0; z-index: 19; display: flex; flex-direction: column; background: var(--bg); padding-top: env(safe-area-inset-top); }
+/* Eigen, sterkere lijnkleur: de gewone --line valt in donkere modus weg tegen de kaartjes en knoppen */
+.mapscreen { position: fixed; inset: 0; z-index: 19; display: flex; flex-direction: column; background: var(--bg); padding-top: env(safe-area-inset-top); --line: color-mix(in srgb, var(--text) 24%, var(--bg)); }
 .mapscreen:focus { outline: none; }
 .mapscreen [hidden] { display: none !important; }
 .mapsearch { display: flex; gap: 8px; padding: 8px; }
@@ -191,19 +192,46 @@ body.map-open { overflow: hidden; }
 /* De pin staat vast in het midden; de punt van de pin valt op het middelpunt van de kaart */
 .pin { position: absolute; left: 50%; top: 50%; z-index: 1; translate: -50% -100%; font-size: 2rem; line-height: 1; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
 /* Specifieker dan button.ghost, anders is hij doorzichtig en in donkere modus onleesbaar op de lichte tegels */
-.mapscreen .myloc { position: absolute; right: 10px; bottom: 24px; z-index: 1; width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 1.375rem; background: var(--card); color: var(--text); border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,.25); }
-.mappanel { display: grid; gap: 8px; padding: 8px 12px calc(12px + env(safe-area-inset-bottom)); max-height: 55vh; overflow-y: auto; border-top: 1px solid var(--line); background: var(--card); }
+.mapscreen .myloc { position: absolute; right: 10px; bottom: 24px; z-index: 1; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; font-size: .875rem; background: var(--card); color: var(--text); border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+.mapscreen .myloc span { font-size: 1.125rem; line-height: 1; }
+.mappanel { display: flex; flex-direction: column; max-height: 55vh; border-top: 1px solid var(--line); background: var(--card); }
+.mapbody { flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 14px; align-content: start; padding: 10px 12px; }
+.mapfoot { display: grid; gap: 8px; padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+.mapsec { display: grid; gap: 4px; min-width: 0; }
+.maph { display: flex; justify-content: space-between; gap: 8px; margin: 0; font-size: .75rem; font-weight: 600; color: var(--muted); }
+.maph strong { color: var(--text); font-size: .875rem; }
+.mapnote { margin: 2px 0 0; font-size: .75rem; line-height: 1.45; color: var(--muted); }
 .mappanel label { font-size: .75rem; color: var(--muted); display: grid; gap: 3px; }
 .mappanel input[type="range"] { padding: 0; border: 0; background: transparent; accent-color: var(--accent); }
-.mappanel .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.mappanel .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mappanel .actions > :first-child { grid-column: 1 / -1; }
+.favsave { display: flex; gap: 8px; align-items: end; }
+.favsave label { flex: 1; min-width: 0; }
+.favsave button { flex: none; }
 .seg { display: flex; gap: 0; }
 .seg button { flex: 1; border-radius: 0; }
+.seg button:not([aria-pressed="true"]) { background: var(--fill); }
 .seg button:first-child { border-radius: 8px 0 0 8px; }
 .seg button:last-child { border-radius: 0 8px 8px 0; border-left: 0; }
 .favs { padding: 0; }
 .fav { display: inline-flex; flex: none; }
 .chips .fav button { border-radius: 999px 0 0 999px; }
 .chips .fav button.edit-fav { border-radius: 0 999px 999px 0; border-left: 0; padding: 4px 10px; color: var(--muted); }
+.chips .fav:has(> button[aria-pressed="true"]) .edit-fav { border-color: var(--accent); }
+/* Desktop: kaart links, bediening in een smal paneel rechts in plaats van balken over de hele breedte */
+@media (min-width: 900px) {
+  .mapscreen { display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto auto minmax(0, 1fr); }
+  .mapwrap { grid-column: 1; grid-row: 1 / -1; }
+  .mapsearch, .mapresults, .mappanel { grid-column: 2; border-left: 1px solid var(--line); background: var(--card); }
+  .mapsearch { grid-row: 1; padding: 12px 12px 8px; }
+  .mapresults { grid-row: 2; }
+  .mappanel { grid-row: 3; max-height: none; border-top: 0; }
+  .mapbody { padding: 8px 16px 16px; gap: 18px; }
+  .mapfoot { padding: 12px 16px 16px; }
+  .mapscreen .seg { display: inline-flex; justify-self: start; }
+  .mapscreen .seg button { flex: none; padding: 6px 16px; min-height: 34px; }
+  .chips.favs { flex-wrap: wrap; overflow: visible; }
+}
 .fav button:first-child { -webkit-touch-callout: none; user-select: none; }
 .mapscreen .leaflet-bar a, .mapscreen .leaflet-control-attribution { background: var(--card); color: var(--text); border-color: var(--line); }
 .mapscreen .leaflet-control-attribution a { color: var(--accent); }
@@ -541,7 +569,6 @@ p.set-note { margin: 0 0 8px; }
 .set-seg button + button { border-left: 1px solid var(--line); }
 .set-seg button[aria-pressed="true"] { background: var(--tint); color: var(--link); font-weight: 600; }
 .set-select { max-width: 100%; min-height: 36px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); font-size: .875rem; }
-.set-control input.set-time { width: auto; padding: 6px 8px; font-size: .875rem; }
 /* Schakelaar (checkbox met role=switch) */
 .set-switch { appearance: none; position: relative; flex: none; width: 46px; min-width: 46px; height: 28px; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 999px; background: var(--fill); cursor: pointer; transition: background .15s; }
 .set-switch::before { content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: translate .15s; }
@@ -659,16 +686,40 @@ button.secbtn:not(:disabled):hover { border-color: var(--muted); background: var
 .dp-day.out { opacity: .55; }
 .dp-day.today { color: var(--link); font-weight: 700; }
 .dp-day[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); font-weight: 600; opacity: 1; }
-.dp-times { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
-.dp-times button { min-height: 34px; padding: 4px 10px; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); font-size: .875rem; }
-.dp-times button[aria-pressed="true"] { outline: 1px solid var(--accent); color: var(--link); }
-.dp-times .dp-other, .dp-own { margin-left: auto; }
-.dp-own { width: auto; min-height: 34px; padding: 4px 8px; }
+/* Het tijdveld (de gekozen tijd, opent de tijdkiezer) en daaronder de snelle tijden als lichtere pillen */
+.dp-field { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 12px; padding: 6px 12px; border: 1px solid color-mix(in srgb, var(--text) 30%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--text) 5%, transparent); color: var(--text); text-align: left; }
+.dp-field[aria-expanded="true"] { border-color: var(--accent); }
+.dp-field-ico { font-size: 1.125rem; line-height: 1; }
+.dp-field-main { flex: 1; display: grid; }
+.dp-field-main small { font-size: .6875rem; color: var(--muted); }
+.dp-field-main b { font-size: 1.125rem; font-weight: 600; }
+.dp-field-act { color: var(--link); font-size: .8125rem; white-space: nowrap; }
+.dp-times { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.dp-times-label { color: var(--muted); font-size: .75rem; }
+.dp-times button { min-height: 30px; padding: 2px 12px; border: 1px dashed color-mix(in srgb, var(--text) 30%, transparent); border-radius: 999px; background: transparent; color: var(--muted); font-size: .8125rem; }
+.dp-times button[aria-pressed="true"] { border-style: solid; border-color: var(--accent); color: var(--link); }
+.dp-back { margin-top: 8px; padding: 4px 0; min-height: 0; background: transparent; color: var(--link); font-size: .8125rem; }
+/* Tijdkiezer (timepicker.js): tabs met de gekozen waarde, daaronder het raster van zes kolommen */
+.tp-head { display: flex; align-items: end; gap: 4px; margin-bottom: 10px; }
+.tp-tab { display: grid; justify-items: center; min-height: 0; padding: 0 6px 3px; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: transparent; color: var(--text); }
+.tp-tab small { font-size: .6875rem; color: var(--muted); }
+.tp-tab b { font-size: 1.625rem; font-weight: 500; line-height: 1.2; }
+.tp-tab[aria-pressed="true"] { border-bottom-color: var(--accent); }
+.tp-colon { font-size: 1.625rem; padding-bottom: 6px; }
+.tp-type { margin-left: auto; min-height: 0; padding: 4px 0; background: transparent; color: var(--link); font-size: .8125rem; }
+.tp-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.tp-grid button { min-height: 38px; padding: 0; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); font-size: .875rem; font-variant-numeric: tabular-nums; }
+.tp-grid button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+.tp-input { font-size: 1.125rem; }
+.tp-error { margin: 6px 0 0; color: var(--danger); font-size: .8125rem; }
+.tp-note { margin: 6px 0 0; color: var(--muted); font-size: .75rem; }
+.tpick { width: min(320px, calc(100vw - 16px)); }
+.time-btn { min-height: 36px; padding: 4px 14px; border: 1px solid var(--line); background: var(--card); color: var(--text); font-variant-numeric: tabular-nums; }
 .dp-quick { display: flex; gap: 6px; margin-bottom: 10px; }
 .dp-quick button { flex: 1 1 0; min-width: 0; min-height: 34px; padding: 4px 6px; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); font-size: .875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dp-quick button[aria-pressed="true"] { outline: 1px solid var(--accent); color: var(--link); }
 /* Van onderen (smal scherm): vingervriendelijk, minstens 44px hoog */
-.dpick.sheet .dp-quick button, .dpick.sheet .dp-times button, .dpick.sheet .dp-own { min-height: 44px; }
+.dpick.sheet .dp-quick button, .dpick.sheet .dp-times button, .dpick.sheet .tp-grid button { min-height: 44px; }
 .dp-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
 .dp-sum { color: var(--muted); font-size: .875rem; }
 .dp-actions { display: flex; gap: 8px; }

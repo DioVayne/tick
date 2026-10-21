@@ -32,7 +32,6 @@ function addToHead(tag, props) {
 
 const round6 = (x) => Math.round(x * 1e6) / 1e6;
 const clampRadius = (r) => Math.min(RADIUS.max, Math.max(RADIUS.min, Math.round(r / RADIUS.step) * RADIUS.step));
-const radiusText = (r) => t('map.radius_value', { radius: formatRadius(r) });
 
 /** Melding bij een mislukte actie op de favorieten. */
 function placeError(e) {
@@ -76,8 +75,13 @@ async function openScreen(mode) {
 /** mode.place: undefined bij een taak; null (nieuw) of een plek bij het beheren van favorieten. */
 function buildScreen(L, { loc, place }, resolve) {
   const managing = place !== undefined;
-  let radius = loc?.radius ?? RADIUS.default;
   let trigger = loc?.trigger ?? 'enter';
+  // Een favoriet heeft geen trigger; die krijgt de standaard van aankomst.
+  let radius = clampRadius(loc?.radius ?? RADIUS.default[managing ? 'enter' : trigger]);
+  // Zolang je de straal niet zelf kiest, schuift hij mee met de trigger. Een bestaande plek heeft al een eigen straal.
+  let radiusChosen = !!loc;
+  let chosenFav = null; // gekozen favoriet; vervalt als je de kaart of de straal daarna zelf verandert
+  let autoName = loc?.name ?? ''; // naam voor de taak: van de bestaande plek of het laatste zoekresultaat
   let userMoved = false; // na een eigen actie springt de kaart niet meer naar je huidige locatie
   let result, closing = false, finished = false;
 
@@ -85,19 +89,28 @@ function buildScreen(L, { loc, place }, resolve) {
   const query = el('input', { type: 'search', placeholder: t('map.search_placeholder'), 'aria-label': t('map.search_label'), enterkeyhint: 'search', autocomplete: 'off' });
   const results = el('ul', { class: 'mapresults', hidden: true });
   const mapEl = el('div', { class: 'map' });
-  const myLoc = el('button', { type: 'button', class: 'ghost myloc', title: t('map.my_location'), 'aria-label': t('map.my_location') }, '◎');
-  const chips = el('div', { class: 'chips favs', role: 'group', 'aria-label': t('map.favorites'), hidden: true });
+  const myLoc = el('button', { type: 'button', class: 'ghost myloc' }, el('span', { 'aria-hidden': 'true' }, '◎'), t('map.my_location'));
+  const chips = el('div', { class: 'chips favs', role: 'group', 'aria-label': t('map.favorites') });
+  const favEmpty = el('p', { class: 'mapnote' }, t('map.no_favorites'));
   const range = el('input', { type: 'range', min: RADIUS.min, max: RADIUS.max, step: RADIUS.step, value: radius, 'aria-label': t('map.radius') });
-  const rangeLabel = el('span', {}, radiusText(radius));
+  const radiusValue = el('strong', {}, formatRadius(radius));
+  const radiusHint = el('p', { class: 'mapnote' });
+  const whenNote = el('p', { class: 'mapnote' });
   const enterBtn = el('button', { type: 'button', class: 'ghost' }, t('map.on_arrive'));
   const exitBtn = el('button', { type: 'button', class: 'ghost' }, t('map.on_leave'));
-  const name = el('input', { value: loc?.name ?? '', placeholder: managing ? t('map.favorite_name') : t('map.pinned_place'), maxlength: 100, autocomplete: 'off' });
+  // Alleen bij het beheren van een favoriet een vast naamveld; bij een taak krijgt de plek vanzelf een naam.
+  const name = el('input', { value: loc?.name ?? '', placeholder: t('map.favorite_name'), maxlength: 100, autocomplete: 'off' });
+  const favName = el('input', { maxlength: 100, autocomplete: 'off', enterkeyhint: 'done' });
+  const favRow = el('form', { class: 'favsave', hidden: true, onsubmit: (e) => { e.preventDefault(); saveFavorite(); } },
+    el('label', {}, t('map.favorite_name'), favName),
+    el('button', { type: 'submit' }, t('map.save')),
+    el('button', { type: 'button', class: 'ghost', 'aria-label': t('map.cancel'), onclick: () => { favRow.hidden = true; } }, '✕'));
   const actions = managing
     ? [el('button', { type: 'button', onclick: saveManaged }, t('map.save')),
       place ? el('button', { type: 'button', class: 'danger', onclick: deleteManaged }, t('map.delete')) : null,
       el('button', { type: 'button', class: 'ghost', onclick: () => close(undefined) }, t('map.cancel'))]
     : [el('button', { type: 'button', onclick: use }, t('map.use_place')),
-      el('button', { type: 'button', class: 'ghost', onclick: saveFavorite }, t('map.save_favorite')),
+      el('button', { type: 'button', class: 'ghost', onclick: openFavRow }, t('map.save_favorite')),
       el('button', { type: 'button', class: 'ghost', onclick: () => close(undefined) }, t('map.close'))];
   const title = managing ? (place ? t('map.edit_place') : t('map.new_place')) : t('map.choose_place');
 
@@ -107,11 +120,18 @@ function buildScreen(L, { loc, place }, resolve) {
     results,
     el('div', { class: 'mapwrap' }, mapEl, el('div', { class: 'pin', 'aria-hidden': 'true' }, '📍'), myLoc),
     el('div', { class: 'mappanel' },
-      chips,
-      el('label', {}, rangeLabel, range),
-      managing ? null : el('div', { class: 'seg', role: 'group', 'aria-label': t('map.when') }, enterBtn, exitBtn),
-      el('label', {}, t('map.name'), name),
-      el('div', { class: 'actions' }, ...actions)),
+      el('div', { class: 'mapbody' },
+        managing
+          ? el('label', { class: 'mapsec' }, el('span', { class: 'maph' }, t('map.favorite_name')), name)
+          : el('section', { class: 'mapsec' }, el('h3', { class: 'maph' }, t('map.favorites')), chips, favEmpty),
+        managing ? null : el('section', { class: 'mapsec' },
+          el('h3', { class: 'maph' }, t('map.when')),
+          el('div', { class: 'seg', role: 'group', 'aria-label': t('map.when') }, enterBtn, exitBtn),
+          whenNote),
+        el('section', { class: 'mapsec' },
+          el('h3', { class: 'maph' }, el('span', {}, t('map.radius')), radiusValue),
+          range, radiusHint)),
+      el('div', { class: 'mapfoot' }, managing ? null : favRow, el('div', { class: 'actions' }, ...actions))),
   );
   document.body.append(screen);
   document.body.classList.add('map-open');
@@ -124,6 +144,7 @@ function buildScreen(L, { loc, place }, resolve) {
   const circle = L.circle(map.getCenter(), { radius, className: 'loc-circle', interactive: false }).addTo(map);
   map.on('move', () => circle.setLatLng(map.getCenter()));
   map.on('dragstart zoomstart', () => { userMoved = true; });
+  map.on('dragstart', () => markFav(null));
 
   const go = (lat, lng) => {
     if (finished) return; // antwoord van zoeken of GPS kwam pas na het sluiten
@@ -149,18 +170,24 @@ function buildScreen(L, { loc, place }, resolve) {
   });
 
   // ---------- straal en trigger ----------
+  const showHints = () => {
+    whenNote.textContent = t(trigger === 'exit' ? 'map.when_exit_note' : 'map.when_enter_note');
+    radiusHint.textContent = t(!managing && trigger === 'enter' ? 'map.radius_enter_hint' : 'map.radius_exit_hint');
+  };
   const setRadius = (r) => {
     radius = clampRadius(r);
     range.value = radius;
-    rangeLabel.textContent = radiusText(radius);
+    radiusValue.textContent = formatRadius(radius);
     circle.setRadius(radius);
   };
-  range.addEventListener('input', () => setRadius(Number(range.value)));
+  range.addEventListener('input', () => { radiusChosen = true; markFav(null); setRadius(Number(range.value)); });
 
   const setTrigger = (v) => {
     trigger = v;
     enterBtn.setAttribute('aria-pressed', String(v === 'enter'));
     exitBtn.setAttribute('aria-pressed', String(v === 'exit'));
+    if (!radiusChosen) setRadius(RADIUS.default[v]);
+    showHints();
   };
   enterBtn.addEventListener('click', () => setTrigger('enter'));
   exitBtn.addEventListener('click', () => setTrigger('exit'));
@@ -185,13 +212,15 @@ function buildScreen(L, { loc, place }, resolve) {
 
   function pick(r) {
     go(r.lat, r.lng);
-    name.value = r.name.split(',')[0].trim();
+    markFav(null);
+    autoName = r.name.split(',')[0].trim();
+    if (managing && !name.value.trim()) name.value = autoName;
     results.hidden = true;
     results.replaceChildren();
   }
 
   // ---------- favorieten ----------
-  async function refreshPlaces() {
+  async function refreshPlaces(select) {
     let places;
     try {
       places = await loadPlaces();
@@ -200,17 +229,32 @@ function buildScreen(L, { loc, place }, resolve) {
     }
     chips.replaceChildren(...places.map(favChip));
     chips.hidden = !places.length;
+    favEmpty.hidden = !!places.length;
+    if (select) markFav(places.find((p) => p.name === select) ?? null);
+    // Een bestaande plek die precies een favoriet is: die favoriet staat dan al gekozen.
+    else if (loc && !chosenFav && !userMoved && radius === loc.radius) {
+      markFav(places.find((p) => p.name === loc.name && p.lat === loc.lat && p.lng === loc.lng && p.radius === loc.radius) ?? null);
+    }
+  }
+
+  /** Markeert de gekozen favoriet (of geen). */
+  function markFav(p) {
+    chosenFav = p;
+    for (const b of chips.querySelectorAll('.fav > button:first-child')) b.setAttribute('aria-pressed', String(!!p && b.dataset.id === p.id));
   }
 
   function favChip(p) {
     let pressTimer, longPressed = false;
     const choose = el('button', {
       type: 'button',
+      'data-id': p.id,
+      'aria-pressed': String(chosenFav?.id === p.id),
       onclick: () => {
         if (longPressed) { longPressed = false; return; }
         go(p.lat, p.lng);
+        radiusChosen = true;
         setRadius(p.radius);
-        name.value = p.name;
+        markFav(p);
       },
       onpointerdown: () => { longPressed = false; pressTimer = setTimeout(() => { longPressed = true; editPlace(p); }, LONG_PRESS_MS); },
       onpointerup: () => clearTimeout(pressTimer),
@@ -243,18 +287,26 @@ function buildScreen(L, { loc, place }, resolve) {
     refreshPlaces();
   }
 
+  /** Klapt onderin de regel open om de plek als favoriet te bewaren, met de naam die de plek nu zou krijgen. */
+  function openFavRow() {
+    favRow.hidden = false;
+    favName.value = chosenFav?.name ?? autoName;
+    favName.focus();
+    favName.select();
+  }
+
   async function saveFavorite() {
-    const answer = prompt(t('map.favorite_name'), name.value.trim());
-    if (answer === null || !answer.trim()) return;
+    const n = favName.value.trim();
+    if (!n) { toast(t('map.name_needed')); favName.focus(); return; }
     const c = center();
     try {
-      await savePlace({ name: answer.trim(), lat: c.lat, lng: c.lng, radius });
+      await savePlace({ name: n, lat: c.lat, lng: c.lng, radius });
     } catch (e) {
       placeError(e);
       return;
     }
-    if (!name.value.trim()) name.value = answer.trim();
-    refreshPlaces();
+    favRow.hidden = true;
+    await refreshPlaces(n);
   }
 
   // Bij het beheren van een favoriet horen de knoppen van de andere favorieten er niet bij.
@@ -295,7 +347,7 @@ function buildScreen(L, { loc, place }, resolve) {
   }
 
   function use() {
-    close({ name: name.value.trim() || t('map.pinned_place'), ...center(), radius, trigger });
+    close({ name: chosenFav?.name ?? (autoName || t('map.pinned_place')), ...center(), radius, trigger });
   }
 
   // Eigen history-item: de terugknop sluit dan de kaart in plaats van de app te verlaten.
