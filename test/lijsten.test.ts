@@ -7,7 +7,7 @@ const tag = () => 'L' + crypto.randomUUID().slice(0, 8);
 
 const rename = (from: string, to: string) => call('/api/lists/rename', { method: 'POST', json: { from, to } });
 const del = (name: string, tasks: string) => call('/api/lists/delete', { method: 'POST', json: { name, tasks } });
-const lists = async () => json<{ name: string; open: number }[]>(await call('/api/lists'));
+const lists = async () => json<{ name: string; open: number; id: string }[]>(await call('/api/lists'));
 const finish = async (t: Task) => expect((await call(`/api/tasks/${t.id}`, { method: 'PATCH', json: { done: true } })).status).toBe(200);
 const doneTasks = async () => json<Task[]>(await call('/api/tasks?done=1&limit=500'));
 
@@ -18,8 +18,8 @@ describe('lijsten', () => {
     await createTask({ title: 'kind', parent_id: p.id });
     await finish(await createTask({ title: 'k', list: b }));
     const all = await lists();
-    expect(all.find((l) => l.name === a)).toEqual({ name: a, open: 2 });
-    expect(all.find((l) => l.name === b)).toEqual({ name: b, open: 0 });
+    expect(all.find((l) => l.name === a)).toEqual({ name: a, open: 2, id: expect.any(String) });
+    expect(all.find((l) => l.name === b)).toEqual({ name: b, open: 0, id: expect.any(String) });
     expect(all.some((l) => l.name === 'Inbox')).toBe(true);
   });
 
@@ -173,9 +173,9 @@ describe('lijsten', () => {
     expect(res.status).toBe(201);
     expect(await json(res)).toEqual({ name: a });
     expect((await make(a)).status).toBe(201); // nog eens: verandert niets
-    expect((await lists()).filter((l) => l.name === a)).toEqual([{ name: a, open: 0 }]);
+    expect((await lists()).filter((l) => l.name === a)).toEqual([{ name: a, open: 0, id: expect.any(String) }]);
     await createTask({ title: 't', list: a });
-    expect((await lists()).filter((l) => l.name === a)).toEqual([{ name: a, open: 1 }]);
+    expect((await lists()).filter((l) => l.name === a)).toEqual([{ name: a, open: 1, id: expect.any(String) }]);
     expect((await make('  ')).status).toBe(400);
     expect((await make('x'.repeat(101))).status).toBe(400);
     expect((await make('Inbox')).status).toBe(201);
@@ -203,5 +203,26 @@ describe('lijsten', () => {
     expect((await call('/api/lists', { auth: null })).status).toBe(401);
     // Het inbox-token mag alleen naar /api/inbox: daar geeft de middleware 403.
     expect((await call('/api/lists/rename', { method: 'POST', auth: INBOX, json: { from: 'a', to: 'b' } })).status).toBe(403);
+  });
+
+  it('elke lijst heeft een vaste id: hernoemen houdt hem, samenvoegen houdt die van het doel, verwijderen niet', async () => {
+    const a = tag(), b = tag(), c = tag();
+    await createTask({ title: 't', list: a });
+    await createTask({ title: 't', list: c });
+    const idOf = async (name: string) => (await lists()).find((l) => l.name === name)?.id;
+    const first = await idOf(a);
+    expect(first).toMatch(/^[0-9a-f]{12}$/);
+    expect(await idOf(a)).toBe(first); // nog eens opvragen: dezelfde
+    expect(await idOf('Inbox')).toEqual(expect.any(String));
+    await rename(a, b);
+    expect(await idOf(b)).toBe(first);
+    const target = await idOf(c);
+    await rename(b, c);
+    expect(await idOf(c)).toBe(target);
+    await del(c, 'inbox');
+    await createTask({ title: 't', list: c });
+    const again = await idOf(c);
+    expect(again).not.toBe(target);
+    expect(again).not.toBe(first);
   });
 });

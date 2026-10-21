@@ -844,8 +844,22 @@ app.get('/api/lists', async (c) => {
   // Inbox is vast en moet er ook zijn zonder taken.
   if (!lists.some((l) => l.name === 'Inbox')) lists.push({ name: 'Inbox', open: 0 });
   lists.sort((a, b) => a.name.localeCompare(b.name, c.get('lang'), { sensitivity: 'base' }));
-  return c.json(lists);
+  const ids = await listIds(db, userId, lists.map((l) => l.name));
+  return c.json(lists.map((l) => ({ ...l, id: ids.get(l.name) })));
 });
+
+/** De vaste id van elke naam (voor bladwijzers); een naam die er nog geen heeft, krijgt er nu een. */
+async function listIds(db: D1Database, userId: string, names: string[]): Promise<Map<string, string>> {
+  const read = async () => new Map((await db.prepare('SELECT name, id FROM list_ids WHERE user_id = ?').bind(userId)
+    .all<{ name: string; id: string }>()).results.map((r) => [r.name, r.id]));
+  const ids = await read();
+  const missing = names.filter((n) => !ids.has(n));
+  if (!missing.length) return ids;
+  const newId = () => [...crypto.getRandomValues(new Uint8Array(6))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  // OR IGNORE: een gelijktijdig verzoek kan hem net hebben aangemaakt; daarom daarna opnieuw lezen.
+  await db.batch(missing.map((n) => db.prepare('INSERT OR IGNORE INTO list_ids (user_id, name, id) VALUES (?, ?, ?)').bind(userId, n, newId())));
+  return read();
+}
 
 /** Een nieuwe, lege lijst bewaren (bestaat hij al, dan verandert er niets). */
 app.post('/api/lists', async (c) => {
@@ -872,6 +886,9 @@ app.post('/api/lists/rename', async (c) => {
     // De bewaarde lijst gaat mee; bestaat de nieuwe naam al (samenvoegen), dan vervalt de oude rij.
     db.prepare('UPDATE OR IGNORE lists SET name = ? WHERE name = ? AND user_id = ?').bind(to, from, userId),
     db.prepare('DELETE FROM lists WHERE name = ? AND user_id = ?').bind(from, userId),
+    // De id gaat ook mee, zodat een bladwijzer blijft werken; bij samenvoegen houdt de bestaande lijst de zijne.
+    db.prepare('UPDATE OR IGNORE list_ids SET name = ? WHERE name = ? AND user_id = ?').bind(to, from, userId),
+    db.prepare('DELETE FROM list_ids WHERE name = ? AND user_id = ?').bind(from, userId),
   ]);
   return c.json({ moved: res[0].meta.changes + res[1].meta.changes });
 });
@@ -883,12 +900,16 @@ app.post('/api/lists/delete', async (c) => {
   const db = c.env.DB;
   const userId = c.get('auth').userId;
   // De bewaarde lijst (als die er is) gaat altijd weg, ook als hij geen taken had.
-  const forget = db.prepare('DELETE FROM lists WHERE name = ? AND user_id = ?').bind(name, userId);
+  // De id ook: komt de naam later terug, dan is dat een nieuwe lijst.
+  const forget = [
+    db.prepare('DELETE FROM lists WHERE name = ? AND user_id = ?').bind(name, userId),
+    db.prepare('DELETE FROM list_ids WHERE name = ? AND user_id = ?').bind(name, userId),
+  ];
   if (b.tasks === 'inbox') {
     const res = await db.batch([
       db.prepare("UPDATE tasks SET list = 'Inbox', updated_at = ? WHERE list = ? AND user_id = ?").bind(now(), name, userId),
       db.prepare("UPDATE task_shares SET list = 'Inbox' WHERE list = ? AND to_user = ? AND status = 'accepted'").bind(name, userId),
-      forget,
+      ...forget,
     ]);
     return c.json({ moved: res[0].meta.changes + res[1].meta.changes });
   }
@@ -901,7 +922,7 @@ app.post('/api/lists/delete', async (c) => {
       db.prepare('UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE list = ? AND user_id = ? AND deleted_at IS NULL').bind(ts, ts, name, userId),
       db.prepare(`UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE (id IN (${mine}) OR parent_id IN (${mine})) AND deleted_at IS NULL`)
         .bind(ts, ts, name, userId, name, userId),
-      forget,
+      ...forget,
     ]);
     return c.json({ deleted: res[0].meta.changes + res[1].meta.changes });
   }

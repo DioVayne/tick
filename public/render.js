@@ -6,8 +6,9 @@ import { icon } from './icons.js';
 import { dateLocale, t, t as tr } from './i18n.js'; // tr waar t al een taak is
 import { listColor } from './lists.js';
 import { plainText } from './markdown.js';
+import { toHash } from './route.js';
 import { renderSidebar } from './sidebar.js';
-import { UNDO_MS, listNames, state, toggleDone, update } from './store.js';
+import { UNDO_MS, listNames, lists, state, toggleDone, update } from './store.js';
 import { renderTrash, shareLabel, shareNames } from './trash.js';
 import { renderInvites } from './share.js';
 import { enableSwipe, swipedAway } from './swipe.js';
@@ -241,6 +242,7 @@ export function render() {
   renderNet();
   renderSidebar();
   renderDetail(); // eerst: kan de keuze wissen als de taak elders verwijderd is
+  writeHash();
   const root = $('#list');
   // Typ je in het titelveld van de lijst (opslaan rendert ook), dan blijven focus en cursor staan.
   const a = document.activeElement;
@@ -254,6 +256,19 @@ export function render() {
   if (!typing) return;
   f.focus({ preventScroll: true });
   f.setSelectionRange(typing.start, typing.end, typing.dir);
+}
+
+/**
+ * Het adres volgt wat je ziet (zie route.js). Zonder nieuwe stap in de geschiedenis; de stap onthoudt zijn adres, zodat
+ * app.js bij terug een eigen stap kan onderscheiden van een bladwijzer.
+ */
+function writeHash() {
+  const on = (c) => document.body.classList.contains(c);
+  const page = on('settings-open') ? 'settings' : on('help-open') ? 'help' : on('calendar-open') ? 'calendar' : null;
+  const listId = state.list ? lists().find((l) => l.name === state.list)?.id : undefined;
+  const hash = toHash({ page, task: state.selected, showDone: state.showDone, showTrash: state.showTrash, list: state.list, listId });
+  if (hash === location.hash && history.state?.hash === hash) return;
+  history.replaceState({ ...history.state, hash }, '', hash || location.pathname + location.search);
 }
 
 function renderList(root) {

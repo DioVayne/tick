@@ -41,7 +41,7 @@ describe('MCP', () => {
     expect(sub).toMatchObject({ parent_id: made.id, list });
 
     expect((await tool('list_tasks', { list })).data().map((t: { id: string }) => t.id)).toEqual([made.id, sub.id]);
-    expect((await tool('list_lists')).data()).toContainEqual({ name: list, open: 2 });
+    expect((await tool('list_lists')).data()).toContainEqual({ name: list, open: 2, id: expect.any(String) });
 
     expect((await tool('update_task', { id: made.id, title: 'nieuw', pinned: true })).data()).toMatchObject({ title: 'nieuw', pinned: true });
     expect((await tool('snooze_task', { id: made.id, minutes: 30 })).data().remind_at).toEqual(expect.any(String));

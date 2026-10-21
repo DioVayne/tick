@@ -77,7 +77,10 @@ function applyLocal(op) {
     const wasExtra = state.extraLists.includes(from) || state.serverLists.some((l) => l.name === from);
     state.extraLists = state.extraLists.filter((n) => n !== from);
     if (wasExtra && op.type === 'list-rename' && !state.extraLists.includes(to)) state.extraLists.push(to);
+    // Hernoemen houdt de id (zoals de server doet), behalve bij samenvoegen: dan houdt de bestaande lijst de zijne.
+    const kept = state.serverLists.find((l) => l.name === from);
     state.serverLists = state.serverLists.filter((l) => l.name !== from);
+    if (kept?.id && op.type === 'list-rename' && !state.serverLists.some((l) => l.name === to)) state.serverLists.push({ ...kept, name: to });
     return;
   }
   const t = find(op.id);
