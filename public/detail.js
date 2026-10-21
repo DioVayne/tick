@@ -4,6 +4,7 @@ import { fillCopiesBox } from './copies.js';
 import { openDatePicker } from './datepicker.js';
 import { ask } from './dialog.js';
 import { autoGrow, createEditor } from './editor.js';
+import { icon } from './icons.js';
 import { t as tr } from './i18n.js'; // tr: t is hier een taak
 import { openListPicker } from './listpicker.js';
 import { describeRule } from './repeat.js';
@@ -299,7 +300,7 @@ function build(t, readOnly) {
         render(); // de knop en Herhalen meteen bijwerken, niet pas na het opslaan
       });
     },
-  }, el('span', { 'aria-hidden': 'true' }, '🔔'), remindLabel);
+  }, icon('bell'), remindLabel);
   // Verzetten en wissen winnen van een gekozen, nog niet opgeslagen tijd (die anders na de klik alsnog zou gaan).
   const plusHour = el('button', { class: 'pill mini', type: 'button', onclick: () => { dropField(id, 'remind_at'); save(snooze(id, 60)); } }, tr('push.snooze'));
   const clearRemind = el('button', {
@@ -321,7 +322,7 @@ function build(t, readOnly) {
         save(update(id, body));
       }, unsaved);
     },
-  }, repeatLabel);
+  }, icon('repeat'), repeatLabel);
 
   // De Android-app pas wekken als de wijziging in de outbox staat: de intent kan de pagina laten navigeren.
   const setLocation = (location, since) => save(updateQueued(id, { location }).then(() => wakeAndroidApp(id, since)));
@@ -335,7 +336,7 @@ function build(t, readOnly) {
       const location = await openMap(task);
       if (location) setLocation(location, since);
     },
-  }, locLabel);
+  }, icon('place'), locLabel);
   const clearLoc = el('button', {
     class: 'pill mini', type: 'button', title: tr('detail.remove_location'),
     onclick: () => setLocation(null, current(id)?.updated_at ?? ''),
@@ -349,7 +350,7 @@ function build(t, readOnly) {
       const task = current(id);
       if (task) openListPicker(listPill, task.list, (name) => save(update(id, { list: name })));
     },
-  }, listLabel);
+  }, icon('folder'), listLabel);
 
   const desc = el('div', { class: 'desc' });
   let editor = null;
@@ -396,7 +397,7 @@ function build(t, readOnly) {
   const pin = t.parent_id || readOnly ? null : el('button', {
     class: 'dpin', type: 'button',
     onclick: () => { const task = current(id); if (task) save(update(id, { pinned: !task.pinned })); },
-  }, '📌');
+  }, icon('pin'));
   const crumb = t.parent_id ? el('button', { class: 'crumb', type: 'button', onclick: () => selectTask(t.parent_id) }) : null;
   const back = el('button', { class: 'dback', type: 'button', onclick: closeTask });
   const status = el('span', { class: 'dstatus', role: 'status' });
@@ -478,12 +479,12 @@ function fill(t) {
   v.plusHour.hidden = done || !remindAt;
   v.clearRemind.hidden = done || !remindAt;
   const rep = t.repeat;
-  v.repeatLabel.textContent = '🔁 ' + (rep ? describeRule(rep.rule, rep.start) : tr('rep.none'));
+  v.repeatLabel.textContent = (rep ? describeRule(rep.rule, rep.start) : tr('rep.none'));
   v.repeatRow.hidden = v.repeatPill.hidden || (!remindAt && !rep);
   // Al gemeld: de plek doet niets meer tot hij opnieuw gekozen wordt.
   v.locLabel.textContent = t.location ? locationLabel(t.location) + (t.location_notified ? tr('detail.already_notified') : '') : tr('detail.no_location');
   v.clearLoc.hidden = done || !t.location;
-  v.listLabel.textContent = '📁 ' + t.list + ' ▾';
+  v.listLabel.textContent = t.list + ' ▾';
 
   const text = t.description ?? '';
   if (v.descValue !== text) {

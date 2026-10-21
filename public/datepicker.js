@@ -1,5 +1,6 @@
 import { monthGrid, pickerDefault, quickDays } from './calendar.js';
 import { dateLocale, t } from './i18n.js';
+import { narrow, place } from './popover.js';
 import { el } from './render.js';
 import { chipDays, getDefaultTime } from './repeat.js';
 
@@ -13,7 +14,6 @@ const TIMES = ['09:00', '13:00', '19:00'];
 const p2 = (n) => String(n).padStart(2, '0');
 const dayKey = (d) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
 const fromKey = (key) => { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d); };
-const narrow = matchMedia('(max-width: 1023.98px)');
 
 /**
  * @param {HTMLElement} anchor de knop die de kiezer opent (focus gaat daar weer heen)
@@ -156,13 +156,3 @@ export function openDatePicker(anchor, value, onPick) {
   /** @type {HTMLElement | null} */ (grid.querySelector('[aria-pressed="true"]'))?.focus();
 }
 
-/** Onder de knop (of erboven als daar geen plek is), binnen het scherm. */
-function place(dialog, anchor) {
-  const r = anchor.getBoundingClientRect();
-  const w = dialog.offsetWidth;
-  const h = dialog.offsetHeight;
-  const left = Math.max(8, Math.min(r.left, innerWidth - w - 8));
-  const top = r.bottom + 4 + h > innerHeight - 8 ? Math.max(8, r.top - h - 4) : r.bottom + 4;
-  dialog.style.left = left + 'px';
-  dialog.style.top = top + 'px';
-}

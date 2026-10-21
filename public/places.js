@@ -11,9 +11,9 @@ export const RADIUS = { min: 100, max: 2000, step: 50, default: 500 };
 /** "500 m" of vanaf 1 km "1,2 km" (decimaalteken volgens de taal). */
 export const formatRadius = (m) => (m >= 1000 ? t('places.km', { km: (m / 1000).toFixed(1).replace('.', t('places.decimal')) }) : `${m} m`);
 
-/** Bijvoorbeeld "📍 Station · 500 m · bij aankomst". */
+/** Bijvoorbeeld "Station · 500 m · bij aankomst" (het plekicoon staat ervoor in de knop). */
 export function locationLabel(loc) {
-  return `📍 ${loc.name} · ${formatRadius(loc.radius)} · ${loc.trigger === 'exit' ? t('places.on_leave') : t('places.on_arrive')}`;
+  return `${loc.name} · ${formatRadius(loc.radius)} · ${loc.trigger === 'exit' ? t('places.on_leave') : t('places.on_arrive')}`;
 }
 
 /** Favorieten van de server, met een lokale kopie voor offline. */

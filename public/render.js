@@ -2,6 +2,7 @@ import { confetti, isCouple } from './confetti.js';
 import { copyPills } from './copies.js';
 import { bindTitle, renderDetail, selectTask, titleOf } from './detail.js';
 import { autoGrow } from './editor.js';
+import { icon } from './icons.js';
 import { dateLocale, t, t as tr } from './i18n.js'; // tr waar t al een taak is
 import { listColor } from './lists.js';
 import { plainText } from './markdown.js';
@@ -160,7 +161,7 @@ function taskItem(t, children) {
     !t.parent_id && (!state.list || state.showDone) ? listPill(t.list) : null,
     // Rechts in de rij; een klik maakt de taak los.
     t.pinned && !t.parent_id && !done
-      ? el('button', { class: 'pinned', type: 'button', title: tr('render.pinned'), 'aria-label': tr('render.pinned'), onclick: () => update(t.id, { pinned: false }) }, '📌')
+      ? el('button', { class: 'pinned', type: 'button', title: tr('render.pinned'), 'aria-label': tr('render.pinned'), onclick: () => update(t.id, { pinned: false }) }, icon('pin', 'sm'))
       : null,
   );
   li.append(row);
@@ -168,18 +169,18 @@ function taskItem(t, children) {
   const meta = [];
   if (t.remind_at && !done) {
     const past = new Date(t.remind_at) < new Date();
-    meta.push(el('span', { class: 'bell' + (past ? ' past' : '') }, '🔔 ' + fmt(t.remind_at) + (t.repeat ? ' 🔁' : '')));
+    meta.push(el('span', { class: 'bell' + (past ? ' past' : '') }, icon('bell', 'sm'), fmt(t.remind_at), t.repeat ? icon('repeat', 'sm') : null));
   }
-  if (t.location && !t.location_notified && !done) meta.push(el('span', { class: 'loc' }, '📍 ' + t.location.name));
+  if (t.location && !t.location_notified && !done) meta.push(el('span', { class: 'loc' }, icon('place', 'sm'), t.location.name));
   if (t.share) {
     const label = shareLabel(t);
     const names = shareNames(t) || label;
-    meta.push(el('span', { class: 'shared', title: label, 'aria-label': label }, '👥 ' + names));
+    meta.push(el('span', { class: 'shared', title: label, 'aria-label': label }, icon('users', 'sm'), names));
   }
   if (!t.parent_id && t.copies) meta.push(...copyPills(t));
   if (t.attachments?.length) {
     const label = tr('att.count', { n: t.attachments.length });
-    meta.push(el('span', { class: 'att', title: label, 'aria-label': label }, '📎 ' + t.attachments.length));
+    meta.push(el('span', { class: 'att', title: label, 'aria-label': label }, icon('clip', 'sm'), String(t.attachments.length)));
   }
   // Zonder markdowntekens; zoeken gebeurt wel in de ruwe tekst.
   const plain = t.description ? plainText(t.description) : '';

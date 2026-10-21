@@ -1,4 +1,5 @@
 import { request, Offline } from './api.js';
+import { icon } from './icons.js';
 import { ask } from './dialog.js';
 import { t } from './i18n.js';
 import { el, toast } from './render.js';
@@ -126,7 +127,7 @@ export function fillShareBox(box, task, readOnly) {
   box.replaceChildren(...[
     el('h3', {}, rows.length ? t('share.members') : t('share.heading')),
     rows.length ? el('ul', { class: 'share-list' }, ...rows) : null,
-    owner && !readOnly ? el('button', { class: 'ghost secbtn', type: 'button', onclick: () => openShareDialog(task) }, '👥 ' + t(rows.length ? 'share.button' : 'share.with_someone')) : null,
+    owner && !readOnly ? el('button', { class: 'ghost secbtn', type: 'button', onclick: () => openShareDialog(task) }, icon('users'), t(rows.length ? 'share.button' : 'share.with_someone')) : null,
   ].filter(Boolean));
 }
 

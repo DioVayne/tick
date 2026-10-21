@@ -1,8 +1,9 @@
 import { t } from './i18n.js';
+import { showMenu } from './popover.js';
 import { el } from './render.js';
 import { createList, listNames } from './store.js';
 
-// Lijstkeuzemenu onder een knop: Inbox, de andere lijsten en onderaan "Nieuwe lijst…".
+// Lijstkeuzemenu onder een knop (op een smal scherm van onderen): Inbox, de andere lijsten en onderaan "Nieuwe lijst…".
 
 let closeOpen = null;
 let openAnchor = null;
@@ -40,8 +41,7 @@ export function openListPicker(anchor, current, onPick) {
 
   const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': t('lists.pick') },
     ...names.map(item), el('div', { class: 'menu-sep' }), newButton);
-  document.body.append(menu);
-  place(menu, anchor);
+  const hide = showMenu(menu, anchor, () => { close(); anchor.focus(); });
 
   // Capture op document: Esc sluit alleen het menu, niet ook het paneel eronder.
   const onKey = (e) => {
@@ -60,14 +60,15 @@ export function openListPicker(anchor, current, onPick) {
     const next = e.key === 'ArrowDown' ? (i + 1) % items.length : (i <= 0 ? items.length - 1 : i - 1);
     /** @type {HTMLElement} */ (items[next]).focus();
   };
-  const onDown = (e) => { if (!menu.contains(e.target) && e.target !== anchor && !anchor.contains(e.target)) close(); };
+  // De laag achter een sheet sluit zelf bij een klik; hier niet al bij het neerdrukken, anders valt de klik op wat eronder ligt.
+  const onDown = (e) => { if (!menu.contains(e.target) && e.target !== anchor && !anchor.contains(e.target) && !e.target.classList?.contains('sheet-scrim')) close(); };
   function close() {
     if (closeOpen !== close) return;
     closeOpen = null;
     openAnchor = null;
     document.removeEventListener('keydown', onKey, true);
     document.removeEventListener('pointerdown', onDown, true);
-    menu.remove();
+    hide();
     anchor.setAttribute('aria-expanded', 'false');
   }
   closeOpen = close;
@@ -78,14 +79,3 @@ export function openListPicker(anchor, current, onPick) {
   /** @type {HTMLElement | null} */ (menu.querySelector('.menu-item.on') ?? menu.querySelector('.menu-item'))?.focus();
 }
 
-/** Onder de knop, en binnen het scherm. */
-function place(menu, anchor) {
-  const r = anchor.getBoundingClientRect();
-  const w = menu.offsetWidth;
-  const h = menu.offsetHeight;
-  const left = Math.max(8, Math.min(r.left, innerWidth - w - 8));
-  const below = r.bottom + 4;
-  const top = below + h > innerHeight - 8 ? Math.max(8, r.top - h - 4) : below;
-  menu.style.left = left + 'px';
-  menu.style.top = top + 'px';
-}

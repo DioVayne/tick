@@ -4,6 +4,7 @@
 import { Offline, request } from './api.js';
 import { connectApp, isInApp, openPhoneSettings } from './androidapp.js';
 import { ask } from './dialog.js';
+import { icon } from './icons.js';
 import { dateLocale, t } from './i18n.js';
 import { disablePush, enablePush, pushState, resubscribeLocale } from './push.js';
 import { setDefaultTime, setTimeZone, setWeekStart } from './repeat.js';
@@ -135,13 +136,13 @@ function select(label, options, current, onChange, disabled = false) {
  * Een uitklapbaar blok met icoon en titel; dicht als de pagina opengaat. De inhoud staat in een eigen deel dat apart
  * opnieuw getekend kan worden; `extra` komt onder dat deel (bijvoorbeeld tussenkopjes met hun eigen delen).
  */
-function block(icon, title, part, sub, ...extra) {
+function block(name, title, part, sub, ...extra) {
   const body = el('div', { class: 'set-body' });
   S.parts[part] = body;
   const subEl = el('span', { class: 'set-sub' }, sub ?? '');
   S.parts[`${part}-sub`] = subEl;
   return el('details', { class: 'set-block' },
-    el('summary', {}, el('span', { class: 'set-icon', 'aria-hidden': 'true' }, icon), el('span', { class: 'set-title' }, title), subEl),
+    el('summary', {}, el('span', { class: 'set-icon' }, icon(name)), el('span', { class: 'set-title' }, title), subEl),
     el('div', { class: 'set-content' }, body, ...extra));
 }
 
@@ -365,7 +366,7 @@ const displayPreview = () => el('ul', { class: 'tasks set-preview', 'aria-hidden
     el('div', { class: 'row' }, el('span', { class: 'check' }), el('span', { class: 'title' }, t(k))))));
 
 function displayBlock() {
-  const sec = block('🎨', t('set.display'), 'display', t('set.this_device'));
+  const sec = block('palette', t('set.display'), 'display', t('set.this_device'));
   paintDisplay();
   return sec;
 }
@@ -850,7 +851,7 @@ function advancedBlock() {
   const webhook = el('div', {});
   S.parts.keys = keys;
   S.parts.webhook = webhook;
-  return block('🛠', t('set.advanced'), 'advanced', t('set.advanced_sub'),
+  return block('sliders', t('set.advanced'), 'advanced', t('set.advanced_sub'),
     el('h3', { class: 'set-h3' }, t('set.keys')), keys, el('h3', { class: 'set-h3' }, t('set.webhook')), webhook);
 }
 
@@ -968,15 +969,15 @@ function build() {
   S.parts = {};
   const root = el('div', { id: 'settings', class: 'settings' },
     el('button', { type: 'button', class: 'set-back', onclick: () => closeSettings() }, t('set.back')),
-    group(t('set.group_use'), displayBlock(), block('📍', t('set.places'), 'places')),
+    group(t('set.group_use'), displayBlock(), block('place', t('set.places'), 'places')),
     group(t('set.group_you'),
-      block('🔔', t('set.notifications'), 'push'),
-      block('🌍', t('set.langtime'), 'langtime'),
-      block('👤', t('set.account'), 'account'),
-      block('📱', t('set.devices'), 'devices')),
+      block('bell', t('set.notifications'), 'push'),
+      block('globe', t('set.langtime'), 'langtime'),
+      block('user', t('set.account'), 'account'),
+      block('phone', t('set.devices'), 'devices')),
     group(t('set.group_admin'),
-      CONFIG.isAdmin ? block('👥', t('set.accounts'), 'accounts') : null,
-      block('💾', t('set.data'), 'data'),
+      CONFIG.isAdmin ? block('users', t('set.accounts'), 'accounts') : null,
+      block('data', t('set.data'), 'data'),
       advancedBlock()));
   return root;
 }

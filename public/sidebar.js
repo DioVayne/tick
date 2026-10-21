@@ -1,5 +1,6 @@
 import { t } from './i18n.js';
 import { $, el, render } from './render.js';
+import { icon } from './icons.js';
 import { listColor } from './lists.js';
 import { createList, lists, load, loadTrash, state } from './store.js';
 
@@ -53,27 +54,12 @@ export function renderSidebar() {
   // Blokken: Alle en Inbox, dan de eigen lijsten (met Nieuwe lijst eronder, in #side-new), elk met een vaste kleur.
   $('#side-lists').replaceChildren(
     el('div', { class: 'side-grp' },
-      item(null, t('ui.all'), total, icon(ALL)),
-      inbox ? item(inbox.name, inbox.name, inbox.open, icon(INBOX)) : null),
+      item(null, t('ui.all'), total, icon('all')),
+      inbox ? item(inbox.name, inbox.name, inbox.open, icon('inbox')) : null),
     el('p', { class: 'side-h' }, t('ui.lists')),
     el('div', { class: 'side-grp side-mine' }, ...all.filter((l) => l !== inbox).map((l) => item(l.name, l.name, l.open, dot(l.name, all.map((x) => x.name))))),
   );
   updateHeader();
-}
-
-const ALL = 'M4 6h2M4 12h2M4 18h2M9 6h11M9 12h11M9 18h11';
-const INBOX = 'M4 13h4l1 3h6l1-3h4M4 13l2-8h12l2 8v6H4z';
-
-/** Een lijnicoon (zoals Kalender, Afgerond en Prullenbak in index.html). */
-function icon(d) {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('class', 'ico');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('aria-hidden', 'true');
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', d);
-  svg.append(path);
-  return svg;
 }
 
 /** Het kleurbolletje van een eigen lijst (de kleur volgt uit de naam, zie listColor). */
@@ -104,6 +90,8 @@ function updateHeader() {
   $('#add-title').placeholder = state.list && !state.showDone && !state.showTrash ? t('sidebar.add_to_list', { list: state.list }) : t('ui.new_task_placeholder');
   // Geen nieuwe taak in Afgerond, de prullenbak of de help, en niet tijdens zoeken (de lijst toont dan alleen treffers).
   $('#add').hidden = help || state.showDone || state.showTrash || !!state.query.trim();
+  // De ronde +-knop (mobiel) onder dezelfde voorwaarde, en ook niet in de instellingen of de kalender (daar is geen invoerveld).
+  $('#fab').hidden = $('#add').hidden || open || cal;
 }
 
 const listButton = (e) => e.target.closest('button[data-list]');
