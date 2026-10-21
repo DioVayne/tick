@@ -9,8 +9,9 @@ import { $, el, fmt, fromLocalInput, render, status, toast } from './render.js';
 import { closeCalendar, hideCalendar, isCalendarOpen, openCalendar, refreshCalendar } from './calendarview.js';
 import { closeSettings, hideSettings, isSettingsOpen, openSettings } from './settingsview.js';
 import { closeHelp, hideHelp, isHelpOpen, openHelp } from './help.js';
-import { closeDrawer, onListContext, setupSidebar } from './sidebar.js';
-import { addTask, init, load, on, state } from './store.js';
+import { closeDrawer, onListContext, selectDone, selectList, selectTrash, setupSidebar } from './sidebar.js';
+import { addTask, init, lists, load, on, state } from './store.js';
+import { parseHash } from './route.js';
 import { normName } from './lists.js';
 import { startBadge, updateBadge } from './badge.js';
 
@@ -156,13 +157,49 @@ if (openTask) {
   // Mobiel: het taakscherm als eigen stap, zodat terug naar de lijst gaat en niet de app uit.
   if (matchMedia('(max-width: 1023.98px)').matches) history.pushState({ task: openTask }, '');
 }
+// Een bladwijzer (#/list/…, #/task/…; zie route.js), als er geen ?list of ?task was. Herladen houdt de stap zoals hij
+// was; een nieuw geopend adres krijgt een eerste stap zonder adres, zodat terug na een taak of pagina naar de lijst gaat.
+let ready = false; // de lijsten zijn geladen (eerst lokaal, dan van de server)
+let pendingList = /** @type {string | null} */ (null); // lijst-id uit het adres, nog niet bekend: na het laden opnieuw
+const startRoute = openList || openTask ? null : parseHash(location.hash);
+const reloaded = !!location.hash && history.state?.hash === location.hash;
+if (startRoute && !reloaded) history.replaceState(null, '', location.pathname);
+if (startRoute) goTo(startRoute, { push: !reloaded });
 // Herladen op de instellingen (bijvoorbeeld na een taalwissel): daar weer verder.
 if (history.state?.settings) openSettings({ push: false });
 init(CONFIG.userId).then(() => {
   detailReady();
+  ready = true;
+  if (pendingList) goTo({ page: 'list', id: pendingList });
   if (openTask) document.querySelector(`li.task[data-id="${CSS.escape(openTask)}"]`)?.scrollIntoView({ block: 'center' });
   if (openShare) document.querySelector(`.invite[data-id="${CSS.escape(openShare)}"]`)?.scrollIntoView({ block: 'center' });
 });
+
+// ---------- adres ----------
+
+/**
+ * Naar het scherm van een adres. push: taak of pagina als eigen stap in de geschiedenis (alleen bij het starten).
+ * @param {import('./route.js').Route} route
+ */
+function goTo(route, { push = false } = {}) {
+  pendingList = null;
+  if (route.page !== 'settings') hideSettings();
+  if (route.page !== 'calendar') hideCalendar();
+  if (route.page !== 'help') hideHelp();
+  if (route.page !== 'task') selectTask(null, { push: false });
+  if (route.page === 'all') selectList(null);
+  else if (route.page === 'inbox') selectList('Inbox');
+  else if (route.page === 'list') {
+    const name = lists().find((l) => l.id === route.id)?.name;
+    if (!name && !ready) pendingList = route.id;
+    selectList(name ?? null); // weg of niet van jou: Alle
+  } else if (route.page === 'done') selectDone();
+  else if (route.page === 'trash') selectTrash();
+  else if (route.page === 'calendar') openCalendar({ push });
+  else if (route.page === 'settings') openSettings({ push });
+  else if (route.page === 'help') openHelp({ push });
+  else if (route.page === 'task') selectTask(route.id, { push });
+}
 
 // ---------- detailpaneel ----------
 // Terug (ook de Android-terugknop) sluit het taakscherm; vooruit opent de taak weer.
@@ -170,6 +207,9 @@ init(CONFIG.userId).then(() => {
 // De instellingen hebben ook een eigen history-item: terug sluit ze, vooruit opent ze weer (zonder de taak te raken).
 window.addEventListener('popstate', (e) => {
   if (document.body.classList.contains('map-open')) return;
+  // Een bladwijzer of getypt adres in de open app: een nieuwe stap met een adres dat render.js niet schreef.
+  const route = location.hash && e.state?.hash !== location.hash ? parseHash(location.hash) : null;
+  if (route) { goTo(route); return; }
   if (e.state?.settings) { hideCalendar(); hideHelp(); openSettings({ push: false }); return; }
   if (e.state?.help) {
     hideSettings();

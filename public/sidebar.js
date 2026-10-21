@@ -34,6 +34,24 @@ export function selectList(name) {
   render();
 }
 
+export function selectDone() {
+  state.showDone = true;
+  state.doneLoading = true;
+  state.showTrash = false;
+  closeDrawer();
+  render();
+  load();
+}
+
+export function selectTrash() {
+  state.showTrash = true;
+  state.showDone = false;
+  state.trash = null;
+  closeDrawer();
+  render();
+  loadTrash();
+}
+
 /** Zijbalk (en uitschuifmenu), mobiele titel en het invoerveld, passend bij de gekozen lijst. */
 export function renderSidebar() {
   hideMore(); // de knoppen worden hieronder vervangen
@@ -177,22 +195,8 @@ export function setupSidebar() {
   $('.scrim').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
 
-  $('#btn-done').addEventListener('click', () => {
-    state.showDone = true;
-    state.doneLoading = true;
-    state.showTrash = false;
-    closeDrawer();
-    render();
-    load();
-  });
-  $('#btn-trash').addEventListener('click', () => {
-    state.showTrash = true;
-    state.showDone = false;
-    state.trash = null;
-    closeDrawer();
-    render();
-    loadTrash();
-  });
+  $('#btn-done').addEventListener('click', selectDone);
+  $('#btn-trash').addEventListener('click', selectTrash);
 
   // "+ Nieuwe lijst" wordt op zijn plek een invoerveld.
   const button = $('#btn-newlist');
