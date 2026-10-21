@@ -610,6 +610,11 @@ button.secbtn:not(:disabled):hover { border-color: var(--muted); background: var
 .dp-times button[aria-pressed="true"] { outline: 1px solid var(--accent); color: var(--link); }
 .dp-times .dp-other, .dp-own { margin-left: auto; }
 .dp-own { width: auto; min-height: 34px; padding: 4px 8px; }
+.dp-quick { display: flex; gap: 6px; margin-bottom: 10px; }
+.dp-quick button { flex: 1 1 0; min-width: 0; min-height: 34px; padding: 4px 6px; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); font-size: .875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dp-quick button[aria-pressed="true"] { outline: 1px solid var(--accent); color: var(--link); }
+/* Van onderen (smal scherm): vingervriendelijk, minstens 44px hoog */
+.dpick.sheet .dp-quick button, .dpick.sheet .dp-times button, .dpick.sheet .dp-own { min-height: 44px; }
 .dp-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
 .dp-sum { color: var(--muted); font-size: .875rem; }
 .dp-actions { display: flex; gap: 8px; }

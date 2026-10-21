@@ -11,6 +11,37 @@ export function dayKey(ms) {
 
 const keyOf = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
 
+/** Dagsleutel van een wandklok-datum plus n dagen (`m` is 1-12). */
+function addDays(y, m, d, n) {
+  const t = new Date(Date.UTC(y, m - 1, d + n));
+  return keyOf(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate());
+}
+
+/**
+ * Snelknoppen van de datumkiezer. Volgende week is de eerste dag van de volgende week (maandag of zondag,
+ * naar de weekstart), dus altijd 1 tot 7 dagen verder.
+ * @param {{ y: number, m: number, d: number }} now wandklok van nu
+ * @param {'mon' | 'sun'} weekStart
+ * @returns {{ today: string, tomorrow: string, nextWeek: string }}
+ */
+export function quickDays(now, weekStart) {
+  const wd = (new Date(Date.UTC(now.y, now.m - 1, now.d)).getUTCDay() + 6) % 7; // 0 = maandag
+  const toNext = 7 - ((wd - weekdayOrder(weekStart)[0] + 7) % 7);
+  return { today: keyOf(now.y, now.m, now.d), tomorrow: addDays(now.y, now.m, now.d, 1), nextWeek: addDays(now.y, now.m, now.d, toNext) };
+}
+
+/**
+ * Beginstand van een lege datumkiezer: vandaag op het volgende hele uur; na 23:00 is dat er niet meer,
+ * dan wordt het morgen op de standaardtijd.
+ * @param {{ y: number, m: number, d: number, h: number }} now wandklok van nu
+ * @param {{ h: number, mi: number }} def standaardtijd (getDefaultTime)
+ * @returns {{ day: string, time: string }}
+ */
+export function pickerDefault(now, def) {
+  if (now.h < 23) return { day: keyOf(now.y, now.m, now.d), time: `${pad(now.h + 1)}:00` };
+  return { day: addDays(now.y, now.m, now.d, 1), time: `${pad(def.h)}:${pad(def.mi)}` };
+}
+
 /** Begin (00:00) van de dag met deze wandklok-datum, als UTC-moment. `m` is 1-12; d mag buiten de maand lopen. */
 export function startOfDay(y, m, d) {
   const n = new Date(Date.UTC(y, m - 1, d));
