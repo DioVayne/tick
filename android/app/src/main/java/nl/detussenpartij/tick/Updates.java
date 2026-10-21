@@ -51,6 +51,28 @@ final class Updates {
         Prefs.setUpdateNotified(c, latest);
     }
 
+    /** Voor de knop in MainActivity: alleen de officiële app haalt updates van GitHub Releases. */
+    static boolean available(Context c) {
+        return OFFICIAL_PACKAGE.equals(c.getPackageName());
+    }
+
+    /**
+     * Kijkt meteen (de knop "Zoeken naar updates"), ook als het nog geen dag geleden is. Geeft de nieuwere versie, of
+     * null als deze app de nieuwste is. Blokkeert (netwerk): alleen vanuit een achtergrondthread.
+     */
+    static String checkNow(Context c) throws Exception {
+        Prefs.setUpdateCheckedAt(c, System.currentTimeMillis());
+        String latest = UpdateCheck.version(new JSONObject(fetch()).optString("tag_name"));
+        if (!UpdateCheck.isNewer(latest, BuildConfig.VERSION_NAME)) return null;
+        Prefs.setUpdateNotified(c, latest); // al gezien via de knop: geen melding meer voor deze versie
+        return latest;
+    }
+
+    /** Opent de download van de nieuwste APK (de browser of downloadmanager neemt hem over). */
+    static Intent downloadIntent() {
+        return new Intent(Intent.ACTION_VIEW, Uri.parse(DOWNLOAD));
+    }
+
     private static String fetch() throws Exception {
         HttpURLConnection con = (HttpURLConnection) new URL(LATEST_API).openConnection();
         try {

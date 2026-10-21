@@ -84,6 +84,10 @@
     <string name="update_channel">App updates</string>
     <string name="update_title">Tick %s is available</string>
     <string name="update_text">Tap to download the update, then open the file to install it. Your tasks and settings stay.</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_latest">You have the latest version (%s)</string>
+    <string name="update_failed">Could not check for updates: %s</string>
+    <string name="update_download">Download</string>
     <string name="address_current">Address: %s</string>
     <string name="address_none">No Tick address yet.</string>
     <string name="address_change">Change address</string>
