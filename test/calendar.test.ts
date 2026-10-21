@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { agenda, dayKey, monthGrid, pickerDefault, quickDays, startOfDay, taskMoments, tasksByDay } from '../public/calendar.js';
+import { agenda, dayKey, monthGrid, parseTime, pickerDefault, quickDays, startOfDay, taskMoments, tasksByDay } from '../public/calendar.js';
 import { occurrencesBetween, setTimeZone } from '../public/repeat.js';
 
 const ms = (s: string) => Date.parse(s);
@@ -92,5 +92,16 @@ describe('datumkiezer: beginstand en snelknoppen', () => {
     expect(quickDays({ y: 2026, m: 10, d: 25 }, 'mon').nextWeek).toBe('2026-10-26'); // zondag: morgen
     expect(quickDays({ y: 2026, m: 10, d: 26 }, 'mon').nextWeek).toBe('2026-11-02'); // maandag: over een week
     expect(quickDays({ y: 2026, m: 10, d: 31 }, 'mon').tomorrow).toBe('2026-11-01');
+  });
+});
+
+describe('parseTime', () => {
+  it('leest getypte tijden ruim', () => {
+    expect(['7', '07', '715', '7.15', '7:15', '1915', '19:15', ' 23:59 ', '0'].map(parseTime))
+      .toEqual(['07:00', '07:00', '07:15', '07:15', '07:15', '19:15', '19:15', '23:59', '00:00']);
+  });
+
+  it('geeft null bij iets dat geen tijd is', () => {
+    expect(['', '24', '2400', '760', '7:5:1', 'acht', '12345'].map(parseTime)).toEqual([null, null, null, null, null, null, null]);
   });
 });

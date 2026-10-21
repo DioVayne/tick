@@ -24,6 +24,11 @@ describe('locatie op taken', () => {
     expect(t.location).toEqual({ name: 'Werk', lat: 51.8, lng: 5.8, radius: 500, trigger: 'enter' });
   });
 
+  it('kiest bij vertrek een kleinere standaardstraal', async () => {
+    const t = await createTask({ title: 'weg', location: { name: 'Thuis', lat: 51.8, lng: 5.8, trigger: 'exit' } });
+    expect(t.location).toEqual({ name: 'Thuis', lat: 51.8, lng: 5.8, radius: 200, trigger: 'exit' });
+  });
+
   it('wissen met null', async () => {
     const t = await createTask({ title: 'weg', location: UTRECHT });
     expect((await json<Task>(await patch(t.id, { location: null }))).location).toBeNull();
@@ -33,7 +38,7 @@ describe('locatie op taken', () => {
     const t = await createTask({ title: 'blijft' });
     for (const location of [
       { ...UTRECHT, lat: 91 }, { ...UTRECHT, lng: -181 }, { ...UTRECHT, lat: 'x' },
-      { ...UTRECHT, radius: 99 }, { ...UTRECHT, radius: 2001 }, { ...UTRECHT, radius: 500.5 },
+      { ...UTRECHT, radius: 199 }, { ...UTRECHT, radius: 2001 }, { ...UTRECHT, radius: 500.5 },
       { ...UTRECHT, name: '  ' }, { ...UTRECHT, name: 'x'.repeat(101) }, { ...UTRECHT, trigger: 'soms' },
       'Utrecht', [],
     ]) {

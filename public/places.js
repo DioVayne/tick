@@ -5,8 +5,11 @@ import { knownAppPackage } from './androidapp.js';
 
 // Favoriete plekken, het label van een plek en het wekken van de Android-app.
 
-/** Grenzen van de straal in meters, gelijk aan die van de server. */
-export const RADIUS = { min: 100, max: 2000, step: 50, default: 500 };
+/**
+ * Grenzen van de straal in meters, gelijk aan die van de server. De standaard hangt af van de trigger: bij vertrek
+ * klein (dan meldt Android het eerder), bij aankomst groter (met de auto rijd je anders door een kleine cirkel heen).
+ */
+export const RADIUS = { min: 200, max: 2000, step: 50, default: { enter: 500, exit: 200 } };
 
 /** "500 m" of vanaf 1 km "1,2 km" (decimaalteken volgens de taal). */
 export const formatRadius = (m) => (m >= 1000 ? t('places.km', { km: (m / 1000).toFixed(1).replace('.', t('places.decimal')) }) : `${m} m`);
