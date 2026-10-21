@@ -222,8 +222,8 @@ textarea.editor { min-height: 120px; resize: none; overflow: hidden; font-size: 
 .iconbtn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 0; background: var(--fill); color: var(--muted); }
 .iconbtn:hover, .iconbtn[aria-expanded="true"] { color: var(--text); }
 #topbar .search { flex: 1; min-width: 0; height: 36px; padding: 6px 10px; }
-body.search-open:not(.settings-open):not(.calendar-open) #topbar h1 { display: none; }
-body.settings-open #btn-search, body.settings-open #search, body.calendar-open #btn-search, body.calendar-open #search { display: none; }
+body.search-open:not(.settings-open):not(.calendar-open):not(.help-open) #topbar h1 { display: none; }
+body.settings-open #btn-search, body.settings-open #search, body.calendar-open #btn-search, body.calendar-open #search, body.help-open #btn-search, body.help-open #search { display: none; }
 #resizer, #detail { display: none; }
 #side { background: var(--side); border-right: 1px solid var(--line); padding: max(12px, env(safe-area-inset-top)) 8px 12px; display: flex; flex-direction: column; overflow-y: auto; }
 .brand { margin: 4px 8px 8px; font-size: 1.25rem; }
@@ -417,6 +417,14 @@ button.small { min-height: 30px; padding: 2px 10px; font-size: .8125rem; }
 /* ---------- Instellingen (settingsview.js): losse blokken met icoon en titel, regels met een scheidingslijn ---------- */
 .toast.ok { background: var(--text); color: var(--bg); }
 body.settings-open #main > :not(#settings):not(#net) { display: none; }
+
+/* ---------- Help (help.js): per knop een kopje en een zin ---------- */
+body.help-open #main > :not(#help):not(#net) { display: none; }
+#help { padding: 2px 0 24px; max-width: 40rem; }
+.help-intro { margin: 0 0 12px; color: var(--muted); }
+.help-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.help-list h3 { margin: 0 0 2px; font-size: .9375rem; font-weight: 600; }
+.help-list p { margin: 0; line-height: 1.45; }
 
 /* ---------- Kalender (calendarview.js): maandraster en agenda ---------- */
 body.calendar-open #main > :not(#calendar):not(#net) { display: none; }

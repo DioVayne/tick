@@ -810,19 +810,36 @@ app.post('/api/trash/empty', async (c) => {
   return c.json({ deleted: res[1].meta.changes + res[4].meta.changes + res[5].meta.changes });
 });
 
-// Lijsten bestaan alleen als `list`-kolom van taken; er is geen aparte tabel.
+// Lijsten bestaan als `list`-kolom van taken; de tabel `lists` houdt alleen zelf aangemaakte (lege) lijsten vast.
 app.get('/api/lists', async (c) => {
+  const db = c.env.DB;
+  const userId = c.get('auth').userId;
   // Een gedeelde taak telt mee in de lijst van de deelnemer (zijn deelrij); subtaken in de lijst van hun ouder bij hem.
-  const { results } = await c.env.DB.prepare('SELECT COALESCE(s.list, t.list) AS name, SUM(t.done = 0) AS open FROM tasks t ' +
-    "LEFT JOIN task_shares s ON s.task_id = COALESCE(t.parent_id, t.id) AND s.to_user = ?1 AND s.status = 'accepted' " +
-    'WHERE (t.user_id = ?1 OR t.id IN (SELECT task_id FROM task_shares WHERE to_user = ?1 AND status = \'accepted\') ' +
-    'OR t.parent_id IN (SELECT task_id FROM task_shares WHERE to_user = ?1 AND status = \'accepted\')) AND t.deleted_at IS NULL GROUP BY 1')
-    .bind(c.get('auth').userId).all<{ name: string; open: number }>();
+  const [{ results }, made] = await db.batch<{ name: string; open: number }>([
+    db.prepare('SELECT COALESCE(s.list, t.list) AS name, SUM(t.done = 0) AS open FROM tasks t ' +
+      "LEFT JOIN task_shares s ON s.task_id = COALESCE(t.parent_id, t.id) AND s.to_user = ?1 AND s.status = 'accepted' " +
+      'WHERE (t.user_id = ?1 OR t.id IN (SELECT task_id FROM task_shares WHERE to_user = ?1 AND status = \'accepted\') ' +
+      'OR t.parent_id IN (SELECT task_id FROM task_shares WHERE to_user = ?1 AND status = \'accepted\')) AND t.deleted_at IS NULL GROUP BY 1')
+      .bind(userId),
+    db.prepare('SELECT name, 0 AS open FROM lists WHERE user_id = ?').bind(userId),
+  ]);
   const lists = results.map((r) => ({ name: r.name, open: r.open }));
+  // Een aangemaakte lijst met taken staat er al: dan niet nog eens.
+  for (const r of made.results) if (!lists.some((l) => l.name === r.name)) lists.push({ name: r.name, open: 0 });
   // Inbox is vast en moet er ook zijn zonder taken.
   if (!lists.some((l) => l.name === 'Inbox')) lists.push({ name: 'Inbox', open: 0 });
   lists.sort((a, b) => a.name.localeCompare(b.name, c.get('lang'), { sensitivity: 'base' }));
   return c.json(lists);
+});
+
+/** Een nieuwe, lege lijst bewaren (bestaat hij al, dan verandert er niets). */
+app.post('/api/lists', async (c) => {
+  const name = listName((await body(c)).name, 'name');
+  if (name !== 'Inbox') {
+    await c.env.DB.prepare('INSERT INTO lists (user_id, name, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING')
+      .bind(c.get('auth').userId, name, now()).run();
+  }
+  return c.json({ name }, 201);
 });
 
 app.post('/api/lists/rename', async (c) => {
@@ -837,6 +854,9 @@ app.post('/api/lists/rename', async (c) => {
   const res = await db.batch([
     db.prepare('UPDATE tasks SET list = ?, updated_at = ? WHERE list = ? AND user_id = ?').bind(to, now(), from, userId),
     db.prepare("UPDATE task_shares SET list = ? WHERE list = ? AND to_user = ? AND status = 'accepted'").bind(to, from, userId),
+    // De bewaarde lijst gaat mee; bestaat de nieuwe naam al (samenvoegen), dan vervalt de oude rij.
+    db.prepare('UPDATE OR IGNORE lists SET name = ? WHERE name = ? AND user_id = ?').bind(to, from, userId),
+    db.prepare('DELETE FROM lists WHERE name = ? AND user_id = ?').bind(from, userId),
   ]);
   return c.json({ moved: res[0].meta.changes + res[1].meta.changes });
 });
@@ -847,10 +867,13 @@ app.post('/api/lists/delete', async (c) => {
   if (name === 'Inbox') throw new HttpError(400, 'err.inbox_delete');
   const db = c.env.DB;
   const userId = c.get('auth').userId;
+  // De bewaarde lijst (als die er is) gaat altijd weg, ook als hij geen taken had.
+  const forget = db.prepare('DELETE FROM lists WHERE name = ? AND user_id = ?').bind(name, userId);
   if (b.tasks === 'inbox') {
     const res = await db.batch([
       db.prepare("UPDATE tasks SET list = 'Inbox', updated_at = ? WHERE list = ? AND user_id = ?").bind(now(), name, userId),
       db.prepare("UPDATE task_shares SET list = 'Inbox' WHERE list = ? AND to_user = ? AND status = 'accepted'").bind(name, userId),
+      forget,
     ]);
     return c.json({ moved: res[0].meta.changes + res[1].meta.changes });
   }
@@ -863,6 +886,7 @@ app.post('/api/lists/delete', async (c) => {
       db.prepare('UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE list = ? AND user_id = ? AND deleted_at IS NULL').bind(ts, ts, name, userId),
       db.prepare(`UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE (id IN (${mine}) OR parent_id IN (${mine})) AND deleted_at IS NULL`)
         .bind(ts, ts, name, userId, name, userId),
+      forget,
     ]);
     return c.json({ deleted: res[0].meta.changes + res[1].meta.changes });
   }
