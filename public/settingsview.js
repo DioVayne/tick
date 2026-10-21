@@ -18,6 +18,7 @@ import { prepare } from './attachments.js';
 import { formatRadius, loadPlaces } from './places.js';
 import { editPlace } from './map.js';
 import { timeButton } from './timepicker.js';
+import { badgeOff, setBadgeOff } from './badge.js';
 
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
@@ -481,6 +482,7 @@ async function paintPush() {
     row(t('set.push_label'), sw, t('set.this_device')),
     row('', test),
     overdueRow(),
+    badgeRow(),
     ps.iosNeedsHomeScreen ? el('p', { class: 'hint' }, t('push.ios_hint'))
       : !ps.supported ? el('p', { class: 'hint' }, t('push.unsupported'))
       : ps.permission === 'denied' ? el('p', { class: 'hint' }, t('set.push_blocked')) : null);
@@ -507,6 +509,14 @@ function overdueRow() {
     if (time.value) await save({ overdueTime: time.value }, revert);
   });
   return row(t('set.overdue'), [sw, time], homeNote(t('set.overdue_note')));
+}
+
+/** Teller op het app-icoon, het favicon en de tabtitel: aan of uit op dit apparaat, werkt ook offline. */
+function badgeRow() {
+  const sw = /** @type {HTMLInputElement} */ (el('input', { type: 'checkbox', role: 'switch', class: 'set-switch', 'aria-label': t('set.badge') }));
+  sw.checked = !badgeOff();
+  sw.addEventListener('change', () => setBadgeOff(!sw.checked));
+  return row(t('set.badge'), sw, `${t('set.badge_note')} · ${t('set.this_device')}`);
 }
 
 // ---------- 📱 Apparaten ----------

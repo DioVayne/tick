@@ -12,8 +12,10 @@ import { closeHelp, hideHelp, isHelpOpen, openHelp } from './help.js';
 import { closeDrawer, onListContext, setupSidebar } from './sidebar.js';
 import { addTask, init, load, on, state } from './store.js';
 import { normName } from './lists.js';
+import { startBadge, updateBadge } from './badge.js';
 
-on('change', () => { render(); refreshCalendar(); });
+on('change', () => { render(); refreshCalendar(); updateBadge(); });
+startBadge(() => state.open);
 on('error', toast);
 setupSidebar();
 onListContext(openListMenu);
