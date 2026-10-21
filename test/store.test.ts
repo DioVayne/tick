@@ -2,17 +2,22 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // De Workers-runtime heeft geen IndexedDB: db.js valt dan terug op geheugen, en dat lezen we hier uit.
 import { nextOccurrence } from '../public/repeat.js';
 import * as db from '../public/db.js';
-import { deleteList, ensureOwner, init, load, renameList, state, sync, toggleDone, update } from '../public/store.js';
+import { createList, deleteList, ensureOwner, init, load, renameList, state, sync, toggleDone, update } from '../public/store.js';
 
 describe('store: lijst-ops', () => {
-  it('een lijst die alleen in deze sessie bestaat, hernoemen of verwijderen geeft geen outbox-op', async () => {
-    state.extraLists = ['Nieuw'];
+  it('een nieuwe lege lijst gaat via de outbox naar de server, en hernoemen en verwijderen gaan mee', async () => {
+    const clear = async () => { for (const op of await db.outboxAll()) await db.outboxDelete(op.seq); };
+    await clear();
+    state.extraLists = [];
+    expect(createList('Nieuw ')).toBe('Nieuw');
+    expect(state.extraLists).toEqual(['Nieuw']);
+    expect(createList('nieuw')).toBe('Nieuw'); // bestaande schrijfwijze wint, geen tweede op
     await renameList('Nieuw', 'Anders');
     expect(state.extraLists).toEqual(['Anders']);
     await deleteList('Anders', 'inbox');
     expect(state.extraLists).toEqual([]);
-    expect(await db.outboxAll()).toHaveLength(0);
-    expect(state.pending).toBe(0);
+    expect((await db.outboxAll()).map((op: { type: string }) => op.type)).toEqual(['list-create', 'list-rename', 'list-delete']);
+    await clear();
   });
 });
 

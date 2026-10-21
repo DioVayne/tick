@@ -14,7 +14,7 @@ const byName = (a, b) => a.localeCompare(b, getLocale(), { sensitivity: 'base' }
 
 /**
  * Alle lijsten met het aantal open taken (incl. subtaken). De server kent ook lijsten met alleen afgeronde taken,
- * `extra` zijn lijsten die alleen in deze sessie bestaan. Tellen doen we op de lokale taken, die lopen voor op de server.
+ * `extra` zijn nieuwe lijsten die de server nog niet teruggaf (ze staan nog in de outbox). Tellen doen we op de lokale taken, die lopen voor op de server.
  * @param {{ name: string, open: number }[]} server
  * @param {{ list: string, done?: boolean }[]} tasks
  * @param {string[]} extra

@@ -112,7 +112,8 @@ The Worker passes the zone with every call: `Zone = { timeZone, reminderTime }` 
 | `location_notified` in `PATCH /api/tasks/:id` | Boolean; Android sets it to `true` after a notification. A place change in the same PATCH sets it back to `false` |
 | `GET`/`POST /api/places`, `PATCH`/`DELETE /api/places/:id` | Favourite places. A duplicate name (per account) gives a 409; `PATCH`/`DELETE` of an unknown or foreign id gives a 404 |
 | `GET /api/geocode?q=` | Address search through Nominatim (2 to 200 characters, max. 5 results `{name, lat, lng}`). 429 on too many searches, 502 when Nominatim does not answer |
-| `GET /api/lists` | `[{ name, open }]`: every list name on a task (open or done, not in the trash) with the number of open tasks, subtasks included; shared tasks count in your own list. Inbox is always there. `rename` and `delete` with `inbox` also move your share rows |
+| `GET /api/lists` | `[{ name, open }]`: every list name on a task (open or done, not in the trash) with the number of open tasks, subtasks included; shared tasks count in your own list. Lists you created (table `lists`) are there too, once, also when empty. Inbox is always there. `rename` and `delete` with `inbox` also move your share rows |
+| `POST /api/lists` | `{ name }`: keeps a new, empty list (table `lists`, migration `0014`); an existing name or Inbox changes nothing. Answer 201 `{ name }` |
 | `POST /api/lists/rename` | `{ from, to }`: moves all tasks with `list = from` to `to`; an existing `to` merges. Empty, longer than 100 characters or `from = Inbox` gives a 400. Answer `{ moved }` |
 | `POST /api/lists/delete` | `{ name, tasks: 'inbox' \| 'delete' }`: tasks to Inbox or to the trash (including subtasks and completed ones, and shared tasks in your list, for everyone). Answer `{ moved }` or `{ deleted }` |
 | `POST /api/inbox` | Input from automations: `title`, `notes`, `due` (a bare date becomes 09:00), `list` and `repeat`. The Dutch fields `titel`, `omschrijving`, `datum` also work |
@@ -175,7 +176,7 @@ The language is chosen **per device**: Automatic (the first of `navigator.langua
 ## Layout
 | | Desktop (from 1024px) | Mobile (below) |
 |---|---|---|
-| Lists | Fixed sidebar on the left: All, Inbox, other lists with open counts, New list, Completed, Trash; at the bottom only ⚙ Settings | ☰ opens a drawer with the same content |
+| Lists | Fixed sidebar on the left: All, Inbox, other lists with open counts, New list, Completed, Trash; at the bottom ⓘ Help (`help.js`: one sentence per button, the new-task field hidden) and ⚙ Settings | ☰ opens a drawer with the same content |
 | Settings | One long page in the middle column (where the task list is), a view of its own with `history.pushState` | One column; Android's back button closes it |
 | Tasks | Middle, with search, input and drag to sort | One column |
 | Task | Detail panel on the right with a resize handle (380px by default, 300 to 700px, kept in `localStorage`) | Full-screen task screen with "‹ list"; Android's back button works through `history.pushState`/`popstate` |
@@ -192,7 +193,7 @@ Only when the Worker has the R2 binding `FILES` (`/config.js` says `attachments:
 The description is markdown, rendered by `markdown.js`, a line-by-line parser. Supported: headings `#` to `###`, paragraphs, bold, italics, strikethrough, inline code and code blocks, bullet and numbered lists (one level of nesting), checklists `- [ ]`/`- [x]` (clickable in the read view), quotes, links and bare `https://` addresses, and `---`. Not: tables, images and HTML (shown as text). Only DOM nodes through `textContent`, never `innerHTML`; links only with `http:`, `https:` and `mailto:`.
 
 ## Lists
-A list is only the `list` column of tasks; there is no list table. **Inbox** is always on top after All and cannot be renamed or deleted. A new list only exists in the session until it contains a task. The list menu (right-click, "⋯", long press on mobile) offers Rename, Merge with… and Delete…; a name that already exists asks to merge. On desktop you can drag a task onto a list in the sidebar.
+A list is the `list` column of tasks; the table `lists` (per person) only keeps lists you created, so a new empty list survives a reload and shows on every device. Rename and delete update that row too. **Inbox** is always on top after All and cannot be renamed or deleted. The list menu (right-click, "⋯", long press on mobile) offers Rename, Merge with… and Delete…; a name that already exists asks to merge. On desktop you can drag a task onto a list in the sidebar.
 
 ## Repeating reminders
 A top-level task with a reminder can repeat daily, weekly, monthly or yearly. Completing it moves the same task on to the next occurrence.

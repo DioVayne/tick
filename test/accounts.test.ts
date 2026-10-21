@@ -62,7 +62,7 @@ describe('accountbeheer', () => {
     expect(await count('SELECT COUNT(*) n FROM devices WHERE key_id = ?', key.id)).toBe(1);
 
     expect((await callAs(admin, `/api/users/${b.id}`, { method: 'DELETE' })).status).toBe(200);
-    for (const t of ['tasks', 'places', 'api_keys', 'pair_codes', 'push_subscriptions', 'user_settings', 'account_links']) {
+    for (const t of ['tasks', 'places', 'api_keys', 'pair_codes', 'push_subscriptions', 'user_settings', 'account_links', 'lists']) {
       expect(await count(`SELECT COUNT(*) n FROM ${t} WHERE user_id = ?`, b.id), t).toBe(0);
     }
     expect(await count('SELECT COUNT(*) n FROM devices WHERE key_id = ?', key.id)).toBe(0);

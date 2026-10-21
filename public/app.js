@@ -7,6 +7,7 @@ import { openDatePicker } from './datepicker.js';
 import { $, el, fmt, fromLocalInput, render, status, toast } from './render.js';
 import { closeCalendar, hideCalendar, isCalendarOpen, openCalendar, refreshCalendar } from './calendarview.js';
 import { closeSettings, hideSettings, isSettingsOpen, openSettings } from './settingsview.js';
+import { closeHelp, hideHelp, isHelpOpen, openHelp } from './help.js';
 import { closeDrawer, onListContext, setupSidebar } from './sidebar.js';
 import { addTask, init, load, on, state } from './store.js';
 
@@ -48,12 +49,20 @@ $('#add-title').addEventListener('keydown', (e) => {
 });
 
 // Instellingen: een eigen pagina in de middenkolom (meldingen, thema en uitloggen staan daar).
-$('#btn-settings').addEventListener('click', () => { hideCalendar(); openSettings({ push: true }); });
+$('#btn-settings').addEventListener('click', () => { hideCalendar(); hideHelp(); openSettings({ push: true }); });
 // Kalender: maandraster en agenda van taken met een datum.
 $('#btn-calendar').addEventListener('click', () => {
   if (isCalendarOpen()) { closeDrawer(); return; }
   hideSettings();
+  hideHelp();
   openCalendar({ push: true });
+});
+// Help: wat de knoppen doen.
+$('#btn-help').addEventListener('click', () => {
+  if (isHelpOpen()) { closeDrawer(); return; }
+  hideSettings();
+  hideCalendar();
+  openHelp({ push: true });
 });
 
 // ---------- zoeken ----------
@@ -104,7 +113,7 @@ document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
   if (e.key !== '/' && e.key !== 'n' && e.key !== 'N') return;
   if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable], dialog')) return;
-  if (document.body.matches('.settings-open, .calendar-open, .map-open')) return;
+  if (document.body.matches('.settings-open, .calendar-open, .help-open, .map-open')) return;
   e.preventDefault();
   if (e.key === '/') openSearch();
   else $('#add-title').focus();
@@ -146,14 +155,23 @@ init(CONFIG.userId).then(() => {
 // De instellingen hebben ook een eigen history-item: terug sluit ze, vooruit opent ze weer (zonder de taak te raken).
 window.addEventListener('popstate', (e) => {
   if (document.body.classList.contains('map-open')) return;
-  if (e.state?.settings) { hideCalendar(); openSettings({ push: false }); return; }
+  if (e.state?.settings) { hideCalendar(); hideHelp(); openSettings({ push: false }); return; }
+  if (e.state?.help) {
+    hideSettings();
+    hideCalendar();
+    if (!isHelpOpen()) openHelp({ push: false });
+    selectTask(null, { push: false });
+    return;
+  }
   if (e.state?.calendar) {
     hideSettings();
+    hideHelp();
     if (!isCalendarOpen()) openCalendar({ push: false });
     selectTask(null, { push: false }); // terug vanuit een taak die over de kalender lag
     return;
   }
   if (isSettingsOpen()) { hideSettings(); return; }
+  if (isHelpOpen()) { hideHelp(); return; }
   if (isCalendarOpen() && !e.state?.task) { hideCalendar(); return; }
   selectTask(e.state?.task ?? null, { push: false });
 });
@@ -171,6 +189,7 @@ $('#side').addEventListener('click', (e) => {
   if (!(e.target instanceof Element)) return;
   if (isSettingsOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeSettings();
   if (isCalendarOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeCalendar();
+  if (isHelpOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeHelp();
   if (!state.selected) return;
   const b = e.target.closest('button[data-list], #btn-done, #btn-trash');
   if (!b) return;
@@ -181,6 +200,7 @@ $('#newlist-input').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !e.target.value.trim()) return;
   if (isSettingsOpen()) closeSettings();
   if (isCalendarOpen()) closeCalendar();
+  if (isHelpOpen()) closeHelp();
   if (state.selected) closeTask();
 }, true);
 
@@ -220,6 +240,7 @@ navigator.serviceWorker?.addEventListener('message', (e) => {
   if (e.data.geo) offerAppSync();
   if (isSettingsOpen()) hideSettings();
   hideCalendar();
+  hideHelp();
   selectTask(e.data.id);
   document.querySelector(`li.task[data-id="${CSS.escape(e.data.id)}"]`)?.scrollIntoView({ block: 'center' });
 });

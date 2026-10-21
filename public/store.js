@@ -34,13 +34,15 @@ const find = (id) => state.open.find((t) => t.id === id) ?? state.done.find((t) 
 export const lists = () => mergeLists(state.serverLists, state.open.concat(state.done), state.extraLists);
 export const listNames = () => lists().map((l) => l.name);
 
-/** Een nieuwe lijst bestaat tot de eerste taak erin pas in deze sessie; een bestaande schrijfwijze wint. */
+/**
+ * Een nieuwe lijst staat meteen lokaal (extraLists) en gaat via de outbox naar de server, die hem ook leeg bewaart.
+ * Een bestaande schrijfwijze wint.
+ */
 export function createList(name) {
   const known = findList(listNames(), name);
   if (known) return known;
   const fresh = normName(name);
-  state.extraLists.push(fresh);
-  changed();
+  mutate({ type: 'list-create', name: fresh });
   return fresh;
 }
 
@@ -59,13 +61,18 @@ function applyLocal(op) {
     state.done = state.done.filter((t) => !gone(t));
     return;
   }
+  if (op.type === 'list-create') {
+    // Tot de server hem in /api/lists teruggeeft (of na herladen offline, uit de outbox); dubbel bekend is geen probleem.
+    if (!state.extraLists.includes(op.name)) state.extraLists.push(op.name);
+    return;
+  }
   if (op.type === 'list-rename' || op.type === 'list-delete') {
     state.open = applyListOp(state.open, op);
     state.done = applyListOp(state.done, op);
     const from = op.type === 'list-rename' ? op.from : op.name;
     const to = op.type === 'list-rename' ? op.to : 'Inbox';
     if (state.list === from) state.list = to; // na verwijderen ga je naar Inbox, ook als de taken mee zijn
-    // Een lege sessielijst die hernoemd wordt blijft bestaan onder de nieuwe naam.
+    // Een nieuwe lijst die nog niet van de server terug is, blijft bij hernoemen bestaan onder de nieuwe naam.
     const wasExtra = state.extraLists.includes(from);
     state.extraLists = state.extraLists.filter((n) => n !== from);
     if (wasExtra && op.type === 'list-rename') state.extraLists.push(to);
@@ -155,6 +162,7 @@ function applyLocal(op) {
 function toHttp(op) {
   if (op.type === 'create') return ['POST', '/api/tasks', op.body];
   if (op.type === 'delete') return ['DELETE', `/api/tasks/${op.id}`];
+  if (op.type === 'list-create') return ['POST', '/api/lists', { name: op.name }];
   if (op.type === 'list-rename') return ['POST', '/api/lists/rename', { from: op.from, to: op.to }];
   if (op.type === 'list-delete') return ['POST', '/api/lists/delete', { name: op.name, tasks: op.tasks }];
   return ['PATCH', `/api/tasks/${op.id}`, op.body];
@@ -405,19 +413,10 @@ export function remove(id) {
   return mutate({ type: 'delete', id });
 }
 
-// Een lijst zonder taken die de server kent (een sessielijst) bestaat alleen hier: dan geen serverop.
-const knownToServer = (name) => state.serverLists.some((l) => l.name === name)
-  || state.open.some((t) => t.list === name) || state.done.some((t) => t.list === name);
-
-function listOp(op, name) {
-  if (knownToServer(name)) return mutate(op);
-  applyLocal(op);
-  changed();
-  return Promise.resolve();
-}
-
-export const renameList = (from, to) => listOp({ type: 'list-rename', from, to }, from);
-export const deleteList = (name, tasks) => listOp({ type: 'list-delete', name, tasks }, name);
+// Ook een lege lijst kent de server (of krijgt hij eerst uit de outbox): hernoemen en verwijderen gaan dus altijd mee,
+// zodat de bewaarde lijst ook verhuist of verdwijnt.
+export const renameList = (from, to) => mutate({ type: 'list-rename', from, to });
+export const deleteList = (name, tasks) => mutate({ type: 'list-delete', name, tasks });
 
 export function toggleDone(t) {
   const pending = state.justDone.get(t.id);

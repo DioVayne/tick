@@ -166,6 +166,39 @@ describe('lijsten', () => {
     expect((await json<Task>(res)).list).toBe('y'.repeat(99));
   });
 
+  it('POST /api/lists bewaart een lege lijst; met taken staat hij er één keer', async () => {
+    const a = tag();
+    const make = (name: string) => call('/api/lists', { method: 'POST', json: { name } });
+    const res = await make(` ${a} `);
+    expect(res.status).toBe(201);
+    expect(await json(res)).toEqual({ name: a });
+    expect((await make(a)).status).toBe(201); // nog eens: verandert niets
+    expect((await lists()).filter((l) => l.name === a)).toEqual([{ name: a, open: 0 }]);
+    await createTask({ title: 't', list: a });
+    expect((await lists()).filter((l) => l.name === a)).toEqual([{ name: a, open: 1 }]);
+    expect((await make('  ')).status).toBe(400);
+    expect((await make('x'.repeat(101))).status).toBe(400);
+    expect((await make('Inbox')).status).toBe(201);
+    expect((await lists()).filter((l) => l.name === 'Inbox')).toHaveLength(1);
+  });
+
+  it('hernoemen en verwijderen werken de bewaarde lege lijst bij', async () => {
+    const a = tag(), b = tag(), c = tag();
+    await call('/api/lists', { method: 'POST', json: { name: a } });
+    expect(await json(await rename(a, b))).toEqual({ moved: 0 });
+    let names = (await lists()).map((l) => l.name);
+    expect(names).toContain(b);
+    expect(names).not.toContain(a);
+    // Samenvoegen met een andere bewaarde lijst laat er één over.
+    await call('/api/lists', { method: 'POST', json: { name: c } });
+    await rename(c, b);
+    names = (await lists()).map((l) => l.name);
+    expect(names.filter((n) => n === b)).toHaveLength(1);
+    expect(names).not.toContain(c);
+    expect(await json(await del(b, 'inbox'))).toEqual({ moved: 0 });
+    expect((await lists()).map((l) => l.name)).not.toContain(b);
+  });
+
   it('lijstroutes vereisen inlog', async () => {
     expect((await call('/api/lists', { auth: null })).status).toBe(401);
     // Het inbox-token mag alleen naar /api/inbox: daar geeft de middleware 403.
