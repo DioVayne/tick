@@ -72,10 +72,11 @@ function applyLocal(op) {
     const from = op.type === 'list-rename' ? op.from : op.name;
     const to = op.type === 'list-rename' ? op.to : 'Inbox';
     if (state.list === from) state.list = to; // na verwijderen ga je naar Inbox, ook als de taken mee zijn
-    // Een nieuwe lijst die nog niet van de server terug is, blijft bij hernoemen bestaan onder de nieuwe naam.
-    const wasExtra = state.extraLists.includes(from);
+    // Een lijst blijft bij hernoemen bestaan onder de nieuwe naam, ook als hij (nog) leeg is: nieuw en nog niet van de
+    // server terug, of een lege lijst die de server bewaart (die staat alleen in serverLists).
+    const wasExtra = state.extraLists.includes(from) || state.serverLists.some((l) => l.name === from);
     state.extraLists = state.extraLists.filter((n) => n !== from);
-    if (wasExtra && op.type === 'list-rename') state.extraLists.push(to);
+    if (wasExtra && op.type === 'list-rename' && !state.extraLists.includes(to)) state.extraLists.push(to);
     state.serverLists = state.serverLists.filter((l) => l.name !== from);
     return;
   }

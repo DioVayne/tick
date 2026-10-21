@@ -19,6 +19,19 @@ describe('store: lijst-ops', () => {
     expect((await db.outboxAll()).map((op: { type: string }) => op.type)).toEqual(['list-create', 'list-rename', 'list-delete']);
     await clear();
   });
+
+  it('een lege lijst die alleen de server kent, blijft bij hernoemen bestaan onder de nieuwe naam', async () => {
+    const clear = async () => { for (const op of await db.outboxAll()) await db.outboxDelete(op.seq); };
+    await clear();
+    state.extraLists = [];
+    state.serverLists = [{ name: 'Inbox', open: 0 }, { name: 'Leeg', open: 0 }] as any;
+    await renameList('Leeg', 'Ander');
+    expect(state.serverLists.map((l: { name: string }) => l.name)).toEqual(['Inbox']);
+    expect(state.extraLists).toEqual(['Ander']);
+    state.serverLists = [];
+    state.extraLists = [];
+    await clear();
+  });
 });
 
 describe('store: herhalende taken', () => {
