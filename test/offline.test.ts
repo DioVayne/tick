@@ -68,6 +68,23 @@ describe('app-shell', () => {
     expect(Number(sw.match(/const CACHE = 'tick-shell-v(\d+)'/)![1])).toBeGreaterThanOrEqual(26);
   });
 
+  it('index.html laadt elke module die app.js (via imports) nodig heeft meteen mee', async () => {
+    const html = await (await call('/')).text();
+    const preloaded = new Set([...html.matchAll(/<link rel="modulepreload" href="(\/[\w.-]+\.js)">/g)].map((m) => m[1]));
+    const needed = new Set<string>();
+    const walk = async (path: string) => {
+      if (needed.has(path)) return;
+      needed.add(path);
+      const code = await (await call(path)).text();
+      // Alleen statische imports; een dynamische import( laadt pas als hij nodig is.
+      for (const m of code.matchAll(/(?:from\s*|^import\s*)['"]\.\/([\w.-]+\.js)['"]/gm)) await walk(`/${m[1]}`);
+    };
+    await walk('/app.js');
+    needed.delete('/app.js');
+    for (const path of needed) expect(preloaded, `modulepreload voor ${path}`).toContain(path);
+    for (const path of preloaded) expect(needed, `${path} wordt niet (meer) geïmporteerd`).toContain(path);
+  });
+
   it('elke module die de shell importeert zit zelf ook in de shell (anders is de app offline leeg)', async () => {
     const sw = await (await call('/sw.js')).text();
     const shell = JSON.parse(sw.match(/const SHELL = (\[[^\]]+\])/)![1].replace(/'/g, '"').replace(/,\s*\]/, ']')) as string[];

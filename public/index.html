@@ -12,6 +12,43 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <script src="/theme.js"></script>
   <link rel="stylesheet" href="/style.css">
+  <!-- Alle modules van app.js tegelijk ophalen, niet laag voor laag zoals de imports ze ontdekken (scheelt een paar rondes over het netwerk bij elke start, ook vanuit een widget of melding). test/offline.test.ts bewaakt de lijst. -->
+  <link rel="modulepreload" href="/androidapp.js">
+  <link rel="modulepreload" href="/api.js">
+  <link rel="modulepreload" href="/applink.js">
+  <link rel="modulepreload" href="/attachments.js">
+  <link rel="modulepreload" href="/calendar.js">
+  <link rel="modulepreload" href="/calendarview.js">
+  <link rel="modulepreload" href="/confetti.js">
+  <link rel="modulepreload" href="/config.js">
+  <link rel="modulepreload" href="/copies.js">
+  <link rel="modulepreload" href="/datepicker.js">
+  <link rel="modulepreload" href="/db.js">
+  <link rel="modulepreload" href="/detail.js">
+  <link rel="modulepreload" href="/dialog.js">
+  <link rel="modulepreload" href="/editor.js">
+  <link rel="modulepreload" href="/help.js">
+  <link rel="modulepreload" href="/i18n.js">
+  <link rel="modulepreload" href="/icons.js">
+  <link rel="modulepreload" href="/listmenu.js">
+  <link rel="modulepreload" href="/listpicker.js">
+  <link rel="modulepreload" href="/lists.js">
+  <link rel="modulepreload" href="/map.js">
+  <link rel="modulepreload" href="/markdown.js">
+  <link rel="modulepreload" href="/next.js">
+  <link rel="modulepreload" href="/places.js">
+  <link rel="modulepreload" href="/popover.js">
+  <link rel="modulepreload" href="/push.js">
+  <link rel="modulepreload" href="/render.js">
+  <link rel="modulepreload" href="/repeat.js">
+  <link rel="modulepreload" href="/repeatpicker.js">
+  <link rel="modulepreload" href="/settings.js">
+  <link rel="modulepreload" href="/settingsview.js">
+  <link rel="modulepreload" href="/share.js">
+  <link rel="modulepreload" href="/sidebar.js">
+  <link rel="modulepreload" href="/store.js">
+  <link rel="modulepreload" href="/swipe.js">
+  <link rel="modulepreload" href="/trash.js">
 </head>
 <body>
   <div id="app">
