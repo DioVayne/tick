@@ -94,6 +94,18 @@ li.task.sel, li.task.sel:has(> .row:hover) { background: color-mix(in srgb, var(
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 22%, transparent); }
 li.task.sortable-chosen { background: var(--card); box-shadow: 0 6px 18px var(--shadow); }
 li.task.sortable-ghost { opacity: .4; }
+/* Vegen (swipe.js): de taak schuift over een gekleurde laag; links rood (verwijderen), rechts blauw (lijst) */
+ul.tasks { position: relative; }
+li.task { touch-action: pan-y; }
+li.task.swiping { position: relative; z-index: 1; background: var(--fill); }
+li.task.swipe-go { transition: translate .18s ease-in; }
+.swipe-back { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-radius: 8px; background: var(--fill); color: var(--text); }
+.swipe-back.left > .ico:first-child, .swipe-back.right > .ico:last-child { visibility: hidden; }
+.swipe-back.left { background: color-mix(in srgb, var(--danger), transparent 70%); }
+.swipe-back.right { background: color-mix(in srgb, var(--accent), transparent 70%); }
+.swipe-back.left.go { background: var(--danger); }
+.swipe-back.right.go { background: var(--accent); }
+.swipe-back.go { color: #fff; }
 .row { display: flex; align-items: center; gap: 6px; padding: var(--row-pad) 6px; }
 .grip { cursor: grab; touch-action: none; color: var(--muted); padding: 6px 2px; user-select: none; font-size: 1rem; line-height: 1; }
 /* Met een muis verschijnt de greep pas bij hover, zoals in TickTick */

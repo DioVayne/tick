@@ -10,6 +10,7 @@ import { renderSidebar } from './sidebar.js';
 import { UNDO_MS, listNames, state, toggleDone, update } from './store.js';
 import { renderTrash, shareLabel, shareNames } from './trash.js';
 import { renderInvites } from './share.js';
+import { enableSwipe, swipedAway } from './swipe.js';
 
 export const $ = (s) => document.querySelector(s);
 
@@ -192,6 +193,7 @@ function taskItem(t, children) {
     children.forEach((c) => ul.append(taskItem(c)));
     li.append(ul);
   }
+  if (!done && !state.showDone) enableSwipe(li, t);
   return li;
 }
 
@@ -222,7 +224,7 @@ const pinnedOf = (t) => !!t?.pinned && !t.parent_id;
 
 /** Open taken, plus net afgevinkte die tijdens de ongedaan-maken-periode zichtbaar blijven. */
 function openTasks() {
-  const shown = state.open.filter((t) => !t.done || state.justDone.has(t.id));
+  const shown = state.open.filter((t) => (!t.done || state.justDone.has(t.id)) && !swipedAway(t));
   for (const { task } of state.justDone.values()) if (!shown.some((t) => t.id === task.id)) shown.push(task);
   return shown.sort((a, b) => Number(pinnedOf(b)) - Number(pinnedOf(a)) || a.position - b.position);
 }

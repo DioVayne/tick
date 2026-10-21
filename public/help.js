@@ -4,7 +4,7 @@ import { $, el, render } from './render.js';
 import { closeDrawer } from './sidebar.js';
 import { state } from './store.js';
 
-const TOPICS = ['menu', 'search', 'check', 'drag', 'list', 'remind', 'repeat', 'done', 'trash', 'undo'];
+const TOPICS = ['menu', 'search', 'check', 'drag', 'swipe', 'list', 'remind', 'repeat', 'done', 'trash', 'undo'];
 
 const S = { open: false, root: null };
 
