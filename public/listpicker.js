@@ -38,7 +38,7 @@ export function openListPicker(anchor, current, onPick) {
     if (name !== current) onPick(name);
   });
 
-  const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': 'Lijst kiezen' },
+  const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': t('lists.pick') },
     ...names.map(item), el('div', { class: 'menu-sep' }), newButton);
   document.body.append(menu);
   place(menu, anchor);

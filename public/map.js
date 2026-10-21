@@ -229,7 +229,9 @@ function buildScreen(L, { loc, place }, resolve) {
     const newName = answer.trim();
     try {
       if (!newName) {
-        if (!confirm(t('map.confirm_delete', { name: p.name }))) return;
+        const yes = await ask({ title: t('map.confirm_delete', { name: p.name }), text: t('map.delete_note'), buttons: [
+          { label: t('map.delete'), value: 'yes', kind: 'danger' }, { label: t('map.cancel'), value: null, kind: 'ghost' }] });
+        if (!yes) return;
         await deletePlace(p.id);
       } else if (newName !== p.name) {
         await renamePlace(p.id, newName);

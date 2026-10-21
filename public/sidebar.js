@@ -109,7 +109,7 @@ let moreFor = null;
 function hideMore() { if (more) more.hidden = true; moreFor = null; }
 function showMore(b) {
   if (!more) {
-    more = el('button', { class: 'list-more', type: 'button', 'aria-label': 'Lijstmenu', 'aria-haspopup': 'menu', hidden: true,
+    more = el('button', { class: 'list-more', type: 'button', 'aria-label': t('lists.menu'), 'aria-haspopup': 'menu', hidden: true,
       onclick: () => { if (moreFor) contextHandler(moreFor.dataset.list, moreFor); } }, '⋯');
     more.addEventListener('pointerleave', (e) => { if (!e.relatedTarget?.closest?.('#side-lists')) hideMore(); });
     document.body.append(more);

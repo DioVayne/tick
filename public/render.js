@@ -152,7 +152,7 @@ function taskItem(t, children) {
     done || state.query.trim() ? null : el('span', { class: 'grip', 'aria-hidden': 'true' }, '⋮⋮'),
     el('button', {
       class: 'check', role: 'checkbox', 'aria-checked': String(done),
-      'aria-label': state.justDone.has(t.id) ? tr('render.undo') : t.done ? tr('render.reopen') : tr('render.check'),
+      'aria-label': tr(state.justDone.has(t.id) ? 'render.undo_named' : t.done ? 'render.reopen_named' : 'render.check_named', { title: t.title }),
       onclick: (e) => { if (!done) confetti(e.currentTarget, isCouple(t.share ?? state.open.find((p) => p.id === t.parent_id)?.share)); checkOff(t); },
     }),
     selected && !done && wide.matches ? titleField(t)

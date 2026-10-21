@@ -21,7 +21,7 @@ export function openListMenu(name, anchor) {
   closeOpen?.();
   fromTitle = anchor.id === 'title';
 
-  const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': `Lijst "${name}"` });
+  const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': t('lists.menu_named', { name }) });
   const item = (label, onclick) => el('button', { class: 'menu-item', type: 'button', role: 'menuitem', onclick }, label);
   const focusFirst = () => /** @type {HTMLElement | null} */ (menu.querySelector('.menu-item'))?.focus();
   const showMain = () => {
@@ -35,7 +35,7 @@ export function openListMenu(name, anchor) {
   const showTargets = () => {
     const others = listNames().filter((n) => n !== name); // Inbox staat al vooraan
     menu.replaceChildren(
-      el('button', { class: 'menu-item muted', type: 'button', role: 'menuitem', onclick: showMain }, '‹ Terug'),
+      el('button', { class: 'menu-item muted', type: 'button', role: 'menuitem', onclick: showMain }, t('lists.back')),
       ...others.map((n) => item(n, () => { close(); confirmMerge(name, n); })),
     );
     focusFirst();
@@ -91,7 +91,7 @@ function startRename(name, anchor) {
   // Na een render bestaat de knop misschien niet meer; zoek hem opnieuw.
   const button = /** @type {HTMLElement} */ (fromTitle ? anchor : [...document.querySelectorAll('#side-lists button[data-list]')]
     .find((b) => /** @type {HTMLElement} */ (b).dataset.list === name) ?? anchor);
-  const input = el('input', { class: 'rename-input', value: name, maxlength: '100', 'aria-label': 'Nieuwe naam', autocomplete: 'off' });
+  const input = el('input', { class: 'rename-input', value: name, maxlength: '100', 'aria-label': t('lists.new_name'), autocomplete: 'off' });
   let finished = false;
   const finish = (commit, refocus = commit) => {
     if (finished) return;
