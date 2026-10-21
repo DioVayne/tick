@@ -10,6 +10,13 @@ const known = (v) => (v === 'en' || v === 'nl' ? v : null);
 
 const stored = () => { try { return known(localStorage.getItem(LANG_KEY)); } catch { return null; } };
 
+/** Het cookie dat de server leest voor zijn meldingen; null wist het. @param {'en' | 'nl' | null} lang */
+const writeCookie = (lang) => {
+  document.cookie = lang
+    ? `${COOKIE}=${lang}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`
+    : `${COOKIE}=; Path=/; Max-Age=0; SameSite=Lax; Secure`;
+};
+
 /**
  * Vertaalt een stuk pagina opnieuw: `data-i18n` (tekst) en `data-i18n-attr` ("attr:sleutel;attr2:sleutel2").
  * De server vertaalt de schil al; dit is voor als de taal in de browser anders uitvalt of wisselt.
@@ -35,13 +42,14 @@ export function applyI18n(root = document) {
 export function setLanguage(choice) {
   const lang = known(choice);
   try { if (lang) localStorage.setItem(LANG_KEY, lang); else localStorage.removeItem(LANG_KEY); } catch { /* geen opslag */ }
-  document.cookie = lang
-    ? `${COOKIE}=${lang}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`
-    : `${COOKIE}=; Path=/; Max-Age=0; SameSite=Lax; Secure`;
+  writeCookie(lang);
   setLocale(lang ?? pickLocale(navigator.languages) ?? CONFIG.defaultLocale);
 }
 
-setLocale(stored() ?? pickLocale(navigator.languages) ?? CONFIG.defaultLocale);
+// Het cookie kan verlopen of gewist zijn terwijl de keuze in localStorage nog staat; dan antwoordt de server in een andere taal.
+const chosen = stored();
+if (chosen) writeCookie(chosen);
+setLocale(chosen ?? pickLocale(navigator.languages) ?? CONFIG.defaultLocale);
 setTimeZone(CONFIG.timeZone);
 setDefaultTime(CONFIG.reminderTime);
 setWeekStart(CONFIG.weekStart);

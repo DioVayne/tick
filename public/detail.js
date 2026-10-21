@@ -2,6 +2,7 @@ import { bindDrop, fillAttachmentsBox } from './attachments.js';
 import { confetti, isCouple } from './confetti.js';
 import { fillCopiesBox } from './copies.js';
 import { openDatePicker } from './datepicker.js';
+import { ask } from './dialog.js';
 import { autoGrow, createEditor } from './editor.js';
 import { t as tr } from './i18n.js'; // tr: t is hier een taak
 import { openListPicker } from './listpicker.js';
@@ -402,7 +403,7 @@ function build(t, readOnly) {
   const reopen = el('button', { class: 'ghost', type: 'button', hidden: !readOnly, onclick: () => { const task = current(id); if (task) toggleDone(task); } }, tr('render.reopen'));
   const del = el('button', {
     class: 'danger', type: 'button',
-    onclick: () => {
+    onclick: async () => {
       const task = current(id);
       if (!task) return;
       // Een gedeelde taak (of een subtaak ervan) gaat voor iedereen naar de prullenbak.
@@ -410,7 +411,13 @@ function build(t, readOnly) {
       // Alleen als er echt iemand meedoet (de eigenaar met een geaccepteerde deelnemer, of jij als deelnemer).
       const s = top?.share;
       const shared = !!s && (!s.mine || s.members.some((m) => m.status === 'accepted'));
-      if (!confirm(tr(shared ? 'detail.confirm_delete_shared' : 'detail.confirm_delete', { title: task.title }))) return;
+      const answer = await ask({
+        title: tr('detail.delete_title'),
+        text: tr(shared ? 'detail.confirm_delete_shared' : 'detail.confirm_delete', { title: task.title }),
+        buttons: [{ label: tr('detail.delete'), value: 'delete', kind: 'danger' }, { label: tr('dialog.cancel'), value: null, kind: 'ghost' }],
+      });
+      // Tijdens de vraag kan de taak al weg zijn (verversing of ander apparaat).
+      if (answer !== 'delete' || !current(id)) return;
       dropPending(id);
       const pushed = !!history.state?.task;
       remove(id); // zet de keuze op null
@@ -451,7 +458,7 @@ function fill(t) {
   v.back.textContent = '‹ ' + listTitle();
   if (v.crumb) v.crumb.textContent = '‹ ' + (current(t.parent_id)?.title ?? tr('detail.parent_task'));
   v.check.setAttribute('aria-checked', String(done));
-  v.check.setAttribute('aria-label', state.justDone.has(t.id) ? tr('render.undo') : done ? tr('render.reopen') : tr('render.check'));
+  v.check.setAttribute('aria-label', tr(state.justDone.has(t.id) ? 'render.undo_named' : done ? 'render.reopen_named' : 'render.check_named', { title: t.title }));
   if (v.pin) {
     v.pin.setAttribute('aria-pressed', String(!!t.pinned));
     v.pin.title = tr(t.pinned ? 'detail.unpin' : 'detail.pin');
@@ -507,7 +514,7 @@ function fill(t) {
         return el('li', { class: kDone ? 'done' : '' },
           el('button', {
             class: 'check', role: 'checkbox', 'aria-checked': String(kDone), disabled: done,
-            'aria-label': state.justDone.has(k.id) ? tr('render.undo') : kDone ? tr('render.reopen') : tr('render.check'),
+            'aria-label': tr(state.justDone.has(k.id) ? 'render.undo_named' : kDone ? 'render.reopen_named' : 'render.check_named', { title: k.title }),
             onclick: (e) => { if (!kDone) confetti(e.currentTarget, isCouple(t.share)); checkOff(current(k.id) ?? k); }, // de rij kan ouder zijn dan de taak na een verversing
           }),
           el('button', { class: 'subtitle', type: 'button', onclick: () => selectTask(k.id) }, k.title));
