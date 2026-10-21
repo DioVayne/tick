@@ -22,13 +22,13 @@ export function openListMenu(name, anchor) {
   fromTitle = anchor.id === 'title';
 
   const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': t('lists.menu_named', { name }) });
-  const item = (label, onclick) => el('button', { class: 'menu-item', type: 'button', role: 'menuitem', onclick }, label);
+  const item = (label, onclick, extra = '') => el('button', { class: 'menu-item' + extra, type: 'button', role: 'menuitem', onclick }, label);
   const focusFirst = () => /** @type {HTMLElement | null} */ (menu.querySelector('.menu-item'))?.focus();
   const showMain = () => {
     menu.replaceChildren(
       item(t('lists.rename'), () => { close(); startRename(name, anchor); }),
       item(t('lists.move_tasks'), showTargets),
-      item(t('lists.delete'), () => { close(); confirmDelete(name); }),
+      item(t('lists.delete'), () => { close(); confirmDelete(name); }, ' menu-danger'),
     );
     focusFirst();
   };

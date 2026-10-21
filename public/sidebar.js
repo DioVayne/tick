@@ -98,6 +98,8 @@ function updateHeader() {
   /** @type {HTMLButtonElement} */ ($('#title')).disabled = open || cal || state.showTrash || state.showDone || !state.list || state.list === 'Inbox';
   // Afgerond toont alle lijsten; een nieuwe taak gaat daar naar Inbox, net als bij Alle.
   $('#add-title').placeholder = state.list && !state.showDone && !state.showTrash ? t('sidebar.add_to_list', { list: state.list }) : t('ui.new_task_placeholder');
+  // Geen nieuwe taak in Afgerond of de prullenbak, en niet tijdens zoeken (de lijst toont dan alleen treffers).
+  $('#add').hidden = state.showDone || state.showTrash || !!state.query.trim();
 }
 
 const listButton = (e) => e.target.closest('button[data-list]');
