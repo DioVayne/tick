@@ -250,6 +250,8 @@ export function renderDetail() {
     if (ready && !t?.done) vanished(state.selected);
   }
   document.body.classList.toggle('task-open', !!state.selected);
+  // Het skelet van theme.js blijft tot de taak er is, of tot na de eerste load duidelijk is dat hij er niet is.
+  if (t || ready || !state.selected) delete document.documentElement.dataset.bootTask;
   if (!t) {
     if (view || !root.querySelector('.detail-empty')) {
       view?.editor?.destroy();

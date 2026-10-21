@@ -4,6 +4,9 @@
 // zodat de pagina niet eerst in de standaardweergave flitst. Zonder keuze volgt het thema het systeem. Gewoon script in
 // <head>: de CSP staat geen inline code toe. Alleen bekende waarden komen op <html>.
 // De achtergrondfoto: `tick.bg` is de versie van de foto (zie src/background.ts); de foto zelf komt van /api/background.
+// Geopend op een taak (widget, melding): meteen een skelet van het taakscherm, tot detail.js de taak toont.
+if (new URLSearchParams(location.search).has('task')) document.documentElement.dataset.bootTask = '';
+
 try {
   const root = document.documentElement;
   const pick = (key, attr, allowed) => {

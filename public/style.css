@@ -369,9 +369,9 @@ body.resizing { cursor: col-resize; user-select: none; }
 .menu.sheet .rp-chip { min-width: 44px; min-height: 44px; }
 
 @media (max-width: 1023.98px) {
-  /* Taakscherm: schermvullend over de lijst, onder de kaart en de toast */
-  body.task-open { overflow: hidden; }
-  body.task-open #detail { display: block; position: fixed; inset: 0; z-index: 12; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); padding: max(8px, env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom)); }
+  /* Taakscherm: schermvullend over de lijst, onder de kaart en de toast (ook het skelet bij het opstarten op een taak) */
+  body.task-open, html[data-boot-task] body { overflow: hidden; }
+  body.task-open #detail, html[data-boot-task] #detail { display: block; position: fixed; inset: 0; z-index: 12; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); padding: max(8px, env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom)); }
   body.task-open .dback { display: inline-block; min-height: 40px; padding: 4px 0; margin-bottom: 4px; background: transparent; color: var(--link); font-size: 1.0625rem; }
 }
 
@@ -673,3 +673,31 @@ button.secbtn:not(:disabled):hover { border-color: var(--muted); background: var
 .dp-sum { color: var(--muted); font-size: .875rem; }
 .dp-actions { display: flex; gap: 8px; }
 .dp-actions .dp-clear { background: transparent; color: var(--danger); }
+
+/* Opstarten: grijze vlakken waar straks de taken staan (de lijst is alleen leeg tot de eerste render), en bij het openen
+   op een taak (?task=, zie theme.js) een skelet van het taakscherm: terug, vinkje met titel, twee eigenschappen, omschrijving. */
+#list:empty::before, html[data-boot-task] #detail::before {
+  content: ''; display: block; animation: skel 1s ease-in-out infinite alternate;
+  --skc: color-mix(in srgb, var(--text) 12%, transparent); --sk: linear-gradient(var(--skc) 0 0);
+}
+#list:empty::before {
+  height: 264px;
+  background:
+    linear-gradient(var(--skc) 0 18px, transparent 18px 44px) 10px 13px / 18px 44px repeat-y,
+    linear-gradient(var(--skc) 0 14px, transparent 14px 44px) 42px 15px / 55% 44px repeat-y;
+}
+html[data-boot-task] #detail > * { display: none; }
+html[data-boot-task] #detail::before {
+  height: 260px; max-width: 560px;
+  background:
+    var(--sk) 0 12px / 80px 16px no-repeat,
+    var(--sk) 0 58px / 22px 22px no-repeat,
+    var(--sk) 34px 58px / 70% 22px no-repeat,
+    var(--sk) 0 112px / 170px 28px no-repeat,
+    var(--sk) 0 150px / 120px 28px no-repeat,
+    var(--sk) 0 204px / 90% 14px no-repeat,
+    var(--sk) 0 228px / 60% 14px no-repeat;
+}
+@media (min-width: 1024px) { html[data-boot-task] #detail::before { background-position-y: -36px, 22px, 22px, 76px, 114px, 168px, 192px; } }
+@keyframes skel { from { opacity: 1; } to { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { #list:empty::before, html[data-boot-task] #detail::before { animation: none; } }
