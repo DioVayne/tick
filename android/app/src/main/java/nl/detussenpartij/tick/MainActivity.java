@@ -155,6 +155,14 @@ public class MainActivity extends Activity {
         look.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         root.addView(look);
 
+        // Alleen de officiële app: een eigen build komt niet van GitHub Releases.
+        if (Updates.available(this)) {
+            Button update = new Button(this);
+            update.setText(R.string.update_check);
+            update.setOnClickListener(v -> checkForUpdate(update));
+            root.addView(update);
+        }
+
         // Ingeklapt: de sleutel met de hand, voor als koppelen via Tick niet lukt.
         LinearLayout advanced = new LinearLayout(this);
         advanced.setOrientation(LinearLayout.VERTICAL);
@@ -337,6 +345,38 @@ public class MainActivity extends Activity {
                 && !shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) return false;
         return Build.VERSION.SDK_INT < 33 || granted(Manifest.permission.POST_NOTIFICATIONS)
                 || shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS);
+    }
+
+    /** De knop "Zoeken naar updates": meteen kijken; nieuwer is een vraag om te downloaden, anders een korte melding. */
+    private void checkForUpdate(Button button) {
+        button.setEnabled(false);
+        new Thread(() -> {
+            String latest = null;
+            String error = null;
+            try {
+                latest = Updates.checkNow(this);
+            } catch (Exception e) {
+                error = Sync.errorText(this, e);
+            }
+            final String newer = latest;
+            final String failed = error;
+            runOnUiThread(() -> {
+                button.setEnabled(true);
+                if (isFinishing()) return;
+                if (failed != null) {
+                    Toast.makeText(this, getString(R.string.update_failed, failed), Toast.LENGTH_LONG).show();
+                } else if (newer == null) {
+                    Toast.makeText(this, getString(R.string.update_latest, BuildConfig.VERSION_NAME), Toast.LENGTH_LONG).show();
+                } else {
+                    new AlertDialog.Builder(this)
+                            .setTitle(getString(R.string.update_title, newer))
+                            .setMessage(R.string.update_text)
+                            .setPositiveButton(R.string.update_download, (dlg, w) -> startActivity(Updates.downloadIntent()))
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show();
+                }
+            });
+        }).start();
     }
 
     private void test() {

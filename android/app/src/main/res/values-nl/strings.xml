@@ -84,6 +84,10 @@
     <string name="update_channel">App-updates</string>
     <string name="update_title">Tick %s is beschikbaar</string>
     <string name="update_text">Tik om de update te downloaden en open daarna het bestand om hem te installeren. Je taken en instellingen blijven.</string>
+    <string name="update_check">Zoeken naar updates</string>
+    <string name="update_latest">Je hebt de nieuwste versie (%s)</string>
+    <string name="update_failed">Kon niet kijken of er een update is: %s</string>
+    <string name="update_download">Downloaden</string>
     <string name="address_current">Adres: %s</string>
     <string name="address_none">Nog geen Tick-adres.</string>
     <string name="address_change">Adres wijzigen</string>
