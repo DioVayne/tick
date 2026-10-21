@@ -36,6 +36,11 @@ public class TaskWidgetProvider extends AppWidgetProvider {
     }
 
     @Override
+    public void onDeleted(Context context, int[] ids) {
+        for (int id : ids) Prefs.forgetWidget(context, id);
+    }
+
+    @Override
     public void onDisabled(Context context) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         am.cancel(refreshIntent(context));
@@ -144,8 +149,17 @@ public class TaskWidgetProvider extends AppWidgetProvider {
         manager.notifyAppWidgetViewDataChanged(ids, R.id.list);
     }
 
+    /** De kop van een widget: de lijstnaam, "Vandaag" of (bij Alles) de naam van de app. */
+    static String title(Context c, String view) {
+        if (view == null || view.isEmpty()) return c.getString(R.string.app_name);
+        if (WidgetFilter.TODAY.equals(view)) return c.getString(R.string.widget_view_today);
+        return view;
+    }
+
     private static RemoteViews build(Context c, int widgetId) {
         RemoteViews rv = new RemoteViews(c.getPackageName(), R.layout.widget_tasks);
+        String view = Prefs.widgetView(c, widgetId);
+        rv.setTextViewText(R.id.header_title, title(c, view));
 
         Intent svc = new Intent(c, TaskListService.class);
         svc.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
@@ -158,12 +172,17 @@ public class TaskWidgetProvider extends AppWidgetProvider {
                 new Intent(c, WidgetClickActivity.class),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE));
 
-        // De titel opent Tick in de app (TWA), niet in de standaardbrowser.
-        rv.setOnClickPendingIntent(R.id.header_title, PendingIntent.getActivity(c, 1,
-                new Intent(c, TickLauncherActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                PendingIntent.FLAG_IMMUTABLE));
-        rv.setOnClickPendingIntent(R.id.btn_add, PendingIntent.getActivity(c, 2,
-                new Intent(c, QuickAddActivity.class), PendingIntent.FLAG_IMMUTABLE));
+        // De titel opent Tick in de app (TWA), niet in de standaardbrowser; bij een widget met één lijst op die lijst.
+        boolean oneList = !view.isEmpty() && !WidgetFilter.TODAY.equals(view);
+        Intent open = oneList ? Launch.list(c, view)
+                : new Intent(c, TickLauncherActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        rv.setOnClickPendingIntent(R.id.header_title, PendingIntent.getActivity(c, 2000 + widgetId, open,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
+        // Snel toevoegen in de lijst van deze widget (of met een herinnering vandaag); eigen request code per widget,
+        // anders delen de widgets één PendingIntent met de extra's van de laatste.
+        Intent add = new Intent(c, QuickAddActivity.class).putExtra(QuickAddActivity.EXTRA_VIEW, view);
+        rv.setOnClickPendingIntent(R.id.btn_add, PendingIntent.getActivity(c, 1000 + widgetId, add,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
         rv.setOnClickPendingIntent(R.id.btn_refresh, manualRefreshIntent(c));
         return rv;
     }

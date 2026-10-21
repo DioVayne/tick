@@ -87,4 +87,15 @@
     <string name="address_current">Adres: %s</string>
     <string name="address_none">Nog geen Tick-adres.</string>
     <string name="address_change">Adres wijzigen</string>
+    <!-- Weergave per widget (SettingsActivity, TaskListService) -->
+    <string name="widget_view_label">Deze widget toont</string>
+    <string name="widget_view_all">Alle taken</string>
+    <string name="widget_view_today">Vandaag</string>
+    <string name="widget_view_today_long">Vandaag en te laat</string>
+    <string name="widget_empty_today">Niets meer voor vandaag</string>
+    <string name="quick_hint_list">Nieuwe taak in %s…</string>
+    <string name="meta_repeat">Herhaalt</string>
+    <string name="meta_place">Locatie</string>
+    <string name="meta_shared">Gedeeld</string>
+    <string name="meta_subtasks">Subtaken</string>
 </resources>

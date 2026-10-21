@@ -86,6 +86,19 @@ final class Prefs {
         sp(c).edit().putInt("fontSp", fontSp).putInt("spacingDp", spacingDp).apply();
     }
 
+    /** Wat een widget toont: "" (Alles), WidgetFilter.TODAY of een lijstnaam. Per widget-id. */
+    static String widgetView(Context c, int widgetId) {
+        return sp(c).getString("widget_" + widgetId + "_view", "");
+    }
+
+    static void setWidgetView(Context c, int widgetId, String view) {
+        sp(c).edit().putString("widget_" + widgetId + "_view", view == null ? "" : view).apply();
+    }
+
+    static void forgetWidget(Context c, int widgetId) {
+        sp(c).edit().remove("widget_" + widgetId + "_view").apply();
+    }
+
     /** Foutmelding van de laatste mislukte sync voor in de widget, of leeg als die gelukt is. */
     /** Moment (ms) van de laatste geslaagde verversing, of 0. */
     static long lastSync(Context c) {

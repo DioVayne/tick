@@ -87,4 +87,15 @@
     <string name="address_current">Address: %s</string>
     <string name="address_none">No Tick address yet.</string>
     <string name="address_change">Change address</string>
+    <!-- Weergave per widget (SettingsActivity, TaskListService) -->
+    <string name="widget_view_label">This widget shows</string>
+    <string name="widget_view_all">All tasks</string>
+    <string name="widget_view_today">Today</string>
+    <string name="widget_view_today_long">Today and overdue</string>
+    <string name="widget_empty_today">Nothing left for today</string>
+    <string name="quick_hint_list">New task in %s…</string>
+    <string name="meta_repeat">Repeats</string>
+    <string name="meta_place">Location</string>
+    <string name="meta_shared">Shared</string>
+    <string name="meta_subtasks">Subtasks</string>
 </resources>

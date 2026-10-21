@@ -17,6 +17,11 @@ final class StartUrl {
         return base + "/?app=android&task=" + URLEncoder.encode(taskId, StandardCharsets.UTF_8) + pair(needsPair);
     }
 
+    /** Opent een lijst (vanuit de kop van een widget die die lijst toont). */
+    static String list(String base, String name, boolean needsPair) {
+        return base + "/?app=android&list=" + URLEncoder.encode(name, StandardCharsets.UTF_8) + pair(needsPair);
+    }
+
     /**
      * Het adres uit een intent (een taak uit Launch.task of een link naar je Tick): alleen als het op base ligt, anders de
      * gewone start. De app opent zo nooit een andere site schermvullend. Zonder sleutel komt er pair=1 bij.

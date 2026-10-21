@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Grijze pil met de lijstnaam in de widget (donkergrijs in donkere modus); de letters krijgen de lijstkleur. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_pill" />
+    <corners android:radius="999dp" />
+</shape>

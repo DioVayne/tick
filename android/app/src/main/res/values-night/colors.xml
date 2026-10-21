@@ -3,6 +3,9 @@
     <color name="widget_bg">#181C22</color>
     <color name="widget_text">#E6E8EB</color>
     <color name="widget_muted">#8B93A1</color>
-    <color name="widget_divider">#2A303A</color>
+    <!-- Achtergrond van de lijstpil: donkerder dan de widget, zodat de gekleurde naam erop uitkomt. -->
+    <color name="widget_pill">#0E1014</color>
+    <!-- Tegeltje per taak: net iets lichter dan widget_bg. -->
+    <color name="widget_tile">#20252D</color>
     <color name="overdue">#FF7B72</color>
 </resources>
