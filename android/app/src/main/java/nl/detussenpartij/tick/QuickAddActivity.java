@@ -19,12 +19,17 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 public class QuickAddActivity extends Activity {
+    /** Weergave van de widget waar de + op zat: een lijstnaam, WidgetFilter.TODAY of leeg. */
+    static final String EXTRA_VIEW = "view";
+
     private static final DateTimeFormatter SHOWN =
             DateTimeFormatter.ofPattern("EEE d MMM HH:mm", Locale.getDefault());
 
     private LocalDateTime remindAt;
     private Button remindButton;
     private Button clearButton;
+    /** De lijst voor de nieuwe taak, of null (dan kiest de server Inbox). */
+    private String list;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -36,8 +41,17 @@ public class QuickAddActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(pad, pad, pad, pad);
 
+        String view = getIntent().getStringExtra(EXTRA_VIEW);
+        if (WidgetFilter.TODAY.equals(view)) {
+            // Vanuit Vandaag: anders zou de nieuwe taak niet in die widget staan. Het eerstvolgende hele uur, te wissen met ✕.
+            remindAt = LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0).withNano(0);
+        } else if (view != null && !view.isEmpty()) {
+            list = view;
+        }
+
         EditText title = new EditText(this);
-        title.setHint(R.string.quick_hint);
+        if (list == null) title.setHint(R.string.quick_hint);
+        else title.setHint(getString(R.string.quick_hint_list, list));
         title.setMinWidth((int) (280 * d));
         String shared = getIntent().getStringExtra(Intent.EXTRA_TEXT);
         if (shared != null) title.setText(shared.trim());
@@ -93,11 +107,13 @@ public class QuickAddActivity extends Activity {
 
     private void send(String text, Button button) {
         final LocalDateTime when = remindAt;
+        final String inList = list;
         new Thread(() -> {
             String msg;
             boolean added = false;
             try {
                 JSONObject body = new JSONObject().put("title", text);
+                if (inList != null) body.put("list", inList);
                 if (when != null) body.put("remind_at", when.atZone(ZoneId.systemDefault()).toInstant().toString());
                 Api.call(this, "POST", "/api/tasks", body.toString());
                 msg = getString(R.string.quick_added);

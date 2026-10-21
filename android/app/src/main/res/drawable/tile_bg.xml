@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tegeltje per taak in de widget: iets lichter (donkere modus) of grijzer (lichte modus) dan de widget zelf. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_tile" />
+    <corners android:radius="12dp" />
+</shape>

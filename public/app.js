@@ -11,6 +11,7 @@ import { closeSettings, hideSettings, isSettingsOpen, openSettings } from './set
 import { closeHelp, hideHelp, isHelpOpen, openHelp } from './help.js';
 import { closeDrawer, onListContext, setupSidebar } from './sidebar.js';
 import { addTask, init, load, on, state } from './store.js';
+import { normName } from './lists.js';
 
 on('change', () => { render(); refreshCalendar(); });
 on('error', toast);
@@ -139,6 +140,12 @@ if (params.has('add')) $('#add-title').focus();
 // Uit een uitnodigingsmelding: de balk met Accepteren en Weigeren in beeld.
 const openShare = params.get('share');
 if (openShare) history.replaceState(null, '', '/');
+// Uit de kop van een Android-widget met één lijst: meteen op die lijst.
+const openList = params.get('list');
+if (openList) {
+  state.list = normName(openList);
+  history.replaceState(null, '', '/');
+}
 const openTask = params.get('task');
 if (openTask && params.get('geo') === '1') offerAppSync();
 if (openTask) {

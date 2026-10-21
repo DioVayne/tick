@@ -8,11 +8,25 @@ import android.util.TypedValue;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-/** Widget-instellingen: tekstgrootte en regelafstand. Werkt ook als configuratiescherm van de widget zelf. */
+import org.json.JSONArray;
+
+import java.text.Collator;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+/**
+ * Widget-instellingen: tekstgrootte en regelafstand (voor alle widgets). Werkt ook als configuratiescherm van de widget
+ * zelf; dan kies je bovenaan ook wat deze widget toont (Alles, Vandaag of een lijst).
+ */
 public class SettingsActivity extends Activity {
     static final int FONT_MIN = 12, FONT_MAX = 24, FONT_DEFAULT = 15;
     static final int SPACING_MIN = 0, SPACING_MAX = 16, SPACING_DEFAULT = 0;
@@ -23,6 +37,9 @@ public class SettingsActivity extends Activity {
     private TextView spacingLabel;
     private final TextView[] sample = new TextView[3];
     private float density;
+    private int widgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
+    private RadioGroup viewGroup;
+    private final List<String> viewValues = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle state) {
@@ -31,7 +48,7 @@ public class SettingsActivity extends Activity {
         int pad = (int) (20 * density);
 
         // Als de widget dit scherm opent bij het toevoegen, is wegklikken ook goed: de standaardwaarden gelden dan.
-        int widgetId = getIntent().getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
+        widgetId = getIntent().getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
         if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             setResult(RESULT_OK, new Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId));
         }
@@ -47,6 +64,17 @@ public class SettingsActivity extends Activity {
         title.setText(R.string.widget_settings);
         title.setTextSize(24);
         root.addView(title);
+
+        if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+            TextView label = new TextView(this);
+            label.setText(R.string.widget_view_label);
+            label.setPadding(0, (int) (16 * density), 0, 0);
+            root.addView(label);
+            viewGroup = new RadioGroup(this);
+            root.addView(viewGroup);
+            fillViews(namesFromCache());
+            loadListsFromServer();
+        }
 
         // Voorbeeld
         LinearLayout preview = new LinearLayout(this);
@@ -128,6 +156,68 @@ public class SettingsActivity extends Activity {
         scroll.setFitsSystemWindows(true);
         setContentView(scroll);
         refreshPreview();
+    }
+
+    /** Lijstnamen uit de opgeslagen taken: direct beschikbaar, ook zonder verbinding. */
+    private Set<String> namesFromCache() {
+        try {
+            return WidgetFilter.listNames(new JSONArray(Prefs.cache(this)));
+        } catch (Exception e) {
+            return new LinkedHashSet<>();
+        }
+    }
+
+    /** Ook lege lijsten en lijsten met alleen afgeronde taken: die kent alleen de server (GET /api/lists). */
+    private void loadListsFromServer() {
+        new Thread(() -> {
+            try {
+                JSONArray arr = new JSONArray(Api.call(this, "GET", "/api/lists", null));
+                Set<String> names = namesFromCache();
+                for (int i = 0; i < arr.length(); i++) names.add(WidgetFilter.normName(arr.getJSONObject(i).optString("name")));
+                runOnUiThread(() -> {
+                    if (!isFinishing()) fillViews(names);
+                });
+            } catch (Exception ignored) {
+                // Dan blijft de lijst uit de cache staan.
+            }
+        }).start();
+    }
+
+    /** Keuzes: Alles, Vandaag & te laat, Inbox en de eigen lijsten op naam; de huidige keuze staat aangevinkt. */
+    private void fillViews(Set<String> names) {
+        String current = Prefs.widgetView(this, widgetId);
+        List<String> own = new ArrayList<>();
+        for (String n : names) if (!WidgetFilter.INBOX.equals(WidgetFilter.normName(n))) own.add(n);
+        // Bestaat de gekozen lijst (nog) niet in de taken, laat hem dan toch zien zodat de keuze niet verdwijnt.
+        if (!current.isEmpty() && !WidgetFilter.TODAY.equals(current) && !WidgetFilter.INBOX.equals(current)
+                && !own.contains(current)) own.add(current);
+        Collator coll = Collator.getInstance(Locale.getDefault());
+        coll.setStrength(Collator.PRIMARY);
+        own.sort(coll);
+
+        viewValues.clear();
+        viewValues.add("");
+        viewValues.add(WidgetFilter.TODAY);
+        viewValues.add(WidgetFilter.INBOX);
+        viewValues.addAll(own);
+
+        viewGroup.setOnCheckedChangeListener(null);
+        viewGroup.removeAllViews();
+        for (int i = 0; i < viewValues.size(); i++) {
+            String v = viewValues.get(i);
+            RadioButton b = new RadioButton(this);
+            b.setId(View.generateViewId());
+            b.setText(v.isEmpty() ? getString(R.string.widget_view_all)
+                    : WidgetFilter.TODAY.equals(v) ? getString(R.string.widget_view_today_long) : v);
+            viewGroup.addView(b);
+            if (v.equals(current)) viewGroup.check(b.getId());
+        }
+        viewGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            int index = group.indexOfChild(group.findViewById(checkedId));
+            if (index < 0) return;
+            Prefs.setWidgetView(this, widgetId, viewValues.get(index));
+            TaskWidgetProvider.updateAll(this);
+        });
     }
 
     private void refreshPreview() {

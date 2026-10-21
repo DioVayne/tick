@@ -4,12 +4,19 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
+    <!-- Elke taak is een eigen tegeltje (tile_bg) met wat ruimte eronder; die ruimte (en de grotere na de laatste
+         vastgezette taak) en de binnenruimte boven en onder zet TaskListService. -->
     <LinearLayout
         android:id="@+id/row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:layout_marginBottom="3dp"
+        android:background="@drawable/tile_bg"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:paddingStart="2dp">
 
         <ImageView
             android:id="@+id/check"
@@ -28,31 +35,116 @@
             android:paddingTop="1dp"
             android:paddingBottom="1dp">
 
-            <TextView
-                android:id="@+id/title"
+            <!-- Titelregel: titel en, in Alle taken en Vandaag, altijd rechts de lijstpil. Zo staat de lijstnaam steeds op
+                 dezelfde plek. De uitlijning op de basislijn (standaard) zet de pil op de eerste regel van de titel. -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:textColor="@color/widget_text"
-                android:textSize="15sp" />
+                android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/due"
+                <TextView
+                    android:id="@+id/title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="2"
+                    android:textColor="@color/widget_text"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/title_pill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/pill_bg"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:maxWidth="96dp"
+                    android:paddingStart="6dp"
+                    android:paddingTop="1dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="1dp"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Metaregel, links onder de titel: alleen als er een herinnering, herhaling, locatie, delen of subtaken is. -->
+            <LinearLayout
+                android:id="@+id/meta"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/widget_muted"
-                android:textSize="12sp"
-                android:visibility="gone" />
+                android:layout_marginTop="2dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/bell"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="3dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_bell"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/due"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:maxLines="1"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/repeat"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="6dp"
+                    android:contentDescription="@string/meta_repeat"
+                    android:src="@drawable/ic_repeat"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/place"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="6dp"
+                    android:contentDescription="@string/meta_place"
+                    android:src="@drawable/ic_place"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/people"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="6dp"
+                    android:contentDescription="@string/meta_shared"
+                    android:src="@drawable/ic_people"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/subtasks"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="2dp"
+                    android:contentDescription="@string/meta_subtasks"
+                    android:src="@drawable/ic_subtasks"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/subtask_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
-
-    <!-- dunne scheidingslijn van 1 pixel -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="1px"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
-        android:background="@color/widget_divider"
-        android:orientation="horizontal" />
 </LinearLayout>

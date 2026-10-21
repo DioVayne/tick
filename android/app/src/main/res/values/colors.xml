@@ -6,6 +6,7 @@
     <color name="widget_bg">#FFFFFF</color>
     <color name="widget_text">#1B1F24</color>
     <color name="widget_muted">#6B7280</color>
-    <color name="widget_divider">#E5E7EB</color>
+    <color name="widget_tile">#F2F4F7</color>
+    <color name="widget_pill">#E3E7EC</color>
     <color name="overdue">#D1242F</color>
 </resources>
