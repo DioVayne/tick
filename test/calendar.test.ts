@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { agenda, dayKey, monthGrid, startOfDay, taskMoments, tasksByDay } from '../public/calendar.js';
+import { agenda, dayKey, monthGrid, pickerDefault, quickDays, startOfDay, taskMoments, tasksByDay } from '../public/calendar.js';
 import { occurrencesBetween, setTimeZone } from '../public/repeat.js';
 
 const ms = (s: string) => Date.parse(s);
@@ -75,5 +75,22 @@ describe('agenda', () => {
     const a = agenda([task('oud', '2026-10-10T08:00:00Z'), task('nu', '2026-10-19T12:00:00Z'), task('later', '2026-10-22T08:00:00Z')], now, 30);
     expect(a.overdue.map((i) => i.task.id)).toEqual(['oud']);
     expect(a.days.map((d) => d.key)).toEqual(['2026-10-19', '2026-10-22']);
+  });
+});
+
+describe('datumkiezer: beginstand en snelknoppen', () => {
+  const nine = { h: 9, mi: 0 };
+  it('leeg: het volgende hele uur, na 23:00 morgen op de standaardtijd', () => {
+    expect(pickerDefault({ y: 2026, m: 10, d: 21, h: 14 }, nine)).toEqual({ day: '2026-10-21', time: '15:00' });
+    expect(pickerDefault({ y: 2026, m: 10, d: 21, h: 22 }, nine)).toEqual({ day: '2026-10-21', time: '23:00' });
+    expect(pickerDefault({ y: 2026, m: 12, d: 31, h: 23 }, { h: 8, mi: 30 })).toEqual({ day: '2027-01-01', time: '08:30' });
+  });
+  it('volgende week is de eerste dag van de volgende week, naar de weekstart', () => {
+    const wo = { y: 2026, m: 10, d: 21 }; // woensdag
+    expect(quickDays(wo, 'mon')).toEqual({ today: '2026-10-21', tomorrow: '2026-10-22', nextWeek: '2026-10-26' });
+    expect(quickDays(wo, 'sun').nextWeek).toBe('2026-10-25');
+    expect(quickDays({ y: 2026, m: 10, d: 25 }, 'mon').nextWeek).toBe('2026-10-26'); // zondag: morgen
+    expect(quickDays({ y: 2026, m: 10, d: 26 }, 'mon').nextWeek).toBe('2026-11-02'); // maandag: over een week
+    expect(quickDays({ y: 2026, m: 10, d: 31 }, 'mon').tomorrow).toBe('2026-11-01');
   });
 });

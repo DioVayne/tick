@@ -1,9 +1,13 @@
+import { monthGrid, pickerDefault, quickDays } from './calendar.js';
 import { dateLocale, t } from './i18n.js';
 import { el } from './render.js';
+import { chipDays, getDefaultTime } from './repeat.js';
 
-// Eigen datum- en tijdkiezer: een maand met de weekdagen erboven (ma–zo), drie vaste tijden of een eigen tijd.
+// Eigen datum- en tijdkiezer: snelknoppen (vandaag, morgen, volgende week), een maand met de weekdagen erboven
+// (in de volgorde van "week begint op"), drie vaste tijden of een eigen tijd.
 // Op een smal scherm schuift hij van onderen in beeld, op een breed scherm staat hij onder de knop.
-// Werkt met lokale tijd als 'YYYY-MM-DDTHH:MM' (zoals een datetime-local-veld); null is wissen.
+// Werkt met lokale tijd als 'YYYY-MM-DDTHH:MM' (zoals een datetime-local-veld, zie toLocalInput/fromLocalInput
+// in render.js); daarom rekent ook "nu" hier met de klok van het apparaat. null is wissen.
 
 const TIMES = ['09:00', '13:00', '19:00'];
 const p2 = (n) => String(n).padStart(2, '0');
@@ -11,22 +15,21 @@ const dayKey = (d) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate
 const fromKey = (key) => { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d); };
 const narrow = matchMedia('(max-width: 1023.98px)');
 
-/** Leeg: vandaag, op het volgende hele uur (na 23:00 wordt het 23:30, zodat het vandaag blijft). */
-function defaultTime(now) {
-  const h = now.getHours() + 1;
-  return h > 23 ? '23:30' : `${p2(h)}:00`;
-}
-
 /**
  * @param {HTMLElement} anchor de knop die de kiezer opent (focus gaat daar weer heen)
  * @param {string} value 'YYYY-MM-DDTHH:MM', of '' voor geen datum
  * @param {(value: string | null) => void} onPick met de gekozen waarde, of null bij Wissen; niet bij annuleren
  */
 export function openDatePicker(anchor, value, onPick) {
-  const now = new Date();
-  const today = dayKey(now);
-  let day = value ? value.slice(0, 10) : today;
-  let time = value ? value.slice(11, 16) : defaultTime(now);
+  const n = new Date();
+  const now = { y: n.getFullYear(), m: n.getMonth() + 1, d: n.getDate(), h: n.getHours(), mi: n.getMinutes() };
+  const nowTime = `${p2(now.h)}:${p2(now.mi)}`;
+  const today = dayKey(n);
+  const start = pickerDefault(now, getDefaultTime());
+  const weekStart = chipDays()[0] === 6 ? 'sun' : 'mon';
+  const quick = quickDays(now, weekStart);
+  let day = value ? value.slice(0, 10) : start.day;
+  let time = value ? value.slice(11, 16) : start.time;
   let month = fromKey(day);
   month.setDate(1);
   let ownOpen = !TIMES.includes(time);
@@ -41,15 +44,23 @@ export function openDatePicker(anchor, value, onPick) {
   const grid = el('div', { class: 'dp-grid' });
   const times = el('div', { class: 'dp-times' });
   const own = /** @type {HTMLInputElement} */ (el('input', { type: 'time', class: 'dp-own', 'aria-label': t('dp.time') }));
-  own.addEventListener('input', () => { if (own.value) { time = own.value; drawTimes(); } });
+  // Tijdens het typen het veld niet opnieuw opbouwen: dan gaat de focus weg en wordt "10" 01:00.
+  own.addEventListener('input', () => { if (own.value) { time = own.value; markTimes(); drawSummary(); } });
+  const timeButtons = TIMES.map((tm) => el('button', {
+    type: 'button', onclick: () => { time = tm; ownOpen = false; drawTimes(); },
+  }, tm));
+  const other = el('button', { class: 'dp-other', type: 'button', onclick: () => { ownOpen = true; drawTimes(); own.focus(); } }, t('dp.other_time'));
+  const quickButtons = /** @type {const} */ ([['today', 'dp.today'], ['tomorrow', 'dp.tomorrow'], ['nextWeek', 'dp.next_week']])
+    .map(([k, label]) => el('button', { type: 'button', 'data-day': quick[k], onclick: () => pickQuick(quick[k]) }, t(label)));
   const summary = el('span', { class: 'dp-sum' });
   const shift = (months) => { month = new Date(month.getFullYear(), month.getMonth() + months, 1); drawDays(); };
 
-  // Maandag tot en met zondag: 1 januari 2024 was een maandag.
+  // In de volgorde van de weekstart; 1 januari 2024 was een maandag (wd 0).
   const weekdays = el('div', { class: 'dp-wd', 'aria-hidden': 'true' },
-    ...Array.from({ length: 7 }, (_, i) => el('span', {}, fmtWeekday.format(new Date(2024, 0, 1 + i)))));
+    ...chipDays(weekStart).map((wd) => el('span', {}, fmtWeekday.format(new Date(2024, 0, 1 + wd)))));
 
   const dialog = /** @type {HTMLDialogElement} */ (el('dialog', { class: 'dpick' + (narrow.matches ? ' sheet' : ''), 'aria-label': t('dp.title') },
+    el('div', { class: 'dp-quick' }, ...quickButtons),
     el('div', { class: 'dp-head' },
       el('button', { class: 'dp-nav', type: 'button', 'aria-label': t('dp.prev'), onclick: () => shift(-1) }, '‹'),
       title,
@@ -65,34 +76,32 @@ export function openDatePicker(anchor, value, onPick) {
 
   function drawDays() {
     title.textContent = fmtMonth.format(month);
-    const offset = (month.getDay() + 6) % 7; // maandag eerst
-    const inMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-    const cells = Math.ceil((offset + inMonth) / 7) * 7;
-    grid.replaceChildren(...Array.from({ length: cells }, (_, i) => {
-      const d = new Date(month.getFullYear(), month.getMonth(), 1 - offset + i);
-      const key = dayKey(d);
+    const cells = monthGrid(month.getFullYear(), month.getMonth() + 1, weekStart).flat();
+    grid.replaceChildren(...cells.map(({ key, d, inMonth }) => {
       const cls = ['dp-day'];
-      if (d.getMonth() !== month.getMonth()) cls.push('out');
+      if (!inMonth) cls.push('out');
       if (key < today) cls.push('past');
       if (key === today) cls.push('today');
       return el('button', {
-        class: cls.join(' '), type: 'button', 'data-day': key, 'aria-label': fmtDay.format(d), 'aria-pressed': String(key === day),
+        class: cls.join(' '), type: 'button', 'data-day': key, 'aria-label': fmtDay.format(fromKey(key)), 'aria-pressed': String(key === day),
         tabindex: key === day ? '0' : '-1',
         onclick: () => pick(key),
-      }, String(d.getDate()));
+      }, String(d));
     }));
+    for (const b of quickButtons) b.setAttribute('aria-pressed', String(b.dataset.day === day));
     drawSummary();
   }
 
+  function markTimes() {
+    timeButtons.forEach((b, i) => b.setAttribute('aria-pressed', String(TIMES[i] === time)));
+  }
+
+  /** Alleen bij wisselen tussen "Anders…" en het tijdveld komen er andere knoppen; verder blijven ze staan. */
   function drawTimes() {
     own.value = time;
-    times.replaceChildren(
-      ...TIMES.map((tm) => el('button', {
-        type: 'button', 'aria-pressed': String(tm === time),
-        onclick: () => { time = tm; ownOpen = false; drawTimes(); },
-      }, tm)),
-      ownOpen ? own : el('button', { class: 'dp-other', type: 'button', onclick: () => { ownOpen = true; drawTimes(); own.focus(); } }, t('dp.other_time')),
-    );
+    markTimes();
+    const last = ownOpen ? own : other;
+    if (times.lastChild !== last) times.replaceChildren(...timeButtons, last);
     drawSummary();
   }
 
@@ -107,6 +116,12 @@ export function openDatePicker(anchor, value, onPick) {
     if (d.getMonth() !== month.getMonth() || d.getFullYear() !== month.getFullYear()) month = new Date(d.getFullYear(), d.getMonth(), 1);
     drawDays();
     if (focus) /** @type {HTMLElement | null} */ (grid.querySelector(`[data-day="${key}"]`))?.focus();
+  }
+
+  /** Snelknop: de dag, en bij Vandaag met een tijd die al geweest is het volgende hele uur (als dat nog vandaag is). */
+  function pickQuick(key) {
+    pick(key);
+    if (key === today && time <= nowTime && start.day === today) { time = start.time; ownOpen = !TIMES.includes(time); drawTimes(); }
   }
 
   // Pijltjes verplaatsen de gekozen dag (een dag of een week), Enter op een dag is al een klik.
