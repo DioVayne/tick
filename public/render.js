@@ -65,8 +65,14 @@ export const toLocalInput = (iso) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 export const fromLocalInput = (v) => (v ? new Date(v).toISOString() : null);
-export const fmt = (iso) =>
-  new Date(iso).toLocaleString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+// toLocaleString met opties maakt per aanroep een nieuwe formatter; met veel taken met een datum is dat merkbaar.
+let fmtCache = { locale: '', f: /** @type {Intl.DateTimeFormat | null} */ (null) };
+export const fmt = (iso) => {
+  if (fmtCache.locale !== dateLocale()) {
+    fmtCache = { locale: dateLocale(), f: new Intl.DateTimeFormat(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) };
+  }
+  return fmtCache.f.format(new Date(iso));
+};
 
 // ---------- zoeken ----------
 const norm = (s) => s.toLowerCase();
@@ -197,9 +203,11 @@ function taskItem(t, children) {
   return li;
 }
 
+// De lijstnamen voor de kleuren: één keer per render, niet per taak.
+let pillNames = null;
 function listPill(name) {
   const pill = el('span', { class: 'lpill' }, name);
-  const color = listColor(name, listNames());
+  const color = listColor(name, pillNames ??= listNames());
   if (color) pill.style.setProperty('--lc', color); // CSSOM: geen style-attribuut (CSP)
   return pill;
 }
@@ -239,7 +247,7 @@ export function render() {
   const typing = a instanceof HTMLTextAreaElement && a.classList.contains('title-edit') && root.contains(a)
     ? { start: a.selectionStart, end: a.selectionEnd, dir: a.selectionDirection } : null;
   rebuilding = true;
-  try { renderList(root); } finally { rebuilding = false; }
+  try { renderList(root); } finally { rebuilding = false; pillNames = null; }
   const f = root.querySelector('.title-edit');
   if (!(f instanceof HTMLTextAreaElement)) return;
   autoGrow(f);

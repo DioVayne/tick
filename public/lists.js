@@ -3,14 +3,22 @@ import { getLocale } from './i18n.js';
 
 export const normName = (name) => String(name ?? '').trim() || 'Inbox';
 
+// localeCompare met opties maakt per aanroep een nieuwe collator; dat is traag bij elke render. Eén per taal en gevoeligheid.
+const collators = new Map();
+const collator = (sensitivity) => {
+  const key = getLocale() + '\n' + sensitivity;
+  if (!collators.has(key)) collators.set(key, new Intl.Collator(getLocale(), { sensitivity }));
+  return collators.get(key);
+};
+
 // Hoofdletter- en spatieongevoelig (accenten tellen wel): "werk " en "Werk" zijn voor de gebruiker dezelfde lijst.
-export const sameName = (a, b) => String(a).trim().localeCompare(String(b).trim(), getLocale(), { sensitivity: 'accent' }) === 0;
+export const sameName = (a, b) => collator('accent').compare(String(a).trim(), String(b).trim()) === 0;
 
 /** De bestaande schrijfwijze van een lijst, of undefined. */
 export const findList = (names, name) => names.find((n) => sameName(n, name));
 
 // Hoofdletterongevoelig sorteren, maar bij gelijke letters een vaste volgorde ("Werk" voor "werk").
-const byName = (a, b) => a.localeCompare(b, getLocale(), { sensitivity: 'base' }) || (a < b ? -1 : a > b ? 1 : 0);
+const byName = (a, b) => collator('base').compare(a, b) || (a < b ? -1 : a > b ? 1 : 0);
 
 /**
  * Alle lijsten met het aantal open taken (incl. subtaken). De server kent ook lijsten met alleen afgeronde taken,
@@ -57,12 +65,13 @@ const slotOf = (name) => {
   return h % COLORS.length;
 };
 
-let memo = { key: '', map: new Map() };
+let memo = { key: '', map: new Map(), names: /** @type {string[] | null} */ (null) };
 /** Kleur per lijstnaam; alle lijsten samen bepalen wie welke krijgt (op naam gesorteerd, dus elke keer hetzelfde). */
 function colorMap(names) {
+  if (memo.names === names) return memo.map; // dezelfde array (één render): niet opnieuw sorteren
   const own = names.filter((n) => normName(n) !== 'Inbox').sort(byName);
   const key = own.join('\n');
-  if (memo.key === key) return memo.map;
+  if (memo.key === key) { memo.names = names; return memo.map; }
   const map = new Map();
   let used = new Set();
   for (const name of own) {
@@ -72,7 +81,7 @@ function colorMap(names) {
     used.add(slot);
     map.set(name, COLORS[slot]);
   }
-  memo = { key, map };
+  memo = { key, map, names };
   return map;
 }
 
