@@ -4,6 +4,7 @@ import { t } from './i18n.js';
 import { closeTask, detailReady, flushPending, selectTask } from './detail.js';
 import { openListMenu } from './listmenu.js';
 import { openDatePicker } from './datepicker.js';
+import { icon } from './icons.js';
 import { $, el, fmt, fromLocalInput, render, status, toast } from './render.js';
 import { closeCalendar, hideCalendar, isCalendarOpen, openCalendar, refreshCalendar } from './calendarview.js';
 import { closeSettings, hideSettings, isSettingsOpen, openSettings } from './settingsview.js';
@@ -19,7 +20,7 @@ onListContext(openListMenu);
 // Reminder voor de nieuwe taak: de waarde staat in een verborgen veld, het knopje toont hem.
 function setAddRemind(value) {
   $('#add-remind').value = value ?? '';
-  $('#add-when').textContent = '🔔' + (value ? ' ' + fmt(fromLocalInput(value)) : '');
+  $('#add-when').replaceChildren(icon('bell'), value ? ' ' + fmt(fromLocalInput(value)) : '');
   $('#add-when').classList.toggle('on', !!value);
 }
 $('#add-when').addEventListener('click', () => {
@@ -40,6 +41,11 @@ function submitAdd(open) {
     selectTask(id);
   }
 }
+// De ronde +-knop (mobiel): naar het invoerveld bovenaan en daar typen. Focus meteen in de klik, anders geen toetsenbord op iOS.
+$('#fab').addEventListener('click', () => {
+  $('#add-title').focus({ preventScroll: true });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
 $('#add').addEventListener('submit', (e) => { e.preventDefault(); submitAdd(false); });
 $('#add-open').addEventListener('click', () => submitAdd(true));
 $('#add-title').addEventListener('keydown', (e) => {

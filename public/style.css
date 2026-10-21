@@ -49,6 +49,9 @@ html[data-density="roomy"] { --row-pad: 8px; }
 html, body { margin: 0; background: var(--bg); color: var(--text); font: 1rem/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
 h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }
 button, input, textarea, select { font: inherit; color: inherit; }
+/* Lijnicoontjes (icons.js en index.html): overal even groot en even dik, in de tekstkleur van waar ze staan. */
+.ico { flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: -4px; }
+.ico.sm { width: 14px; height: 14px; vertical-align: -2px; }
 button { border: 0; border-radius: 8px; padding: 8px 14px; background: var(--accent); color: var(--accent-text); cursor: pointer; min-height: 40px; }
 button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
 button.ghost:hover { background: var(--hover); }
@@ -75,7 +78,7 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 @media (hover: none) { .add-key { display: none; } }
 #add-title { flex: 1 1 180px; min-width: 0; }
 #add[hidden] { display: none; } /* niet in Afgerond, de prullenbak en tijdens zoeken */
-#add #add-when { background: transparent; color: var(--muted); padding: 4px 8px; }
+#add #add-when { display: inline-flex; align-items: center; gap: 4px; background: transparent; color: var(--muted); padding: 4px 8px; }
 #add #add-when.on { color: var(--bell); }
 #add #add-when:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
 #add button { min-height: 32px; padding: 4px 12px; font-size: .875rem; }
@@ -112,7 +115,9 @@ textarea.title-edit { display: block; min-width: 0; min-height: 0; margin: 0; bo
 .meta { font-size: .75rem; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; padding: 0 10px 6px 60px; margin-top: -6px; overflow-wrap: anywhere; }
 .meta > * { min-width: 0; }
 .meta .bell { color: var(--bell); }
-.row .pinned { flex: none; margin-left: auto; padding: 2px 4px; border: 0; border-radius: 6px; background: transparent; font-size: .75rem; line-height: 1; cursor: pointer; }
+.meta .ico.sm { margin-right: 3px; }
+.meta .ico.sm + .ico.sm { margin: 0 0 0 4px; } /* het ritme achter de datum */
+.row .pinned { flex: none; display: grid; place-items: center; margin-left: auto; padding: 2px 4px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); line-height: 1; cursor: pointer; }
 .row .pinned:hover { background: var(--fill); }
 /* De lijst van een taak als pilletje in de kleur van die lijst (Inbox grijs); rechts in de rij. */
 .lpill { flex: none; max-width: 40%; margin-left: auto; padding: 1px 8px; border-radius: 999px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem;
@@ -141,6 +146,15 @@ li.trashed .meta { padding-left: 10px; margin-top: 0; }
 .trash-actions button { min-height: 34px; padding: 4px 10px; font-size: .8125rem; }
 .toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); translate: -50% 0; z-index: 20; max-width: calc(100% - 32px); background: var(--toast-bg); color: #fff; padding: 10px 14px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.25); font-size: .875rem; }
 .toast[hidden] { display: none; }
+/* Ronde +-knop rechtsonder (alleen smal): naar het invoerveld. Verborgen waar #add dat ook is (sidebar.js), en als een taak,
+   de kaart, de Android-balk of het invoerveld zelf in beeld is. De toast schuift er dan boven. */
+#fab { display: none; }
+@media (max-width: 1023.98px) {
+  #fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 11; display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border-radius: 50%; background: var(--accent); color: var(--accent-text); box-shadow: 0 4px 14px var(--shadow); }
+  #fab .ico { width: 24px; height: 24px; stroke-width: 2.2; }
+  #fab[hidden], body.task-open #fab, body.map-open #fab, body:has(.appbar) #fab, body:has(#add:focus-within) #fab { display: none; }
+  body:not(.task-open):not(.map-open):not(:has(.appbar)):not(:has(#add:focus-within)):has(#fab:not([hidden])) .toast { bottom: calc(88px + env(safe-area-inset-bottom)); }
+}
 .toast:has(button) { display: flex; align-items: center; gap: 14px; padding: 4px 6px 4px 14px; }
 .toast button { flex: none; white-space: nowrap; min-height: 40px; padding: 4px 10px; background: transparent; color: inherit; font-weight: 600; text-decoration: underline; }
 html { overscroll-behavior-y: contain; }
@@ -209,7 +223,7 @@ textarea.editor { min-height: 120px; resize: none; overflow: hidden; font-size: 
 /* ---------- Indeling: zijbalk, midden, detail ---------- */
 #main { padding: 8px 8px 80px; max-width: 720px; margin: 0 auto; min-width: 0; }
 #topbar { display: flex; align-items: center; gap: 8px; padding: max(8px, env(safe-area-inset-top)) 8px 0; max-width: 720px; margin: 0 auto; }
-#btn-menu { width: 40px; padding: 0; font-size: 1.25rem; border: 0; }
+#btn-menu { display: grid; place-items: center; width: 40px; padding: 0; border: 0; }
 #topbar h1 { flex: 1; min-width: 0; }
 /* De titel is bij een eigen lijst ook de knop voor het lijstmenu (▾); elders gewone tekst. */
 .titlebtn { display: block; max-width: 100%; min-height: 36px; margin-left: -6px; padding: 2px 6px; background: transparent; color: var(--text); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -240,7 +254,7 @@ body.settings-open #btn-search, body.settings-open #search, body.calendar-open #
 #side .item:hover { background: color-mix(in srgb, var(--side), var(--text) 10%); }
 #side .item .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #side .item .count { color: var(--muted); font-size: .8125rem; }
-#side .ico { flex: none; width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#side .ico { stroke: var(--muted); }
 #side .dot { flex: none; width: 9px; height: 9px; margin: 0 4.5px; border-radius: 50%; background: var(--dot, var(--muted)); }
 /* De gekozen lijst: hetzelfde accentrandje met gloed als een gekozen taak */
 #side .item.on, #side .item[aria-pressed="true"] { background: color-mix(in srgb, var(--side-blk), var(--accent) 12%); color: var(--text); font-weight: 500;
@@ -282,9 +296,9 @@ body.settings-open #btn-search, body.settings-open #search, body.calendar-open #
 .crumb { display: block; max-width: 100%; min-height: 28px; padding: 2px 0; margin-bottom: 4px; background: transparent; color: var(--link); font-size: .875rem; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dhead { display: flex; align-items: flex-start; gap: 10px; }
 .dhead .check { margin-top: 4px; }
-.dpin { flex: none; width: 32px; height: 32px; margin-top: 2px; margin-left: auto; padding: 0; border: 0; border-radius: 6px; background: transparent; font-size: 1rem; opacity: .35; filter: grayscale(1); }
-.dpin:hover { opacity: .7; }
-.dpin[aria-pressed="true"] { opacity: 1; filter: none; background: var(--fill); }
+.dpin { flex: none; display: grid; place-items: center; width: 32px; height: 32px; margin-top: 2px; margin-left: auto; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+.dpin:hover { color: var(--text); }
+.dpin[aria-pressed="true"] { color: var(--accent); background: var(--fill); }
 textarea.dt { flex: 1; min-width: 0; min-height: 0; border: 0; background: transparent; padding: 4px; border-radius: 6px; font-size: 1.125rem; font-weight: 600; line-height: 1.35; resize: none; overflow: hidden; overflow-wrap: anywhere; }
 textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 .pill { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; min-height: 30px; padding: 3px 10px; border: 0; border-radius: 6px; background: var(--fill); color: var(--text); font-size: .8125rem; }
@@ -336,6 +350,11 @@ body.resizing { cursor: col-resize; user-select: none; }
 .menu-item.menu-danger { color: var(--danger); } /* niet .danger: button.danger geeft een rand */
 .menu-sep { border-top: 1px solid var(--line); margin: 4px 2px; }
 .menu-input { margin: 2px 0; padding: 6px 8px; font-size: .875rem; }
+/* Lijst- en ritmekiezer op een smal scherm (popover.js): van onderen, net als de datumkiezer (.dpick.sheet), alles minstens 44px hoog */
+.sheet-scrim { position: fixed; inset: 0; z-index: 17; background: var(--scrim); }
+.menu.sheet { inset: auto 0 0; width: 100%; min-width: 0; max-width: 100%; max-height: 75dvh; padding: 8px 8px calc(12px + env(safe-area-inset-bottom)); border-width: 1px 0 0; border-radius: 16px 16px 0 0; font-size: 1rem; }
+.menu.sheet .menu-item, .menu.sheet .menu-input, .menu.sheet .rp-num, .menu.sheet .rp-unit, .menu.sheet .rp-mode, .menu.sheet .rp-until-date, .menu.sheet .rp-actions .pill { min-height: 44px; }
+.menu.sheet .rp-chip { min-width: 44px; min-height: 44px; }
 
 @media (max-width: 1023.98px) {
   /* Taakscherm: schermvullend over de lijst, onder de kaart en de toast */
@@ -464,7 +483,7 @@ body.calendar-open #main > :not(#calendar):not(#net) { display: none; }
 .set-back:hover { background: var(--hover); }
 .set-group { display: grid; min-width: 0; }
 .set-group-h { justify-self: start; margin: 14px 4px 6px; color: var(--muted); font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
-html[data-bg] .set-group-h { padding: 2px 10px; border-radius: 999px; background-color: color-mix(in srgb, var(--bg) 82%, transparent); }
+html[data-bg] .set-group-h { padding: 2px 10px; border-radius: 999px; background-color: color-mix(in srgb, var(--bg) 93%, transparent); }
 .set-list { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
 .set-block { min-width: 0; }
 .set-block + .set-block { border-top: 1px solid var(--line); }
@@ -473,13 +492,15 @@ html[data-bg] .set-group-h { padding: 2px 10px; border-radius: 999px; background
 .set-block > summary::-webkit-details-marker { display: none; }
 .set-block > summary:hover { background: var(--hover); }
 .set-block[open] > summary:hover { background: transparent; }
-.set-block > summary::after { content: "▸"; display: inline-block; margin-left: auto; color: var(--muted); transition: rotate .15s; }
-.set-block[open] > summary::after { rotate: 90deg; }
+/* Pijltje als lijn (zoals de icoontjes): rechts dicht, omlaag open */
+.set-block > summary::after { content: ""; flex: none; width: 7px; height: 7px; margin: 0 4px 0 auto; border: solid var(--muted); border-width: 0 1.8px 1.8px 0; rotate: -45deg; transition: rotate .15s; }
+.set-block[open] > summary::after { rotate: 45deg; }
 .set-block[open] > summary .set-title { color: var(--link); }
 .set-block > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 12px; }
 .set-content { padding: 0 14px 10px; }
 @media (min-width: 600px) { .set-content { padding-left: 46px; } }
-.set-icon { flex: none; width: 22px; text-align: center; }
+.set-icon { flex: none; display: grid; place-items: center; width: 22px; color: var(--muted); }
+.set-block[open] > summary .set-icon { color: var(--link); }
 .set-sub { color: var(--muted); font-size: .8125rem; font-weight: 400; }
 .set-sub:empty { display: none; }
 .set-foot { padding: 8px 0 2px; }
@@ -555,6 +576,7 @@ p.set-note { margin: 0 0 8px; }
 .att-files, .att-busy { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .att-files li { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .att-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; }
+.att-name .ico { margin-right: 4px; }
 .att-size { color: var(--muted); font-size: .8125rem; white-space: nowrap; }
 .att-busy li { display: grid; gap: 2px; font-size: .8125rem; color: var(--muted); }
 .att-add input[hidden] { display: none; }
@@ -576,20 +598,26 @@ p.set-note { margin: 0 0 8px; }
 .att-bar .att-viewer-del { border-color: var(--danger); color: #ff8a8a; }
 
 /* Achtergrondfoto (data-bg en --bg-image op <html>, gezet door theme.js): de foto staat op de pagina, de vlakken erop worden doorschijnend. */
-html[data-bg] { background: var(--bg) var(--bg-image) center / cover fixed no-repeat; }
+/* Donker thema: een donkere laag over de foto (--bg-veil), zodat lichte foto's de vlakken niet doorlichten. Beide routes: systeem en data-theme. */
+html[data-bg] { --bg-veil: transparent; background: linear-gradient(var(--bg-veil), var(--bg-veil)) fixed, var(--bg) var(--bg-image) center / cover fixed no-repeat; }
+@media (prefers-color-scheme: dark) { html[data-bg]:not([data-theme="light"]) { --bg-veil: rgba(0,0,0,.45); } }
+html[data-bg][data-theme="dark"] { --bg-veil: rgba(0,0,0,.45); }
 html[data-bg] body { background: transparent; }
-html[data-bg] #side { background-color: color-mix(in srgb, var(--side) 82%, transparent); backdrop-filter: blur(6px); }
-html[data-bg] #main { background-color: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(6px); border-radius: 18px;
+html[data-bg] #side { background-color: color-mix(in srgb, var(--side) 93%, transparent); backdrop-filter: blur(6px); }
+/* 93% dekkend: grijze tekst op het vlak (lege lijst, Niets gevonden, uitleg prullenbak) haalt zo AA, ook op een drukke foto. */
+html[data-bg] #main { background-color: color-mix(in srgb, var(--bg) 93%, transparent); backdrop-filter: blur(6px); border-radius: 18px;
   width: auto; max-width: min(720px, calc(100% - 24px)); margin: 0 auto 12px; }
+/* Op een smal scherm minstens schermhoog: anders staat bij een korte lijst de rest van het scherm los op de foto. */
+@media (max-width: 1023.98px) { html[data-bg] #main { min-height: calc(100dvh - 80px); } }
 @media (min-width: 1024px) {
   html[data-bg] #main { max-width: none; margin: 0 12px 12px; }
   html[data-bg] #topbar { padding: 12px 12px 6px; }
 }
 html[data-bg] #topbar { background: transparent; }
 /* De titel en het menuknopje staan los op de foto: een eigen vlak, anders hangt de leesbaarheid af van de foto. */
-html[data-bg] #title, html[data-bg] #btn-menu { background-color: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(6px); border-radius: 18px; }
+html[data-bg] #title, html[data-bg] #btn-menu { background-color: color-mix(in srgb, var(--bg) 93%, transparent); backdrop-filter: blur(6px); border-radius: 18px; }
 html[data-bg] #title { padding: 3px 14px; }
-html[data-bg] #detail { background-color: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px); }
+html[data-bg] #detail { background-color: color-mix(in srgb, var(--bg) 93%, transparent); backdrop-filter: blur(6px); }
 
 /* Retro: ronde vormen; de bovenbalk is doorzichtig, zodat alleen het afgeronde takendeel een vlak is. */
 html[data-palette="retro"] button, html[data-palette="retro"] input, html[data-palette="retro"] textarea, html[data-palette="retro"] select,
@@ -599,7 +627,7 @@ html[data-palette="retro"] .set-list, html[data-palette="retro"] #main { border-
 html[data-palette="retro"] #topbar { background: transparent; }
 
 /* Knoppen in de blokken van het detailpaneel (bestand toevoegen, delen): klein, met een rand, los van het vlak. */
-button.secbtn { min-height: 32px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font-size: .8125rem; }
+button.secbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font-size: .8125rem; }
 button.secbtn:not(:disabled):hover { border-color: var(--muted); background: var(--bg); }
 
 /* Datumkiezer (datepicker.js): op een breed scherm onder de knop, op een smal scherm van onderen */

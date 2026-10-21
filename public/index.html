@@ -16,7 +16,7 @@
 <body>
   <div id="app">
     <header id="topbar">
-      <button id="btn-menu" class="ghost" data-i18n-attr="aria-label:ui.menu;title:ui.menu" aria-label="Menu" title="Menu" aria-controls="side" aria-expanded="false">☰</button>
+      <button id="btn-menu" class="ghost" data-i18n-attr="aria-label:ui.menu;title:ui.menu" aria-label="Menu" title="Menu" aria-controls="side" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <h1><button id="title" class="titlebtn" type="button" aria-haspopup="menu" disabled data-i18n="ui.all">All</button></h1>
       <input id="search" class="search" type="search" data-i18n-attr="placeholder:ui.search_placeholder;aria-label:ui.search" placeholder="Search…" aria-label="Search" autocomplete="off" enterkeyhint="search" hidden>
       <button id="btn-search" class="iconbtn" type="button" data-i18n-attr="aria-label:ui.search;title:ui.search_title" aria-label="Search" title="Search ( / )" aria-controls="search" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
@@ -34,8 +34,8 @@
         <button id="btn-trash" class="item" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg><span class="name" data-i18n="ui.trash">Trash</span></button>
       </div>
       <div class="side-foot">
-        <button id="btn-help" class="item" type="button" aria-pressed="false" data-i18n="help.open">ⓘ Help</button>
-        <button id="btn-settings" class="item" type="button" data-i18n="set.open">⚙ Settings</button>
+        <button id="btn-help" class="item" type="button" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 8h.01"/></svg><span class="name" data-i18n="help.open">Help</span></button>
+        <button id="btn-settings" class="item" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span class="name" data-i18n="set.open">Settings</span></button>
       </div>
     </aside>
     <div class="scrim"></div>
@@ -45,7 +45,7 @@
         <input id="add-title" data-i18n-attr="placeholder:ui.new_task_placeholder;aria-label:ui.new_task" placeholder="New task…" aria-label="New task" maxlength="500" enterkeyhint="done" autocomplete="off" required>
         <kbd class="add-key" aria-hidden="true">N</kbd>
         <input id="add-remind" type="hidden">
-        <button id="add-when" type="button" aria-haspopup="dialog" data-i18n-attr="aria-label:ui.reminder;title:ui.reminder" aria-label="Reminder" title="Reminder">🔔</button>
+        <button id="add-when" type="button" aria-haspopup="dialog" data-i18n-attr="aria-label:ui.reminder;title:ui.reminder" aria-label="Reminder" title="Reminder"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></svg></button>
         <button type="submit" data-i18n="ui.add">Add</button>
         <button id="add-open" type="button" class="ghost" data-i18n="ui.add_details" data-i18n-attr="title:ui.add_details_title" title="Add and open the details (Shift+Enter)">Details</button>
       </form>
@@ -53,6 +53,7 @@
       <p id="status" class="status" role="status"></p>
     </main>
     <div id="resizer" aria-hidden="true"></div>
+    <button id="fab" type="button" data-i18n-attr="aria-label:ui.new_task;title:ui.new_task" aria-label="New task" title="New task" hidden><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
     <section id="detail" data-i18n-attr="aria-label:ui.task" aria-label="Task"><p class="detail-empty" data-i18n="ui.pick_task">Pick a task</p></section>
   </div>
   <script src="/sortable.min.js"></script>

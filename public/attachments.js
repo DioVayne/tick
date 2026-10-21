@@ -1,4 +1,5 @@
 import { ask } from './dialog.js';
+import { icon } from './icons.js';
 import { t } from './i18n.js';
 import { el, toast } from './render.js';
 import CONFIG from './settings.js';
@@ -156,7 +157,7 @@ function openViewer(images, start, readOnly) {
   let i = start;
   const img = el('img', { class: 'att-big', alt: '' });
   const caption = el('span', { class: 'att-cap' });
-  const download = el('a', { class: 'pill', download: '' }, '⬇ ' + t('att.download'));
+  const download = el('a', { class: 'pill', download: '' }, icon('download'), t('att.download'));
   const prev = el('button', { type: 'button', class: 'att-nav prev', 'aria-label': t('att.prev'), onclick: () => show(i - 1) }, '‹');
   const next = el('button', { type: 'button', class: 'att-nav next', 'aria-label': t('att.next'), onclick: () => show(i + 1) }, '›');
   const del = readOnly ? null : el('button', {
@@ -168,7 +169,7 @@ function openViewer(images, start, readOnly) {
       if (!images.length) close();
       else show(Math.min(i, images.length - 1));
     },
-  }, '🗑 ' + t('detail.delete'));
+  }, icon('trash'), t('detail.delete'));
   const closeBtn = el('button', { type: 'button', class: 'att-close', 'aria-label': t('att.close'), onclick: () => close() }, '✕');
   const dialog = /** @type {HTMLDialogElement} */ (el('dialog', { class: 'att-viewer', 'aria-label': t('att.title') },
     closeBtn, prev, img, next,
@@ -259,7 +260,7 @@ export function fillAttachmentsBox(box, task, readOnly) {
           }, '✕'));
       })) : null,
       files.length ? el('ul', { class: 'att-files' }, ...files.map((a) => el('li', {},
-        el('a', { href: src(a, true), download: a.name, class: 'att-name' }, '📄 ', a.name),
+        el('a', { href: src(a, true), download: a.name, class: 'att-name' }, icon('file'), a.name),
         el('span', { class: 'att-size' }, fmtSize(a.size)),
         readOnly ? null : el('button', {
           type: 'button', class: 'pill mini', title: t('att.delete_title'), 'aria-label': t('att.delete_named', { name: a.name }),
@@ -275,7 +276,7 @@ export function fillAttachmentsBox(box, task, readOnly) {
           type: 'button', class: 'pill secbtn', disabled: state.offline,
           title: state.offline ? t('att.offline') : false,
           onclick: () => input.click(),
-        }, '📎 ' + t('att.add')),
+        }, icon('clip'), t('att.add')),
         input),
     ].filter(Boolean));
   }
