@@ -81,14 +81,16 @@
             android:targetActivity=".TickManageDataActivity"
             android:exported="false" />
 
-        <!-- Meldingen van de PWA (web push) verschijnen als meldingen van deze app -->
+        <!-- Meldingen van de PWA (web push) verschijnen als meldingen van deze app. SMALL_ICON moet een bitmap zijn: Chrome
+             gebruikt het als de badge van de site niet laadt (bijv. telefoon net uit slaap), en bij een vector toont hij
+             zijn eigen icoon. De PNG's komen uit scripts/make-icons.mjs. -->
         <service
             android:name="com.google.androidbrowserhelper.trusted.DelegationService"
             android:enabled="true"
             android:exported="true">
             <meta-data
                 android:name="android.support.customtabs.trusted.SMALL_ICON"
-                android:resource="@drawable/ic_notify" />
+                android:resource="@drawable/ic_notify_bitmap" />
             <intent-filter>
                 <action android:name="android.support.customtabs.trusted.TRUSTED_WEB_ACTIVITY_SERVICE" />
                 <category android:name="android.intent.category.DEFAULT" />
