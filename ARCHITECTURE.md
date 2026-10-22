@@ -234,7 +234,7 @@ Vitest with `@cloudflare/vitest-plugin`: the tests run in the Workers runtime ag
 - Location notifications only work on Android. Android reports geofences with a delay of a few minutes. A small circle notifies sooner when leaving, but below 200 m the location drift indoors gives false alarms; on arrival, a car crosses a small circle in seconds. Hence 200 m as the minimum and the default when leaving, and 500 m by default on arrival.
 - The map only works online.
 - No initial trigger: if you are already at the place when you set it, the arrival notification only comes next time.
-- Repeating reminders have no end date or maximum count.
+- Repeating reminders can have an end date (`UNTIL`), but no maximum count.
 - Quick add in the Android app keeps its own 09:00 for a date without a time; it does not follow the reminder time setting.
 - Another device keeps calculating in the old time zone or reminder time until it starts again (the server stays leading when it completes a repeating task).
 - A phone on an Android app older than 1.2 does not report its notification and location status; the Devices block shows only "last seen".
