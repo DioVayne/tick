@@ -1,0 +1,101 @@
+# Tick for Home Assistant, as a package.
+# Put this file in <config>/packages/ and replace https://tick.example.com with
+# the address of your Tick. The key goes in secrets.yaml (see README.md).
+
+rest_command:
+  # Reads your open tasks; feeds the sensors below.
+  tick_tasks:
+    url: "https://tick.example.com/api/tasks"
+    method: get
+    headers:
+      authorization: !secret tick_full
+    timeout: 20
+
+  # data: {id: "<task id>"}. A repeating task moves on to its next occurrence.
+  tick_done:
+    url: "https://tick.example.com/api/tasks/{{ id }}/done"
+    method: post
+    headers:
+      authorization: !secret tick_full
+
+  # data: {id: "<task id>"}. Moves the reminder to tomorrow at your reminder time.
+  tick_tomorrow:
+    url: "https://tick.example.com/api/tasks/{{ id }}/tomorrow"
+    method: post
+    headers:
+      authorization: !secret tick_full
+
+  # data: {title: "...", due: "2026-10-23" or "2026-10-23T18:00" (optional), list: "..." (optional)}.
+  # Times without a zone are in your Tick time zone, a bare date gets your reminder time;
+  # without a list the task goes to Inbox.
+  tick_add:
+    url: "https://tick.example.com/api/tasks"
+    method: post
+    headers:
+      authorization: !secret tick_full
+    content_type: "application/json"
+    payload: >-
+      {{ {"title": title, "remind_at": due | default(none), "list": list | default(none)} | to_json }}
+
+template:
+  - trigger:
+      - trigger: time_pattern
+        minutes: "/1"
+      - trigger: homeassistant
+        event: start
+      # Fire this event after tick_done/tick_tomorrow/tick_add to refresh at once.
+      - trigger: event
+        event_type: tick_refresh
+    action:
+      - action: rest_command.tick_tasks
+        response_variable: tick
+        continue_on_error: true
+      - variables:
+          ok: "{{ tick is defined and tick.status == 200 and tick.content is list }}"
+          # Top-level open tasks only (like the badge on the Tick icon), without descriptions,
+          # so the attribute stays well under the 16 KB the recorder keeps.
+          tasks: >-
+            {% set ns = namespace(l=[]) %}
+            {% if ok %}
+              {% for t in tick.content if t.parent_id is none %}
+                {% set at = as_datetime(t.remind_at) if t.remind_at else none %}
+                {% set ns.l = ns.l + [{
+                  "id": t.id,
+                  "title": t.title,
+                  "list": t.list,
+                  "due": (as_local(at).isoformat() if at else none)
+                }] %}
+              {% endfor %}
+            {% endif %}
+            {{ ns.l }}
+          start: "{{ today_at('00:00').isoformat() }}"
+          end: "{{ (today_at('00:00') + timedelta(days=1)).isoformat() }}"
+          today: >-
+            {{ tasks | selectattr('due') | selectattr('due', '>=', start)
+               | selectattr('due', '<', end) | sort(attribute='due') | list }}
+          overdue: "{{ tasks | selectattr('due') | selectattr('due', '<', start) | sort(attribute='due') | list }}"
+    sensor:
+      - name: "Tick open"
+        unique_id: tick_open
+        icon: mdi:checkbox-marked-circle-outline
+        state_class: measurement
+        availability: "{{ ok }}"
+        state: "{{ tasks | count }}"
+        attributes:
+          tasks: "{{ tasks }}"
+      - name: "Tick today"
+        unique_id: tick_today
+        icon: mdi:calendar-today
+        state_class: measurement
+        availability: "{{ ok }}"
+        state: "{{ today | count }}"
+        attributes:
+          tasks: "{{ today }}"
+      - name: "Tick overdue"
+        unique_id: tick_overdue
+        icon: mdi:alert-circle-outline
+        state_class: measurement
+        availability: "{{ ok }}"
+        state: "{{ overdue | count }}"
+        attributes:
+          tasks: "{{ overdue }}"
