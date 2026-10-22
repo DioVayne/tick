@@ -1,6 +1,8 @@
 // Genereert de PNG-iconen van Tick (geen dependencies). public/icon.svg (het favicon) is dezelfde speld,
 // maar groter, zonder achtergrond en met een dikker vinkje, zodat hij op 16 px nog leesbaar is.
-// public/badge-96.png (wit vinkje op transparant, voor meldingen) maakt dit script niet.
+// public/badge-96.png (wit vinkje op transparant, voor meldingen) maakt dit script niet. Wel het meldingsicoon van de
+// Android-app als PNG per dichtheid (ic_notify_bitmap): Chrome valt daarop terug als de badge van de site niet laadt,
+// en Browser Helper geeft Chrome alleen een bitmap door, geen vector.
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 
@@ -55,42 +57,59 @@ function pinSpans(y) {
   return xs.sort((a, b) => a - b);
 }
 
-function png(size) {
+// Bedekking per pixel (0..1) van de speld met het vinkje uitgespaard. toGrid zet een pixelcoördinaat om naar het 512-raster.
+function coverage(size, toGrid) {
   const SS = 4; // 4×4 monsters per pixel voor gladde randen
-  const s = 512 / (size * SS);
-  const raw = Buffer.alloc(size * (size * 3 + 1));
-  const cover = new Float32Array(size);
-  let o = 0;
+  const out = new Float32Array(size * size);
   for (let y = 0; y < size; y++) {
-    cover.fill(0);
     for (let sy = 0; sy < SS; sy++) {
-      const py = (y * SS + sy + 0.5) * s;
+      const py = toGrid(y + (sy + 0.5) / SS);
       const xs = pinSpans(py);
       for (let x = 0; x < size; x++) {
         for (let sx = 0; sx < SS; sx++) {
-          const px = (x * SS + sx + 0.5) * s;
+          const px = toGrid(x + (sx + 0.5) / SS);
           let inPin = false;
           for (let i = 0; i < xs.length; i += 2) if (px >= xs[i] && px < xs[i + 1]) inPin = true;
           if (!inPin) continue;
           const d = Math.min(distToSeg(px, py, ...CHECK[0], ...CHECK[1]), distToSeg(px, py, ...CHECK[1], ...CHECK[2]));
-          if (d > CHECK_HALF) cover[x]++;
+          if (d > CHECK_HALF) out[y * size + x] += 1 / (SS * SS);
         }
       }
     }
+  }
+  return out;
+}
+
+// colorType 2 = RGB, 6 = RGBA; pixel(a) geeft de kanalen bij bedekking a.
+function encode(size, colorType, cover, pixel) {
+  const channels = colorType === 6 ? 4 : 3;
+  const raw = Buffer.alloc(size * (size * channels + 1));
+  let o = 0;
+  for (let y = 0; y < size; y++) {
     raw[o++] = 0;
-    for (let x = 0; x < size; x++) {
-      const a = cover[x] / (SS * SS);
-      for (let c = 0; c < 3; c++) raw[o++] = Math.round(BG[c] + (PIN[c] - BG[c]) * a);
-    }
+    for (let x = 0; x < size; x++) for (const v of pixel(cover[y * size + x])) raw[o++] = v;
   }
   const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4); ihdr[8] = 8; ihdr[9] = 2;
+  ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4); ihdr[8] = 8; ihdr[9] = colorType;
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0)),
   ]);
 }
 
+// App-icoon: de speld over het hele vlak, op leisteenblauw.
+const png = (size) =>
+  encode(size, 2, coverage(size, (p) => (p * 512) / size), (a) => BG.map((b, c) => Math.round(b + (PIN[c] - b) * a)));
+
+// Meldingsicoon (24 dp): wit op transparant, met de schaal en verschuiving van drawable/ic_notify.xml.
+const notifyPng = (size) =>
+  encode(size, 6, coverage(size, (p) => ((p * 24) / size + 4.41) / 0.0641), (a) => [255, 255, 255, Math.round(255 * a)]);
+
 for (const [name, size] of [['icon-192.png', 192], ['icon-512.png', 512], ['apple-touch-icon.png', 180]]) {
   fs.writeFileSync(new URL(`../public/${name}`, import.meta.url), png(size));
+}
+for (const [density, size] of [['mdpi', 24], ['hdpi', 36], ['xhdpi', 48], ['xxhdpi', 72], ['xxxhdpi', 96]]) {
+  const dir = new URL(`../android/app/src/main/res/drawable-${density}/`, import.meta.url);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(new URL('ic_notify_bitmap.png', dir), notifyPng(size));
 }
