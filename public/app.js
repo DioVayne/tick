@@ -290,7 +290,9 @@ $('#newlist-input').addEventListener('keydown', (e) => {
 // De service worker cachet de app voor offline gebruik en ontvangt pushmeldingen.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => null);
 // Een tik op een melding terwijl Tick al open is: de service worker vraagt ons de taak te tonen.
+// Na Klaar, Morgen of Snooze in een melding: de taak is op de server gewijzigd, dus opnieuw laden.
 navigator.serviceWorker?.addEventListener('message', (e) => {
+  if (e.data?.type === 'refresh') return load();
   if (e.data?.type !== 'open-task' || !e.data.id) return;
   if (e.data.geo) offerAppSync();
   if (isSettingsOpen()) hideSettings();

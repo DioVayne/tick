@@ -75,8 +75,12 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   const { taskId, url, occurrence, shareId } = event.notification.data || {};
   event.notification.close();
+  // Na de actie een open Tick laten verversen: het meldingenpaneel maakt de app niet onzichtbaar, dus zonder
+  // dit bericht ziet hij de wijziging pas bij de volgende keer laden.
   const call = (path, method, body) =>
-    fetch(path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    fetch(path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      .finally(() => self.clients.matchAll({ type: 'window' })
+        .then((wins) => wins.forEach((w) => w.postMessage({ type: 'refresh' }))));
   // Uitnodiging om een taak te delen: Accepteren of Weigeren zonder de app te openen.
   if (shareId && (event.action === 'accept' || event.action === 'decline')) {
     event.waitUntil(call(`/api/shares/${shareId}/${event.action}`, 'POST', {}));
