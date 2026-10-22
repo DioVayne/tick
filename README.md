@@ -76,25 +76,16 @@ Claude asks a few questions (language, time zone, Android app or not), sets ever
 *The screenshots use made-up demo tasks.*
 
 ## All features
-- **Location reminders**: get a notification when you arrive at or leave a place, set on a map (with the Android app).
-- Tasks with lists, one level of subtasks, drag to sort, search, and pinning to keep a task at the top of its list.
-- Several accounts on one Tick; share a task with someone as one shared task (done is done for everyone) or as a separate copy. They accept or decline the invitation, and reminders on a shared task go to everyone on it. Copies stay linked: you see how far the others are and get a notification when one of them is done.
-- A trash: deleted tasks stay there for 30 days; restore them, delete them for good, or empty the trash.
-- Reminders with web push; a reminder can repeat (daily, weekly, monthly, yearly, with custom rules), forever or until an end date. A new reminder starts at the next whole hour.
-- A daily notification for overdue tasks (09:00 by default, or switch it off), with *Done* and *Tomorrow* buttons.
-- A calendar: month grid and agenda of your tasks with a date, including the coming dates of repeating tasks.
-- Notes in markdown, with clickable checklists.
-- Optional attachments: photos and files on a task, stored in Cloudflare R2. Photos are scaled down and lose their EXIF data (such as the location) before upload.
-- Works offline as an installable web app (PWA); changes sync when you are back online.
-- Desktop layout with a sidebar and detail panel, where you edit a task's title right in the list; a full-screen task view on mobile.
-- Confetti when you tick off a task (not when your device asks for reduced motion).
-- Colour themes (default or *Retro 70s*, each in light and dark) and an optional background photo of your own.
-- Optional Android app: location reminders, a home-screen widget and quick add. Download it from [GitHub Releases](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk); it checks for updates once a day and notifies you. Notifications show up as Tick instead of Chrome, and you link the app with one tap on *Link* in the web app.
-- **Home-screen widget** (Android): your open tasks on the home screen, tick off with 3 seconds to undo, tap to open a task in the app, quick add with a reminder, resizable, with its own text size and line spacing.
-- **Claude (MCP):** an MCP server at `/mcp`, so Claude Code or Claude Desktop can list, add, change, check off, snooze and delete your tasks with a key of its own (see step 12 of [SETUP.md](SETUP.md)).
-- An inbox API for automations (`POST /api/inbox` with its own token).
-- **Home Assistant:** sensors for open, today's and overdue tasks, and actions to complete, postpone and add tasks, as one package file (see [home-assistant/](home-assistant/README.md)).
-- A settings page in the app: display (theme, text size, spacing), language per device, time zone, password, keys for your phone and automations, a view of your devices, and backup, restore and TickTick import. After the install you rarely need the config again.
+Each topic has its own page in the [user guide](docs/README.md).
+
+- **[Places](docs/places.md):** a notification when you arrive at or leave a place, set on a map, with favorite places (with the Android app).
+- **[Tasks and lists](docs/tasks-and-lists.md):** lists, one level of subtasks, drag to sort, swipe on a phone, search, pinning, notes in markdown with clickable checklists, optional photos and files (stored in Cloudflare R2, photos lose their EXIF data), and a trash that keeps deleted tasks for 30 days. Works offline as an installable web app; changes sync when you are back online.
+- **[Reminders](docs/reminders.md):** web push at a time, repeating (daily, weekly, monthly, yearly, custom rules, until an end date if you like), a daily notification for overdue tasks with *Done* and *Tomorrow*, a calendar with a month grid and agenda, and a counter on the app icon.
+- **[Sharing](docs/sharing.md):** several accounts on one Tick; share a task as one shared task (done is done for everyone) or as linked copies where you see how far the others are.
+- **[Android app](docs/android.md):** place reminders, a resizable home-screen widget (tick off with 3 seconds to undo, quick add, a list or *Today* per widget), notifications as Tick instead of Chrome, and an update check. [Download it](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk).
+- **[Settings](docs/settings.md):** theme, colour theme (such as *Retro 70s*) and your own background photo, text size, language per device, time zone, password, keys, your devices, backup and restore, and TickTick import. After the install you rarely need the config again.
+- **[Integrations](docs/integrations.md):** an MCP server so Claude can manage your tasks, an inbox API for automations, a Home Assistant package, and a fallback webhook.
+- Desktop layout with a sidebar and a detail panel; a full-screen task view on mobile. Confetti when you tick off a task (not when your device asks for reduced motion).
 - English and Dutch; your own time zone.
 
 ## Requirements
