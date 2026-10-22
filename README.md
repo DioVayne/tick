@@ -93,6 +93,7 @@ Claude asks a few questions (language, time zone, Android app or not), sets ever
 - **Home-screen widget** (Android): your open tasks on the home screen, tick off with 3 seconds to undo, tap to open a task in the app, quick add with a reminder, resizable, with its own text size and line spacing.
 - **Claude (MCP):** an MCP server at `/mcp`, so Claude Code or Claude Desktop can list, add, change, check off, snooze and delete your tasks with a key of its own (see step 12 of [SETUP.md](SETUP.md)).
 - An inbox API for automations (`POST /api/inbox` with its own token).
+- **Home Assistant:** sensors for open, today's and overdue tasks, and actions to complete, postpone and add tasks, as one package file (see [home-assistant/](home-assistant/README.md)).
 - A settings page in the app: display (theme, text size, spacing), language per device, time zone, password, keys for your phone and automations, a view of your devices, and backup, restore and TickTick import. After the install you rarely need the config again.
 - English and Dutch; your own time zone.
 

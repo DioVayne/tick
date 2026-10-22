@@ -1,0 +1,20 @@
+# A Markdown card for a dashboard: what is overdue and what is due today.
+# Dashboard → Edit → Add card → Manual, and paste this.
+type: markdown
+title: Tick
+content: |
+  {%- set overdue = state_attr('sensor.tick_overdue', 'tasks') or [] %}
+  {%- set today = state_attr('sensor.tick_today', 'tasks') or [] %}
+  {%- if overdue %}
+  **Overdue**
+  {%- for t in overdue %}
+  - {{ t.title }} · {{ as_timestamp(t.due) | timestamp_custom('%d-%m') }}
+  {%- endfor %}
+
+  {% endif -%}
+  **Today**
+  {%- for t in today %}
+  - {{ t.title }} · {{ as_timestamp(t.due) | timestamp_custom('%H:%M') }}
+  {%- else %}
+  Nothing left for today.
+  {%- endfor %}
