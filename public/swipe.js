@@ -48,7 +48,8 @@ async function confirmShared(task) {
   return answer === 'delete';
 }
 
-async function swipeDelete(task) {
+/** Verwijderen met "Ongedaan maken"; ook voor slepen naar de prullenbak op desktop. False als het niet doorging. */
+export async function deleteWithUndo(task) {
   if (!(await confirmShared(task))) return false;
   if (state.selected === task.id) state.selected = null;
   deleting.set(task.id, setTimeout(() => finish(task.id), UNDO_MS));
@@ -138,7 +139,7 @@ export function enableSwipe(li, task) {
     if (go && dx < 0) {
       li.classList.add('swipe-go');
       li.style.translate = -width + 'px 0';
-      if (!(await swipeDelete(task))) reset();
+      if (!(await deleteWithUndo(task))) reset();
       return;
     }
     const move = go && dx > 0;

@@ -11,7 +11,7 @@ import { renderSidebar } from './sidebar.js';
 import { UNDO_MS, listNames, lists, state, toggleDone, update } from './store.js';
 import { renderTrash, shareLabel, shareNames } from './trash.js';
 import { renderInvites } from './share.js';
-import { enableSwipe, swipedAway } from './swipe.js';
+import { deleteWithUndo, enableSwipe, swipedAway } from './swipe.js';
 
 export const $ = (s) => document.querySelector(s);
 
@@ -306,9 +306,12 @@ function renderList(root) {
 const wide = matchMedia('(min-width: 1024px)');
 let dragging = null; // { id, hit, off } tijdens een sleep van een hoofdtaak op desktop
 
-/** De lijst in de zijbalk onder de cursor, of null: Alle, Afgerond en de huidige lijst van de taak nemen niets aan. */
+/** De lijst of de prullenbak in de zijbalk onder de cursor, of null: Alle, Afgerond en de huidige lijst van de taak nemen niets aan. */
 function dropTarget(e, id) {
-  const b = document.elementFromPoint(e.clientX, e.clientY)?.closest('#side-lists button.item[data-list]');
+  const over = document.elementFromPoint(e.clientX, e.clientY);
+  const bin = over?.closest('#btn-trash');
+  if (bin) return bin;
+  const b = over?.closest('#side-lists button.item[data-list]');
   const name = b?.dataset.list;
   if (!b || !name || name === state.open.find((t) => t.id === id)?.list) return null;
   return b;
@@ -330,14 +333,14 @@ function startListDrop(id) {
   dragging = { id, hit: null, off: () => events.forEach((t) => document.removeEventListener(t, move)) };
 }
 
-/** Ruimt de markering op en geeft de naam van de lijst waarop is neergezet (of null). */
+/** Ruimt de markering op en geeft de knop waarop is neergezet (een lijst of de prullenbak), of null. */
 function stopListDrop() {
   if (!dragging) return null;
   const { hit, off } = dragging;
   off();
   hit?.classList.remove('drop');
   dragging = null;
-  return hit?.dataset.list ?? null;
+  return hit;
 }
 
 const findOpen = (id) => state.open.find((t) => t.id === id);
@@ -352,11 +355,13 @@ function enableSorting(root) {
       onEnd: (evt) => {
         const target = stopListDrop();
         if (target) {
-          // Neergezet op een lijst: de taak gaat erheen en blijft in Sortable op zijn plek (geen positiewijziging).
+          // Neergezet op een lijst of de prullenbak: de taak blijft in Sortable op zijn plek (geen positiewijziging).
           // Tellen zonder de taak zelf: stond hij al hoger, dan schuift children[oldIndex] anders één plek op.
           const rest = [...ul.children].filter((c) => c !== evt.item);
           ul.insertBefore(evt.item, rest[evt.oldIndex] ?? null);
-          update(evt.item.dataset.id, { list: target });
+          const task = findOpen(evt.item.dataset.id);
+          if (target.id === 'btn-trash') { if (task) deleteWithUndo(task); } // net als vegen: bevestigen bij delen, Ongedaan maken
+          else update(evt.item.dataset.id, { list: target.dataset.list });
           return;
         }
         if (evt.oldIndex === evt.newIndex) return; // op dezelfde plek losgelaten: niets te bewaren
