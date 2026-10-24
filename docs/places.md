@@ -18,10 +18,20 @@ Not the right moment? **Swipe the notification away** and it comes back the next
 ## Favorite places
 **Save as favorite** on the map keeps a place with its name and radius, so next time it is one tap. Manage your favorites under **⚙ Settings → Places**. A favorite is a template: editing or deleting it does not change tasks that already use it.
 
+## On the road
+Android notices that you reached a place only a few minutes later. On foot that hardly matters; by car or bike you are past your circle by then. Under **⚙ Tick on this phone** (in the Android app) you can turn on **On time on the road**:
+
+- While you drive or cycle, Tick makes arrival circles bigger, so the notification comes around the edge of the circle you set. It then says "Almost at …".
+- How much bigger, Tick learns from your earlier notifications, separately for car and bike. The screen shows the margin it uses now.
+- A circle never grows so big that you are already inside it when you set off, so a shop around the corner works too.
+- When you get out or off, the circles go back to normal.
+- Tick asks for the permission **Physical activity**, only to know *whether* you drive or cycle. Nothing about where you are or how you travel is stored or sent.
+- Android itself takes up to a minute or so to notice you started driving or cycling, so a place a few hundred metres from where you set off may still come late.
+
 ## Why the radius has limits
 - Below 200 m the location drifts too much indoors and you get false alarms.
 - A car crosses a small circle in seconds, so arrival uses 500 m by default.
-- Android reports places with a delay of a few minutes.
+- Android reports places with a delay of a few minutes (see [On the road](#on-the-road)).
 
 ## Good to know
 - If you are already at the place when you set it, the arrival notification only comes the next time you arrive.

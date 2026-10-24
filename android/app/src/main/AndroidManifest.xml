@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- "Op tijd melden onderweg": weten óf je rijdt of fietst, om dan de aankomstcirkels groter te maken -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <!-- De systeemvraag om Tick vrij te stellen van batterijoptimalisatie (widget en geofences op de achtergrond) -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Geofences verdwijnen bij een herstart; BootReceiver zet ze opnieuw -->
@@ -181,6 +183,10 @@
 
         <receiver
             android:name=".GeofenceReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".ActivityReceiver"
             android:exported="false" />
 
         <receiver

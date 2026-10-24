@@ -92,7 +92,7 @@ Zolang de stand auto of fiets is, gebruikt elke `Geo.apply` (ook vanuit `SyncJob
 
 Bij EXIT (uitgestapt, afgestapt): onderwegstralen wissen, `Geo.apply` zet alles terug naar normaal.
 
-Het opnieuw registreren gebeurt alleen bij ENTER en EXIT, niet tussendoor. `Geo.java` waarschuwt dat opnieuw registreren een nog niet afgeleverde aankomst kan wissen. Dat risico is er bij deze twee momenten ook. Het wordt geaccepteerd, want ze komen maar een paar keer per dag voor.
+Het opnieuw registreren gebeurt alleen bij ENTER en EXIT, niet tussendoor. `Geo.java` waarschuwt dat opnieuw registreren een nog niet afgeleverde aankomst kan wissen. **Zo gebouwd (keuze tijdens het bouwen):** `Geo.apply` registreert alleen het verschil (`GeoPlan.diff`), dus ongewijzigde geofences, zoals vertrekcirkels, houden hun nog niet afgeleverde gebeurtenis. Een aankomstcirkel die bij EXIT terug naar normaal gaat, wordt gezet mét initiële trigger: sta je er dan binnen, dan ben je net aangekomen en komt de melding alsnog. Een plek die tijdens het ritje bijkomt, krijgt de gewone straal, want de locatie van het begin wordt niet bewaard.
 
 ### Melding
 Gaat een vergrote cirkel af, dan zegt de melding "Bijna bij Albert Heijn" in plaats van "Je bent bij Albert Heijn". De request-id of de opgeslagen onderwegstralen vertellen `GeofenceReceiver` dat het een vergrote cirkel was. Verder is het dezelfde melding, met dezelfde controles (`NotifyDecision`) en boekhouding.
@@ -151,6 +151,12 @@ Geldt voor alle locatiemeldingen, aankomst en vertrek, ook als "Op tijd melden o
 
 ## Eerste stap van het plan
 Voordat deel 2 gebouwd wordt: op Dio's telefoon controleren dat de app een overgang (`IN_VEHICLE`, `ON_BICYCLE`) op de achtergrond ontvangt en daarbij een huidige locatie krijgt. Sommige merken (Samsung, Xiaomi) beperken dat met hun batterijbeheer. Dio's telefoon is een Google Pixel 7a met Android 17 (API 37), Tick 1.6.2, met "Altijd toestaan" voor locatie en vrijgesteld van batterijoptimalisatie (uitgelezen op 2026-10-24). Een Pixel heeft geen extra batterijbeheer van de fabrikant, dus het risico is klein, maar alleen een echte rit of fietstocht bewijst het. Deel 1 en 3 hangen daar niet van af en kunnen eerst.
+
+**Uitkomst fietstest (2026-10-24, wegwerp-app "Tick rittest" in `C:\dev\tick-proef`):**
+- Overgangen komen op de achtergrond binnen, direct nadat Android besloot ("0 s geleden"). Lopen → stil → fiets volgde netjes; "fiets begint" kwam ongeveer 20 s na de laatste "stil begint", dus kort na het opstappen.
+- Bij elke overgang kwam binnen 0–9 s een locatie, met een nauwkeurigheid van 7–31 m. Ruim genoeg voor de afstand tot een plek. De snelheid was 0 of ontbrak, dus die is op dat moment niet bruikbaar (het ontwerp gebruikt hem daar ook niet).
+- **Opnieuw abonneren levert meteen de huidige stand opnieuw af**, met een oud tijdstip ("fiets begint (126 s geleden)" na het openen van de app). Tick moet een ENTER van dezelfde soort als de huidige stand dus zonder bijwerkingen verwerken (gewoon opnieuw de stralen berekenen mag), en de leeftijd van de gebeurtenis meenemen bij "stand ouder dan 3 uur".
+- Autotest: nog te doen.
 
 ## Wat aan de bouwer is
 - Klassenamen, de vorm van de opslag in `Prefs`, en hoe de request-id een vergrote cirkel aangeeft.

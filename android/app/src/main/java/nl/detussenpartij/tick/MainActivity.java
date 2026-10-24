@@ -34,10 +34,13 @@ import java.util.List;
 public class MainActivity extends Activity {
     private static final int REQ_FOREGROUND = 1;
     private static final int REQ_BACKGROUND = 2;
+    private static final int REQ_ACTIVITY = 3;
 
     private TextView result;
     private TextView locStatus;
     private TextView locStats;
+    private Button road;
+    private TextView roadStatus;
     private TextView pairStatus;
     private TextView addressStatus;
     private TextView batteryStatus;
@@ -60,6 +63,8 @@ public class MainActivity extends Activity {
             Prefs.setGeoSig(c, null);
             Geo.applyFromCache(c, true);
         }
+        // Ook na "Gedwongen stoppen" is het abonnement op rijden en fietsen weg; opnieuw abonneren mag altijd.
+        Road.subscribe(c);
     }
 
     /**
@@ -146,6 +151,20 @@ public class MainActivity extends Activity {
         locStats = new TextView(this);
         locStats.setPadding(0, 0, 0, (int) (12 * d));
         root.addView(locStats);
+
+        // "Op tijd melden onderweg": knop, vaste uitleg en status.
+        road = new Button(this);
+        road.setOnClickListener(v -> toggleRoad());
+        root.addView(road);
+
+        TextView roadHelp = new TextView(this);
+        roadHelp.setText(R.string.road_help);
+        roadHelp.setPadding(0, (int) (4 * d), 0, (int) (4 * d));
+        root.addView(roadHelp);
+
+        roadStatus = new TextView(this);
+        roadStatus.setPadding(0, 0, 0, (int) (12 * d));
+        root.addView(roadStatus);
 
         battery = new Button(this);
         battery.setText(R.string.battery_button);
@@ -280,14 +299,72 @@ public class MainActivity extends Activity {
         locStatus.setText(missing.isEmpty() ? getString(R.string.loc_status_on)
                 : getString(R.string.loc_status_missing, String.join(", ", missing)));
         updateLocStats();
+        updateRoadStatus();
     }
 
     private void updateLocStats() {
-        ArrivalStats.Summary s = ArrivalStats.summary(Prefs.arrivals(this), null);
+        String arrivals = Prefs.arrivals(this);
+        ArrivalStats.Summary s = ArrivalStats.summary(arrivals, null);
         locStats.setVisibility(s.count == 0 ? View.GONE : View.VISIBLE);
         if (s.count == 0) return;
-        int meters = (int) Math.round(Math.abs(s.avgLate));
-        locStats.setText(getString(s.avgLate >= 0 ? R.string.loc_stats_inside : R.string.loc_stats_before, s.count, meters));
+        StringBuilder text = new StringBuilder(getString(s.avgLate >= 0 ? R.string.loc_stats_inside : R.string.loc_stats_before,
+                s.count, (int) Math.round(Math.abs(s.avgLate))));
+        // Per soort onderweg, zodra die metingen er zijn.
+        String[][] modes = {{"car", getString(R.string.road_car)}, {"bike", getString(R.string.road_bike)}};
+        for (String[] m : modes) {
+            ArrivalStats.Summary ms = ArrivalStats.summary(arrivals, m[0]);
+            if (ms.count == 0) continue;
+            text.append('\n').append(getString(ms.avgLate >= 0 ? R.string.loc_stats_mode_inside : R.string.loc_stats_mode_before,
+                    m[1], (int) Math.round(Math.abs(ms.avgLate))));
+        }
+        locStats.setText(text);
+    }
+
+    /** Knoptekst en status van "Op tijd melden onderweg", met de marges die Tick nu gebruikt (op 50 m). */
+    private void updateRoadStatus() {
+        boolean on = Prefs.roadOn(this);
+        road.setText(on ? R.string.road_button_off : R.string.road_button_on);
+        if (!on) roadStatus.setText(R.string.road_status_off);
+        else if (!Geo.permitted(this)) roadStatus.setText(R.string.road_status_location);
+        else if (!Road.permitted(this)) roadStatus.setText(R.string.road_status_permission);
+        else {
+            String arrivals = Prefs.arrivals(this);
+            roadStatus.setText(getString(R.string.road_status_on, round50(RoadPlan.margin(arrivals, "car")),
+                    round50(RoadPlan.margin(arrivals, "bike"))));
+        }
+    }
+
+    private static int round50(double m) {
+        return (int) (Math.round(m / 50) * 50);
+    }
+
+    /** Aanzetten: eerst de uitleg, dan de systeemvraag. Uitzetten: abonnement weg en cirkels normaal. */
+    private void toggleRoad() {
+        if (Prefs.roadOn(this)) {
+            Prefs.setRoadOn(this, false);
+            Road.unsubscribe(this);
+            updateRoadStatus();
+            return;
+        }
+        if (!Geo.permitted(this)) {
+            Toast.makeText(this, R.string.road_status_location, Toast.LENGTH_LONG).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.road_dialog_title)
+                .setMessage(R.string.road_dialog_text)
+                .setPositiveButton(R.string.road_dialog_ok, (dlg, w) -> {
+                    if (Road.permitted(this)) roadGranted();
+                    else requestPermissions(new String[] {Manifest.permission.ACTIVITY_RECOGNITION}, REQ_ACTIVITY);
+                })
+                .setNegativeButton(R.string.road_dialog_cancel, null)
+                .show();
+    }
+
+    private void roadGranted() {
+        Prefs.setRoadOn(this, true);
+        Road.subscribe(this);
+        updateRoadStatus();
     }
 
     /** Vraagt de toestemmingen achter elkaar: eerst meldingen en locatie, daarna apart "Altijd toestaan". */
@@ -332,6 +409,13 @@ public class MainActivity extends Activity {
             } else if (!canAskAgain()) {
                 // Eerder geweigerd: Android vraagt het niet nog eens, dus naar de instellingen van de app.
                 openAppSettings();
+            }
+        } else if (code == REQ_ACTIVITY) {
+            if (Road.permitted(this)) {
+                roadGranted();
+            } else if (!shouldShowRequestPermissionRationale(Manifest.permission.ACTIVITY_RECOGNITION)) {
+                // Eerder geweigerd: Android vraagt het niet nog eens.
+                openAppSettings(R.string.road_settings_hint);
             }
         } else if (code == REQ_BACKGROUND) {
             if (granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {

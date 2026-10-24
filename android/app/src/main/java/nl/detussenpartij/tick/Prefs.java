@@ -3,9 +3,13 @@ package nl.detussenpartij.tick;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 final class Prefs {
     private static SharedPreferences sp(Context c) {
@@ -63,7 +67,8 @@ final class Prefs {
     /** Wist de gegevens van de vorige gebruiker: cache, wachtrijen, getoonde locatiemeldingen en geofence-handtekening. */
     static synchronized void wipeAccountData(Context c) {
         sp(c).edit().putString("cache", "[]").remove("pending").remove("pendingRemind")
-                .remove("locFired").remove("locSynced").remove("locRearm").remove("geoSig").commit();
+                .remove("locFired").remove("locSynced").remove("locRearm").remove("geoSig").remove("geoIds")
+                .remove("roadMode").remove("roadModeAt").remove("roadRadii").commit();
     }
 
     static String cache(Context c) {
@@ -257,13 +262,73 @@ final class Prefs {
         sp(c).edit().putString("locRearm", r.toString()).commit();
     }
 
+    /** "Op tijd melden onderweg" staat aan (de knop in "Tick op deze telefoon"). */
+    static boolean roadOn(Context c) {
+        return sp(c).getBoolean("roadOn", false);
+    }
+
+    static void setRoadOn(Context c, boolean on) {
+        sp(c).edit().putBoolean("roadOn", on).apply();
+    }
+
+    /** Huidige stand onderweg: "car", "bike" of "" (RoadPlan.isActive bepaalt of hij nog geldt). */
+    static synchronized String roadMode(Context c) {
+        return sp(c).getString("roadMode", "");
+    }
+
+    /** Moment (ms) waarop de stand begon, volgens Android. */
+    static synchronized long roadModeAt(Context c) {
+        return sp(c).getLong("roadModeAt", 0);
+    }
+
+    /** Onderwegstralen bij het begin van de stand: taak-id -> straal (m), als JSON-object. */
+    static synchronized String roadRadii(Context c) {
+        return sp(c).getString("roadRadii", "{}");
+    }
+
+    static synchronized void setRoad(Context c, String mode, long at, String radiiJson) {
+        sp(c).edit().putString("roadMode", mode).putLong("roadModeAt", at).putString("roadRadii", radiiJson).commit();
+    }
+
+    static synchronized void clearRoad(Context c) {
+        sp(c).edit().remove("roadMode").remove("roadModeAt").remove("roadRadii").commit();
+    }
+
     /** GeoPlan.signature van de geofences die nu geregistreerd zijn, of leeg als er niets (bekend) staat. */
     static String geoSig(Context c) {
         return sp(c).getString("geoSig", "");
     }
 
-    static void setGeoSig(Context c, String sig) {
-        sp(c).edit().putString("geoSig", sig == null ? "" : sig).apply();
+    /** Een lege signature betekent: onbekend wat er staat; dan ook de request-ids vergeten (volgende keer alles). */
+    static synchronized void setGeoSig(Context c, String sig) {
+        SharedPreferences.Editor e = sp(c).edit().putString("geoSig", sig == null ? "" : sig);
+        if (sig == null || sig.isEmpty()) e.remove("geoIds");
+        e.apply();
+    }
+
+    /** Request-ids van de geofences die nu geregistreerd zijn, of null als dat niet bekend is. */
+    static synchronized Set<String> geoIds(Context c) {
+        String json = sp(c).getString("geoIds", null);
+        if (json == null) return null;
+        try {
+            JSONArray arr = new JSONArray(json);
+            Set<String> out = new HashSet<>();
+            for (int i = 0; i < arr.length(); i++) out.add(arr.getString(i));
+            return out;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    static synchronized void setGeo(Context c, String sig, List<String> ids) {
+        sp(c).edit().putString("geoSig", sig).putString("geoIds", new JSONArray(ids).toString()).apply();
+    }
+
+    static synchronized void removeGeoIds(Context c, List<String> ids) {
+        Set<String> now = geoIds(c);
+        if (now == null) return;
+        now.removeAll(ids);
+        sp(c).edit().putString("geoIds", new JSONArray(now).toString()).apply();
     }
 
     /** De laatst aan Tick gemelde apparaatstatus (JSON) en het tijdstip (ms) van die melding. */

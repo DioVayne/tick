@@ -13,7 +13,10 @@ public class BootReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         if (!Intent.ACTION_BOOT_COMPLETED.equals(action) && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) return;
         final Context app = context.getApplicationContext();
+        // Een stand onderweg van voor de herstart geldt niet meer; het nieuwe abonnement levert de huidige stand.
+        Prefs.clearRoad(app);
         Geo.applyFromCache(app, true);
+        Road.subscribe(app);
         // Zonder netwerk nu: de periodieke job ververst zodra er wel netwerk is.
         SyncJob.schedulePeriodic(app);
 

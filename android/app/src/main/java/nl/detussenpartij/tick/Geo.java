@@ -11,6 +11,8 @@ import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 
 import org.json.JSONArray;
 
@@ -56,42 +58,60 @@ final class Geo {
             Prefs.setGeoSig(app, null);
             return;
         }
-        final List<GeoPlan.Fence> fences = GeoPlan.select(tasks, Prefs.locFired(app), GeoPlan.MAX);
+        // Onderweg (auto of fiets) zijn aankomstcirkels groter; zie Road.
+        final List<GeoPlan.Fence> fences = GeoPlan.select(tasks, Prefs.locFired(app), GeoPlan.MAX, Road.radii(app), Road.activeMode(app));
         final String sig = GeoPlan.signature(fences);
         if (!force && sig.equals(Prefs.geoSig(app))) return;
+        final List<String> ids = new ArrayList<>();
+        for (GeoPlan.Fence f : fences) ids.add(GeoPlan.requestId(f));
 
-        client.removeGeofences(pi).addOnCompleteListener(removed -> {
-            if (fences.isEmpty()) {
-                Log.i("Tick", "Geofences: 0");
-                Prefs.setGeoSig(app, sig);
-                return;
-            }
-            List<Geofence> list = new ArrayList<>();
-            for (GeoPlan.Fence f : fences) {
-                list.add(new Geofence.Builder()
-                        .setRequestId(GeoPlan.requestId(f))
-                        .setCircularRegion(f.lat, f.lng, f.radius)
-                        .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                        .setTransitionTypes(f.exit ? Geofence.GEOFENCE_TRANSITION_EXIT : Geofence.GEOFENCE_TRANSITION_ENTER)
-                        .build());
-            }
-            // Geen initiële trigger: sta je al op de plek, dan meldt hij pas bij de volgende aankomst.
-            GeofencingRequest req = new GeofencingRequest.Builder().setInitialTrigger(0).addGeofences(list).build();
-            try {
-                client.addGeofences(req, pi)
-                        .addOnSuccessListener(v -> {
-                            Log.i("Tick", "Geofences: " + list.size());
-                            Prefs.setGeoSig(app, sig);
-                        })
-                        .addOnFailureListener(e -> {
-                            Log.w("Tick", "Geofences zetten mislukt", e);
-                            Prefs.setGeoSig(app, null);
-                        });
-            } catch (SecurityException e) {
-                Log.w("Tick", "Geen locatietoestemming voor geofences", e);
-                Prefs.setGeoSig(app, null);
-            }
-        });
+        // Is bekend wat er staat, dan alleen het verschil: ongewijzigde geofences blijven staan, zodat een nog niet
+        // afgeleverde aankomst of vertrek niet verloren gaat (bijvoorbeeld bij het begin of einde van een rit).
+        final Set<String> registered = Prefs.geoIds(app);
+        if (!force && !Prefs.geoSig(app).isEmpty() && registered != null) {
+            final GeoPlan.Diff d = GeoPlan.diff(registered, fences);
+            Task<Void> removed = d.remove.isEmpty() ? Tasks.forResult(null) : client.removeGeofences(d.remove);
+            removed.addOnCompleteListener(r -> add(app, client, pi, d.add, d.addArrived, sig, ids));
+            return;
+        }
+        client.removeGeofences(pi).addOnCompleteListener(r -> add(app, client, pi, fences, new ArrayList<>(), sig, ids));
+    }
+
+    /**
+     * Zet de geofences in fresh zonder initiële trigger (sta je al op de plek, dan meldt hij pas bij de volgende
+     * aankomst) en die in arrived met (GeoPlan.Diff.addArrived). Bewaart daarna signature en request-ids.
+     */
+    private static void add(Context app, GeofencingClient client, PendingIntent pi, List<GeoPlan.Fence> fresh,
+                            List<GeoPlan.Fence> arrived, String sig, List<String> ids) {
+        try {
+            Task<Void> first = fresh.isEmpty() ? Tasks.forResult(null) : client.addGeofences(request(fresh, 0), pi);
+            first.onSuccessTask(v -> arrived.isEmpty() ? Tasks.forResult(null)
+                            : client.addGeofences(request(arrived, GeofencingRequest.INITIAL_TRIGGER_ENTER), pi))
+                    .addOnSuccessListener(v -> {
+                        Log.i("Tick", "Geofences: " + ids.size() + " (nieuw " + (fresh.size() + arrived.size()) + ")");
+                        Prefs.setGeo(app, sig, ids);
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.w("Tick", "Geofences zetten mislukt", e);
+                        Prefs.setGeoSig(app, null);
+                    });
+        } catch (SecurityException e) {
+            Log.w("Tick", "Geen locatietoestemming voor geofences", e);
+            Prefs.setGeoSig(app, null);
+        }
+    }
+
+    private static GeofencingRequest request(List<GeoPlan.Fence> fences, int initialTrigger) {
+        List<Geofence> list = new ArrayList<>();
+        for (GeoPlan.Fence f : fences) {
+            list.add(new Geofence.Builder()
+                    .setRequestId(GeoPlan.requestId(f))
+                    .setCircularRegion(f.lat, f.lng, f.radius)
+                    .setExpirationDuration(Geofence.NEVER_EXPIRE)
+                    .setTransitionTypes(f.exit ? Geofence.GEOFENCE_TRANSITION_EXIT : Geofence.GEOFENCE_TRANSITION_ENTER)
+                    .build());
+        }
+        return new GeofencingRequest.Builder().setInitialTrigger(initialTrigger).addGeofences(list).build();
     }
 
     /**
@@ -107,6 +127,7 @@ final class Geo {
                 .addOnSuccessListener(v -> {
                     Log.i("Tick", "Geofences weggehaald: " + requestIds.size());
                     Prefs.setGeoSig(app, GeoPlan.signatureWithout(Prefs.geoSig(app), taskIds));
+                    Prefs.removeGeoIds(app, requestIds);
                 })
                 // Blijft de signature staan, dan registreert de volgende refresh alles opnieuw; locFired
                 // voorkomt intussen een tweede melding.
