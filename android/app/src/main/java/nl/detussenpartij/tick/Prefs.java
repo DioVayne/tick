@@ -216,6 +216,18 @@ final class Prefs {
         setLocSynced(c, s);
     }
 
+    /**
+     * Metingen van locatiemeldingen (ArrivalStats, JSON-array): alleen afstanden en tijden, geen coördinaten. Hoort bij
+     * het toestel, niet bij een account: wipeAccountData laat ze staan.
+     */
+    static synchronized String arrivals(Context c) {
+        return sp(c).getString("arrivals", "[]");
+    }
+
+    static synchronized void addArrival(Context c, JSONObject m) {
+        sp(c).edit().putString("arrivals", ArrivalStats.add(arrivals(c), m)).apply();
+    }
+
     /** GeoPlan.signature van de geofences die nu geregistreerd zijn, of leeg als er niets (bekend) staat. */
     static String geoSig(Context c) {
         return sp(c).getString("geoSig", "");

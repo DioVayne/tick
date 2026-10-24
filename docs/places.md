@@ -28,3 +28,4 @@ The place is named after the favorite or search result, or "Pinned place". You g
 - Android allows at most 100 places at once.
 - The map needs a connection. Maps come from OpenStreetMap.
 - Your phone watches the places itself and only tells Tick that a notification went off; Tick keeps no record of where you have been.
+- The Android app shows under **Tick on this phone** how far inside the circle recent arrival notifications came. It keeps only those distances, on the phone, never where you were.

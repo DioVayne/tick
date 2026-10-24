@@ -22,6 +22,8 @@
     <string name="loc_button">Locatiemeldingen aanzetten</string>
     <string name="loc_status_on">Locatiemeldingen: aan</string>
     <string name="loc_status_missing">Locatiemeldingen: nog nodig: %s</string>
+    <string name="loc_stats_inside">Aankomstmeldingen kwamen gemiddeld %2$d m binnen de cirkel (laatste %1$d).</string>
+    <string name="loc_stats_before">Aankomstmeldingen kwamen gemiddeld %2$d m vóór de cirkel (laatste %1$d).</string>
     <string name="loc_missing_notifications">meldingen</string>
     <string name="loc_missing_location">locatie</string>
     <string name="loc_missing_background">locatie altijd toestaan</string>

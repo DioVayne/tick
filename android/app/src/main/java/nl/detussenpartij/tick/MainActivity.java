@@ -37,6 +37,7 @@ public class MainActivity extends Activity {
 
     private TextView result;
     private TextView locStatus;
+    private TextView locStats;
     private TextView pairStatus;
     private TextView addressStatus;
     private TextView batteryStatus;
@@ -140,6 +141,11 @@ public class MainActivity extends Activity {
         locStatus = new TextView(this);
         locStatus.setPadding(0, (int) (4 * d), 0, (int) (12 * d));
         root.addView(locStatus);
+
+        // Hoe laat aankomstmeldingen kwamen (ArrivalStats); verborgen zolang er geen metingen zijn.
+        locStats = new TextView(this);
+        locStats.setPadding(0, 0, 0, (int) (12 * d));
+        root.addView(locStats);
 
         battery = new Button(this);
         battery.setText(R.string.battery_button);
@@ -273,6 +279,15 @@ public class MainActivity extends Activity {
         if (!systemLocationOn()) missing.add(getString(R.string.loc_missing_system_location));
         locStatus.setText(missing.isEmpty() ? getString(R.string.loc_status_on)
                 : getString(R.string.loc_status_missing, String.join(", ", missing)));
+        updateLocStats();
+    }
+
+    private void updateLocStats() {
+        ArrivalStats.Summary s = ArrivalStats.summary(Prefs.arrivals(this), null);
+        locStats.setVisibility(s.count == 0 ? View.GONE : View.VISIBLE);
+        if (s.count == 0) return;
+        int meters = (int) Math.round(Math.abs(s.avgLate));
+        locStats.setText(getString(s.avgLate >= 0 ? R.string.loc_stats_inside : R.string.loc_stats_before, s.count, meters));
     }
 
     /** Vraagt de toestemmingen achter elkaar: eerst meldingen en locatie, daarna apart "Altijd toestaan". */
