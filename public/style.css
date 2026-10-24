@@ -320,6 +320,13 @@ body.settings-open #btn-search, body.settings-open #search, body.calendar-open #
   body.drawer-open .scrim { display: block; position: fixed; inset: 0; z-index: 14; background: var(--scrim); }
   body.drawer-open { overflow: hidden; }
 }
+/* Desktop: lagere rijen; het titelveld van de gekozen taak (21px regel) blijft even hoog als de knop */
+@media (min-width: 1024px) and (not (pointer: coarse)) {
+  ul.tasks { gap: 3px; }
+  .title { min-height: 30px; padding: 2px 2px; }
+  textarea.title-edit { padding: 4.5px 2px; }
+  .meta { margin-top: -4px; padding-bottom: 4px; }
+}
 @media (min-width: 1024px) {
   /* De titel staat ook op desktop boven de lijst; het menuknopje is hier niet nodig */
   #app { display: grid; grid-template-columns: 220px minmax(0, 1fr) 5px var(--panel-w, 380px); grid-template-rows: auto minmax(0, 1fr); height: 100dvh; }
