@@ -3,6 +3,7 @@ package nl.detussenpartij.tick;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.location.Location;
 import android.net.Uri;
 import android.os.SystemClock;
 import android.util.Log;
@@ -43,19 +44,21 @@ public class GeofenceReceiver extends BroadcastReceiver {
         final boolean exit = event.getGeofenceTransition() == Geofence.GEOFENCE_TRANSITION_EXIT;
         final List<String> requestIds = new ArrayList<>();
         for (Geofence g : triggered) requestIds.add(g.getRequestId());
+        // Waar je was toen hij afging (mag ontbreken): alleen voor de meting van hoe laat de melding kwam.
+        final Location fix = event.getTriggeringLocation();
 
         // De beslissing pas op de achtergrond: eerst kort bij de server navragen of de taak nog open is.
         final PendingResult result = goAsync();
         new Thread(() -> {
             try {
-                handle(app, requestIds, exit);
+                handle(app, requestIds, exit, fix);
             } finally {
                 result.finish();
             }
         }).start();
     }
 
-    private static void handle(Context app, List<String> requestIds, boolean exit) {
+    private static void handle(Context app, List<String> requestIds, boolean exit, Location fix) {
         long start = SystemClock.elapsedRealtime();
         JSONArray tasks = fresh(app);
         JSONObject pending = Prefs.pending(app);
@@ -80,6 +83,7 @@ public class GeofenceReceiver extends BroadcastReceiver {
             }
             notified.put(id, GeoPlan.key(loc));
             done.add(rid);
+            measure(app, exit, loc, fix);
         }
         if (notified.isEmpty()) return;
         Prefs.markLocFired(app, notified);
@@ -96,6 +100,22 @@ public class GeofenceReceiver extends BroadcastReceiver {
                 // Sync.refresh probeert het later opnieuw (locFired onthoudt het).
                 Log.w("Tick", "location_notified doorgeven mislukt", e);
             }
+        }
+    }
+
+    /** Legt vast hoe ver je van het midden was. Een fout hierin mag de melding en de PATCH nooit tegenhouden. */
+    private static void measure(Context app, boolean exit, JSONObject loc, Location fix) {
+        try {
+            double radius = loc.optDouble("radius");
+            JSONObject m = ArrivalStats.fromFix(System.currentTimeMillis(), exit, "", loc.optDouble("lat"),
+                    loc.optDouble("lng"), radius, radius,
+                    fix == null ? null : fix.getLatitude(), fix == null ? null : fix.getLongitude(),
+                    fix != null && fix.hasSpeed() ? (double) fix.getSpeed() : null,
+                    fix != null && fix.hasAccuracy() ? (double) fix.getAccuracy() : null,
+                    fix == null ? null : fix.getTime());
+            if (m != null) Prefs.addArrival(app, m);
+        } catch (Exception e) {
+            Log.w("Tick", "Meting van locatiemelding mislukt", e);
         }
     }
 

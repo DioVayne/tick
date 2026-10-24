@@ -22,6 +22,8 @@
     <string name="loc_button">Turn on location notifications</string>
     <string name="loc_status_on">Location notifications: on</string>
     <string name="loc_status_missing">Location notifications: still needed: %s</string>
+    <string name="loc_stats_inside">Arrival notifications came %2$d m inside the circle on average (last %1$d).</string>
+    <string name="loc_stats_before">Arrival notifications came %2$d m before the circle on average (last %1$d).</string>
     <string name="loc_missing_notifications">notifications</string>
     <string name="loc_missing_location">location</string>
     <string name="loc_missing_background">allow location all the time</string>
