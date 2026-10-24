@@ -13,6 +13,8 @@ Open a task and tap **Location**. A map opens:
 
 The place is named after the favorite or search result, or "Pinned place". You get one notification per place; changing the place arms it again. A repeating task arms it again each time it moves on.
 
+Not the right moment? **Swipe the notification away** and it comes back the next time you arrive (or leave), not while you are still there. Tap **Done** to finish the task for good.
+
 ## Favorite places
 **Save as favorite** on the map keeps a place with its name and radius, so next time it is one tap. Manage your favorites under **⚙ Settings → Places**. A favorite is a template: editing or deleting it does not change tasks that already use it.
 

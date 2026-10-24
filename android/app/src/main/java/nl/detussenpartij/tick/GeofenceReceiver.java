@@ -74,7 +74,7 @@ public class GeofenceReceiver extends BroadcastReceiver {
             }
             JSONObject task = NotifyDecision.find(tasks, id);
             JSONObject loc = task.optJSONObject("location");
-            boolean shown = Notify.location(app, id, task.optString("title"),
+            boolean shown = Notify.location(app, id, GeoPlan.key(loc), task.optString("title"),
                     app.getString(exit ? R.string.loc_left : R.string.loc_arrived, loc.optString("name")));
             if (!shown) {
                 // Meldingen staan uit: de herinnering niet stilletjes opmaken.

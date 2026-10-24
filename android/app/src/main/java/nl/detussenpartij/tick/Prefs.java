@@ -63,7 +63,7 @@ final class Prefs {
     /** Wist de gegevens van de vorige gebruiker: cache, wachtrijen, getoonde locatiemeldingen en geofence-handtekening. */
     static synchronized void wipeAccountData(Context c) {
         sp(c).edit().putString("cache", "[]").remove("pending").remove("pendingRemind")
-                .remove("locFired").remove("locSynced").remove("geoSig").commit();
+                .remove("locFired").remove("locSynced").remove("locRearm").remove("geoSig").commit();
     }
 
     static String cache(Context c) {
@@ -226,6 +226,35 @@ final class Prefs {
 
     static synchronized void addArrival(Context c, JSONObject m) {
         sp(c).edit().putString("arrivals", ArrivalStats.add(arrivals(c), m)).apply();
+    }
+
+    /**
+     * Weggeveegde locatiemeldingen waarvan de server location_notified = false nog niet kent: taak-id -> GeoPlan.key.
+     * Sync.refresh probeert de PATCH opnieuw (bijvoorbeeld na offline wegvegen).
+     */
+    static synchronized JSONObject locRearm(Context c) {
+        try {
+            return new JSONObject(sp(c).getString("locRearm", "{}"));
+        } catch (Exception e) {
+            return new JSONObject();
+        }
+    }
+
+    static synchronized void markLocRearm(Context c, String id, String key) {
+        JSONObject r = locRearm(c);
+        try {
+            r.put(id, key);
+        } catch (Exception ignored) {
+        }
+        sp(c).edit().putString("locRearm", r.toString()).commit();
+    }
+
+    /** Vergeet een weggeveegde melding, maar alleen als er intussen geen nieuwere (andere key) voor is. */
+    static synchronized void dropLocRearm(Context c, String id, String key) {
+        JSONObject r = locRearm(c);
+        if (!key.equals(r.optString(id, null))) return;
+        r.remove(id);
+        sp(c).edit().putString("locRearm", r.toString()).commit();
     }
 
     /** GeoPlan.signature van de geofences die nu geregistreerd zijn, of leeg als er niets (bekend) staat. */
