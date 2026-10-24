@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Icon;
 import android.net.Uri;
+import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
 
 /** Meldingen op het toestel; nu alleen voor locatiereminders. */
@@ -27,15 +28,19 @@ final class Notify {
         return ch == null || ch.getImportance() == NotificationManager.IMPORTANCE_NONE;
     }
 
+    /** Extra in de melding: GeoPlan.key van de plek, voor het wegvegen (ook na doneFailed). */
+    private static final String EXTRA_KEY = "tick_key";
+
     /**
-     * Melding voor een taak bij aankomst of vertrek. Tik opent de taak in de web-app, "Afvinken" rondt hem af.
+     * Melding voor een taak bij aankomst of vertrek. Tik opent de taak in de web-app, "Afvinken" rondt hem af,
+     * wegvegen zet de herinnering weer klaar voor de volgende keer. key: GeoPlan.key van de plek.
      * Geeft false als meldingen (of het kanaal "locatie") uit staan en er dus niets te zien is.
      */
-    static boolean location(Context c, String id, String title, String text) {
+    static boolean location(Context c, String id, String key, String title, String text) {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         if (channelBlocked(c) || !nm.areNotificationsEnabled()) return false;
         try {
-            nm.notify(id.hashCode(), build(c, id, title, text));
+            nm.notify(id.hashCode(), build(c, id, key, title, text));
             return true;
         } catch (SecurityException e) {
             return false; // geen toestemming voor meldingen (meer)
@@ -52,8 +57,9 @@ final class Notify {
         for (StatusBarNotification sbn : nm.getActiveNotifications()) {
             if (sbn.getId() != code || !CHANNEL.equals(sbn.getNotification().getChannelId())) continue;
             CharSequence title = sbn.getNotification().extras.getCharSequence(Notification.EXTRA_TITLE);
+            String key = sbn.getNotification().extras.getString(EXTRA_KEY);
             try {
-                nm.notify(code, build(c, id, title == null ? "" : title.toString(), c.getString(R.string.loc_done_failed, reason)));
+                nm.notify(code, build(c, id, key, title == null ? "" : title.toString(), c.getString(R.string.loc_done_failed, reason)));
             } catch (SecurityException ignored) {
                 // meldingen staan uit; de Toast zegt het dan nog
             }
@@ -61,7 +67,7 @@ final class Notify {
         }
     }
 
-    private static Notification build(Context c, String id, String title, String text) {
+    private static Notification build(Context c, String id, String key, String title, String text) {
         int code = id.hashCode();
         // Eigen data-URI per taak, zodat de PendingIntents van verschillende taken elkaar niet overschrijven.
         Uri data = Uri.parse("tick://taak/" + Uri.encode(id));
@@ -77,8 +83,19 @@ final class Notify {
                         .putExtra(ActionReceiver.EXTRA_ID, id)
                         .putExtra(ActionReceiver.EXTRA_FROM_NOTIFICATION, true),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        // Wegvegen (niet tikken of afvinken): de herinnering komt de volgende keer terug. Eigen request-code, zodat hij
+        // de intent van "Afvinken" niet overschrijft. Zonder key (oude melding) geen actie.
+        PendingIntent dismissed = key == null ? null : PendingIntent.getBroadcast(c, code ^ 0x5EED,
+                new Intent(c, ActionReceiver.class).setAction(ActionReceiver.ACTION_DISMISSED).setData(data)
+                        .putExtra(ActionReceiver.EXTRA_ID, id)
+                        .putExtra(ActionReceiver.EXTRA_KEY, key),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Bundle extras = new Bundle();
+        if (key != null) extras.putString(EXTRA_KEY, key);
 
         return new Notification.Builder(c, CHANNEL)
+                .addExtras(extras)
+                .setDeleteIntent(dismissed)
                 .setSmallIcon(R.drawable.ic_notify_place)
                 .setContentTitle(title)
                 .setContentText(text)

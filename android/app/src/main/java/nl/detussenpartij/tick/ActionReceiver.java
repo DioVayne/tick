@@ -12,9 +12,16 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class ActionReceiver extends BroadcastReceiver {
     static final String ACTION_DONE = BuildConfig.APPLICATION_ID + ".DONE";
+    /** Locatiemelding weggeveegd: de herinnering weer klaarzetten voor de volgende keer. */
+    static final String ACTION_DISMISSED = BuildConfig.APPLICATION_ID + ".DISMISSED";
     static final String EXTRA_ID = "id";
+    /** GeoPlan.key van de plek uit de weggeveegde melding. */
+    static final String EXTRA_KEY = "key";
     /** "Afvinken" in een locatiemelding: een tweede tik maakt niets ongedaan, die knop is alleen om af te ronden. */
     static final String EXTRA_FROM_NOTIFICATION = "fromNotification";
 
@@ -24,6 +31,10 @@ public class ActionReceiver extends BroadcastReceiver {
      */
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (ACTION_DISMISSED.equals(intent.getAction())) {
+            dismissed(context, intent);
+            return;
+        }
         if (!ACTION_DONE.equals(intent.getAction())) return;
         final String id = intent.getStringExtra(EXTRA_ID);
         if (id == null || id.isEmpty()) return;
@@ -80,6 +91,49 @@ public class ActionReceiver extends BroadcastReceiver {
                 new Handler(Looper.getMainLooper()).post(() -> Toast.makeText(app, msg, Toast.LENGTH_LONG).show());
             } finally {
                 Sync.refresh(app);
+                result.finish();
+            }
+        }).start();
+    }
+
+    /**
+     * Locatiemelding weggeveegd: "nu niet". De herinnering staat weer klaar voor de volgende aankomst (of het volgende
+     * vertrek); de geofence gaat niet meteen opnieuw af, want hij wordt gezet zonder initiële trigger. Lukt de PATCH
+     * niet (offline), dan probeert Sync.refresh het later opnieuw via locRearm.
+     */
+    private void dismissed(Context context, Intent intent) {
+        final String id = intent.getStringExtra(EXTRA_ID);
+        final String key = intent.getStringExtra(EXTRA_KEY);
+        if (id == null || id.isEmpty() || key == null) return;
+        final Context app = context.getApplicationContext();
+        final PendingResult result = goAsync();
+        new Thread(() -> {
+            try {
+                JSONArray tasks;
+                try {
+                    tasks = new JSONArray(Prefs.cache(app));
+                } catch (Exception e) {
+                    tasks = new JSONArray();
+                }
+                RearmDecision.Result r = RearmDecision.decide(tasks, id, key, Prefs.pending(app));
+                if (r != RearmDecision.Result.REARM) {
+                    Log.i("Tick", "Weggeveegde locatiemelding niet klaargezet voor " + id + ": " + r);
+                    return;
+                }
+                Map<String, String> seen = new HashMap<>();
+                seen.put(id, key);
+                Prefs.dropLocFired(app, seen);
+                Prefs.markLocRearm(app, id, key);
+                Prefs.setCache(app, RearmDecision.withNotifiedFalse(Prefs.cache(app), id));
+                Geo.applyFromCache(app, false);
+                try {
+                    Api.call(app, "PATCH", "/api/tasks/" + Uri.encode(id), "{\"location_notified\":false}",
+                            Api.SHORT_TIMEOUT_MS, Api.SHORT_TIMEOUT_MS);
+                    Prefs.dropLocRearm(app, id, key);
+                } catch (Exception e) {
+                    Log.w("Tick", "location_notified terugzetten mislukt; later opnieuw", e);
+                }
+            } finally {
                 result.finish();
             }
         }).start();

@@ -46,6 +46,8 @@ final class Sync {
                 Prefs.setPending(c, pending);
                 Prefs.setPendingRemind(c, remindThen);
             }
+            // Eerst weggeveegde meldingen: die zetten location_notified in arr (en de cache) terug op false.
+            if (retryRearm(c, arr, pending)) json = arr.toString();
             Prefs.setCache(c, json);
             Prefs.setSyncError(c, null);
             Prefs.setLastSync(c, System.currentTimeMillis());
@@ -97,6 +99,41 @@ final class Sync {
         }
         // Alleen weghalen wat er nog zo staat: de GeofenceReceiver kan intussen een nieuwe melding gezet hebben.
         if (!drop.isEmpty()) Prefs.dropLocFired(c, drop);
+    }
+
+    /**
+     * Weggeveegde locatiemeldingen die de server nog als gemeld kent: PATCH false opnieuw proberen. Is de plek intussen
+     * opnieuw afgegaan (locFired heeft dezelfde key weer), de taak af of weg, of de plek veranderd, dan vergeten.
+     * Geeft true als arr is aangepast (location_notified terug op false), zodat de geofence meteen weer staat.
+     */
+    private static boolean retryRearm(Context c, JSONArray arr, JSONObject pending) {
+        JSONObject rearm = Prefs.locRearm(c);
+        if (rearm.length() == 0) return false;
+        JSONObject fired = Prefs.locFired(c);
+        boolean changed = false;
+        Iterator<String> ids = rearm.keys();
+        Map<String, String> drop = new HashMap<>();
+        while (ids.hasNext()) {
+            String id = ids.next();
+            String key = rearm.optString(id);
+            JSONObject t = NotifyDecision.find(arr, id);
+            if (key.equals(fired.optString(id, null))
+                    || RearmDecision.decide(arr, id, key, pending) != RearmDecision.Result.REARM
+                    || !t.optBoolean("location_notified")) {
+                drop.put(id, key);
+                continue;
+            }
+            try {
+                Api.call(c, "PATCH", "/api/tasks/" + Uri.encode(id), "{\"location_notified\":false}");
+                t.put("location_notified", false);
+                changed = true;
+                drop.put(id, key);
+            } catch (Exception e) {
+                Log.w("Tick", "location_notified terugzetten opnieuw mislukt", e);
+            }
+        }
+        for (Map.Entry<String, String> e : drop.entrySet()) Prefs.dropLocRearm(c, e.getKey(), e.getValue());
+        return changed;
     }
 
     /** remind_at van een taak, of "" als hij er geen heeft (of de taak onbekend is). */
