@@ -74,8 +74,10 @@ public class GeofenceReceiver extends BroadcastReceiver {
             }
             JSONObject task = NotifyDecision.find(tasks, id);
             JSONObject loc = task.optJSONObject("location");
+            // Onderweg vergrote cirkel: je bent er nog niet, maar bijna.
+            boolean road = !exit && !GeoPlan.roadMode(rid).isEmpty();
             boolean shown = Notify.location(app, id, GeoPlan.key(loc), task.optString("title"),
-                    app.getString(exit ? R.string.loc_left : R.string.loc_arrived, loc.optString("name")));
+                    app.getString(exit ? R.string.loc_left : road ? R.string.loc_almost : R.string.loc_arrived, loc.optString("name")));
             if (!shown) {
                 // Meldingen staan uit: de herinnering niet stilletjes opmaken.
                 Log.w("Tick", "Locatiemelding niet getoond: meldingen staan uit");
@@ -83,7 +85,7 @@ public class GeofenceReceiver extends BroadcastReceiver {
             }
             notified.put(id, GeoPlan.key(loc));
             done.add(rid);
-            measure(app, exit, loc, fix);
+            measure(app, exit, rid, loc, fix);
         }
         if (notified.isEmpty()) return;
         Prefs.markLocFired(app, notified);
@@ -104,11 +106,14 @@ public class GeofenceReceiver extends BroadcastReceiver {
     }
 
     /** Legt vast hoe ver je van het midden was. Een fout hierin mag de melding en de PATCH nooit tegenhouden. */
-    private static void measure(Context app, boolean exit, JSONObject loc, Location fix) {
+    private static void measure(Context app, boolean exit, String rid, JSONObject loc, Location fix) {
         try {
             double radius = loc.optDouble("radius");
-            JSONObject m = ArrivalStats.fromFix(System.currentTimeMillis(), exit, "", loc.optDouble("lat"),
-                    loc.optDouble("lng"), radius, radius,
+            // Soort en gebruikte straal uit de request-id: de stand onderweg kan al voorbij zijn als Android meldt.
+            float road = GeoPlan.roadRadius(rid);
+            double used = Float.isNaN(road) ? radius : road;
+            JSONObject m = ArrivalStats.fromFix(System.currentTimeMillis(), exit, GeoPlan.roadMode(rid), loc.optDouble("lat"),
+                    loc.optDouble("lng"), radius, used,
                     fix == null ? null : fix.getLatitude(), fix == null ? null : fix.getLongitude(),
                     fix != null && fix.hasSpeed() ? (double) fix.getSpeed() : null,
                     fix != null && fix.hasAccuracy() ? (double) fix.getAccuracy() : null,
