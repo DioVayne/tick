@@ -142,7 +142,8 @@ on('change', updateLocationBar);
 if (params.has('add')) $('#add-title').focus();
 // Uit een uitnodigingsmelding: de balk met Accepteren en Weigeren in beeld.
 const openShare = params.get('share');
-if (openShare) history.replaceState(null, '', '/');
+const openListInvite = params.get('listInvite');
+if (openShare || openListInvite) history.replaceState(null, '', '/');
 // Uit de kop van een Android-widget met één lijst: meteen op die lijst.
 const openList = params.get('list');
 if (openList) {
@@ -173,6 +174,7 @@ init(CONFIG.userId, CONFIG.userName).then(() => {
   if (pendingList) goTo({ page: 'list', id: pendingList });
   if (openTask) document.querySelector(`li.task[data-id="${CSS.escape(openTask)}"]`)?.scrollIntoView({ block: 'center' });
   if (openShare) document.querySelector(`.invite[data-id="${CSS.escape(openShare)}"]`)?.scrollIntoView({ block: 'center' });
+  if (openListInvite) document.querySelector(`.invite[data-list-invite="${CSS.escape(openListInvite)}"]`)?.scrollIntoView({ block: 'center' });
 });
 
 // ---------- adres ----------

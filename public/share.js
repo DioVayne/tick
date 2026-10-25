@@ -4,7 +4,8 @@ import { ask } from './dialog.js';
 import { t } from './i18n.js';
 import { el, toast } from './render.js';
 import CONFIG from './settings.js';
-import { load, state } from './store.js';
+import { load, sharedOf, state } from './store.js';
+import { renderListInvites } from './sharedlist.js';
 
 // Delen gaat alleen online: uitnodigen, accepteren, weigeren en stoppen zijn directe verzoeken, daarna een load().
 
@@ -72,10 +73,11 @@ export async function openShareDialog(task) {
   el('label', { for: 'share-to' }, t('share.to_label')),
   chips.length ? el('div', { class: 'people', role: 'group', 'aria-label': t('share.to_label') }, ...chips) : null,
   input,
+  // In een gedeelde lijst is de taak al van alle leden: alleen een kopie sturen kan.
   el('fieldset', { class: 'share-modes' },
     el('legend', {}, t('share.mode_label')),
-    option('shared', t('share.mode_shared'), t('share.mode_shared_hint'), true),
-    option('copy', t('share.mode_copy'), t('share.mode_copy_hint'), false)),
+    task.shared_list ? null : option('shared', t('share.mode_shared'), t('share.mode_shared_hint'), true),
+    option('copy', t('share.mode_copy'), t('share.mode_copy_hint'), !!task.shared_list)),
   el('div', { class: 'dialog-buttons' },
     el('button', { type: 'button', class: 'ghost', onclick: close }, t('dialog.cancel')),
     el('button', { type: 'submit' }, t('share.send'))));
@@ -112,6 +114,15 @@ export function fillShareBox(box, task, readOnly) {
   box.hidden = !!task.parent_id || (!s && readOnly);
   if (box.hidden) { box.replaceChildren(); return; }
   const rows = [];
+  // In een gedeelde lijst staan de leden bij de lijst; hier alleen de knop voor een kopie (voor de eigenaar).
+  if (task.shared_list) {
+    box.hidden = !sharedOf(task.list)?.mine || readOnly; // de eigenaar van de lijst is eigenaar van elke taak erin
+    box.replaceChildren(...(box.hidden ? [] : [
+      el('h3', {}, t('share.heading')),
+      el('button', { class: 'ghost secbtn', type: 'button', onclick: () => openShareDialog(task) }, icon('users'), t('share.with_someone')),
+    ]));
+    return;
+  }
   if (s && !s.mine) rows.push(el('li', {}, el('span', { class: 'who' }, s.owner.name), el('span', { class: 'state' }, t('share.owner'))));
   for (const m of s?.members ?? []) {
     const self = m.user_id === CONFIG.userId;
@@ -131,8 +142,9 @@ export function fillShareBox(box, task, readOnly) {
   ].filter(Boolean));
 }
 
-/** Balk per openstaande uitnodiging bovenaan de takenlijst, met Accepteren en Weigeren. */
+/** Balk per openstaande uitnodiging bovenaan de takenlijst, met Accepteren en Weigeren; lijstuitnodigingen eerst. */
 export function renderInvites(root) {
+  renderListInvites(root);
   // Offline niet: accepteren en weigeren gaan alleen online, en de lijst kan verouderd zijn.
   if (state.offline || !state.invites.length) return;
   root.append(el('div', { class: 'invites' }, ...state.invites.map((inv) => el('div', { class: 'invite', 'data-id': inv.id, role: 'group' },

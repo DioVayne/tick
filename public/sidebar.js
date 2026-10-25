@@ -60,12 +60,15 @@ export function renderSidebar() {
   const all = lists();
   // Met de instellingen open is geen lijst gekozen in de zijbalk; ⚙ Instellingen is dan gemarkeerd.
   const current = (name) => !settingsOpen() && !calendarOpen() && !helpOpen() && !state.showDone && !state.showTrash && state.list === name;
-  const item = (name, label, count, lead) =>
+  const item = (name, label, count, lead, shared = false) =>
     el('button', {
       class: 'item' + (current(name) ? ' on' : ''),
       'data-list': name ?? '',
       'aria-current': current(name) ? 'true' : false,
-    }, lead, el('span', { class: 'name' }, label), el('span', { class: 'count' }, String(count)));
+    }, lead, el('span', { class: 'name' }, label),
+    // Een gedeelde lijst: het icoontje van delen naast de naam.
+    shared ? el('span', { class: 'slist-ico', title: t('slist.shared_list'), 'aria-label': t('slist.shared_list'), role: 'img' }, icon('users', 'sm')) : null,
+    el('span', { class: 'count' }, String(count)));
   // Een lijst die alleen afgeronde taken heeft staat er gewoon met 0.
   const total = all.reduce((n, l) => n + l.open, 0);
   const inbox = all.find((l) => l.name === 'Inbox');
@@ -75,7 +78,7 @@ export function renderSidebar() {
       item(null, t('ui.all'), total, icon('all')),
       inbox ? item(inbox.name, inbox.name, inbox.open, icon('inbox')) : null),
     el('p', { class: 'side-h' }, t('ui.lists')),
-    el('div', { class: 'side-grp side-mine' }, ...all.filter((l) => l !== inbox).map((l) => item(l.name, l.name, l.open, dot(l.name, all.map((x) => x.name))))),
+    el('div', { class: 'side-grp side-mine' }, ...all.filter((l) => l !== inbox).map((l) => item(l.name, l.name, l.open, dot(l.name, all.map((x) => x.name)), !!l.shared))),
   );
   updateHeader();
 }

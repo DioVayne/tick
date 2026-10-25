@@ -13,7 +13,7 @@ import { openMap } from './map.js';
 import { renderMarkdown } from './markdown.js';
 import { locationLabel, wakeAndroidApp } from './places.js';
 import { $, checkOff, el, fmt, fromLocalInput, render, toLocalInput } from './render.js';
-import { addSubtask, findDone, remove, snooze, state, toggleDone, update, updateQueued } from './store.js';
+import { addSubtask, claimedByOther, findDone, remove, sharedOf, snooze, state, toggleDone, update, updateQueued, watchTask } from './store.js';
 import { fillShareBox } from './share.js';
 
 // Detailpaneel (desktop) en taakscherm (mobiel): één opbouw per gekozen taak, daarna alleen bijwerken.
@@ -46,8 +46,9 @@ export function detailReady() {
   render();
 }
 
+// Ook sharedDone: een taak die een ander in een gedeelde lijst afvinkte (geopend vanuit het blok Afgevinkt).
 const findTask = (id) => state.open.find((t) => t.id === id) ?? state.done.find((t) => t.id === id)
-  ?? [...state.justDone.values()].find((v) => v.task.id === id)?.task;
+  ?? [...state.justDone.values()].find((v) => v.task.id === id)?.task ?? state.sharedDone.find((t) => t.id === id);
 const current = (id) => findTask(id) ?? (snapshot?.id === id ? snapshot : null);
 const hasPending = (id, field) => !!pending.get(id) && field in pending.get(id);
 const remindPending = () => [...pending.values()].some((p) => 'remind_at' in p);
@@ -354,6 +355,13 @@ function build(t, readOnly) {
     },
   }, icon('folder'), listLabel);
 
+  // Gedeelde lijst: per taak een melding bij afvinken, alleen als die voor de hele lijst uit staat (zie fill).
+  const watch = el('button', {
+    class: 'pill watch', type: 'button', 'aria-pressed': 'false',
+    onclick: () => { const task = current(id); if (task) save(watchTask(id, !task.watch)); },
+  }, icon('bell'), el('span', { class: 'lbl' }, tr('slist.watch')));
+  const watchRow = el('div', { class: 'prow', hidden: true }, watch);
+
   const desc = el('div', { class: 'desc' });
   let editor = null;
   if (!readOnly) {
@@ -442,7 +450,8 @@ function build(t, readOnly) {
       el('div', { class: 'prow when' }, remindPill, plusHour, clearRemind),
       repeatRow,
       el('div', { class: 'prow' }, locPill, clearLoc),
-      el('div', { class: 'prow' }, listPill)),
+      el('div', { class: 'prow' }, listPill),
+      watchRow),
     desc,
     readOnly ? null : el('p', { class: 'md-hint' }, tr('detail.markdown_hint') + ' ',
       el('a', { href: 'https://www.markdownguide.org/cheat-sheet/', target: '_blank', rel: 'noopener' }, tr('detail.markdown_link'))),
@@ -452,7 +461,7 @@ function build(t, readOnly) {
     shareBox,
     el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, reopen, del)),
   ].filter(Boolean));
-  view = { repeatRow, filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remindLabel, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
+  view = { watch, watchRow, reopen, repeatRow, filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remindLabel, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
 }
 
 function fill(t) {
@@ -461,7 +470,16 @@ function fill(t) {
   v.back.textContent = '‹ ' + listTitle();
   if (v.crumb) v.crumb.textContent = '‹ ' + (current(t.parent_id)?.title ?? tr('detail.parent_task'));
   v.check.setAttribute('aria-checked', String(done));
-  v.check.setAttribute('aria-label', tr(state.justDone.has(t.id) ? 'render.undo_named' : done ? 'render.reopen_named' : 'render.check_named', { title: t.title }));
+  // Op naam van een ander (gedeelde lijst): alleen die vinkt hem af of heropent hem.
+  const lockedBy = claimedByOther(t) ? (t.claimed_by ?? current(t.parent_id)?.claimed_by) : null;
+  v.check.disabled = !!lockedBy;
+  v.reopen.disabled = !!lockedBy;
+  v.check.setAttribute('aria-label', lockedBy ? tr('slist.claimed_by', { name: lockedBy.name })
+    : tr(state.justDone.has(t.id) ? 'render.undo_named' : done ? 'render.reopen_named' : 'render.check_named', { title: t.title }));
+  v.check.title = lockedBy ? tr('slist.claimed_by', { name: lockedBy.name }) : '';
+  v.watchRow.hidden = done || !!t.parent_id || !t.shared_list || !!sharedOf(t.list)?.notify_done;
+  v.watch.setAttribute('aria-pressed', String(!!t.watch));
+  v.watch.classList.toggle('on', !!t.watch);
   if (v.pin) {
     v.pin.setAttribute('aria-pressed', String(!!t.pinned));
     v.pin.title = tr(t.pinned ? 'detail.unpin' : 'detail.pin');
@@ -509,14 +527,14 @@ function fill(t) {
       .sort((a, b) => a.position - b.position);
     // Alleen opnieuw opbouwen als er echt iets veranderde: een rij die onder je vinger vervangen wordt, slikt op
     // een touchscherm de eerste tik (bijvoorbeeld als een veld net zijn focus verliest en opslaan rendert).
-    const key = JSON.stringify([done, kids.map((k) => [k.id, k.title, !!k.done, state.justDone.has(k.id)])]);
+    const key = JSON.stringify([done, t.claimed_by?.id ?? null, kids.map((k) => [k.id, k.title, !!k.done, state.justDone.has(k.id)])]);
     if (v.subKey !== key) {
       v.subKey = key;
       v.subList.replaceChildren(...kids.map((k) => {
         const kDone = !!(k.done || state.justDone.has(k.id));
         return el('li', { class: kDone ? 'done' : '' },
           el('button', {
-            class: 'check', role: 'checkbox', 'aria-checked': String(kDone), disabled: done,
+            class: 'check', role: 'checkbox', 'aria-checked': String(kDone), disabled: done || claimedByOther(k),
             'aria-label': tr(state.justDone.has(k.id) ? 'render.undo_named' : kDone ? 'render.reopen_named' : 'render.check_named', { title: k.title }),
             onclick: (e) => { if (!kDone) confetti(e.currentTarget, isCouple(t.share)); checkOff(current(k.id) ?? k); }, // de rij kan ouder zijn dan de taak na een verversing
           }),

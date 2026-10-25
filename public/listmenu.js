@@ -1,10 +1,12 @@
 import { ask } from './dialog.js';
 import { t } from './i18n.js';
 import { sameName } from './lists.js';
-import { el } from './render.js';
-import { deleteList, listNames, lists, renameList, state } from './store.js';
+import { el, render, toast } from './render.js';
+import { joinNames, openListShareDialog } from './sharedlist.js';
+import { deleteList, leaveList, listNames, lists, renameList, setListNotify, sharedOf, state } from './store.js';
 
-// Menu bij een lijst in de zijbalk en achter de titel: hernoemen, taken verplaatsen naar, verwijderen
+// Menu bij een lijst in de zijbalk en achter de titel: delen, hernoemen, taken verplaatsen naar, verwijderen.
+// Een gedeelde lijst: de eigenaar deelt, zet meldingen aan en verwijdert; een lid zet meldingen aan en verlaat hem.
 
 let closeOpen = null;
 /** Geopend vanaf de titel boven de lijst: hernoemen gebeurt daar, en daar gaat de focus ook weer heen. */
@@ -24,16 +26,26 @@ export function openListMenu(name, anchor) {
   const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': t('lists.menu_named', { name }) });
   const item = (label, onclick, extra = '') => el('button', { class: 'menu-item' + extra, type: 'button', role: 'menuitem', onclick }, label);
   const focusFirst = () => /** @type {HTMLElement | null} */ (menu.querySelector('.menu-item'))?.focus();
+  const shared = sharedOf(name);
   const showMain = () => {
-    menu.replaceChildren(
+    const notify = shared ? el('button', {
+      class: 'menu-item', type: 'button', role: 'menuitemcheckbox', 'aria-checked': String(!!shared.notify_done),
+      onclick: () => { close(); toggleNotify(shared); },
+    }, t('slist.notify')) : null;
+    menu.replaceChildren(...[
+      !shared || shared.mine ? item(t('slist.share_menu'), () => { close(); openListShareDialog(name); }) : null,
+      notify,
       item(t('lists.rename'), () => { close(); startRename(name, anchor); }),
-      item(t('lists.move_tasks'), showTargets),
-      item(t('lists.delete'), () => { close(); confirmDelete(name); }, ' menu-danger'),
-    );
+      // Samenvoegen kan niet met een gedeelde lijst (de server weigert het).
+      shared ? null : item(t('lists.move_tasks'), showTargets),
+      !shared ? item(t('lists.delete'), () => { close(); confirmDelete(name); }, ' menu-danger')
+        : shared.mine ? item(t('slist.delete'), () => { close(); confirmDelete(name); }, ' menu-danger')
+        : item(t('slist.leave'), () => { close(); confirmLeave(name, shared); }, ' menu-danger'),
+    ].filter(Boolean));
     focusFirst();
   };
   const showTargets = () => {
-    const others = listNames().filter((n) => n !== name); // Inbox staat al vooraan
+    const others = listNames().filter((n) => n !== name && !sharedOf(n)); // Inbox staat al vooraan
     menu.replaceChildren(
       el('button', { class: 'menu-item muted', type: 'button', role: 'menuitem', onclick: showMain }, t('lists.back')),
       ...others.map((n) => item(n, () => { close(); confirmMerge(name, n); })),
@@ -144,10 +156,36 @@ async function confirmMerge(name, target) {
   focusList(answer === 'merge' ? target : name);
 }
 
+/** Meldingen bij afvinken voor deze lijst aan of uit (alleen online). */
+async function toggleNotify(shared) {
+  if (state.offline) { toast(t('share.online_only')); return; }
+  const on = !shared.notify_done;
+  if (await setListNotify(shared.id, on)) toast(t(on ? 'slist.notify_on' : 'slist.notify_off'), 'ok');
+}
+
+/** Een lid verlaat de lijst: die verdwijnt bij hem, de taken blijven bij de anderen. */
+async function confirmLeave(name, shared) {
+  const answer = await ask({
+    title: t('slist.leave_title', { list: name }),
+    text: t('slist.leave_text', { owner: shared.owner.name }),
+    buttons: [{ label: t('dialog.cancel'), value: null, kind: 'ghost' }, { label: t('slist.leave_button'), value: 'ok', kind: 'danger' }],
+  });
+  if (answer !== 'ok') { focusList(name); return; }
+  if (state.offline) { toast(t('share.online_only')); return; }
+  if (await leaveList(shared.id) && state.list === name) {
+    state.list = 'Inbox';
+    render();
+  }
+  focusList(state.list ?? '');
+}
+
 async function confirmDelete(name) {
+  // Een gedeelde lijst met leden: de bevestiging noemt hen, want zij raken de lijst en de taken kwijt.
+  const s = sharedOf(name);
+  const members = (s?.mine ? s.members : []).filter((m) => m.status === 'accepted').map((m) => m.name);
   const answer = await ask({
     title: t('lists.delete_title', { name, n: openCount(name) }),
-    text: t('lists.delete_text'),
+    text: members.length ? t('slist.delete_confirm', { list: name, names: joinNames(members) }) + ' ' + t('slist.delete_inbox_note') : t('lists.delete_text'),
     buttons: [
       { label: t('lists.delete_to_inbox'), value: 'inbox', kind: 'primary' },
       { label: t('lists.delete_tasks_too'), value: 'delete', kind: 'danger' },
