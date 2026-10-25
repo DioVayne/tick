@@ -4,7 +4,7 @@ import type { TaskRow } from '../src/index';
 import type { Payload, Sender } from '../src/push';
 import { attachStmts, detachStmts, listOf, listPush, type ListShare } from '../src/sharedlists';
 import { sendToAll } from '../src/push';
-import { ADMIN_ID, call, callAs, createTask, createUser, json, openTasks, type Task } from './helpers';
+import { ADMIN_ID, call, callAs, createTask, createUser, json, openTasks, session, type Task } from './helpers';
 
 type User = Awaited<ReturnType<typeof createUser>>;
 type ListItem = { name: string; open: number; id: string; shared: ListShare | null };
@@ -268,5 +268,80 @@ describe('gedeelde lijsten', () => {
     expect(await sharesOn(eigen.id)).toEqual([]);
     expect((await tasksOf(c)).map((x) => x.id)).not.toContain(eigen.id);
     expect((await openTasks()).map((x) => x.id)).not.toContain(eigen.id);
+  });
+});
+
+describe('gedeelde lijsten: account verwijderen', () => {
+  const deleteUser = async (u: User) => expect((await callAs(await session(), `/api/users/${u.id}`, { method: 'DELETE' })).status).toBe(200);
+  const mk = async (o: { name?: string } = {}) => createUser({ name: o.name ?? `Lid ${uniq()}` });
+  const addTask = async (u: User, title: string, list: string, parent_id?: string) =>
+    json<Task>(await callAs(u.cookie, '/api/tasks', { method: 'POST', json: { title, list, parent_id } }));
+  const idsIn = async (u: User, name: string) => (await tasksOf(u)).filter((x) => x.list === name && !x.parent_id).map((x) => x.id);
+
+  it('de lijst gaat naar het langste lid', async () => {
+    const [a, b, c] = [await mk(), await mk({ name: `Bea ${uniq()}` }), await mk()];
+    const name = `Tuin ${uniq()}`;
+    const t1 = await addTask(a, 'Gras', name);
+    const t2 = await addTask(a, 'Hek', name);
+    const kind = await addTask(a, 'Verf', name, t2.id);
+    const { list_id: id } = await json<{ list_id: string }>(await shareList(name, b.email, {}, a.cookie));
+    expect((await accept(b, id)).status).toBe(200);
+    expect((await shareList(name, c.email, {}, a.cookie)).status).toBe(201);
+    expect((await accept(c, id)).status).toBe(200);
+    // B zet t2 vast en B heeft een eigen volgorde.
+    await env.DB.prepare('UPDATE task_shares SET pinned = 1 WHERE task_id = ? AND to_user = ?').bind(t2.id, b.id).run();
+    const volgordeB = await idsIn(b, name);
+    const posB = (await sharesOn(t1.id)).find((r) => r.to_user === b.id)!.position;
+    // C meldt zich later nog bij de taak.
+    await env.DB.prepare('INSERT INTO task_watch (task_id, user_id) VALUES (?, ?)').bind(t1.id, b.id).run();
+
+    await deleteUser(a);
+
+    expect(await env.DB.prepare('SELECT owner_id FROM shared_lists WHERE id = ?').bind(id).first()).toEqual({ owner_id: b.id });
+    expect(await env.DB.prepare('SELECT user_id, role FROM list_members WHERE list_id = ? ORDER BY user_id').bind(id).all().then((r) => r.results.sort((x, y) => String(x.user_id).localeCompare(String(y.user_id)))))
+      .toEqual([{ user_id: b.id, role: 'owner' }, { user_id: c.id, role: 'member' }].sort((x, y) => x.user_id.localeCompare(y.user_id)));
+    for (const t of [t1, t2, kind]) expect(await row(t.id)).toMatchObject({ user_id: b.id, list: name });
+    expect(await row(t1.id)).toMatchObject({ shared_list: id, position: posB });
+    expect(await row(t2.id)).toMatchObject({ pinned: 1 });
+    expect((await sharesOn(t1.id)).map((r) => r.to_user)).toEqual([c.id]);
+    expect(await env.DB.prepare('SELECT from_user FROM task_shares WHERE task_id = ?').bind(t1.id).all().then((r) => r.results)).toEqual([{ from_user: b.id }]);
+    expect(await idsIn(b, name)).toEqual(volgordeB);
+    expect((await idsIn(c, name)).sort()).toEqual([t1.id, t2.id].sort());
+    const lc = (await listsOf(c)).find((l) => l.name === name)!;
+    expect(lc.shared).toMatchObject({ id, mine: false, owner: { id: b.id, name: expect.stringContaining('Bea') } });
+    expect((await listsOf(b)).find((l) => l.name === name)!.shared).toMatchObject({ mine: true, members: [{ user_id: c.id, status: 'accepted' }] });
+  });
+
+  it('zonder leden verdwijnt alles', async () => {
+    const [a, b] = [await mk(), await mk()];
+    const leeg = await addTask(a, 'Alleen', `Solo ${uniq()}`);
+    const name = `Wacht ${uniq()}`;
+    const t = await addTask(a, 'Wachtend', name);
+    const { list_id: id } = await json<{ list_id: string }>(await shareList(name, b.email, {}, a.cookie)); // alleen uitgenodigd
+    await deleteUser(a);
+    expect(await env.DB.prepare('SELECT 1 FROM shared_lists WHERE id = ?').bind(id).first()).toBeNull();
+    expect(await env.DB.prepare('SELECT 1 FROM list_members WHERE list_id = ?').bind(id).first()).toBeNull();
+    expect(await env.DB.prepare('SELECT 1 FROM tasks WHERE id IN (?, ?)').bind(t.id, leeg.id).first()).toBeNull();
+    expect((await incomingOf(b)).map((i) => i.id)).not.toContain(id);
+  });
+
+  it('een lid verwijderen laat de lijst staan en zijn taken op naam vrij', async () => {
+    const [a, b] = [await mk(), await mk()];
+    const name = `Feest ${uniq()}`;
+    const t = await addTask(a, 'Slingers', name);
+    const { list_id: id } = await json<{ list_id: string }>(await shareList(name, b.email, {}, a.cookie));
+    expect((await accept(b, id)).status).toBe(200);
+    await env.DB.batch([
+      env.DB.prepare('UPDATE tasks SET claimed_by = ? WHERE id = ?').bind(b.id, t.id),
+      env.DB.prepare('INSERT INTO task_watch (task_id, user_id) VALUES (?, ?)').bind(t.id, b.id),
+    ]);
+    await deleteUser(b);
+    expect((await row(t.id)).claimed_by).toBeNull();
+    expect(await env.DB.prepare('SELECT 1 FROM task_watch WHERE user_id = ?').bind(b.id).first()).toBeNull();
+    expect(await env.DB.prepare('SELECT 1 FROM list_members WHERE user_id = ?').bind(b.id).first()).toBeNull();
+    expect(await sharesOn(t.id)).toEqual([]);
+    expect(await row(t.id)).toMatchObject({ user_id: a.id, shared_list: id });
+    expect((await listsOf(a)).find((l) => l.name === name)!.shared!.members).toEqual([]);
+    expect((await tasksOf(a)).map((x) => x.id)).toContain(t.id);
   });
 });

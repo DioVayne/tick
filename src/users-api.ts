@@ -5,6 +5,7 @@ import { adminOnly } from './guards';
 import { createLink } from './links';
 import { backgroundKey } from './background';
 import { deleteUserStmts, getUser } from './users';
+import { transferListsStmts } from './sharedlists';
 
 /** Accountbeheer, alleen voor de beheerder. */
 export const usersApi = new Hono<AppEnv>();
@@ -31,7 +32,7 @@ usersApi.delete('/:id', async (c) => {
   const id = c.req.param('id');
   if (id === c.get('user').id) throw new HttpError(400, 'err.cannot_delete_self');
   if (!(await getUser(c.env.DB, id))) throw new HttpError(404, 'err.not_found');
-  await c.env.DB.batch(deleteUserStmts(c.env.DB, id));
+  await c.env.DB.batch([...await transferListsStmts(c.env.DB, id), ...deleteUserStmts(c.env.DB, id)]);
   await c.env.FILES?.delete(backgroundKey(id));
   return c.json({ ok: true });
 });

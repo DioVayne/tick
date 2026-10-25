@@ -131,6 +131,45 @@ export function leaveListStmts(db: D1Database, listId: string, userId: string): 
   ];
 }
 
+/**
+ * Statements voor het verwijderen van de eigenaar van lijsten, vóór `deleteUserStmts`. Elke lijst gaat naar het
+ * geaccepteerde lid met de vroegste `responded_at` (gelijk: kleinste `user_id`): zijn positie en pin worden die van
+ * de taak, taken en subtaken worden van hem met zijn lijstnaam, zijn deelrijen verdwijnen, de andere deelrijen komen
+ * van hem, en hij wordt eigenaar. Een lijst zonder geaccepteerde leden verdwijnt (de taken gaan mee met het
+ * account). Een vast aantal statements per lijst, want D1 telt elk statement van een batch als query.
+ */
+export async function transferListsStmts(db: D1Database, userId: string): Promise<D1PreparedStatement[]> {
+  const { results: lists } = await db.prepare('SELECT id FROM shared_lists WHERE owner_id = ?').bind(userId).all<{ id: string }>();
+  const stmts: D1PreparedStatement[] = [];
+  const ts = now();
+  for (const { id } of lists) {
+    const heir = await db.prepare(
+      "SELECT user_id, name FROM list_members WHERE list_id = ? AND status = 'accepted' AND user_id != ? ORDER BY responded_at, user_id LIMIT 1",
+    ).bind(id, userId).first<{ user_id: string; name: string }>();
+    if (!heir) {
+      stmts.push(db.prepare('DELETE FROM shared_lists WHERE id = ?').bind(id));
+      continue;
+    }
+    const inList = 'SELECT id FROM tasks WHERE shared_list = ?1';
+    const mine = 'SELECT 1 FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2';
+    stmts.push(
+      db.prepare(
+        `UPDATE tasks SET position = (SELECT s.position FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2), ` +
+        `pinned = (SELECT s.pinned FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2), ` +
+        `loc_notified = (SELECT s.loc_notified FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2) ` +
+        `WHERE shared_list = ?1 AND EXISTS (${mine})`,
+      ).bind(id, heir.user_id),
+      db.prepare(`UPDATE tasks SET user_id = ?2, list = ?3, updated_at = ?4 WHERE shared_list = ?1 OR parent_id IN (${inList})`).bind(id, heir.user_id, heir.name, ts),
+      db.prepare(`DELETE FROM task_shares WHERE to_user = ?2 AND task_id IN (${inList})`).bind(id, heir.user_id),
+      db.prepare(`UPDATE task_shares SET from_user = ?2 WHERE task_id IN (${inList})`).bind(id, heir.user_id),
+      db.prepare(`DELETE FROM task_watch WHERE user_id = ?2 AND (task_id IN (${inList}) OR task_id IN (SELECT id FROM tasks WHERE parent_id IN (${inList})))`).bind(id, heir.user_id),
+      db.prepare('UPDATE shared_lists SET owner_id = ? WHERE id = ?').bind(heir.user_id, id),
+      db.prepare("UPDATE list_members SET role = 'owner' WHERE list_id = ? AND user_id = ?").bind(id, heir.user_id),
+    );
+  }
+  return stmts;
+}
+
 /** Deelstatus per lijst waar je geaccepteerd lid van bent, met als sleutel jouw naam van de lijst. */
 export async function listSharing(db: D1Database, userId: string): Promise<Map<string, ListShare>> {
   const { results } = await db.prepare(

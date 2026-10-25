@@ -29,7 +29,7 @@ This browser, your other browsers with notifications, and your Android phones wi
 Your name and email address, change your password, **log out on other devices**, and log out.
 
 ## Accounts (administrator)
-Everyone on this Tick with when they were last seen. **+ Invite someone** and **Reset link** make one-time links (see [Sharing](sharing.md#accounts)). Deleting an account erases all of that person's data.
+Everyone on this Tick with when they were last seen. **+ Invite someone** and **Reset link** make one-time links (see [Sharing](sharing.md#accounts)). Deleting an account erases all of that person's data; a shared list they own goes to the member who has been in it longest, and a list without members disappears.
 
 ## Data
 - **Download backup:** a file with your own tasks and places (completed tasks included). Not included: settings, keys, tasks others shared with you, and the files of attachments.
