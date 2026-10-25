@@ -13,7 +13,7 @@ Working on one list together, such as a packing list for a holiday or a weekend 
 - **Share:** open the list menu (right-click, a long press, **⋯**, or the list name at the top) and choose **Share…**. Pick one or more people. The dialog shows who is in the list and who has not answered yet. A shared list has a small people icon next to its name in the sidebar.
 - **Accept once:** the other person gets a notification with **Accept** and **Decline**, and a bar at the top of Tick. After accepting, the list is in their sidebar with all its tasks. If they already have a list with that name, the shared one gets the owner's name after it, such as "Holiday (Dio)"; each person can rename it for themselves.
 - **Everyone can do everything:** anyone in the list can add, change, tick off and delete tasks. A new task is shared with everyone straight away. A deleted task goes to everyone's trash.
-- **I'll bring it:** tap **I'll bring it** under an open task to put it on your name. The others then see "*Name* brings it", and only you can tick it off; their checkbox is greyed out. Tap your own **You bring it** to let go, so someone else can take it.
+- **I'll take it:** tap **I'll take it** under an open task to put it on your name, for example "Find a car" or "Beach ball". The others then see "*Name* is on it", and only you can tick it off; their checkbox is greyed out. Tap your own **You're on it** to let go, so someone else can take it.
 - **Ticked off stays:** a ticked-off task does not vanish. It moves to the **Ticked off** block at the bottom of the list, newest first, with who ticked it off and when ("Sanne · Sun 25 Oct, 17:10"). Tap its checkbox to reopen it. **Clear** moves all ticked-off tasks to the trash, for everyone. Ticked-off tasks do not count in the number in the sidebar.
 - **Notifications:** by default you get no notification when someone else ticks off a task. Turn on **Notify when ticked off** in the list menu to hear about every task, or, while that is off, open a task and tap **Notify me when this is ticked off** for just that one. You never get a notification for your own tick.
 - **Dragging a task out:** drag a task to one of your own lists and it is yours alone; it quietly disappears for the others. Drag a task of your own into a shared list and it is shared with everyone.
@@ -21,11 +21,11 @@ Working on one list together, such as a packing list for a holiday or a weekend 
 - **Removing someone:** only the person who shared the list (the owner) can invite people and remove them, in the **Share…** dialog. It works the same as leaving, and the person gets a notification.
 - **Deleting:** only the owner can delete a shared list (**Delete…**). The confirmation names the members, because the list and all its tasks disappear for them too. With **Move tasks to Inbox** only you keep the tasks, as your own; otherwise they go to everyone's trash, and only you can restore them.
 
-Sharing, accepting, leaving, removing someone, notifications and **Clear** only work while online. Adding, ticking off and **I'll bring it** also work offline and are sent once you are back online; if two people take the same task offline, whoever comes online first gets it.
+Sharing, accepting, leaving, removing someone, notifications and **Clear** only work while online. Adding, ticking off and **I'll take it** also work offline and are sent once you are back online; if two people take the same task offline, whoever comes online first gets it.
 
 Within a shared list, only the list's owner can send someone a **copy** of a task (see below); nobody can share a single task again.
 
-A task that you had already shared on its own with someone outside the list, before you shared the list, stays shared with them as an ordinary shared task: they keep it in their own list, get the usual notifications, and cannot use **I'll bring it**.
+A task that you had already shared on its own with someone outside the list, before you shared the list, stays shared with them as an ordinary shared task: they keep it in their own list, get the usual notifications, and cannot use **I'll take it**.
 
 ## Sharing a task
 Open a top-level task and tap **Share**. Pick someone and choose how:

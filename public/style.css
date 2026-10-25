@@ -761,7 +761,7 @@ html[data-boot-task] #detail::before {
 @keyframes skel { from { opacity: 1; } to { opacity: .45; } }
 @media (prefers-reduced-motion: reduce) { #list:empty::before, html[data-boot-task] #detail::before { animation: none; } }
 
-/* Gedeelde lijsten: icoon in de zijbalk, "ik neem het mee", het blok Afgevinkt, meldingen per taak en de deeldialoog. */
+/* Gedeelde lijsten: icoon in de zijbalk, "ik pak het op", het blok Afgevinkt, meldingen per taak en de deeldialoog. */
 #side .item .slist-ico { flex: none; display: inline-flex; color: var(--muted); }
 #side .item .slist-ico .ico { stroke: currentColor; }
 .meta .claim { display: inline-flex; align-items: center; gap: 3px; padding: 0 8px; min-height: 22px; border-radius: 999px; font-size: .75rem; line-height: 1.4; }
