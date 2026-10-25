@@ -2,7 +2,8 @@ import { env } from 'cloudflare:workers';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { TaskRow } from '../src/index';
 import type { Payload, Sender } from '../src/push';
-import { attachStmts, detachStmts, listOf, listPush, type ListShare } from '../src/sharedlists';
+import { attachStmts, detachStmts, listOf, listPush, transferListsStmts, type ListShare } from '../src/sharedlists';
+import { deleteUserStmts } from '../src/users';
 import { sendToAll } from '../src/push';
 import { ADMIN_ID, call, callAs, createTask, createUser, json, openTasks, session, type Task } from './helpers';
 
@@ -292,7 +293,7 @@ describe('gedeelde lijsten: account verwijderen', () => {
     await env.DB.prepare('UPDATE task_shares SET pinned = 1 WHERE task_id = ? AND to_user = ?').bind(t2.id, b.id).run();
     const volgordeB = await idsIn(b, name);
     const posB = (await sharesOn(t1.id)).find((r) => r.to_user === b.id)!.position;
-    // C meldt zich later nog bij de taak.
+    // B had zich voor deze taak aangemeld; als eigenaar heeft hij dat niet meer nodig.
     await env.DB.prepare('INSERT INTO task_watch (task_id, user_id) VALUES (?, ?)').bind(t1.id, b.id).run();
 
     await deleteUser(a);
@@ -305,6 +306,7 @@ describe('gedeelde lijsten: account verwijderen', () => {
     expect(await row(t2.id)).toMatchObject({ pinned: 1 });
     expect((await sharesOn(t1.id)).map((r) => r.to_user)).toEqual([c.id]);
     expect(await env.DB.prepare('SELECT from_user FROM task_shares WHERE task_id = ?').bind(t1.id).all().then((r) => r.results)).toEqual([{ from_user: b.id }]);
+    expect(await env.DB.prepare('SELECT 1 FROM task_watch WHERE task_id = ? AND user_id = ?').bind(t1.id, b.id).first()).toBeNull();
     expect(await idsIn(b, name)).toEqual(volgordeB);
     expect((await idsIn(c, name)).sort()).toEqual([t1.id, t2.id].sort());
     const lc = (await listsOf(c)).find((l) => l.name === name)!;
@@ -343,5 +345,18 @@ describe('gedeelde lijsten: account verwijderen', () => {
     expect(await row(t.id)).toMatchObject({ user_id: a.id, shared_list: id });
     expect((await listsOf(a)).find((l) => l.name === name)!.shared!.members).toEqual([]);
     expect((await tasksOf(a)).map((x) => x.id)).toContain(t.id);
+  });
+
+  it('een erfgenaam die intussen weg is: de lijst gaat mee met het account', async () => {
+    const [a, b] = [await mk(), await mk()];
+    const name = `Race ${uniq()}`;
+    const t = await addTask(a, 'Snel', name);
+    const { list_id: id } = await json<{ list_id: string }>(await shareList(name, b.email, {}, a.cookie));
+    expect((await accept(b, id)).status).toBe(200);
+    const stmts = await transferListsStmts(env.DB, a.id); // erfgenaam B is gekozen...
+    expect((await removeMember(id, b.id, b.cookie)).status).toBe(200); // ...en vertrekt voor de batch draait
+    await env.DB.batch([...stmts, ...deleteUserStmts(env.DB, a.id)]);
+    expect(await env.DB.prepare('SELECT 1 FROM shared_lists WHERE id = ?').bind(id).first()).toBeNull();
+    expect(await env.DB.prepare('SELECT 1 FROM tasks WHERE id = ?').bind(t.id).first()).toBeNull();
   });
 });

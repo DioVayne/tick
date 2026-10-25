@@ -152,19 +152,23 @@ export async function transferListsStmts(db: D1Database, userId: string): Promis
     }
     const inList = 'SELECT id FROM tasks WHERE shared_list = ?1';
     const mine = 'SELECT 1 FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2';
+    // De erfgenaam is buiten de batch gekozen: elk statement geldt alleen zolang hij nog geaccepteerd lid is.
+    const still = "EXISTS (SELECT 1 FROM list_members WHERE list_id = ?1 AND user_id = ?2 AND status = 'accepted')";
     stmts.push(
       db.prepare(
         `UPDATE tasks SET position = (SELECT s.position FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2), ` +
         `pinned = (SELECT s.pinned FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2), ` +
         `loc_notified = (SELECT s.loc_notified FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2) ` +
-        `WHERE shared_list = ?1 AND EXISTS (${mine})`,
+        `WHERE shared_list = ?1 AND EXISTS (${mine}) AND ${still}`,
       ).bind(id, heir.user_id),
-      db.prepare(`UPDATE tasks SET user_id = ?2, list = ?3, updated_at = ?4 WHERE shared_list = ?1 OR parent_id IN (${inList})`).bind(id, heir.user_id, heir.name, ts),
-      db.prepare(`DELETE FROM task_shares WHERE to_user = ?2 AND task_id IN (${inList})`).bind(id, heir.user_id),
-      db.prepare(`UPDATE task_shares SET from_user = ?2 WHERE task_id IN (${inList})`).bind(id, heir.user_id),
-      db.prepare(`DELETE FROM task_watch WHERE user_id = ?2 AND (task_id IN (${inList}) OR task_id IN (SELECT id FROM tasks WHERE parent_id IN (${inList})))`).bind(id, heir.user_id),
-      db.prepare('UPDATE shared_lists SET owner_id = ? WHERE id = ?').bind(heir.user_id, id),
-      db.prepare("UPDATE list_members SET role = 'owner' WHERE list_id = ? AND user_id = ?").bind(id, heir.user_id),
+      db.prepare(`UPDATE tasks SET user_id = ?2, list = ?3, updated_at = ?4 WHERE (shared_list = ?1 OR parent_id IN (${inList})) AND ${still}`).bind(id, heir.user_id, heir.name, ts),
+      db.prepare(`DELETE FROM task_shares WHERE to_user = ?2 AND task_id IN (${inList}) AND ${still}`).bind(id, heir.user_id),
+      db.prepare(`UPDATE task_shares SET from_user = ?2 WHERE task_id IN (${inList}) AND ${still}`).bind(id, heir.user_id),
+      db.prepare(`DELETE FROM task_watch WHERE user_id = ?2 AND (task_id IN (${inList}) OR task_id IN (SELECT id FROM tasks WHERE parent_id IN (${inList}))) AND ${still}`).bind(id, heir.user_id),
+      db.prepare(`UPDATE list_members SET role = 'owner' WHERE list_id = ?1 AND user_id = ?2 AND status = 'accepted'`).bind(id, heir.user_id),
+      db.prepare(`UPDATE shared_lists SET owner_id = ?2 WHERE id = ?1 AND ${still}`).bind(id, heir.user_id),
+      // Is de erfgenaam intussen weg, dan gaat de lijst mee met het account (de taken blijven van de eigenaar).
+      db.prepare('DELETE FROM shared_lists WHERE id = ? AND owner_id = ?').bind(id, userId),
     );
   }
   return stmts;
