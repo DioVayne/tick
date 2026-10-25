@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // De Workers-runtime heeft geen IndexedDB: db.js valt dan terug op geheugen, en dat lezen we hier uit.
 import { nextOccurrence } from '../public/repeat.js';
 import * as db from '../public/db.js';
@@ -216,6 +216,11 @@ describe('store: gedeelde lijsten', () => {
   const quiet = () => vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('', { status: 503 }));
   const clear = async () => { for (const op of await db.outboxAll()) await db.outboxDelete(op.seq); };
   afterEach(() => vi.restoreAllMocks());
+  // Elke test op zichzelf: eerst inloggen als 'me' (Ik), tegen een server zonder gegevens.
+  beforeEach(async () => {
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => json([]));
+    try { await init('me', 'Ik'); } finally { spy.mockRestore(); }
+  });
 
   it('init kent de ingelogde gebruiker; sharedDone en listInvites komen van de server en sharedDone gaat in de cache', async () => {
     await db.clearAll();
