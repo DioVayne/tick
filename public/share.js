@@ -114,8 +114,9 @@ export function fillShareBox(box, task, readOnly) {
   box.hidden = !!task.parent_id || (!s && readOnly);
   if (box.hidden) { box.replaceChildren(); return; }
   const rows = [];
-  // In een gedeelde lijst staan de leden bij de lijst; hier alleen de knop voor een kopie (voor de eigenaar).
-  if (task.shared_list) {
+  // In een gedeelde lijst staan de leden bij de lijst; hier alleen de knop voor een kopie (voor de eigenaar). Wie de
+  // taak per taak deelt zonder lid te zijn, heeft hem in een eigen lijst (geen sharedOf) en ziet het gewone vak.
+  if (task.shared_list && sharedOf(task.list)) {
     box.hidden = !sharedOf(task.list)?.mine || readOnly; // de eigenaar van de lijst is eigenaar van elke taak erin
     box.replaceChildren(...(box.hidden ? [] : [
       el('h3', {}, t('share.heading')),

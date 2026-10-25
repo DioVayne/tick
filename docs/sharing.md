@@ -14,7 +14,7 @@ Working on one list together, such as a packing list for a holiday or a weekend 
 - **Accept once:** the other person gets a notification with **Accept** and **Decline**, and a bar at the top of Tick. After accepting, the list is in their sidebar with all its tasks. If they already have a list with that name, the shared one gets the owner's name after it, such as "Holiday (Dio)"; each person can rename it for themselves.
 - **Everyone can do everything:** anyone in the list can add, change, tick off and delete tasks. A new task is shared with everyone straight away. A deleted task goes to everyone's trash.
 - **I'll bring it:** tap **I'll bring it** under an open task to put it on your name. The others then see "*Name* brings it", and only you can tick it off; their checkbox is greyed out. Tap your own **You bring it** to let go, so someone else can take it.
-- **Ticked off stays:** a ticked-off task does not vanish. It moves to the **Ticked off** block at the bottom of the list, newest first, with who ticked it off and when ("Sanne · Fri 17:30"). Tap its checkbox to reopen it. **Clear** moves all ticked-off tasks to the trash, for everyone. Ticked-off tasks do not count in the number in the sidebar.
+- **Ticked off stays:** a ticked-off task does not vanish. It moves to the **Ticked off** block at the bottom of the list, newest first, with who ticked it off and when ("Sanne · Sun 25 Oct, 17:10"). Tap its checkbox to reopen it. **Clear** moves all ticked-off tasks to the trash, for everyone. Ticked-off tasks do not count in the number in the sidebar.
 - **Notifications:** by default you get no notification when someone else ticks off a task. Turn on **Notify when ticked off** in the list menu to hear about every task, or, while that is off, open a task and tap **Notify me when this is ticked off** for just that one. You never get a notification for your own tick.
 - **Dragging a task out:** drag a task to one of your own lists and it is yours alone; it quietly disappears for the others. Drag a task of your own into a shared list and it is shared with everyone.
 - **Leaving:** a member chooses **Leave…** in the list menu. The list and its tasks disappear for them; the tasks stay in the list for everyone else, including the ones they added. Whatever was on their name is free again.
@@ -23,7 +23,9 @@ Working on one list together, such as a packing list for a holiday or a weekend 
 
 Sharing, accepting, leaving, removing someone, notifications and **Clear** only work while online. Adding, ticking off and **I'll bring it** also work offline and are sent once you are back online; if two people take the same task offline, whoever comes online first gets it.
 
-Within a shared list you can still send someone a **copy** of a task (see below), but not share a single task again.
+Within a shared list, only the list's owner can send someone a **copy** of a task (see below); nobody can share a single task again.
+
+A task that you had already shared on its own with someone outside the list, before you shared the list, stays shared with them as an ordinary shared task: they keep it in their own list, get the usual notifications, and cannot use **I'll bring it**.
 
 ## Sharing a task
 Open a top-level task and tap **Share**. Pick someone and choose how:

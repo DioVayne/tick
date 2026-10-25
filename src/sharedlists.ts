@@ -58,29 +58,36 @@ export async function listNames(db: D1Database, userId: string): Promise<Set<str
 }
 
 /**
+ * De laagste positie in de volgorde van open hoofdtaken van `who` (een SQL-uitdrukking), min `step`: zoals
+ * `topMin(…) - STEP`, maar in de query zelf. MIN met twee waarden is NULL als er een NULL is, vandaar de COALESCE.
+ */
+const topSql = (who: string, step: string) => {
+  const own = `(SELECT MIN(position) FROM tasks WHERE user_id = ${who} AND parent_id IS NULL AND done = 0 AND deleted_at IS NULL)`;
+  const shared = `(SELECT MIN(s.position) FROM task_shares s JOIN tasks t ON t.id = s.task_id WHERE s.to_user = ${who} AND s.status = 'accepted' AND t.done = 0 AND t.deleted_at IS NULL)`;
+  return `COALESCE(MIN(${own}, ${shared}), ${own}, ${shared}, 0) - ${step}`;
+};
+
+/**
  * Maakt een eigen hoofdtaak (met subtaken) deel van de lijst: van de eigenaar, in diens naam van de lijst, met een
- * deelrij voor elk ander geaccepteerd lid. De aanvrager krijgt `actorPosition`, de anderen komen bovenaan.
+ * deelrij voor elk ander geaccepteerd lid. De aanvrager krijgt `actorPosition`, de anderen komen bovenaan. De leden
+ * leest de batch zelf, zodat wie intussen vertrok of accepteerde goed meetelt.
  */
 export async function attachStmts(db: D1Database, task: Pick<TaskRow, 'id'>, list: ListRef, actorId: string, actorPosition: number): Promise<D1PreparedStatement[]> {
-  const { results: members } = await db.prepare("SELECT user_id, name FROM list_members WHERE list_id = ? AND status = 'accepted'")
-    .bind(list.id).all<{ user_id: string; name: string }>();
   const ts = now();
-  const position = async (uid: string) => (uid === actorId ? actorPosition : ((await topMin(db, uid)) ?? 0) - STEP);
-  const ownerName = members.find((m) => m.user_id === list.owner_id)?.name ?? list.name;
-  const stmts = [
-    db.prepare('UPDATE tasks SET user_id = ?1, list = ?2, updated_at = ?3 WHERE id = ?4 OR parent_id = ?4').bind(list.owner_id, ownerName, ts, task.id),
-    db.prepare('UPDATE tasks SET shared_list = ?, position = ? WHERE id = ?').bind(list.id, await position(list.owner_id), task.id),
+  const ownerPosition = list.owner_id === actorId ? actorPosition : ((await topMin(db, list.owner_id)) ?? 0) - STEP;
+  return [
+    db.prepare('UPDATE tasks SET user_id = ?1, list = COALESCE((SELECT name FROM list_members WHERE list_id = ?2 AND user_id = ?1), ?3), updated_at = ?4 ' +
+      'WHERE id = ?5 OR parent_id = ?5').bind(list.owner_id, list.id, list.name, ts, task.id),
+    db.prepare('UPDATE tasks SET shared_list = ?, position = ? WHERE id = ?').bind(list.id, ownerPosition, task.id),
     // De eigenaar heeft de taak nu zelf; een deelrij voor hem zou hem dubbel geven.
     db.prepare('DELETE FROM task_shares WHERE task_id = ? AND to_user = ?').bind(task.id, list.owner_id),
-  ];
-  for (const m of members) {
-    if (m.user_id === list.owner_id) continue;
-    stmts.push(db.prepare(
-      "INSERT INTO task_shares (id, task_id, from_user, to_user, mode, status, list, position, created_at, responded_at) VALUES (?, ?, ?, ?, 'shared', 'accepted', ?, ?, ?, ?) " +
+    db.prepare(
+      'INSERT INTO task_shares (id, task_id, from_user, to_user, mode, status, list, position, created_at, responded_at) ' +
+      `SELECT lower(hex(randomblob(16))), ?1, ?2, m.user_id, 'shared', 'accepted', m.name, CASE WHEN m.user_id = ?4 THEN ?5 ELSE ${topSql('m.user_id', '?6')} END, ?7, ?7 ` +
+      "FROM list_members m WHERE m.list_id = ?3 AND m.status = 'accepted' AND m.user_id != ?2 " +
       "ON CONFLICT (task_id, to_user) DO UPDATE SET mode = 'shared', status = 'accepted', list = excluded.list, position = excluded.position, responded_at = excluded.responded_at",
-    ).bind(crypto.randomUUID(), task.id, list.owner_id, m.user_id, m.name, await position(m.user_id), ts, ts));
-  }
-  return stmts;
+    ).bind(task.id, list.owner_id, list.id, actorId, actorPosition, STEP, ts),
+  ];
 }
 
 /**
@@ -136,42 +143,46 @@ export function leaveListStmts(db: D1Database, listId: string, userId: string): 
  * geaccepteerde lid met de vroegste `responded_at` (gelijk: kleinste `user_id`): zijn positie en pin worden die van
  * de taak, taken en subtaken worden van hem met zijn lijstnaam, zijn deelrijen verdwijnen, de andere deelrijen komen
  * van hem, en hij wordt eigenaar. Een lijst zonder geaccepteerde leden verdwijnt (de taken gaan mee met het
- * account). Een vast aantal statements per lijst, want D1 telt elk statement van een batch als query.
+ * account). Elk statement kiest de erfgenaam zelf, in SQL, als de batch draait: wie intussen vertrok, erft niets.
+ * Een vast aantal statements, hoeveel lijsten het ook zijn, want D1 telt elk statement van een batch als query.
  */
-export async function transferListsStmts(db: D1Database, userId: string): Promise<D1PreparedStatement[]> {
-  const { results: lists } = await db.prepare('SELECT id FROM shared_lists WHERE owner_id = ?').bind(userId).all<{ id: string }>();
-  const stmts: D1PreparedStatement[] = [];
+export function transferListsStmts(db: D1Database, userId: string): D1PreparedStatement[] {
+  const owned = 'SELECT id FROM shared_lists WHERE owner_id = ?1';
+  const heir = (list: string) =>
+    `(SELECT h.user_id FROM list_members h WHERE h.list_id = ${list} AND h.status = 'accepted' AND h.user_id != ?1 ORDER BY h.responded_at, h.user_id LIMIT 1)`;
+  const heirName = (list: string) => `(SELECT n.name FROM list_members n WHERE n.list_id = ${list} AND n.user_id = ${heir(list)})`;
+  // De lijst van een taak of subtaak: een subtaak draagt hem niet zelf, haar ouder wel.
+  const listOfTask = (id: string) => `(SELECT COALESCE(t.shared_list, p.shared_list) FROM tasks t LEFT JOIN tasks p ON p.id = t.parent_id WHERE t.id = ${id})`;
+  const inList = `SELECT id FROM tasks WHERE shared_list IN (${owned})`;
+  const heirShare = (col: string) => `(SELECT s.${col} FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ${heir('tasks.shared_list')})`;
+  const parentList = '(SELECT p.shared_list FROM tasks p WHERE p.id = tasks.parent_id)';
+  const shareHeir = heir(listOfTask('task_shares.task_id'));
   const ts = now();
-  for (const { id } of lists) {
-    const heir = await db.prepare(
-      "SELECT user_id, name FROM list_members WHERE list_id = ? AND status = 'accepted' AND user_id != ? ORDER BY responded_at, user_id LIMIT 1",
-    ).bind(id, userId).first<{ user_id: string; name: string }>();
-    if (!heir) {
-      stmts.push(db.prepare('DELETE FROM shared_lists WHERE id = ?').bind(id));
-      continue;
-    }
-    const inList = 'SELECT id FROM tasks WHERE shared_list = ?1';
-    const mine = 'SELECT 1 FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2';
-    // De erfgenaam is buiten de batch gekozen: elk statement geldt alleen zolang hij nog geaccepteerd lid is.
-    const still = "EXISTS (SELECT 1 FROM list_members WHERE list_id = ?1 AND user_id = ?2 AND status = 'accepted')";
-    stmts.push(
-      db.prepare(
-        `UPDATE tasks SET position = (SELECT s.position FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2), ` +
-        `pinned = (SELECT s.pinned FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2), ` +
-        `loc_notified = (SELECT s.loc_notified FROM task_shares s WHERE s.task_id = tasks.id AND s.to_user = ?2) ` +
-        `WHERE shared_list = ?1 AND EXISTS (${mine}) AND ${still}`,
-      ).bind(id, heir.user_id),
-      db.prepare(`UPDATE tasks SET user_id = ?2, list = ?3, updated_at = ?4 WHERE (shared_list = ?1 OR parent_id IN (${inList})) AND ${still}`).bind(id, heir.user_id, heir.name, ts),
-      db.prepare(`DELETE FROM task_shares WHERE to_user = ?2 AND task_id IN (${inList}) AND ${still}`).bind(id, heir.user_id),
-      db.prepare(`UPDATE task_shares SET from_user = ?2 WHERE task_id IN (${inList}) AND ${still}`).bind(id, heir.user_id),
-      db.prepare(`DELETE FROM task_watch WHERE user_id = ?2 AND (task_id IN (${inList}) OR task_id IN (SELECT id FROM tasks WHERE parent_id IN (${inList}))) AND ${still}`).bind(id, heir.user_id),
-      db.prepare(`UPDATE list_members SET role = 'owner' WHERE list_id = ?1 AND user_id = ?2 AND status = 'accepted'`).bind(id, heir.user_id),
-      db.prepare(`UPDATE shared_lists SET owner_id = ?2 WHERE id = ?1 AND ${still}`).bind(id, heir.user_id),
-      // Is de erfgenaam intussen weg, dan gaat de lijst mee met het account (de taken blijven van de eigenaar).
-      db.prepare('DELETE FROM shared_lists WHERE id = ? AND owner_id = ?').bind(id, userId),
-    );
-  }
-  return stmts;
+  return [
+    db.prepare(
+      `UPDATE tasks SET position = ${heirShare('position')}, pinned = ${heirShare('pinned')}, loc_notified = ${heirShare('loc_notified')} ` +
+      `WHERE shared_list IN (${owned}) AND ${heirShare('id')} IS NOT NULL`,
+    ).bind(userId),
+    // Eerst de subtaken (de lijst lezen ze bij hun ouder), dan de hoofdtaken.
+    db.prepare(
+      `UPDATE tasks SET user_id = ${heir(parentList)}, list = ${heirName(parentList)}, updated_at = ?2 ` +
+      `WHERE parent_id IN (${inList}) AND ${heir(parentList)} IS NOT NULL`,
+    ).bind(userId, ts),
+    db.prepare(
+      `UPDATE tasks SET user_id = ${heir('tasks.shared_list')}, list = ${heirName('tasks.shared_list')}, updated_at = ?2 ` +
+      `WHERE shared_list IN (${owned}) AND ${heir('tasks.shared_list')} IS NOT NULL`,
+    ).bind(userId, ts),
+    db.prepare(`DELETE FROM task_shares WHERE task_id IN (${inList}) AND to_user = ${shareHeir}`).bind(userId),
+    db.prepare(`UPDATE task_shares SET from_user = ${shareHeir} WHERE task_id IN (${inList}) AND ${shareHeir} IS NOT NULL`).bind(userId),
+    db.prepare(
+      `DELETE FROM task_watch WHERE (task_id IN (${inList}) OR task_id IN (SELECT id FROM tasks WHERE parent_id IN (${inList}))) ` +
+      `AND user_id = ${heir(listOfTask('task_watch.task_id'))}`,
+    ).bind(userId),
+    db.prepare(`UPDATE list_members SET role = 'owner' WHERE list_id IN (${owned}) AND user_id = ${heir('list_members.list_id')}`).bind(userId),
+    db.prepare(`UPDATE shared_lists SET owner_id = ${heir('shared_lists.id')} WHERE owner_id = ?1 AND ${heir('shared_lists.id')} IS NOT NULL`).bind(userId),
+    // Een lijst zonder erfgenaam gaat mee met het account (de taken blijven van de eigenaar).
+    db.prepare('DELETE FROM shared_lists WHERE owner_id = ?').bind(userId),
+  ];
 }
 
 /** Deelstatus per lijst waar je geaccepteerd lid van bent, met als sleutel jouw naam van de lijst. */
@@ -305,8 +316,8 @@ sharedListsApi.get('/incoming', async (c) => {
 /**
  * Accepteren: je lidmaatschap krijgt een naam die je nog niet hebt, en elke hoofdtaak van de lijst een deelrij,
  * bovenaan in jouw volgorde en in die van de eigenaar. De deelrijen lezen de taken in dezelfde batch, zodat er geen
- * taak tussendoor valt; een taak die al per taak met je gedeeld was, houdt zijn rij, en een openstaande uitnodiging
- * per taak wordt een deelname in de lijst.
+ * taak tussendoor valt; een taak die al per taak met je gedeeld was, komt ook in de lijst, en een openstaande
+ * uitnodiging per taak wordt een deelname in de lijst.
  */
 sharedListsApi.post('/:id/accept', async (c) => {
   const db = c.env.DB;
@@ -334,9 +345,10 @@ sharedListsApi.post('/:id/accept', async (c) => {
       'SELECT id, user_id, row_number() OVER (ORDER BY position, id) AS rn, count(*) OVER () AS n FROM tasks ' +
       'WHERE shared_list = ?1 AND parent_id IS NULL AND deleted_at IS NULL) ' +
       "WHERE EXISTS (SELECT 1 FROM list_members WHERE list_id = ?1 AND user_id = ?2 AND status = 'accepted') " +
-      // Een openstaande uitnodiging per taak (gedeeld of kopie) wordt een gewone deelname; een geaccepteerde blijft.
+      // Een openstaande uitnodiging per taak (gedeeld of kopie) wordt een gewone deelname in de lijst, en een al
+      // geaccepteerde deelname komt in de lijst: met de lijstnaam en positie van dit lid, zoals elke andere taak.
       "ON CONFLICT (task_id, to_user) DO UPDATE SET mode = 'shared', status = 'accepted', list = excluded.list, position = excluded.position, " +
-      "responded_at = excluded.responded_at WHERE task_shares.status = 'pending'",
+      'responded_at = excluded.responded_at',
     ).bind(listId, userId, name, top, STEP, ts),
   ]);
   if (!res.meta.changes) throw new HttpError(404, 'err.not_found'); // intussen geweigerd of ingetrokken

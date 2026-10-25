@@ -24,7 +24,7 @@ import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
 import { leaveShareStmts, notifyShareDone, notifyShareLocation, sharesApi } from './shares';
 import {
-  assertMayTick, attachStmts, detachStmts, dissolveStmts, listNames, listOf, listPush, type ListRef, listSharing, nameOf, notifyListDone, sharedListsApi,
+  assertMayTick, attachStmts, detachStmts, dissolveStmts, listById, listNames, listOf, listPush, type ListRef, listSharing, nameOf, notifyListDone, sharedListsApi,
 } from './sharedlists';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 import { backgroundApi } from './background';
@@ -496,10 +496,11 @@ async function plainDone(db: D1Database, t: TaskRow, done: boolean, actorId: str
 
 /**
  * Nieuwe of andere plek op een gedeelde hoofdtaak: melding aan de anderen die hem delen, op de achtergrond. In een
- * gedeelde lijst niet: daar meldt Tick alleen afvinken, en alleen aan wie dat aanzette.
+ * gedeelde lijst niet aan de leden (daar meldt Tick alleen afvinken, en alleen aan wie dat aanzette); een deelnemer
+ * per taak die geen lid is, krijgt hem wel (`notifyShareLocation` slaat de leden over).
  */
 async function placeShared(c: Context<AppEnv>, t: TaskRow) {
-  if (t.parent_id || t.shared_list) return;
+  if (t.parent_id) return;
   const sending = notifyShareLocation(c.env, t, c.get('auth').userId, c.get('user').name, c.get('install').defaultLocale, listPush.send)
     .catch((e) => console.warn('plek op gedeelde taak melden mislukt', (e as Error).message));
   try { c.executionCtx.waitUntil(sending); } catch { await sending; }
@@ -507,17 +508,18 @@ async function placeShared(c: Context<AppEnv>, t: TaskRow) {
 
 /**
  * Na echt afvinken van een hoofdtaak: melding aan de andere leden van de kopiegroep en aan de anderen die de taak
- * delen, op de achtergrond. In een gedeelde lijst alleen aan wie dat aanzette (`notifyListDone`).
+ * delen, op de achtergrond. In een gedeelde lijst krijgen de leden hem alleen als ze dat aanzetten
+ * (`notifyListDone`); een deelnemer per taak die geen lid is, krijgt hem zoals altijd (`notifyShareDone`).
  */
 async function copyDone(c: Context<AppEnv>, t: TaskRow) {
   if (t.parent_id) return;
   const user = c.get('user'), locale = c.get('install').defaultLocale, actorId = c.get('auth').userId;
   const sending = Promise.all([
     t.copy_group && notifyCopyDone(c.env, t, user.name, locale).catch((e) => console.warn('kopie klaar melden mislukt', (e as Error).message)),
-    (t.shared_list
-      ? notifyListDone(c.env, t, actorId, user.name, locale, listPush.send)
-      : notifyShareDone(c.env, t, actorId, user.name, locale, listPush.send)
-    ).catch((e) => console.warn('gedeelde taak klaar melden mislukt', (e as Error).message)),
+    Promise.all([
+      t.shared_list && notifyListDone(c.env, t, actorId, user.name, locale, listPush.send),
+      notifyShareDone(c.env, t, actorId, user.name, locale, listPush.send),
+    ]).catch((e) => console.warn('gedeelde taak klaar melden mislukt', (e as Error).message)),
   ]);
   try { c.executionCtx.waitUntil(sending); } catch { await sending; }
 }
@@ -715,10 +717,15 @@ app.patch('/api/tasks/:id', async (c) => patchTask(c, c.req.param('id'), await b
 
 /**
  * Wat een nieuwe `list` met het lidmaatschap van een hoofdtaak in een gedeelde lijst doet: null als dat niet
- * verandert, anders of hij eerst los moet (`detach`) en in welke lijst hij daarna komt (`attach`).
+ * verandert, anders of hij eerst los moet (`detach`) en in welke lijst hij daarna komt (`attach`). Voor een
+ * deelnemer per taak die geen lid van de lijst is (`outsider`) verandert het nooit: hij past alleen zijn eigen deelrij aan.
  */
-async function listMove(db: D1Database, t: Access, userId: string, list: string): Promise<{ detach: boolean; attach: ListRef | null } | null> {
+async function listMove(db: D1Database, t: Access, userId: string, list: string, outsider: boolean): Promise<{ detach: boolean; attach: ListRef | null } | null> {
   const dest = await listOf(db, userId, list);
+  if (outsider) {
+    if (dest) throw new HttpError(400, 'err.shared_task_to_list');
+    return null;
+  }
   if ((t.shared_list ?? null) === (dest?.id ?? null)) return null;
   // Erin slepen kan alleen met een eigen taak die nog met niemand per taak gedeeld is.
   if (!t.shared_list && (t.user_id !== userId || t.has_share)) throw new HttpError(400, 'err.shared_task_to_list');
@@ -744,6 +751,8 @@ async function patchTask(c: Context<AppEnv>, id: string, b: Record<string, unkno
   const z = c.get('prefs');
   const t = await getTask(db, userId, id);
   if (!t) throw new HttpError(404, 'err.not_found');
+  // Al per taak gedeeld voordat de lijst gedeeld werd, maar geen lid: voor hem is het een gewone gedeelde taak.
+  const outsider = !!t.shared_list && !!t.share_id && !(await listById(db, userId, t.shared_list));
   const sets: string[] = [];
   const vals: unknown[] = [];
   const set = (col: string, v: unknown) => { sets.push(`${col} = ?`); vals.push(v); };
@@ -761,7 +770,7 @@ async function patchTask(c: Context<AppEnv>, id: string, b: Record<string, unkno
     if (parent && !('pinned' in b)) set('pinned', 0); // een subtaak pint niet
   }
   const target = list;
-  const move = target !== null && !parentId ? await listMove(db, t, userId, target) : null;
+  const move = target !== null && !parentId ? await listMove(db, t, userId, target, outsider) : null;
   // Een deelnemer heeft lijst en volgorde van de hoofdtaak in zijn eigen deelrij; bij zijn subtaken volgt de lijst de ouder.
   const member = !!t.share_id;
   const shareSets: [string, unknown][] = [];
@@ -817,8 +826,9 @@ async function patchTask(c: Context<AppEnv>, id: string, b: Record<string, unkno
     if (member && !t.parent_id) shareSets.push(['loc_notified', b.location_notified ? 1 : 0]);
     else set('loc_notified', b.location_notified ? 1 : 0);
   }
-  // Op naam en een melding per taak: alleen bij een hoofdtaak in een gedeelde lijst, zoals hij na een verhuizing is.
-  const inSharedList = !parentId && (move ? !!move.attach : !!t.shared_list);
+  // Op naam en een melding per taak: alleen bij een hoofdtaak in een gedeelde lijst, zoals hij na een verhuizing is,
+  // en alleen voor de leden.
+  const inSharedList = !parentId && (move ? !!move.attach : !!t.shared_list && !outsider);
   if ('claimed' in b) {
     if (typeof b.claimed !== 'boolean') throw new HttpError(400, 'err.must_be_bool', { field: 'claimed' });
     if (!inSharedList || (b.claimed && t.done)) throw new HttpError(400, 'err.claim_shared_list');
@@ -924,6 +934,9 @@ app.post('/api/tasks/:id/restore', async (c) => {
   const head = parent ?? (t.parent_id ? null : t);
   const orphan = !!head?.shared_list && !(await db.prepare('SELECT 1 FROM shared_lists WHERE id = ?').bind(head.shared_list).first());
   if (orphan && head!.user_id !== userId) throw new HttpError(403, 'err.shared_list_owner_only');
+  // Lag de hoofdtaak in de prullenbak toen zijn lijst gedeeld werd, dan heeft hij de naam van een gedeelde lijst van
+  // zijn eigenaar maar hoort hij er niet bij (de leden zien hem niet): terugzetten maakt hem deel van de lijst.
+  const join = head && !head.shared_list ? await listOf(db, head.user_id, head.list) : null;
   const ts = now();
   const back = (r: TaskRow) => db.prepare(
     'UPDATE tasks SET deleted_at = NULL, notified = CASE WHEN remind_at IS NOT NULL AND remind_at <= ? THEN 1 ELSE notified END, updated_at = ? ' +
@@ -931,6 +944,7 @@ app.post('/api/tasks/:id/restore', async (c) => {
   await db.batch([
     ...(parent ? [back(parent)] : []), back(t),
     ...(orphan ? detachStmts(db, head!, userId, 'Inbox', ((await topMin(db, userId)) ?? 0) - STEP) : []),
+    ...(join ? await attachStmts(db, head!, join, head!.user_id, head!.position) : []),
   ]);
   return c.json({ ok: true });
 });
