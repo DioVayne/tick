@@ -23,7 +23,9 @@ import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
 import { leaveShareStmts, notifyShareDone, notifyShareLocation, sharesApi } from './shares';
-import { attachStmts, detachStmts, dissolveStmts, listNames, listOf, type ListRef, listSharing, sharedListsApi } from './sharedlists';
+import {
+  assertMayTick, attachStmts, detachStmts, dissolveStmts, listNames, listOf, listPush, type ListRef, listSharing, nameOf, notifyListDone, sharedListsApi,
+} from './sharedlists';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxUpload, sweepAttachments } from './attachments';
@@ -233,9 +235,10 @@ const byPin = (a: { pinned: boolean; position: number }, b: { pinned: boolean; p
  * Taken voor de client zoals `userId` ze ziet: lijst en volgorde uit zijn deelrij, en `share` op de hoofdtaak
  * (null op subtaken en op taken die met niemand gedeeld zijn), en `copies` uit `copiesFor` (null zonder kopiegroep).
  * `done_by` en `claimed_by` worden `{ id, name }` met de naam uit `names` (een verwijderd account geeft null);
- * `watch` is nog altijd false.
+ * `watch` zegt of `userId` een melding bij afvinken van deze taak heeft (`watched`).
  */
-function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, copies: Map<string, Copies>, files = new Map<string, Attachment[]>(), names = new Map<string, string>()) {
+function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, copies: Map<string, Copies>, files = new Map<string, Attachment[]>(),
+  names = new Map<string, string>(), watched = new Set<string>()) {
   const person = (id: string | null) => {
     const name = id === null ? undefined : names.get(id);
     return name === undefined ? null : { id: id!, name };
@@ -244,7 +247,7 @@ function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, c
     const { share_id, share_list, share_position, share_pinned, share_loc_notified, has_share, has_copy_invite, ...t } = overlay(r);
     const s = t.parent_id ? undefined : info.get(t.id);
     return {
-      ...asBool(t), done_by: person(t.done_by), claimed_by: person(t.claimed_by), watch: false,
+      ...asBool(t), done_by: person(t.done_by), claimed_by: person(t.claimed_by), watch: watched.has(t.id),
       share: s ? { ...s, mine: s.owner.id === userId } : null, copies: (!t.parent_id && copies.get(t.id)) || null,
       attachments: files.get(t.id) ?? [],
     };
@@ -258,13 +261,21 @@ async function personNames(db: D1Database, rows: TaskRow[]): Promise<Map<string,
   return new Map(results.map((u) => [u.id, u.name]));
 }
 
-/** Deelinformatie, kopiegroepen, bijlagen en namen voor deze rijen; alleen opgezocht als er iets te vinden is. */
+/** De taken waarbij `userId` een melding bij afvinken heeft; alleen opgezocht als er een taak uit een gedeelde lijst bij is. */
+async function watchedBy(db: D1Database, userId: string, rows: TaskRow[]): Promise<Set<string>> {
+  if (!rows.some((r) => r.shared_list)) return new Set();
+  const { results } = await db.prepare('SELECT task_id FROM task_watch WHERE user_id = ?').bind(userId).all<{ task_id: string }>();
+  return new Set(results.map((r) => r.task_id));
+}
+
+/** Deelinformatie, kopiegroepen, bijlagen, namen en meldingen voor deze rijen; alleen opgezocht als er iets te vinden is. */
 async function extras(env: Env, userId: string, rows: Access[]) {
   return Promise.all([
     anyShared(rows) ? shareInfo(env.DB, userId) : new Map<string, ShareInfo>(),
     anyCopies(rows, userId) ? copiesFor(env.DB, userId, rows) : new Map<string, Copies>(),
     attachmentsFor(env, rows.map((r) => r.id)),
     personNames(env.DB, rows),
+    watchedBy(env.DB, userId, rows),
   ]);
 }
 
@@ -274,13 +285,14 @@ async function presentOne(env: Env, userId: string, id: string, row?: Access | n
   const t = row ?? await getAccess(db, userId, id);
   if (!t) throw new HttpError(404, 'err.not_found');
   // Een subtaak krijgt share: null, en zonder deelrijen is er niets op te zoeken.
-  const [info, copies, files, names] = await Promise.all([
+  const [info, copies, files, names, watched] = await Promise.all([
     !t.parent_id && anyShared([t]) ? shareInfo(db, userId, t.id) : new Map<string, ShareInfo>(),
     anyCopies([t], userId) ? copiesFor(db, userId, [t]) : new Map<string, Copies>(),
     attachmentsFor(env, [t.id]),
     personNames(db, [t]),
+    watchedBy(db, userId, [t]),
   ]);
-  return present([t], userId, info, copies, files, names)[0];
+  return present([t], userId, info, copies, files, names, watched)[0];
 }
 
 const MAX_TITLE = 500;
@@ -482,24 +494,30 @@ async function plainDone(db: D1Database, t: TaskRow, done: boolean, actorId: str
   return done && res.meta.changes > 0;
 }
 
-/** Nieuwe of andere plek op een gedeelde hoofdtaak: melding aan de anderen die hem delen, op de achtergrond. */
+/**
+ * Nieuwe of andere plek op een gedeelde hoofdtaak: melding aan de anderen die hem delen, op de achtergrond. In een
+ * gedeelde lijst niet: daar meldt Tick alleen afvinken, en alleen aan wie dat aanzette.
+ */
 async function placeShared(c: Context<AppEnv>, t: TaskRow) {
-  if (t.parent_id) return;
-  const sending = notifyShareLocation(c.env, t, c.get('auth').userId, c.get('user').name, c.get('install').defaultLocale)
+  if (t.parent_id || t.shared_list) return;
+  const sending = notifyShareLocation(c.env, t, c.get('auth').userId, c.get('user').name, c.get('install').defaultLocale, listPush.send)
     .catch((e) => console.warn('plek op gedeelde taak melden mislukt', (e as Error).message));
   try { c.executionCtx.waitUntil(sending); } catch { await sending; }
 }
 
 /**
  * Na echt afvinken van een hoofdtaak: melding aan de andere leden van de kopiegroep en aan de anderen die de taak
- * delen, op de achtergrond.
+ * delen, op de achtergrond. In een gedeelde lijst alleen aan wie dat aanzette (`notifyListDone`).
  */
 async function copyDone(c: Context<AppEnv>, t: TaskRow) {
   if (t.parent_id) return;
-  const user = c.get('user'), locale = c.get('install').defaultLocale;
+  const user = c.get('user'), locale = c.get('install').defaultLocale, actorId = c.get('auth').userId;
   const sending = Promise.all([
     t.copy_group && notifyCopyDone(c.env, t, user.name, locale).catch((e) => console.warn('kopie klaar melden mislukt', (e as Error).message)),
-    notifyShareDone(c.env, t, c.get('auth').userId, user.name, locale).catch((e) => console.warn('gedeelde taak klaar melden mislukt', (e as Error).message)),
+    (t.shared_list
+      ? notifyListDone(c.env, t, actorId, user.name, locale, listPush.send)
+      : notifyShareDone(c.env, t, actorId, user.name, locale, listPush.send)
+    ).catch((e) => console.warn('gedeelde taak klaar melden mislukt', (e as Error).message)),
   ]);
   try { c.executionCtx.waitUntil(sending); } catch { await sending; }
 }
@@ -707,6 +725,19 @@ async function listMove(db: D1Database, t: Access, userId: string, list: string)
   return { detach: !!t.shared_list, attach: dest };
 }
 
+/**
+ * Een hoofdtaak in een gedeelde lijst op je naam zetten (alleen als niemand hem heeft) of loslaten (alleen als jij
+ * hem hebt). Heeft een ander hem, dan 409 `err.claimed`; loslaten wat niemand heeft, doet niets. Zonder melding.
+ */
+async function claim(db: D1Database, t: TaskRow, userId: string, on: boolean): Promise<void> {
+  const res = await (on
+    ? db.prepare('UPDATE tasks SET claimed_by = ?1, updated_at = ?2 WHERE id = ?3 AND claimed_by IS NULL')
+    : db.prepare('UPDATE tasks SET claimed_by = NULL, updated_at = ?2 WHERE id = ?3 AND claimed_by = ?1')).bind(userId, now(), t.id).run();
+  if (res.meta.changes) return;
+  const by = (await db.prepare('SELECT claimed_by FROM tasks WHERE id = ?').bind(t.id).first<{ claimed_by: string | null }>())?.claimed_by;
+  if (by && by !== userId) throw new HttpError(409, 'err.claimed', { name: await nameOf(db, by) });
+}
+
 async function patchTask(c: Context<AppEnv>, id: string, b: Record<string, unknown>): Promise<Response> {
   const db = c.env.DB;
   const userId = c.get('auth').userId;
@@ -786,7 +817,18 @@ async function patchTask(c: Context<AppEnv>, id: string, b: Record<string, unkno
     if (member && !t.parent_id) shareSets.push(['loc_notified', b.location_notified ? 1 : 0]);
     else set('loc_notified', b.location_notified ? 1 : 0);
   }
-  if (!sets.length && !shareSets.length && !('done' in b)) throw new HttpError(400, 'err.nothing_to_change');
+  // Op naam en een melding per taak: alleen bij een hoofdtaak in een gedeelde lijst, zoals hij na een verhuizing is.
+  const inSharedList = !parentId && (move ? !!move.attach : !!t.shared_list);
+  if ('claimed' in b) {
+    if (typeof b.claimed !== 'boolean') throw new HttpError(400, 'err.must_be_bool', { field: 'claimed' });
+    if (!inSharedList || (b.claimed && t.done)) throw new HttpError(400, 'err.claim_shared_list');
+  }
+  if ('watch' in b) {
+    if (typeof b.watch !== 'boolean') throw new HttpError(400, 'err.must_be_bool', { field: 'watch' });
+    if (!inSharedList) throw new HttpError(400, 'err.watch_shared_list');
+  }
+  if ('done' in b) await assertMayTick(db, t, userId);
+  if (!sets.length && !shareSets.length && !['done', 'claimed', 'watch'].some((k) => k in b)) throw new HttpError(400, 'err.nothing_to_change');
   if (move) {
     // Pas nu alles gecontroleerd is: eerst los uit de oude gedeelde lijst en/of vast in de nieuwe, met de positie in
     // jouw volgorde. De rest van de wijziging hoort daarna bij de taak zoals hij dan is (andere eigenaar, deelrij).
@@ -798,6 +840,13 @@ async function patchTask(c: Context<AppEnv>, id: string, b: Record<string, unkno
     if ('position' in b) await rebalanceIfNeeded(db, (await getTask(db, userId, id))!, userId);
     const { list: _list, position: _position, ...rest } = b;
     return Object.keys(rest).length ? patchTask(c, id, rest) : c.json(await presentOne(c.env, userId, id));
+  }
+  // Eerst op naam: heeft een ander hem al, dan is dat een 409 voordat er iets anders verandert.
+  if ('claimed' in b) await claim(db, t, userId, !!b.claimed);
+  if ('watch' in b) {
+    await (b.watch
+      ? db.prepare('INSERT OR IGNORE INTO task_watch (task_id, user_id) VALUES (?, ?)')
+      : db.prepare('DELETE FROM task_watch WHERE task_id = ? AND user_id = ?')).bind(id, userId).run();
   }
   // Vóór de eigen deelrij, zodat een location_notified in dezelfde PATCH het laatste woord heeft.
   if (resetShares) await db.prepare('UPDATE task_shares SET loc_notified = 0 WHERE task_id = ?').bind(id).run();
@@ -1042,6 +1091,7 @@ for (const [action, done] of [['done', true], ['reopen', false]] as const) {
   app.post(`/api/tasks/:id/${action}`, async (c) => {
     const t = await getTask(c.env.DB, c.get('auth').userId, c.req.param('id'));
     if (!t) throw new HttpError(404, 'err.not_found');
+    await assertMayTick(c.env.DB, t, c.get('auth').userId);
     // Een herhalende taak staat altijd open: /done schuift altijd door, /reopen draait terug als dat nog mag (setDone beslist).
     if ((rolls(t) || !!t.done !== done) && await setDone(c.env.DB, t, done, await ownerZone(c, t), c.get('auth').userId)) await copyDone(c, t);
     return c.json({ ok: true });
