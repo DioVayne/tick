@@ -167,7 +167,7 @@ if (startRoute && !reloaded) history.replaceState(null, '', location.pathname);
 if (startRoute) goTo(startRoute, { push: !reloaded });
 // Herladen op de instellingen (bijvoorbeeld na een taalwissel): daar weer verder.
 if (history.state?.settings) openSettings({ push: false });
-init(CONFIG.userId).then(() => {
+init(CONFIG.userId, CONFIG.userName).then(() => {
   detailReady();
   ready = true;
   if (pendingList) goTo({ page: 'list', id: pendingList });

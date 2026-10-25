@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // De Workers-runtime heeft geen IndexedDB: db.js valt dan terug op geheugen, en dat lezen we hier uit.
 import { nextOccurrence } from '../public/repeat.js';
 import * as db from '../public/db.js';
-import { createList, deleteList, ensureOwner, init, load, renameList, state, sync, toggleDone, update } from '../public/store.js';
+import { claim, createList, deleteList, doneInList, ensureOwner, init, load, renameList, sharedOf, state, sync, toggleDone, update } from '../public/store.js';
 
 describe('store: lijst-ops', () => {
   it('een nieuwe lege lijst gaat via de outbox naar de server, en hernoemen en verwijderen gaan mee', async () => {
@@ -204,5 +204,107 @@ describe('store: verversen', () => {
     await new Promise((r) => setTimeout(r, 10));
     expect(calls).toEqual(expect.arrayContaining(['GET /api/tasks', 'GET /api/lists', 'GET /api/shares/incoming']));
     await done;
+  });
+});
+
+describe('store: gedeelde lijsten', () => {
+  const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+  const task = (id: string, extra: Record<string, unknown> = {}) => ({
+    id, title: id, list: 'Boodschappen', parent_id: null, position: 0, done: false, done_at: null, shared_list: 'L1', claimed_by: null, done_by: null, watch: false, ...extra,
+  });
+  // Een server die niets terugzet: zo blijft de lokale stand staan en kunnen we hem bekijken.
+  const quiet = () => vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('', { status: 503 }));
+  const clear = async () => { for (const op of await db.outboxAll()) await db.outboxDelete(op.seq); };
+  afterEach(() => vi.restoreAllMocks());
+
+  it('init kent de ingelogde gebruiker; sharedDone en listInvites komen van de server en sharedDone gaat in de cache', async () => {
+    await db.clearAll();
+    const shared = { id: 'L1', mine: true, owner: { id: 'me', name: 'Ik' }, members: [], notify_done: false };
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any) => {
+      const url = String(input);
+      if (url === '/api/tasks?shared_done=1') return json([task('sd1', { done: true, done_at: '2030-01-01T10:00:00.000Z' })]);
+      if (url === '/api/shared-lists/incoming') return json([{ id: 'L9', name: 'Klus', from: { name: 'Bob' }, open: 2 }]);
+      if (url === '/api/lists') return json([{ name: 'Inbox', open: 0 }, { name: 'Boodschappen', open: 0, id: 'L1', shared }]);
+      return json([]);
+    });
+    await init('me', 'Ik');
+    expect(state.sharedDone.map((t: any) => t.id)).toEqual(['sd1']);
+    expect(state.listInvites).toEqual([{ id: 'L9', name: 'Klus', from: { name: 'Bob' }, open: 2 }]);
+    expect(sharedOf('Boodschappen')).toEqual(shared);
+    expect(sharedOf('Inbox')).toBeNull();
+    expect((await db.kvGet('sharedDone')).map((t: any) => t.id)).toEqual(['sd1']);
+  });
+
+  it('doneInList combineert zonder dubbelen en sorteert op done_at', () => {
+    state.justDone.clear();
+    state.sharedDone = [
+      task('a', { done: true, done_at: '2030-01-01T10:00:00.000Z' }),
+      task('b', { done: true, done_at: '2030-01-03T10:00:00.000Z' }),
+      task('weer-open', { done: true, done_at: '2030-01-05T10:00:00.000Z' }),
+      task('elders', { list: 'Klus', done: true, done_at: '2030-01-06T10:00:00.000Z' }),
+    ] as any;
+    state.done = [task('b', { done: true, done_at: '2030-01-03T10:00:00.000Z' }), task('c', { done: true, done_at: '2030-01-02T10:00:00.000Z' })] as any;
+    state.open = [
+      task('d', { done: true, done_at: '2030-01-04T10:00:00.000Z' }), // lokaal afgevinkt
+      task('e', { done: true, done_at: '2030-01-07T10:00:00.000Z' }), // net afgevinkt: nog in justDone
+      task('sub', { parent_id: 'd', done: true, done_at: '2030-01-04T10:00:00.000Z' }),
+      task('weer-open'), // lokaal heropend: niet meer afgevinkt
+      task('f'),
+    ] as any;
+    state.justDone.set('e', { timer: 0, task: state.open[1] } as any);
+    expect(doneInList('Boodschappen').map((t: any) => t.id)).toEqual(['d', 'b', 'c', 'a']);
+    state.justDone.clear();
+  });
+
+  it('claim zet claimed_by lokaal en staat in de outbox', async () => {
+    await clear();
+    state.open = [task('c1')] as any;
+    state.done = [];
+    quiet();
+    await claim('c1', true);
+    expect((state.open[0] as any).claimed_by).toEqual({ id: 'me', name: 'Ik' });
+    expect((await db.outboxAll()).map((op: any) => op.body)).toEqual([{ claimed: true }]);
+    await claim('c1', false);
+    expect((state.open[0] as any).claimed_by).toBeNull();
+    await clear();
+  });
+
+  it('lokaal afvinken in een gedeelde lijst zet done_by', async () => {
+    await clear();
+    state.justDone.clear();
+    state.open = [task('k1'), task('k1s', { parent_id: 'k1' })] as any;
+    state.done = [];
+    quiet();
+    await toggleDone(state.open[0]);
+    expect(state.open.map((t: any) => t.done_by)).toEqual([{ id: 'me', name: 'Ik' }, { id: 'me', name: 'Ik' }]);
+    await toggleDone(state.open[0]); // ongedaan maken
+    expect(state.open.map((t: any) => t.done_by)).toEqual([null, null]);
+    await clear();
+  });
+
+  it('toggleDone op andermans taak op naam doet niets', async () => {
+    await clear();
+    state.justDone.clear();
+    const bob = { id: 'bob', name: 'Bob' };
+    state.open = [task('o1', { claimed_by: bob }), task('o1s', { parent_id: 'o1' })] as any;
+    state.done = [];
+    quiet();
+    await toggleDone(state.open[0]);
+    await toggleDone(state.open[1]); // subtaak: de ouder staat op naam van een ander
+    expect(state.open.map((t: any) => t.done)).toEqual([false, false]);
+    expect(state.justDone.size).toBe(0);
+    expect(await db.outboxAll()).toEqual([]);
+  });
+
+  it('een lijst hernoemen past ook sharedDone aan', async () => {
+    await clear();
+    state.open = [];
+    state.done = [];
+    state.sharedDone = [task('h1', { done: true, done_at: '2030-01-01T10:00:00.000Z' })] as any;
+    quiet();
+    await renameList('Boodschappen', 'Winkel');
+    expect(state.sharedDone.map((t: any) => t.list)).toEqual(['Winkel']);
+    state.sharedDone = [];
+    await clear();
   });
 });

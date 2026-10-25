@@ -24,19 +24,25 @@ const byName = (a, b) => collator('base').compare(a, b) || (a < b ? -1 : a > b ?
  * Alle lijsten met het aantal open taken (incl. subtaken). De server kent ook lijsten met alleen afgeronde taken,
  * `extra` zijn nieuwe lijsten die de server nog niet teruggaf (ze staan nog in de outbox). Tellen doen we op de lokale taken, die lopen voor op de server.
  * De vaste id (voor bladwijzers) komt van de server; een lijst die hij nog niet kent, heeft er (nog) geen.
- * @param {{ name: string, open: number, id?: string }[]} server
+ * Een gedeelde lijst houdt ook `shared` van de server (eigenaar, leden, meldingen); een gewone lijst heeft het niet.
+ * @param {{ name: string, open: number, id?: string, shared?: any }[]} server
  * @param {{ list: string, done?: boolean }[]} tasks
  * @param {string[]} extra
- * @returns {{ name: string, open: number, id?: string }[]}
+ * @returns {{ name: string, open: number, id?: string, shared?: any }[]}
  */
 export function mergeLists(server, tasks, extra) {
   const open = new Map();
   for (const t of tasks) if (!t.done) open.set(t.list, (open.get(t.list) ?? 0) + 1);
   const ids = new Map(server.filter((l) => l.id).map((l) => [l.name, l.id]));
+  const shared = new Map(server.filter((l) => l.shared).map((l) => [l.name, l.shared]));
   const names = new Set(['Inbox']);
   for (const n of [...server.map((l) => l.name), ...tasks.map((t) => t.list), ...extra]) names.add(n);
   names.delete('Inbox');
-  const entry = (name) => (ids.has(name) ? { name, open: open.get(name) ?? 0, id: ids.get(name) } : { name, open: open.get(name) ?? 0 });
+  const entry = (name) => ({
+    name, open: open.get(name) ?? 0,
+    ...(ids.has(name) ? { id: ids.get(name) } : {}),
+    ...(shared.has(name) ? { shared: shared.get(name) } : {}),
+  });
   return [entry('Inbox'), ...[...names].sort(byName).map(entry)];
 }
 

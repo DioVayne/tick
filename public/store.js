@@ -21,6 +21,10 @@ export const state = {
   showTrash: false, trash: /** @type {any[] | null} */ (null),
   // Openstaande uitnodigingen om een taak te delen (alleen online opgehaald).
   invites: /** @type {any[]} */ ([]),
+  // Afgevinkte hoofdtaken in je gedeelde lijsten (van iedereen, met jouw lijstnaam), nieuwste eerst; ook offline uit de cache.
+  sharedDone: /** @type {any[]} */ ([]),
+  // Openstaande uitnodigingen voor een gedeelde lijst (alleen online opgehaald).
+  listInvites: /** @type {any[]} */ ([]),
   serverLists: [], extraLists: /** @type {string[]} */ ([]), offline: false, pending: 0,
 };
 
@@ -29,10 +33,36 @@ export const on = (event, fn) => listeners[event].push(fn);
 const changed = () => listeners.change.forEach((fn) => fn());
 const report = (msg) => listeners.error.forEach((fn) => fn(msg));
 
+// De ingelogde gebruiker (init zet hem uit CONFIG): voor claimed_by en done_by bij lokale wijzigingen.
+let me = { id: /** @type {string | null} */ (null), name: /** @type {string | null} */ (null) };
+const meRef = () => ({ id: me.id, name: me.name });
+// Op naam van een ander (de taak zelf of haar ouder): dan vinkt alleen die hem af of heropent hem.
+const claimedByOther = (t) => {
+  const by = t.claimed_by ?? (t.parent_id ? find(t.parent_id)?.claimed_by : null);
+  return !!by && by.id !== me.id;
+};
+// In een gedeelde lijst: shared_list staat op de hoofdtaak, een subtaak hoort bij die van haar ouder.
+const inSharedList = (t) => !!(t.shared_list ?? (t.parent_id ? find(t.parent_id)?.shared_list : null));
+
 const find = (id) => state.open.find((t) => t.id === id) ?? state.done.find((t) => t.id === id);
 
 export const lists = () => mergeLists(state.serverLists, state.open.concat(state.done), state.extraLists);
 export const listNames = () => lists().map((l) => l.name);
+/** De `shared` van lijst `name` (eigenaar, leden, meldingen), of null voor een gewone lijst. */
+export const sharedOf = (name) => lists().find((l) => l.name === name)?.shared ?? null;
+
+/**
+ * Afgevinkte hoofdtaken in lijst `name`: van de server (state.sharedDone, ook die van anderen), uit Afgerond en lokaal
+ * afgevinkt (behalve wat nog even in justDone staat). Een lokaal bekende taak wint van de serverkopie (die loopt achter),
+ * dus een lokaal heropende taak valt weg. Nieuwste done_at eerst.
+ */
+export function doneInList(name) {
+  const byId = new Map();
+  for (const t of [...state.sharedDone, ...state.done, ...state.open]) byId.set(t.id, t);
+  return [...byId.values()]
+    .filter((t) => t.done && !t.parent_id && t.list === name && !state.justDone.has(t.id))
+    .sort((a, b) => String(b.done_at ?? '').localeCompare(String(a.done_at ?? '')));
+}
 
 /**
  * Een nieuwe lijst staat meteen lokaal (extraLists) en gaat via de outbox naar de server, die hem ook leeg bewaart.
@@ -59,6 +89,7 @@ function applyLocal(op) {
     const gone = (t) => t.id === op.id || t.parent_id === op.id;
     state.open = state.open.filter((t) => !gone(t));
     state.done = state.done.filter((t) => !gone(t));
+    state.sharedDone = state.sharedDone.filter((t) => !gone(t));
     return;
   }
   if (op.type === 'list-create') {
@@ -69,6 +100,7 @@ function applyLocal(op) {
   if (op.type === 'list-rename' || op.type === 'list-delete') {
     state.open = applyListOp(state.open, op);
     state.done = applyListOp(state.done, op);
+    state.sharedDone = applyListOp(state.sharedDone, op);
     const from = op.type === 'list-rename' ? op.from : op.name;
     const to = op.type === 'list-rename' ? op.to : 'Inbox';
     if (state.list === from) state.list = to; // na verwijderen ga je naar Inbox, ook als de taken mee zijn
@@ -85,9 +117,10 @@ function applyLocal(op) {
   }
   const t = find(op.id);
   if (!t) return;
-  const { done, occurrence, ...fields } = op.body;
+  const { done, occurrence, claimed, ...fields } = op.body;
   const { repeat, ...plain } = fields;
   Object.assign(t, plain);
+  if (claimed !== undefined) t.claimed_by = claimed ? meRef() : null;
   if ('remind_at' in fields) t.notified = false;
   if ('parent_id' in fields && fields.parent_id !== null) t.repeat = null;
   if ('remind_at' in fields || 'repeat' in fields) undoRepeat.delete(t.id); // een nieuwe tijd of ritme: niets meer om terug te draaien
@@ -117,7 +150,7 @@ function applyLocal(op) {
     // Elke stap overschrijft de stand: ongedaan maken draait de laatste stap terug (zoals op de server).
     undoRepeat.set(t.id, {
       next, at: t.repeat.at, remind_at: t.remind_at, notified: t.notified, location_notified: t.location_notified,
-      kids: kids.map((x) => ({ id: x.id, done_at: x.done_at })), ms: now,
+      kids: kids.map((x) => ({ id: x.id, done_at: x.done_at, done_by: x.done_by })), ms: now,
     });
     t.remind_at = next;
     t.repeat = { ...t.repeat, at: next };
@@ -126,6 +159,7 @@ function applyLocal(op) {
     for (const x of kids) {
       x.done = false;
       x.done_at = null;
+      if ('done_by' in x) x.done_by = null;
       if (!state.open.includes(x)) state.open.push(x);
     }
     state.done = state.done.filter((x) => x.done);
@@ -141,14 +175,16 @@ function applyLocal(op) {
       t.location_notified = prev.location_notified;
       for (const k of prev.kids) {
         const x = find(k.id);
-        if (x) { x.done = true; x.done_at = k.done_at; }
+        if (x) { x.done = true; x.done_at = k.done_at; if (k.done_by !== undefined) x.done_by = k.done_by; }
       }
     }
   } else if (done === true && !t.done) {
     // Net als de server: open subtaken gaan mee, met hetzelfde done_at.
+    const by = inSharedList(t) ? meRef() : null; // zoals de server: wie afvinkt, staat erbij
     for (const x of [t, ...state.open.filter((x) => x.parent_id === t.id && !x.done)]) {
       x.done = true;
       x.done_at = op.at;
+      if (by) x.done_by = by;
     }
   } else if (done === false && t.done) {
     // Heropenen zet precies die subtaken terug, en een heropende subtaak opent ook haar parent.
@@ -157,6 +193,7 @@ function applyLocal(op) {
     for (const x of [t, ...kids, ...(parent?.done ? [parent] : [])]) {
       x.done = false;
       x.done_at = null;
+      if ('done_by' in x) x.done_by = null;
       if (!state.open.includes(x)) state.open.push(x);
     }
     state.done = state.done.filter((x) => x.done);
@@ -252,12 +289,14 @@ async function loadOnce() {
     const q = state.query.trim();
     // Zoeken buiten Afgerond: de afgeronde treffers komen onder de open taken. Mislukt dat, dan alleen de open treffers.
     const hitQ = !state.showDone && q ? q : '';
-    const [open, done, serverLists, invites, hits] = await Promise.all([
+    const [open, done, serverLists, invites, hits, sharedDone, listInvites] = await Promise.all([
       request('GET', '/api/tasks'),
       state.showDone ? request('GET', '/api/tasks?done=1&limit=200' + (q ? '&q=' + encodeURIComponent(q) : '')) : null,
       soft(request('GET', '/api/lists')),
       soft(request('GET', '/api/shares/incoming')),
       hitQ ? soft(request('GET', '/api/tasks?done=1&limit=50&q=' + encodeURIComponent(hitQ))) : null,
+      soft(request('GET', '/api/tasks?shared_done=1')),
+      soft(request('GET', '/api/shared-lists/incoming')),
     ]);
     const owned = await ownerReady; // false: de lokale gegevens kunnen van een ander zijn, dan niet lezen of schrijven
     const queued = owned ? await db.outboxAll() : [];
@@ -265,6 +304,8 @@ async function loadOnce() {
     if (done) { state.done = done; state.doneLoading = false; } // een eerdere ronde zonder Afgerond laat "Laden…" staan
     if (serverLists) state.serverLists = serverLists;
     if (invites) state.invites = invites;
+    if (sharedDone) state.sharedDone = sharedDone;
+    if (listInvites) state.listInvites = listInvites;
     // Alleen als de zoekterm intussen niet veranderd is: een trage ronde zet geen oude treffers over nieuwere heen.
     if (hitQ && state.query.trim() === hitQ) state.doneHits = { q: hitQ, tasks: hits ? hits.map(keepDone) : [] };
     state.offline = false;
@@ -272,6 +313,7 @@ async function loadOnce() {
     if (owned) {
       db.kvSet('open', open).catch(() => {});
       if (serverLists) db.kvSet('lists', serverLists).catch(() => {});
+      if (sharedDone) db.kvSet('sharedDone', sharedDone).catch(() => {});
     }
     queued.forEach(applyLocal); // wat de server nog niet heeft, bijvoorbeeld na een serverfout
   } catch (e) {
@@ -362,14 +404,17 @@ export async function ensureOwner(userId) {
 /**
  * Start: eerst de lokale kopie tonen (ook offline), dan verversen vanaf het netwerk.
  * @param {string} userId de ingelogde gebruiker (CONFIG.userId)
+ * @param {string} [userName] diens naam (CONFIG.userName), voor claimed_by en done_by bij lokale wijzigingen
  */
-export async function init(userId) {
+export async function init(userId, userName) {
+  me = { id: userId, name: userName ?? null };
   ownerReady = ensureOwner(userId).then(() => true, () => false);
   // Fail-closed: zonder geslaagde controle geen lokale kopie en geen outbox, alleen wat de server geeft.
   if (await ownerReady) {
     try {
       state.open = (await db.kvGet('open')) ?? [];
       state.serverLists = (await db.kvGet('lists')) ?? [];
+      state.sharedDone = (await db.kvGet('sharedDone')) ?? [];
       const queued = await db.outboxAll();
       state.pending = queued.length;
       queued.forEach(applyLocal);
@@ -422,7 +467,12 @@ export function remove(id) {
 export const renameList = (from, to) => mutate({ type: 'list-rename', from, to });
 export const deleteList = (name, tasks) => mutate({ type: 'list-delete', name, tasks });
 
+// Op naam zetten en een melding bij afvinken: via de outbox; applyLocal past claimed_by en watch meteen aan.
+export const claim = (id, on) => update(id, { claimed: on });
+export const watchTask = (id, on) => update(id, { watch: on });
+
 export function toggleDone(t) {
+  if (claimedByOther(t)) return Promise.resolve(); // de server weigert het toch (403 err.claimed)
   const pending = state.justDone.get(t.id);
   if (pending) { // opnieuw tikken binnen de periode: ongedaan maken
     clearTimeout(pending.timer);
@@ -466,3 +516,28 @@ async function trashAction(method, path) {
 export const restoreTask = (id) => trashAction('POST', `/api/tasks/${id}/restore`);
 export const purgeTask = (id) => trashAction('DELETE', `/api/tasks/${id}?purge=1`);
 export const emptyTrash = () => trashAction('POST', '/api/trash/empty');
+
+// ---------- gedeelde lijsten (alleen online) ----------
+
+/** Een actie op een gedeelde lijst op de server, daarna opnieuw laden. Geeft het antwoord, of null als het mislukte. */
+async function listAction(method, path, body) {
+  let res;
+  try {
+    res = await request(method, path, body);
+  } catch (e) {
+    report(tr('store.change_refused', { reason: e instanceof Offline ? tr('api.offline') : e.message }));
+    return null;
+  }
+  await load();
+  return res;
+}
+
+/** Deelt lijst `name` met `{ to }` (e-mailadres) of `{ to_user }` (een gebruiker op deze installatie). */
+export const shareList = (name, who) => listAction('POST', '/api/shared-lists', { name, ...who });
+/** Accepteren geeft `{ ok, name }` (de naam die de lijst bij jou krijgt); weigeren `{ ok }`. */
+export const answerListInvite = (id, accept) => listAction('POST', `/api/shared-lists/${id}/${accept ? 'accept' : 'decline'}`, {});
+export const leaveList = (id) => listAction('DELETE', `/api/shared-lists/${id}/members/${me.id}`);
+export const removeListMember = (id, userId) => listAction('DELETE', `/api/shared-lists/${id}/members/${userId}`);
+export const setListNotify = (id, on) => listAction('PATCH', `/api/shared-lists/${id}/me`, { notify_done: on });
+/** Alle afgevinkte taken in lijst `name` naar de prullenbak (in een gedeelde lijst voor iedereen). Geeft `{ deleted }`. */
+export const clearDone = (name) => listAction('POST', '/api/lists/clear-done', { name });
