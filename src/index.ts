@@ -23,7 +23,7 @@ import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
 import { leaveShareStmts, notifyShareDone, notifyShareLocation, sharesApi } from './shares';
-import { listSharing, sharedListsApi } from './sharedlists';
+import { attachStmts, detachStmts, dissolveStmts, listNames, listOf, type ListRef, listSharing, sharedListsApi } from './sharedlists';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxUpload, sweepAttachments } from './attachments';
@@ -232,24 +232,39 @@ const byPin = (a: { pinned: boolean; position: number }, b: { pinned: boolean; p
 /**
  * Taken voor de client zoals `userId` ze ziet: lijst en volgorde uit zijn deelrij, en `share` op de hoofdtaak
  * (null op subtaken en op taken die met niemand gedeeld zijn), en `copies` uit `copiesFor` (null zonder kopiegroep).
+ * `done_by` en `claimed_by` worden `{ id, name }` met de naam uit `names` (een verwijderd account geeft null);
+ * `watch` is nog altijd false.
  */
-function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, copies: Map<string, Copies>, files = new Map<string, Attachment[]>()) {
+function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, copies: Map<string, Copies>, files = new Map<string, Attachment[]>(), names = new Map<string, string>()) {
+  const person = (id: string | null) => {
+    const name = id === null ? undefined : names.get(id);
+    return name === undefined ? null : { id: id!, name };
+  };
   return rows.map((r) => {
     const { share_id, share_list, share_position, share_pinned, share_loc_notified, has_share, has_copy_invite, ...t } = overlay(r);
     const s = t.parent_id ? undefined : info.get(t.id);
     return {
-      ...asBool(t), share: s ? { ...s, mine: s.owner.id === userId } : null, copies: (!t.parent_id && copies.get(t.id)) || null,
+      ...asBool(t), done_by: person(t.done_by), claimed_by: person(t.claimed_by), watch: false,
+      share: s ? { ...s, mine: s.owner.id === userId } : null, copies: (!t.parent_id && copies.get(t.id)) || null,
       attachments: files.get(t.id) ?? [],
     };
   });
 }
 
-/** Deelinformatie, kopiegroepen en bijlagen voor deze rijen; de eerste twee alleen als er iets te vinden is. */
+/** De namen voor `done_by` en `claimed_by`: één query op users, alleen als een rij er een heeft. */
+async function personNames(db: D1Database, rows: TaskRow[]): Promise<Map<string, string>> {
+  if (!rows.some((r) => r.done_by || r.claimed_by)) return new Map();
+  const { results } = await db.prepare('SELECT id, name FROM users').all<{ id: string; name: string }>();
+  return new Map(results.map((u) => [u.id, u.name]));
+}
+
+/** Deelinformatie, kopiegroepen, bijlagen en namen voor deze rijen; alleen opgezocht als er iets te vinden is. */
 async function extras(env: Env, userId: string, rows: Access[]) {
   return Promise.all([
     anyShared(rows) ? shareInfo(env.DB, userId) : new Map<string, ShareInfo>(),
     anyCopies(rows, userId) ? copiesFor(env.DB, userId, rows) : new Map<string, Copies>(),
     attachmentsFor(env, rows.map((r) => r.id)),
+    personNames(env.DB, rows),
   ]);
 }
 
@@ -259,12 +274,13 @@ async function presentOne(env: Env, userId: string, id: string, row?: Access | n
   const t = row ?? await getAccess(db, userId, id);
   if (!t) throw new HttpError(404, 'err.not_found');
   // Een subtaak krijgt share: null, en zonder deelrijen is er niets op te zoeken.
-  const [info, copies, files] = await Promise.all([
+  const [info, copies, files, names] = await Promise.all([
     !t.parent_id && anyShared([t]) ? shareInfo(db, userId, t.id) : new Map<string, ShareInfo>(),
     anyCopies([t], userId) ? copiesFor(db, userId, [t]) : new Map<string, Copies>(),
     attachmentsFor(env, [t.id]),
+    personNames(db, [t]),
   ]);
-  return present([t], userId, info, copies, files)[0];
+  return present([t], userId, info, copies, files, names)[0];
 }
 
 const MAX_TITLE = 500;
@@ -343,7 +359,7 @@ async function checkParent(db: D1Database, userId: string, v: unknown, self?: Ta
     if (parent.user_id !== self.user_id) throw new HttpError(400, 'err.parent_missing');
     const kids = await db.prepare('SELECT 1 FROM tasks WHERE parent_id = ? AND user_id = ? LIMIT 1').bind(self.id, self.user_id).first();
     if (kids) throw new HttpError(400, 'err.has_children');
-    if (await db.prepare('SELECT 1 FROM task_shares WHERE task_id = ? LIMIT 1').bind(self.id).first()) throw new HttpError(400, 'err.share_is_shared');
+    if (self.shared_list || await db.prepare('SELECT 1 FROM task_shares WHERE task_id = ? LIMIT 1').bind(self.id).first()) throw new HttpError(400, 'err.share_is_shared');
   }
   return parent;
 }
@@ -376,7 +392,7 @@ async function rebalanceIfNeeded(db: D1Database, t: TaskRow, userId: string): Pr
 /** Zo lang na het doorschuiven kan een herhalende taak nog terug naar de vorige keer. */
 const UNDO_LIMIT_MS = 15 * 60_000;
 type RepeatPrev = {
-  remind_at: string | null; repeat_at: string; next: string; kids: { id: string; done_at: string | null }[]; at: string;
+  remind_at: string | null; repeat_at: string; next: string; kids: { id: string; done_at: string | null; done_by?: string | null }[]; at: string;
   notified: number; loc_notified: number;
   /** Deelrijen die de plek al gemeld hadden; ontbreekt in een stand van vóór migratie 0015. */
   shares_loc?: string[];
@@ -397,13 +413,13 @@ function undoable(t: TaskRow): RepeatPrev | null {
  * Heropenen draait dat terug zolang undoable() het toestaat. Beide in één batch; de WHERE op repeat_at/repeat_prev
  * zorgt dat een gelijktijdig verzoek niets half of dubbel doet.
  */
-async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): Promise<boolean> {
+async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone, actorId: string): Promise<boolean> {
   const ts = now();
   if (done) {
     const next = inZone(z, () => nextOccurrence(t.repeat_rule!, t.repeat_start!, Math.max(Date.now(), Date.parse(t.repeat_at!))));
-    if (next === null) return plainDone(db, t, true); // voorbij de einddatum: de laatste keer rondt de taak gewoon af
-    const { results: kids } = await db.prepare('SELECT id, done_at FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 1 AND deleted_at IS NULL')
-      .bind(t.id, t.user_id).all<{ id: string; done_at: string | null }>();
+    if (next === null) return plainDone(db, t, true, actorId); // voorbij de einddatum: de laatste keer rondt de taak gewoon af
+    const { results: kids } = await db.prepare('SELECT id, done_at, done_by FROM tasks WHERE parent_id = ? AND user_id = ? AND done = 1 AND deleted_at IS NULL')
+      .bind(t.id, t.user_id).all<{ id: string; done_at: string | null; done_by: string | null }>();
     const { results: sharesLoc } = await db.prepare('SELECT id FROM task_shares WHERE task_id = ? AND loc_notified = 1').bind(t.id).all<{ id: string }>();
     // Elke stap overschrijft de stand: ongedaan maken draait altijd de laatste stap terug.
     const prev = JSON.stringify({
@@ -414,7 +430,7 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
       db.prepare('UPDATE tasks SET remind_at = ?, repeat_at = ?, notified = 0, loc_notified = CASE WHEN loc_lat IS NULL THEN loc_notified ELSE 0 END, ' +
         'repeat_prev = ?, updated_at = ? WHERE id = ? AND done = 0 AND repeat_at = ?').bind(next, next, prev, ts, t.id, t.repeat_at),
       // Alleen als de parent hierboven echt is doorgeschoven (repeat_at en updated_at van deze stap).
-      db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE parent_id = ? AND user_id = ? AND done = 1 AND id IN (SELECT value FROM json_each(?)) ' +
+      db.prepare('UPDATE tasks SET done = 0, done_at = NULL, done_by = NULL, updated_at = ? WHERE parent_id = ? AND user_id = ? AND done = 1 AND id IN (SELECT value FROM json_each(?)) ' +
         'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_at = ? AND updated_at = ?)').bind(ts, t.id, t.user_id, JSON.stringify(kids.map((k) => k.id)), t.id, next, ts),
       // De volgende keer meldt de plek weer bij iedereen die de taak deelt.
       db.prepare('UPDATE task_shares SET loc_notified = 0 WHERE task_id = ? AND loc_notified = 1 ' +
@@ -426,8 +442,8 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
   if (!prev) return false;
   await db.batch([
     // Eerst de subtaken, zolang repeat_prev nog als bewijs in de parent staat.
-    ...prev.kids.map((k) => db.prepare('UPDATE tasks SET done = 1, done_at = ?, updated_at = ? WHERE id = ? AND parent_id = ? AND user_id = ? AND done = 0 ' +
-      'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_prev = ?)').bind(k.done_at, ts, k.id, t.id, t.user_id, t.id, t.repeat_prev)),
+    ...prev.kids.map((k) => db.prepare('UPDATE tasks SET done = 1, done_at = ?, done_by = ?, updated_at = ? WHERE id = ? AND parent_id = ? AND user_id = ? AND done = 0 ' +
+      'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_prev = ?)').bind(k.done_at, k.done_by ?? null, ts, k.id, t.id, t.user_id, t.id, t.repeat_prev)),
     db.prepare('UPDATE task_shares SET loc_notified = 1 WHERE task_id = ? AND id IN (SELECT value FROM json_each(?)) ' +
       'AND EXISTS (SELECT 1 FROM tasks WHERE id = ? AND repeat_prev = ?)').bind(t.id, JSON.stringify(prev.shares_loc ?? []), t.id, t.repeat_prev),
     db.prepare('UPDATE tasks SET remind_at = ?, repeat_at = ?, notified = ?, loc_notified = ?, repeat_prev = NULL, updated_at = ? WHERE id = ? AND repeat_prev = ?')
@@ -440,24 +456,26 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone): P
  * Vinkt een taak af of heropent haar. Afvinken neemt open subtaken mee (met hetzelfde done_at);
  * heropenen zet precies die subtaken weer open, en een heropende subtaak opent ook haar parent.
  * Een open herhalende hoofdtaak gaat via rollRepeat. Geeft true als de taak hierdoor echt van open naar klaar ging
- * (bij herhalen: echt doorschoof); heropenen geeft altijd false.
+ * (bij herhalen: echt doorschoof); heropenen geeft altijd false. `actorId` is wie afvinkt (`done_by`).
  */
-async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone): Promise<boolean> {
-  return rolls(t) ? rollRepeat(db, t, done, z) : plainDone(db, t, done);
+async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone, actorId: string): Promise<boolean> {
+  return rolls(t) ? rollRepeat(db, t, done, z, actorId) : plainDone(db, t, done, actorId);
 }
 
-async function plainDone(db: D1Database, t: TaskRow, done: boolean): Promise<boolean> {
+async function plainDone(db: D1Database, t: TaskRow, done: boolean, actorId: string): Promise<boolean> {
   const ts = now();
-  const stmts = [db.prepare(`UPDATE tasks SET done = ?, done_at = ?, updated_at = ? WHERE id = ?${done ? ' AND done = 0' : ''}`).bind(done ? 1 : 0, done ? ts : null, ts, t.id)];
+  const stmts = [db.prepare(`UPDATE tasks SET done = ?, done_at = ?, done_by = ?, updated_at = ? WHERE id = ?${done ? ' AND done = 0' : ''}`)
+    .bind(done ? 1 : 0, done ? ts : null, done ? actorId : null, ts, t.id)];
   if (done) {
-    stmts.push(db.prepare('UPDATE tasks SET done = 1, done_at = ?, updated_at = ? WHERE parent_id = ? AND done = 0 AND user_id = ? AND deleted_at IS NULL').bind(ts, ts, t.id, t.user_id));
+    stmts.push(db.prepare('UPDATE tasks SET done = 1, done_at = ?, done_by = ?, updated_at = ? WHERE parent_id = ? AND done = 0 AND user_id = ? AND deleted_at IS NULL')
+      .bind(ts, actorId, ts, t.id, t.user_id));
   } else {
     if (t.done && t.done_at) {
-      stmts.push(db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE parent_id = ? AND done = 1 AND done_at = ? AND user_id = ? AND deleted_at IS NULL')
+      stmts.push(db.prepare('UPDATE tasks SET done = 0, done_at = NULL, done_by = NULL, updated_at = ? WHERE parent_id = ? AND done = 1 AND done_at = ? AND user_id = ? AND deleted_at IS NULL')
         .bind(ts, t.id, t.done_at, t.user_id));
     }
     if (t.parent_id) {
-      stmts.push(db.prepare('UPDATE tasks SET done = 0, done_at = NULL, updated_at = ? WHERE id = ? AND done = 1 AND user_id = ?').bind(ts, t.parent_id, t.user_id));
+      stmts.push(db.prepare('UPDATE tasks SET done = 0, done_at = NULL, done_by = NULL, updated_at = ? WHERE id = ? AND done = 1 AND user_id = ?').bind(ts, t.parent_id, t.user_id));
     }
   }
   const [res] = await db.batch(stmts);
@@ -591,7 +609,14 @@ app.get('/api/tasks', async (c) => {
     const rows = await visibleTasks(db, userId, 't.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM tasks p WHERE p.id = t.parent_id AND p.deleted_at = t.deleted_at)',
       [limit, offset], 'ORDER BY t.deleted_at DESC LIMIT ? OFFSET ?');
     // In de prullenbak telt een exemplaar niet als lid, dus ook copies: null.
-    return c.json(present(rows, userId, anyShared(rows) ? await shareInfo(db, userId) : new Map(), new Map()));
+    const [info, names] = await Promise.all([anyShared(rows) ? shareInfo(db, userId) : new Map<string, ShareInfo>(), personNames(db, rows)]);
+    return c.json(present(rows, userId, info, new Map(), undefined, names));
+  }
+  if (c.req.query('shared_done')) {
+    // Het blok "Afgevinkt" van de gedeelde lijsten: de afgevinkte hoofdtaken erin, met jouw lijstnaam.
+    const rows = await visibleTasks(db, userId, 't.done = 1 AND t.deleted_at IS NULL AND t.parent_id IS NULL AND t.shared_list IS NOT NULL', [],
+      'ORDER BY t.done_at DESC LIMIT 500');
+    return c.json(present(rows, userId, ...await extras(c.env, userId, rows)));
   }
   if (done) {
     const rows = await visibleTasks(db, userId, `t.done = 1 AND t.deleted_at IS NULL${search.sql}`, [...search.binds, limit, offset], 'ORDER BY t.done_at DESC LIMIT ? OFFSET ?');
@@ -644,24 +669,48 @@ async function createTask(env: Env, userId: string, z: Zone, b: Record<string, u
   // Een subtaak hoort altijd in de lijst van haar parent, en bij de eigenaar van haar parent (ook bij een gedeelde taak).
   const list = parent ? parent.list : cleanList(b.list);
   const owner = parent ? parent.user_id : userId;
-  await env.DB.prepare(
-    // ON CONFLICT: twee gelijktijdige pogingen met hetzelfde client-id geven geen fout.
-    'INSERT INTO tasks (id,user_id,title,description,list,parent_id,position,remind_at,source,created_at,updated_at,loc_name,loc_lat,loc_lng,loc_radius,loc_trigger,repeat_rule,repeat_start,repeat_at,repeat_prev) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING',
+  const shared = parent ? null : await listOf(env.DB, userId, list);
+  const insert = (tail: string) => env.DB.prepare(
+    'INSERT INTO tasks (id,user_id,title,description,list,parent_id,position,remind_at,source,created_at,updated_at,loc_name,loc_lat,loc_lng,loc_radius,loc_trigger,repeat_rule,repeat_start,repeat_at,repeat_prev) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)' + tail,
   ).bind(id, owner, title, description, list, parent?.id ?? null, position, remindAt, source, ts, ts,
     loc.loc_name, loc.loc_lat, loc.loc_lng, loc.loc_radius, loc.loc_trigger,
-    rep.repeat_rule, rep.repeat_start, rep.repeat_at, rep.repeat_prev).run();
+    rep.repeat_rule, rep.repeat_start, rep.repeat_at, rep.repeat_prev);
+  if (shared) {
+    // In een gedeelde lijst: eerst als eigen taak, dan in dezelfde batch de lijst in (van de eigenaar, met deelrijen).
+    // Zonder ON CONFLICT: bestaat het id intussen toch, dan faalt de hele batch en blijft andermans taak onaangeroerd.
+    try {
+      await env.DB.batch([insert(''), ...await attachStmts(env.DB, { id }, shared, userId, position)]);
+    } catch (e) {
+      if (!/UNIQUE constraint failed/.test((e as Error).message)) throw e;
+    }
+  } else {
+    // ON CONFLICT: twee gelijktijdige pogingen met hetzelfde client-id geven geen fout.
+    await insert(' ON CONFLICT(id) DO NOTHING').run();
+  }
   // Alleen null als een ander account dit id net gelijktijdig kreeg (ON CONFLICT DO NOTHING).
   const created = await getTask(env.DB, userId, id);
   if (!created) throw new HttpError(409, 'err.id_taken');
   return presentOne(env, userId, id, created);
 }
 
-app.patch('/api/tasks/:id', async (c) => {
+app.patch('/api/tasks/:id', async (c) => patchTask(c, c.req.param('id'), await body(c)));
+
+/**
+ * Wat een nieuwe `list` met het lidmaatschap van een hoofdtaak in een gedeelde lijst doet: null als dat niet
+ * verandert, anders of hij eerst los moet (`detach`) en in welke lijst hij daarna komt (`attach`).
+ */
+async function listMove(db: D1Database, t: Access, userId: string, list: string): Promise<{ detach: boolean; attach: ListRef | null } | null> {
+  const dest = await listOf(db, userId, list);
+  if ((t.shared_list ?? null) === (dest?.id ?? null)) return null;
+  // Erin slepen kan alleen met een eigen taak die nog met niemand per taak gedeeld is.
+  if (!t.shared_list && (t.user_id !== userId || t.has_share)) throw new HttpError(400, 'err.shared_task_to_list');
+  return { detach: !!t.shared_list, attach: dest };
+}
+
+async function patchTask(c: Context<AppEnv>, id: string, b: Record<string, unknown>): Promise<Response> {
   const db = c.env.DB;
-  const id = c.req.param('id');
   const userId = c.get('auth').userId;
   const z = c.get('prefs');
-  const b = await body(c);
   const t = await getTask(db, userId, id);
   if (!t) throw new HttpError(404, 'err.not_found');
   const sets: string[] = [];
@@ -680,6 +729,8 @@ app.patch('/api/tasks/:id', async (c) => {
     if (parent) list = parent.list;
     if (parent && !('pinned' in b)) set('pinned', 0); // een subtaak pint niet
   }
+  const target = list;
+  const move = target !== null && !parentId ? await listMove(db, t, userId, target) : null;
   // Een deelnemer heeft lijst en volgorde van de hoofdtaak in zijn eigen deelrij; bij zijn subtaken volgt de lijst de ouder.
   const member = !!t.share_id;
   const shareSets: [string, unknown][] = [];
@@ -736,6 +787,18 @@ app.patch('/api/tasks/:id', async (c) => {
     else set('loc_notified', b.location_notified ? 1 : 0);
   }
   if (!sets.length && !shareSets.length && !('done' in b)) throw new HttpError(400, 'err.nothing_to_change');
+  if (move) {
+    // Pas nu alles gecontroleerd is: eerst los uit de oude gedeelde lijst en/of vast in de nieuwe, met de positie in
+    // jouw volgorde. De rest van de wijziging hoort daarna bij de taak zoals hij dan is (andere eigenaar, deelrij).
+    const position = 'position' in b ? Number(b.position) : overlay(t).position;
+    await db.batch([
+      ...(move.detach ? detachStmts(db, t, userId, target!, position) : []),
+      ...(move.attach ? await attachStmts(db, t, move.attach, userId, position) : []),
+    ]);
+    if ('position' in b) await rebalanceIfNeeded(db, (await getTask(db, userId, id))!, userId);
+    const { list: _list, position: _position, ...rest } = b;
+    return Object.keys(rest).length ? patchTask(c, id, rest) : c.json(await presentOne(c.env, userId, id));
+  }
   // Vóór de eigen deelrij, zodat een location_notified in dezelfde PATCH het laatste woord heeft.
   if (resetShares) await db.prepare('UPDATE task_shares SET loc_notified = 0 WHERE task_id = ?').bind(id).run();
   if (shareSets.length) {
@@ -758,7 +821,7 @@ app.patch('/api/tasks/:id', async (c) => {
     // ongedaan maken (dat een eerdere stap bedoelde) de nieuwste stap niet terug.
     const sameAt = !('occurrence' in b) || Date.parse(String(b.occurrence)) === Date.parse(cur.repeat_at!);
     const act = rolls(cur) ? sameAt && (!!b.done || !!undoable(cur)) : !!b.done !== !!cur.done;
-    if (act && await setDone(db, cur, !!b.done, await ownerZone(c, cur))) await copyDone(c, cur);
+    if (act && await setDone(db, cur, !!b.done, await ownerZone(c, cur), userId)) await copyDone(c, cur);
   }
   const updated = await getTask(db, userId, id);
   if (newPlace && updated) await placeShared(c, updated);
@@ -767,7 +830,7 @@ app.patch('/api/tasks/:id', async (c) => {
     return c.json(await presentOne(c.env, userId, id));
   }
   return c.json(await presentOne(c.env, userId, id, updated));
-});
+}
 
 app.delete('/api/tasks/:id', async (c) => {
   const userId = c.get('auth').userId;
@@ -807,11 +870,19 @@ app.post('/api/tasks/:id/restore', async (c) => {
   const t = await trashed(c.req.param('id'));
   if (!t) throw new HttpError(404, 'err.not_found');
   const parent = t.parent_id ? await trashed(t.parent_id) : null;
+  // Een hoofdtaak uit een gedeelde lijst die intussen is opgeheven, haalt alleen de eigenaar terug: als zijn eigen
+  // taak in zijn Inbox, zonder deelrijen (dezelfde stappen als eruit slepen).
+  const head = parent ?? (t.parent_id ? null : t);
+  const orphan = !!head?.shared_list && !(await db.prepare('SELECT 1 FROM shared_lists WHERE id = ?').bind(head.shared_list).first());
+  if (orphan && head!.user_id !== userId) throw new HttpError(403, 'err.shared_list_owner_only');
   const ts = now();
   const back = (r: TaskRow) => db.prepare(
     'UPDATE tasks SET deleted_at = NULL, notified = CASE WHEN remind_at IS NOT NULL AND remind_at <= ? THEN 1 ELSE notified END, updated_at = ? ' +
     'WHERE user_id = ? AND deleted_at = ? AND (id = ? OR parent_id = ?)').bind(ts, ts, r.user_id, r.deleted_at, r.id, r.id);
-  await db.batch([...(parent ? [back(parent)] : []), back(t)]);
+  await db.batch([
+    ...(parent ? [back(parent)] : []), back(t),
+    ...(orphan ? detachStmts(db, head!, userId, 'Inbox', ((await topMin(db, userId)) ?? 0) - STEP) : []),
+  ]);
   return c.json({ ok: true });
 });
 
@@ -887,6 +958,9 @@ app.post('/api/lists/rename', async (c) => {
   // Subtaken staan in dezelfde lijst als hun parent, dus één UPDATE dekt alles; plus je deelnames in die lijst.
   const db = c.env.DB;
   const userId = c.get('auth').userId;
+  // Een gedeelde lijst voegt niet samen met een andere lijst: de taken zouden dan half gedeeld zijn.
+  const [shared, into] = await Promise.all([listOf(db, userId, from), listOf(db, userId, to)]);
+  if (into || (shared && (await listNames(db, userId)).has(to))) throw new HttpError(400, 'err.list_shared_merge');
   const res = await db.batch([
     db.prepare('UPDATE tasks SET list = ?, updated_at = ? WHERE list = ? AND user_id = ?').bind(to, now(), from, userId),
     db.prepare("UPDATE task_shares SET list = ? WHERE list = ? AND to_user = ? AND status = 'accepted'").bind(to, from, userId),
@@ -896,6 +970,11 @@ app.post('/api/lists/rename', async (c) => {
     // De id gaat ook mee, zodat een bladwijzer blijft werken; bij samenvoegen houdt de bestaande lijst de zijne.
     db.prepare('UPDATE OR IGNORE list_ids SET name = ? WHERE name = ? AND user_id = ?').bind(to, from, userId),
     db.prepare('DELETE FROM list_ids WHERE name = ? AND user_id = ?').bind(from, userId),
+    // Je naam van een gedeelde lijst is je eigen; die van de eigenaar geldt ook voor wie nog uitgenodigd is.
+    ...(shared ? [
+      db.prepare("UPDATE list_members SET name = ? WHERE list_id = ? AND user_id = ? AND status = 'accepted'").bind(to, shared.id, userId),
+      ...(shared.role === 'owner' ? [db.prepare("UPDATE list_members SET name = ? WHERE list_id = ? AND status = 'pending'").bind(to, shared.id)] : []),
+    ] : []),
   ]);
   return c.json({ moved: res[0].meta.changes + res[1].meta.changes });
 });
@@ -906,6 +985,10 @@ app.post('/api/lists/delete', async (c) => {
   if (name === 'Inbox') throw new HttpError(400, 'err.inbox_delete');
   const db = c.env.DB;
   const userId = c.get('auth').userId;
+  if (b.tasks !== 'inbox' && b.tasks !== 'delete') throw new HttpError(400, 'err.tasks_option');
+  // Een gedeelde lijst verwijdert alleen de eigenaar, en dan voor iedereen; een lid vertrekt.
+  const shared = await listOf(db, userId, name);
+  if (shared && shared.role !== 'owner') throw new HttpError(400, 'err.shared_list_leave');
   // De bewaarde lijst (als die er is) gaat altijd weg, ook als hij geen taken had.
   // De id ook: komt de naam later terug, dan is dat een nieuwe lijst.
   const forget = [
@@ -917,6 +1000,8 @@ app.post('/api/lists/delete', async (c) => {
       db.prepare("UPDATE tasks SET list = 'Inbox', updated_at = ? WHERE list = ? AND user_id = ?").bind(now(), name, userId),
       db.prepare("UPDATE task_shares SET list = 'Inbox' WHERE list = ? AND to_user = ? AND status = 'accepted'").bind(name, userId),
       ...forget,
+      // De eigenaar houdt de taken als zijn eigen; de leden zijn ze kwijt.
+      ...(shared ? dissolveStmts(db, shared.id, userId) : []),
     ]);
     return c.json({ moved: res[0].meta.changes + res[1].meta.changes });
   }
@@ -930,10 +1015,26 @@ app.post('/api/lists/delete', async (c) => {
       db.prepare(`UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE (id IN (${mine}) OR parent_id IN (${mine})) AND deleted_at IS NULL`)
         .bind(ts, ts, name, userId, name, userId),
       ...forget,
+      // De deelrijen blijven, zodat de leden de taken in hun prullenbak zien; terugzetten kan dan alleen de eigenaar.
+      ...(shared ? [db.prepare('DELETE FROM shared_lists WHERE id = ?').bind(shared.id)] : []),
     ]);
     return c.json({ deleted: res[0].meta.changes + res[1].meta.changes });
   }
-  throw new HttpError(400, 'err.tasks_option');
+});
+
+/** De afgevinkte hoofdtaken die jij in lijst `name` ziet naar de prullenbak; in een gedeelde lijst voor iedereen. */
+app.post('/api/lists/clear-done', async (c) => {
+  const name = existingListName((await body(c)).name, 'name');
+  const db = c.env.DB;
+  const userId = c.get('auth').userId;
+  const rows = await visibleTasks(db, userId, 't.done = 1 AND t.deleted_at IS NULL AND t.parent_id IS NULL AND COALESCE(s.list, t.list) = ?', [name]);
+  if (!rows.length) return c.json({ deleted: 0 });
+  // Zoals trashStmts, maar in één statement voor alle taken: D1 telt elk statement als query.
+  const ts = now();
+  const ids = JSON.stringify(rows.map((r) => r.id));
+  await db.prepare('UPDATE tasks SET deleted_at = ?1, updated_at = ?1 WHERE (id IN (SELECT value FROM json_each(?2)) OR parent_id IN (SELECT value FROM json_each(?2))) ' +
+    'AND deleted_at IS NULL').bind(ts, ids).run();
+  return c.json({ deleted: rows.length });
 });
 
 // Simpele variant voor clients zonder PATCH (Android-widget); werkt net als PATCH {done}.
@@ -942,7 +1043,7 @@ for (const [action, done] of [['done', true], ['reopen', false]] as const) {
     const t = await getTask(c.env.DB, c.get('auth').userId, c.req.param('id'));
     if (!t) throw new HttpError(404, 'err.not_found');
     // Een herhalende taak staat altijd open: /done schuift altijd door, /reopen draait terug als dat nog mag (setDone beslist).
-    if ((rolls(t) || !!t.done !== done) && await setDone(c.env.DB, t, done, await ownerZone(c, t))) await copyDone(c, t);
+    if ((rolls(t) || !!t.done !== done) && await setDone(c.env.DB, t, done, await ownerZone(c, t), c.get('auth').userId)) await copyDone(c, t);
     return c.json({ ok: true });
   });
 }
