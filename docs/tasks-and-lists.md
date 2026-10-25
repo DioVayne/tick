@@ -16,6 +16,7 @@ A task can have one level of subtasks. A subtask follows its parent: same list, 
 - Rename, merge or delete a list with right-click, a long press, **⋯**, or (on a phone) by tapping the list name at the top. Renaming to a name that already exists merges the two lists. Deleting asks whether the tasks go to the Inbox or to the trash.
 - Every list has its own colour, shown in the sidebar and on the list pill of a task.
 - **All** shows the open tasks of every list together.
+- A list can be shared with others, so you all work in the same list: see [Sharing a list](sharing.md#sharing-a-list).
 
 ## Order, pinning, dragging and swiping
 - **Drag** a task to change the order. On a wide screen you can also drop it on a list in the sidebar to move it, or on **Trash** to delete it.

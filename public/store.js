@@ -37,14 +37,15 @@ const report = (msg) => listeners.error.forEach((fn) => fn(msg));
 let me = { id: /** @type {string | null} */ (null), name: /** @type {string | null} */ (null) };
 const meRef = () => ({ id: me.id, name: me.name });
 // Op naam van een ander (de taak zelf of haar ouder): dan vinkt alleen die hem af of heropent hem.
-const claimedByOther = (t) => {
+export const claimedByOther = (t) => {
   const by = t.claimed_by ?? (t.parent_id ? find(t.parent_id)?.claimed_by : null);
   return !!by && by.id !== me.id;
 };
 // In een gedeelde lijst: shared_list staat op de hoofdtaak, een subtaak hoort bij die van haar ouder.
 const inSharedList = (t) => !!(t.shared_list ?? (t.parent_id ? find(t.parent_id)?.shared_list : null));
 
-const find = (id) => state.open.find((t) => t.id === id) ?? state.done.find((t) => t.id === id);
+// Ook sharedDone: een taak die een ander in een gedeelde lijst afvinkte, staat alleen daar (heropenen vanuit het blok Afgevinkt).
+const find = (id) => state.open.find((t) => t.id === id) ?? state.done.find((t) => t.id === id) ?? state.sharedDone.find((t) => t.id === id);
 
 export const lists = () => mergeLists(state.serverLists, state.open.concat(state.done), state.extraLists);
 export const listNames = () => lists().map((l) => l.name);
@@ -197,6 +198,7 @@ function applyLocal(op) {
       if (!state.open.includes(x)) state.open.push(x);
     }
     state.done = state.done.filter((x) => x.done);
+    state.sharedDone = state.sharedDone.filter((x) => x.done);
   }
 }
 

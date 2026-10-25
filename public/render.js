@@ -8,9 +8,10 @@ import { listColor } from './lists.js';
 import { plainText } from './markdown.js';
 import { toHash } from './route.js';
 import { renderSidebar } from './sidebar.js';
-import { UNDO_MS, listNames, lists, state, toggleDone, update } from './store.js';
+import { UNDO_MS, claimedByOther, listNames, lists, sharedOf, state, toggleDone, update } from './store.js';
 import { renderTrash, shareLabel, shareNames } from './trash.js';
 import { renderInvites } from './share.js';
+import { claimControl, doneBlock } from './sharedlist.js';
 import { deleteWithUndo, enableSwipe, swipedAway } from './swipe.js';
 
 export const $ = (s) => document.querySelector(s);
@@ -156,11 +157,16 @@ function taskItem(t, children) {
   const selected = state.selected === t.id;
   const done = t.done || state.justDone.has(t.id);
   const li = el('li', { class: 'task' + (done ? ' done' : '') + (selected ? ' sel' : ''), 'data-id': t.id });
+  // Op naam van een ander (in een gedeelde lijst): alleen die vinkt hem af.
+  const locked = claimedByOther(t);
+  const lockedBy = locked ? (t.claimed_by ?? state.open.find((p) => p.id === t.parent_id)?.claimed_by) : null;
   const row = el('div', { class: 'row' },
     done || state.query.trim() ? null : el('span', { class: 'grip', 'aria-hidden': 'true', title: tr('render.drag'), 'aria-label': tr('render.drag') }, '⋮⋮'),
     el('button', {
-      class: 'check', role: 'checkbox', 'aria-checked': String(done),
-      'aria-label': tr(state.justDone.has(t.id) ? 'render.undo_named' : t.done ? 'render.reopen_named' : 'render.check_named', { title: t.title }),
+      class: 'check', role: 'checkbox', 'aria-checked': String(done), disabled: locked,
+      'aria-label': lockedBy ? tr('slist.claimed_by', { name: lockedBy.name })
+        : tr(state.justDone.has(t.id) ? 'render.undo_named' : t.done ? 'render.reopen_named' : 'render.check_named', { title: t.title }),
+      title: lockedBy ? tr('slist.claimed_by', { name: lockedBy.name }) : false,
       onclick: (e) => { if (!done) confetti(e.currentTarget, isCouple(t.share ?? state.open.find((p) => p.id === t.parent_id)?.share)); checkOff(t); },
     }),
     selected && !done && wide.matches ? titleField(t)
@@ -175,12 +181,15 @@ function taskItem(t, children) {
   li.append(row);
 
   const meta = [];
+  // Gedeelde lijst: wie het meeneemt, vooraan in de metaregel (alleen bij een open hoofdtaak).
+  if (t.shared_list && !t.parent_id && !done) meta.push(claimControl(t));
   if (t.remind_at && !done) {
     const past = new Date(t.remind_at) < new Date();
     meta.push(el('span', { class: 'bell' + (past ? ' past' : '') }, icon('bell', 'sm'), fmt(t.remind_at), t.repeat ? icon('repeat', 'sm') : null));
   }
   if (t.location && !t.location_notified && !done) meta.push(el('span', { class: 'loc' }, icon('place', 'sm'), t.location.name));
-  if (t.share) {
+  // In een gedeelde lijst is elke taak gedeeld met de leden; dat staat al bij de lijst.
+  if (t.share && !t.shared_list) {
     const label = shareLabel(t);
     const names = shareNames(t) || label;
     meta.push(el('span', { class: 'shared', title: label, 'aria-label': label }, icon('users', 'sm'), names));
@@ -290,16 +299,20 @@ function renderList(root) {
     ? state.doneHits.tasks.filter((t) => t.done && !ids.has(t.id) && !state.justDone.has(t.id) && (!state.list || t.list === state.list))
     : [];
   const tops = topTasks(visible);
+  // Een gedeelde lijst: onder de open taken het blok Afgevinkt (niet in Alle, Afgerond, zoeken of de prullenbak).
+  const block = state.list && !state.showDone && !q && sharedOf(state.list) ? doneBlock(state.list) : null;
   if (!tops.length && !doneHits.length) {
     const empty = q ? t('render.nothing_found')
       : state.showDone ? (state.offline ? t('render.done_offline') : state.doneLoading ? t('render.loading') : t('render.nothing_done'))
       : t('render.nothing_to_do');
     root.append(el('p', { class: 'empty' }, empty));
+    if (block) root.append(block);
     return;
   }
   if (tops.length) root.append(taskList(visible));
   if (doneHits.length) root.append(el('h2', { class: 'list-head' }, t('ui.completed')), taskList(doneHits));
   if (!state.showDone && !q) enableSorting(root); // in een gefilterde lijst zou slepen posities verkeerd berekenen
+  if (block) root.append(block); // na enableSorting: het blok sorteert niet mee
 }
 
 // ---------- handmatig sorteren ----------

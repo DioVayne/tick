@@ -2,12 +2,12 @@
 
 // App-shell voor offline gebruik. Network-first: online krijg je altijd de nieuwste versie (geen mix van oude en
 // nieuwe modules na een deploy), offline de laatst bewaarde. Verhoog de versie als de lijst hieronder verandert.
-const CACHE = 'tick-shell-v45';
+const CACHE = 'tick-shell-v46';
 const SHELL = [
   '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/push.js', '/style.css', '/sortable.min.js',
   '/markdown.js', '/lists.js', '/editor.js', '/sidebar.js', '/detail.js', '/listpicker.js', '/listmenu.js', '/dialog.js',
   '/repeat.js', '/i18n.js', '/config.js', '/settings.js', '/repeatpicker.js', '/places.js', '/map.js', '/leaflet.js', '/leaflet.css',
-  '/theme.js', '/settingsview.js', '/androidapp.js', '/applink.js', '/swclick.js', '/next.js', '/trash.js', '/share.js', '/copies.js', '/confetti.js', '/attachments.js', '/calendar.js', '/calendarview.js', '/help.js', '/datepicker.js', '/timepicker.js', '/icons.js', '/popover.js', '/swipe.js', '/badge.js', '/route.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/badge-96.png',
+  '/theme.js', '/settingsview.js', '/androidapp.js', '/applink.js', '/swclick.js', '/next.js', '/trash.js', '/share.js', '/sharedlist.js', '/copies.js', '/confetti.js', '/attachments.js', '/calendar.js', '/calendarview.js', '/help.js', '/datepicker.js', '/timepicker.js', '/icons.js', '/popover.js', '/swipe.js', '/badge.js', '/route.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/badge-96.png',
 ];
 importScripts('/swclick.js'); // zet self.tickClickTarget
 const NETWORK_TIMEOUT_MS = 4000;
@@ -63,17 +63,17 @@ self.addEventListener('push', (event) => {
       body: data.body,
       icon: '/icon-192.png',
       badge: '/badge-96.png', // wit op transparant: Android tekent de badge als silhouet
-      tag: data.tag || data.taskId || (data.shareId ? 'share-' + data.shareId : 'tick'),
+      tag: data.tag || data.taskId || (data.shareId ? 'share-' + data.shareId : data.listInviteId ? 'slist-' + data.listInviteId : 'tick'),
       renotify: !!data.tag, // een groepsmelding vervangt de vorige onder dezelfde tag, maar moet wel opnieuw afgaan
       data,
       // De server stuurt de knoppen vertaald mee; zonder taak geen knoppen.
-      actions: data.taskId || data.shareId ? (data.actions ?? (data.taskId ? [{ action: 'done', title: '✓' }, { action: 'snooze', title: '+1h' }] : [])) : [],
+      actions: data.taskId || data.shareId || data.listInviteId ? (data.actions ?? (data.taskId ? [{ action: 'done', title: '✓' }, { action: 'snooze', title: '+1h' }] : [])) : [],
     }),
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
-  const { taskId, url, occurrence, shareId } = event.notification.data || {};
+  const { taskId, url, occurrence, shareId, listInviteId } = event.notification.data || {};
   event.notification.close();
   // Na de actie een open Tick laten verversen: het meldingenpaneel maakt de app niet onzichtbaar, dus zonder
   // dit bericht ziet hij de wijziging pas bij de volgende keer laden.
@@ -84,6 +84,11 @@ self.addEventListener('notificationclick', (event) => {
   // Uitnodiging om een taak te delen: Accepteren of Weigeren zonder de app te openen.
   if (shareId && (event.action === 'accept' || event.action === 'decline')) {
     event.waitUntil(call(`/api/shares/${shareId}/${event.action}`, 'POST', {}));
+    return;
+  }
+  // Uitnodiging voor een gedeelde lijst: net zo.
+  if (listInviteId && (event.action === 'accept' || event.action === 'decline')) {
+    event.waitUntil(call(`/api/shared-lists/${listInviteId}/${event.action}`, 'POST', {}));
     return;
   }
   if (taskId && event.action === 'done') {

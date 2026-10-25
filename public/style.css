@@ -760,3 +760,25 @@ html[data-boot-task] #detail::before {
 @media (min-width: 1024px) { html[data-boot-task] #detail::before { background-position-y: -36px, 22px, 22px, 76px, 114px, 168px, 192px; } }
 @keyframes skel { from { opacity: 1; } to { opacity: .45; } }
 @media (prefers-reduced-motion: reduce) { #list:empty::before, html[data-boot-task] #detail::before { animation: none; } }
+
+/* Gedeelde lijsten: icoon in de zijbalk, "ik neem het mee", het blok Afgevinkt, meldingen per taak en de deeldialoog. */
+#side .item .slist-ico { flex: none; display: inline-flex; color: var(--muted); }
+#side .item .slist-ico .ico { stroke: currentColor; }
+.meta .claim { display: inline-flex; align-items: center; gap: 3px; padding: 0 8px; min-height: 22px; border-radius: 999px; font-size: .75rem; line-height: 1.4; }
+.meta button.claim { border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+.meta button.claim:hover { border-color: var(--muted); color: var(--text); }
+.meta button.claim.mine { border-color: var(--accent); background: var(--sel); color: var(--text); }
+.meta span.claim.other { background: var(--fill); color: var(--text); }
+.meta .claim .ico.sm { margin-right: 0; }
+.check:disabled { opacity: .45; cursor: not-allowed; }
+.done-block { margin-top: 18px; }
+.done-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.done-head .list-head { margin: 0; }
+.done-list .meta { margin-top: -6px; }
+.menu-item[aria-checked="true"]::after { content: ' ✓'; }
+.pill.watch.on { color: var(--accent); }
+.slist-dialog .share-list { margin-bottom: 8px; }
+.slist-invite { display: grid; gap: 8px; }
+.slist-invite[hidden] { display: none; }
+.slist-invite label[for] { font-size: .8125rem; color: var(--muted); }
+.slist-hint { margin: 0; color: var(--muted); font-size: .8125rem; }

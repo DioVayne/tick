@@ -312,4 +312,22 @@ describe('store: gedeelde lijsten', () => {
     state.sharedDone = [];
     await clear();
   });
+
+  it('een taak die een ander afvinkte (alleen in sharedDone) heropent meteen lokaal', async () => {
+    await clear();
+    state.justDone.clear();
+    state.open = [];
+    state.done = [];
+    const bob = { id: 'bob', name: 'Bob' };
+    state.sharedDone = [task('x1', { done: true, done_at: '2030-01-01T10:00:00.000Z', done_by: bob })] as any;
+    quiet();
+    expect(doneInList('Boodschappen').map((t: any) => t.id)).toEqual(['x1']);
+    await toggleDone(state.sharedDone[0]);
+    expect(doneInList('Boodschappen')).toEqual([]);
+    expect(state.sharedDone).toEqual([]);
+    expect(state.open.map((t: any) => [t.id, t.done, t.done_by])).toEqual([['x1', false, null]]);
+    expect((await db.outboxAll()).map((op: any) => [op.id, op.body])).toEqual([['x1', { done: false }]]);
+    state.open = [];
+    await clear();
+  });
 });
