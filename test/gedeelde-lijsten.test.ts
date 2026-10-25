@@ -129,13 +129,17 @@ describe('gedeelde lijsten', () => {
   });
 
   it('een openstaande uitnodiging per taak wordt bij accepteren een deelname in de lijst', async () => {
-    const { name, id, tasks: [gedeeld, kopie] } = await sharedList(b, ['Per taak gedeeld', 'Per taak kopie']);
+    // De uitnodigingen per taak zijn van vóór het delen van de lijst: daarna kan per taak alleen nog een kopie.
+    const name = `Vakantie ${uniq()}`;
+    const gedeeld = await createTask({ title: 'Per taak gedeeld', list: name });
+    const kopie = await createTask({ title: 'Per taak kopie', list: name });
     const invites: string[] = [];
     for (const [t, mode] of [[gedeeld, 'shared'], [kopie, 'copy']] as const) {
       const res = await call('/api/shares', { method: 'POST', json: { task_id: t.id, to_user: b.id, mode } });
       expect(res.status).toBe(201);
       invites.push((await json<{ id: string }>(res)).id);
     }
+    const { list_id: id } = await json<{ list_id: string }>(await shareList(name, b.email));
     expect((await accept(b, id)).status).toBe(200);
     const mine = await tasksOf(b);
     for (const t of [gedeeld, kopie]) expect(mine.find((x) => x.id === t.id)).toMatchObject({ list: name });

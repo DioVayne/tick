@@ -104,6 +104,8 @@ sharesApi.post('/', async (c) => {
   const userId = c.get('auth').userId;
   const task = await getAccess(db, userId, String(b.task_id ?? ''));
   if (!task) throw new HttpError(404, 'err.not_found');
+  // In een gedeelde lijst deel je de lijst, niet de taak; een kopie sturen kan wel.
+  if (b.mode === 'shared' && task.shared_list) throw new HttpError(400, 'err.share_in_shared_list');
   if (task.user_id !== userId) throw new HttpError(403, 'err.share_owner_only');
   if (task.parent_id) throw new HttpError(400, 'err.share_subtask');
   const toUser = await recipientOf(db, b);

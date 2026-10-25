@@ -44,7 +44,7 @@ export function listById(db: D1Database, userId: string, listId: string): Promis
 }
 
 /** Alle lijstnamen die `GET /api/lists` deze gebruiker toont (eigen taken, deelnames, bewaarde lijsten, lidmaatschappen). */
-async function listNames(db: D1Database, userId: string): Promise<Set<string>> {
+export async function listNames(db: D1Database, userId: string): Promise<Set<string>> {
   const { results } = await db.prepare(
     'SELECT list AS name FROM tasks WHERE user_id = ?1 AND deleted_at IS NULL ' +
     "UNION SELECT s.list FROM task_shares s JOIN tasks t ON t.id = s.task_id WHERE s.to_user = ?1 AND s.status = 'accepted' AND t.deleted_at IS NULL " +
@@ -58,7 +58,7 @@ async function listNames(db: D1Database, userId: string): Promise<Set<string>> {
  * Maakt een eigen hoofdtaak (met subtaken) deel van de lijst: van de eigenaar, in diens naam van de lijst, met een
  * deelrij voor elk ander geaccepteerd lid. De aanvrager krijgt `actorPosition`, de anderen komen bovenaan.
  */
-export async function attachStmts(db: D1Database, task: TaskRow, list: ListRef, actorId: string, actorPosition: number): Promise<D1PreparedStatement[]> {
+export async function attachStmts(db: D1Database, task: Pick<TaskRow, 'id'>, list: ListRef, actorId: string, actorPosition: number): Promise<D1PreparedStatement[]> {
   const { results: members } = await db.prepare("SELECT user_id, name FROM list_members WHERE list_id = ? AND status = 'accepted'")
     .bind(list.id).all<{ user_id: string; name: string }>();
   const ts = now();
@@ -84,13 +84,31 @@ export async function attachStmts(db: D1Database, task: TaskRow, list: ListRef, 
  * Maakt een hoofdtaak uit een gedeelde lijst een persoonlijke taak van `actorId` in `list`, met zijn subtaken. Alle
  * deelrijen gaan weg, en de meldrijen van de anderen (`task_watch`, `reminder_sent`). Zonder melding.
  */
-export function detachStmts(db: D1Database, task: TaskRow, actorId: string, list: string, position: number): D1PreparedStatement[] {
+export function detachStmts(db: D1Database, task: Pick<TaskRow, 'id'>, actorId: string, list: string, position: number): D1PreparedStatement[] {
+  const family = '(task_id = ?2 OR task_id IN (SELECT id FROM tasks WHERE parent_id = ?2))';
   return [
     db.prepare('UPDATE tasks SET user_id = ?1, list = ?2, updated_at = ?3 WHERE id = ?4 OR parent_id = ?4').bind(actorId, list, now(), task.id),
     db.prepare('UPDATE tasks SET position = ?, shared_list = NULL, claimed_by = NULL WHERE id = ?').bind(position, task.id),
     db.prepare('DELETE FROM task_shares WHERE task_id = ?').bind(task.id),
-    db.prepare('DELETE FROM task_watch WHERE task_id = ? AND user_id != ?').bind(task.id, actorId),
-    db.prepare('DELETE FROM reminder_sent WHERE user_id != ?1 AND (task_id = ?2 OR task_id IN (SELECT id FROM tasks WHERE parent_id = ?2))').bind(actorId, task.id),
+    db.prepare(`DELETE FROM task_watch WHERE user_id != ?1 AND ${family}`).bind(actorId, task.id),
+    db.prepare(`DELETE FROM reminder_sent WHERE user_id != ?1 AND ${family}`).bind(actorId, task.id),
+  ];
+}
+
+/**
+ * De eigenaar heft de lijst op en houdt de taken: zoals `detachStmts` naar de eigenaar voor elke hoofdtaak van de
+ * lijst (ook in de prullenbak), maar in een vast aantal statements, want D1 telt elk statement van een batch als
+ * query. De lijstnaam verandert hier niet (dat doet de route); het lidmaatschap gaat weg met de cascade.
+ */
+export function dissolveStmts(db: D1Database, listId: string, ownerId: string): D1PreparedStatement[] {
+  const inList = 'SELECT id FROM tasks WHERE shared_list = ?1';
+  const family = `(task_id IN (${inList}) OR task_id IN (SELECT id FROM tasks WHERE parent_id IN (${inList})))`;
+  return [
+    db.prepare(`DELETE FROM task_shares WHERE task_id IN (${inList})`).bind(listId),
+    db.prepare(`DELETE FROM task_watch WHERE user_id != ?2 AND ${family}`).bind(listId, ownerId),
+    db.prepare(`DELETE FROM reminder_sent WHERE user_id != ?2 AND ${family}`).bind(listId, ownerId),
+    db.prepare('UPDATE tasks SET shared_list = NULL, claimed_by = NULL, updated_at = ?2 WHERE shared_list = ?1').bind(listId, now()),
+    db.prepare('DELETE FROM shared_lists WHERE id = ?').bind(listId),
   ];
 }
 
