@@ -25,7 +25,10 @@ export type ListShare = {
   members: { user_id: string; name: string; status: 'pending' | 'accepted' }[]; notify_done: boolean;
 };
 
-/** De push van deze routes; tests zetten er een nep-sender in (zoals `send` bij notifyShareDone). */
+/**
+ * De push van deze routes en van de meldingen bij afvinken en een plek (`copyDone`, `placeShared`); tests zetten er
+ * een nep-sender in (zoals `send` bij notifyShareDone).
+ */
 export const listPush: { send: Sender } = { send: sendToAll };
 
 const now = () => new Date().toISOString();
@@ -154,12 +157,46 @@ export async function listSharing(db: D1Database, userId: string): Promise<Map<s
 }
 
 /** Push naar één persoon in de taal van elk abonnement; zonder abonnement via zijn fallback-webhook (zoals bij taken). */
-async function notify(env: Env, userId: string, make: (locale: string) => Payload, defaultLocale: 'en' | 'nl'): Promise<void> {
-  const { total } = await listPush.send(env, userId, make, defaultLocale);
+async function notify(env: Env, userId: string, make: (locale: string) => Payload, defaultLocale: 'en' | 'nl', send: Sender = listPush.send): Promise<void> {
+  const { total } = await send(env, userId, make, defaultLocale);
   if (total) return;
   const user = await getUser(env.DB, userId);
   const hook = user && (await loadUserPrefs(env, user)).fallbackWebhook;
   if (hook) await postWebhook(hook, { ...make(defaultLocale), actions: undefined });
+}
+
+/**
+ * Afvinken of heropenen mag alleen wie de hoofdtaak (de taak zelf, of de ouder van een subtaak) op naam heeft, of
+ * iedereen als niemand hem heeft. Anders 403 `err.claimed` met de naam van wie hem meeneemt.
+ */
+export async function assertMayTick(db: D1Database, t: TaskRow, userId: string): Promise<void> {
+  const by = t.parent_id
+    ? (await db.prepare('SELECT claimed_by FROM tasks WHERE id = ?').bind(t.parent_id).first<{ claimed_by: string | null }>())?.claimed_by
+    : t.claimed_by;
+  if (by && by !== userId) throw new HttpError(403, 'err.claimed', { name: await nameOf(db, by) });
+}
+
+/** De naam van een gebruiker voor een foutmelding; een verdwenen account heeft er geen. */
+export async function nameOf(db: D1Database, userId: string): Promise<string> {
+  return (await db.prepare('SELECT name FROM users WHERE id = ?').bind(userId).first<{ name: string }>())?.name ?? '?';
+}
+
+/**
+ * Push "{name} heeft dit afgevinkt ✓" bij een hoofdtaak in een gedeelde lijst: naar de geaccepteerde leden (de
+ * eigenaar ook) die meldingen bij afvinken voor de hele lijst aan hebben, of alleen voor deze taak; nooit naar wie
+ * hem afvinkte. Standaard krijgt niemand iets.
+ */
+export async function notifyListDone(env: Env, task: TaskRow, actorId: string, actorName: string, defaultLocale: 'en' | 'nl', send: Sender = sendToAll): Promise<void> {
+  if (task.parent_id || !task.shared_list) return;
+  const { results } = await env.DB.prepare(
+    "SELECT m.user_id FROM list_members m WHERE m.list_id = ?1 AND m.status = 'accepted' AND m.user_id != ?3 " +
+    'AND (m.notify_done = 1 OR EXISTS (SELECT 1 FROM task_watch w WHERE w.task_id = ?2 AND w.user_id = m.user_id))',
+  ).bind(task.shared_list, task.id, actorId).all<{ user_id: string }>();
+  for (const { user_id } of results) {
+    await notify(env, user_id, (locale) => ({
+      title: translate(locale, 'share.push_done', { name: actorName }), body: task.title, url: `/?task=${task.id}`, tag: `share-${task.id}`, actions: [],
+    }), defaultLocale, send);
+  }
 }
 
 /** Een melding die het antwoord niet ophoudt; mislukt hij, dan blijft de wijziging staan. */
