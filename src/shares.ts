@@ -26,13 +26,25 @@ async function hasCopyInGroup(db: D1Database, taskId: string, userId: string): P
 }
 
 /** Ontvanger op e-mailadres (exact) of anders op naam (getrimd); beide hoofdletterongevoelig. */
-async function findRecipient(db: D1Database, to: string): Promise<string> {
+export async function findRecipient(db: D1Database, to: string): Promise<string> {
   const byEmail = await db.prepare('SELECT id FROM users WHERE email = ?').bind(to).first<{ id: string }>();
   if (byEmail) return byEmail.id;
   const { results } = await db.prepare('SELECT id FROM users WHERE lower(trim(name)) = lower(?) LIMIT 2').bind(to).all<{ id: string }>();
   if (!results.length) throw new HttpError(404, 'err.share_user_unknown');
   if (results.length > 1) throw new HttpError(409, 'err.share_user_ambiguous');
   return results[0].id;
+}
+
+/** De ontvanger uit een verzoek: uit de keuzelijst komt een id (`to_user`), getypt een naam of e-mailadres (`to`). */
+export async function recipientOf(db: D1Database, b: Record<string, unknown>): Promise<string> {
+  if (typeof b.to_user === 'string' && b.to_user) {
+    const u = await db.prepare('SELECT id FROM users WHERE id = ?').bind(b.to_user).first<{ id: string }>();
+    if (!u) throw new HttpError(404, 'err.share_user_unknown');
+    return u.id;
+  }
+  const to = String(b.to ?? '').trim();
+  if (!to) throw new HttpError(400, 'err.required', { field: 'to' });
+  return findRecipient(db, to);
 }
 
 /** Melding aan de ontvanger: push in de taal van elk abonnement, zonder abonnement via zijn fallback-webhook. */
@@ -94,17 +106,7 @@ sharesApi.post('/', async (c) => {
   if (!task) throw new HttpError(404, 'err.not_found');
   if (task.user_id !== userId) throw new HttpError(403, 'err.share_owner_only');
   if (task.parent_id) throw new HttpError(400, 'err.share_subtask');
-  // Uit de keuzelijst komt een id (to_user); getypt een naam of e-mailadres (to).
-  let toUser: string;
-  if (typeof b.to_user === 'string' && b.to_user) {
-    const u = await db.prepare('SELECT id FROM users WHERE id = ?').bind(b.to_user).first<{ id: string }>();
-    if (!u) throw new HttpError(404, 'err.share_user_unknown');
-    toUser = u.id;
-  } else {
-    const to = String(b.to ?? '').trim();
-    if (!to) throw new HttpError(400, 'err.required', { field: 'to' });
-    toUser = await findRecipient(db, to);
-  }
+  const toUser = await recipientOf(db, b);
   if (toUser === userId) throw new HttpError(400, 'err.share_self');
   if (await hasCopyInGroup(db, task.id, toUser)) throw new HttpError(409, 'err.copy_exists');
   const row: ShareRow = {

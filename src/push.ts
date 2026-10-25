@@ -10,6 +10,8 @@ export type Payload = {
   title: string; body: string; url?: string; taskId?: string; occurrence?: string;
   /** Uitnodiging om een taak te delen: de knoppen accept/decline gaan naar /api/shares/<shareId>. */
   shareId?: string;
+  /** Uitnodiging voor een gedeelde lijst: de knoppen accept/decline gaan naar /api/shared-lists/<listInviteId>. */
+  listInviteId?: string;
   /** Vervangt de tag van de melding (zelfde tag = vervangt de vorige); zonder tag de taak of uitnodiging. */
   tag?: string;
   /** Knoppen in de melding, al vertaald: de service worker kent de taal niet. */
