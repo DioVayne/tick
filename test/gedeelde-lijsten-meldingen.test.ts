@@ -35,7 +35,7 @@ function fakeSender() {
   return { send, calls };
 }
 
-describe('gedeelde lijsten: ik neem het mee en meldingen', () => {
+describe('gedeelde lijsten: ik pak het op en meldingen', () => {
   let b: User; let c: User; let d: User;
   let bName: string; let cName: string;
   beforeAll(async () => {
@@ -72,7 +72,7 @@ describe('gedeelde lijsten: ik neem het mee en meldingen', () => {
     for (const u of [null, b, c]) expect((await taskOf(u, t.id))!.claimed_by).toEqual({ id: b.id, name: bName });
     const taken = await patch(c, t.id, { claimed: true });
     expect(taken.status).toBe(409);
-    expect(await errorOf(taken)).toBe(`${bName} is already taking this.`);
+    expect(await errorOf(taken)).toBe(`${bName} is already on this.`);
     expect((await patch(c, t.id, { claimed: false })).status).toBe(409);
     expect((await patch(b, t.id, { claimed: true })).status).toBe(200); // nog eens: niets aan de hand
     const free = await patch(b, t.id, { claimed: false });
@@ -94,14 +94,14 @@ describe('gedeelde lijsten: ik neem het mee en meldingen', () => {
     expect(pushes.calls).toEqual([]); // op naam zetten of loslaten meldt niets
   });
 
-  it('alleen wie hem meeneemt vinkt af', async () => {
+  it('alleen wie hem oppakt vinkt af', async () => {
     const { name } = await weekend();
     const t = await newTask(null, { title: 'Tent', list: name });
     const kid = await newTask(null, { title: 'Haringen', parent_id: t.id });
     expect((await patch(b, t.id, { claimed: true })).status).toBe(200);
     const viaPatch = await patch(c, t.id, { done: true });
     expect(viaPatch.status).toBe(403);
-    expect(await errorOf(viaPatch)).toBe(`${bName} is already taking this.`);
+    expect(await errorOf(viaPatch)).toBe(`${bName} is already on this.`);
     expect((await post(c, `/api/tasks/${t.id}/done`)).status).toBe(403);
     expect((await patch(c, kid.id, { done: true })).status).toBe(403);
     expect((await row(t.id)).done).toBe(0);

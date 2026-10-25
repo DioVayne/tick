@@ -9,7 +9,7 @@ import {
   answerListInvite, claim, claimedByOther, clearDone, doneInList, removeListMember, sharedOf, shareList, state, toggleDone,
 } from './store.js';
 
-// Gedeelde lijsten in de app: de deeldialoog van een lijst, de uitnodigingsbalk, "ik neem het mee" en het blok Afgevinkt.
+// Gedeelde lijsten in de app: de deeldialoog van een lijst, de uitnodigingsbalk, "ik pak het op" en het blok Afgevinkt.
 // Delen, accepteren, eruit halen en opruimen gaan alleen online (zoals delen per taak); op naam zetten en afvinken via de outbox.
 
 /** Offline: melden en false. De acties op een gedeelde lijst zijn directe verzoeken aan de server. */
@@ -165,8 +165,8 @@ export function renderListInvites(root) {
 }
 
 /**
- * Op naam in de metaregel van een open hoofdtaak in een gedeelde lijst: "Jij neemt mee" (tik: loslaten), "{name} neemt
- * mee", of de knop "Ik neem het mee". Gaat via de outbox, dus ook offline.
+ * Op naam in de metaregel van een open hoofdtaak in een gedeelde lijst: "Jij pakt het op" (tik: loslaten), "{name} pakt
+ * het op", of de knop "Ik pak het op". Gaat via de outbox, dus ook offline.
  */
 export function claimControl(task) {
   const by = task.claimed_by;

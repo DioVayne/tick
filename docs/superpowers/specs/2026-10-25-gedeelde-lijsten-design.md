@@ -8,11 +8,11 @@ Dio gaat met Medy op vakantie. Ze maken samen een lijst met spullen die mee moet
 
 Dat kan nu alleen per taak: elke taak apart delen, en de ander moet elke uitnodiging accepteren (`docs/sharing.md`). Voor een lijst waar je samen in werkt is dat te omslachtig. Dio wil "een speciale lijst die gedeeld is, waar we allebei taken in kunnen zetten die dan automatisch met elkaar gedeeld zijn". De ander accepteert de lijst één keer, en daarna niet meer per taak.
 
-In een groep speelt nog iets: niet alleen "is het ingepakt", maar ook "wie neemt het mee". Zonder dat nemen twee mensen een barbecue mee, of niemand.
+In een groep speelt nog iets: niet alleen "is het gedaan", maar ook "wie pakt het op". Zonder dat nemen twee mensen een barbecue mee, of niemand; of zoeken twee mensen een auto uit.
 
 ## Wat het wordt
 
-Een lijst kan gedeeld worden met een of meer andere accounts op dezelfde installatie. Elke hoofdtaak in die lijst is een **gedeelde taak** (de bestaande modus `shared`) met iedereen die in de lijst zit, zonder uitnodiging per taak. Daarbovenop krijgt een gedeelde lijst drie dingen die een gewone lijst niet heeft: afgevinkte taken blijven in de lijst staan, je kunt een taak op je naam zetten ("ik neem het mee"), en je kunt meldingen bij afvinken aanzetten.
+Een lijst kan gedeeld worden met een of meer andere accounts op dezelfde installatie. Elke hoofdtaak in die lijst is een **gedeelde taak** (de bestaande modus `shared`) met iedereen die in de lijst zit, zonder uitnodiging per taak. Daarbovenop krijgt een gedeelde lijst drie dingen die een gewone lijst niet heeft: afgevinkte taken blijven in de lijst staan, je kunt een taak op je naam zetten ("ik pak het op"), en je kunt meldingen bij afvinken aanzetten.
 
 ### Leden en rollen (Dio)
 - **De beheerder van Tick** maakt accounts aan, zoals nu. Verder heeft die geen rol in een gedeelde lijst.
@@ -25,7 +25,7 @@ Een lijst kan gedeeld worden met een of meer andere accounts op dezelfde install
 2. **Taken toevoegen.** Iedereen in de lijst kan taken toevoegen. Een nieuwe taak is meteen van alle leden; niemand hoeft iets te accepteren.
 3. **Afgevinkt blijft staan.** Een afgevinkte taak verdwijnt niet uit de lijst maar blijft staan tot iemand hem verwijdert. Bij de taak staat wie hem afvinkte en wanneer, bijvoorbeeld "Sanne · vr 17:30". Dio: "Het is er namelijk wel handig om te kunnen zien wanneer iets is afgevinkt."
 4. **Verwijderen.** Een verwijderde taak staat bij iedereen in de Prullenbak, zoals een gedeelde taak nu.
-5. **Ik neem het mee.** Iedereen kan een open taak die nog van niemand is op zijn naam zetten; de lijst toont dan "Jaap neemt mee".
+5. **Ik pak het op.** Iedereen kan een open taak die nog van niemand is op zijn naam zetten; de lijst toont dan "Jaap pakt het op". (Eerst heette dit "Ik neem het mee"; Dio koos op 25 oktober 2026 voor een tekst die ook past bij taken als "auto uitzoeken". Engels: "I'll take it" / "{name} is on it" / "You're on it".)
    - Een taak op naam kan niemand anders overnemen. Alleen wie hem op zich nam, kan hem weer loslaten; daarna kan een ander hem nemen.
    - Een taak op naam kan alleen die persoon afvinken.
 6. **Meldingen bij afvinken.** Per gedeelde lijst kun je aanzetten dat je een melding krijgt als een taak wordt afgevinkt. Staat dat uit, dan kun je het per taak aanzetten. Die keuze per taak is alleen zichtbaar als het op lijstniveau uit staat.
@@ -41,7 +41,7 @@ Een lijst kan gedeeld worden met een of meer andere accounts op dezelfde install
 - Een taak die een lid eerder naar een eigen lijst sleepte, blijft van dat lid als het lid later vertrekt.
 - Afgevinkte taken staan onderaan in een eigen blok "Afgevinkt", met de laatst afgevinkte bovenaan, en tellen niet mee in het getal in de zijbalk. Een knop **Opruimen** haalt ze in één keer weg.
 - Meldingen bij afvinken stelt ieder voor zichzelf in; ze staan standaard uit. Je krijgt nooit een melding van je eigen vinkje.
-- "Ik neem het mee" werkt in elke gedeelde lijst, ook met twee mensen.
+- "Ik pak het op" werkt in elke gedeelde lijst, ook met twee mensen.
 - Verlaat iemand de lijst of wordt iemand eruit gehaald, dan zijn de taken op zijn naam weer van niemand. Zo blijft er nooit een taak vastzitten.
 
 ### Keuzes van Claude (nog niet aan Dio voorgelegd)
@@ -57,7 +57,7 @@ Een lijst kan gedeeld worden met een of meer andere accounts op dezelfde install
 1. Een groep werkt in één lijst, en elke taak daarin is zonder extra stappen van iedereen.
 2. Eén keer accepteren is genoeg.
 3. Je ziet in de lijst wat er gedaan is, door wie en wanneer.
-4. Niemand neemt per ongeluk hetzelfde mee: wie iets op zich neemt, staat erbij, en alleen die persoon vinkt het af.
+4. Niemand doet per ongeluk hetzelfde: wie iets oppakt, staat erbij, en alleen die persoon vinkt het af.
 5. Je krijgt alleen meldingen als je die zelf aanzet.
 6. Vertrekken, eruit gehaald worden en verwijderen raken nooit onverwacht iemands taken.
 
@@ -81,7 +81,7 @@ Een lijst kan gedeeld worden met een of meer andere accounts op dezelfde install
 - Een lijst is nu een naam per persoon (`tasks.list`, tabel `lists`, `list_ids`); een gedeelde lijst heeft een identiteit nodig die voor alle leden dezelfde is.
 - Offline: delen werkt nu alleen online. Taken toevoegen, afvinken en op naam zetten in een gedeelde lijst moeten offline werken via de outbox, net als een gewone taak. Wie als eerste een taak op naam zet, wint bij synchroniseren.
 - Android-widget en `/mcp` moeten gedeelde lijsten blijven tonen zoals andere lijsten. Een taak op naam van een ander kan daar ook niet worden afgevinkt.
-- Een schets van de lijst staat in het gesprek van 25 oktober 2026: kopregel met naam, leden en belletje; open taken met "Jaap neemt mee" of een knop "Ik neem het mee"; onderaan het blok "Afgevinkt" met naam en tijd en "Opruimen". De vormgeving volgt verder de stijl van Tick.
+- Een schets van de lijst staat in het gesprek van 25 oktober 2026: kopregel met naam, leden en belletje; open taken met "Jaap pakt het op" of een knop "Ik pak het op"; onderaan het blok "Afgevinkt" met naam en tijd en "Opruimen". De vormgeving volgt verder de stijl van Tick.
 
 ## Aan de bouwer
 - Het datamodel: een tabel voor lijstdelingen, en hoe een taak in een gedeelde lijst gedeeld is (automatische `task_shares`-rijen of toegang via lidmaatschap).
