@@ -35,4 +35,11 @@ describe('lijstnamen', () => {
     const afterCreate = [t('1', 'Wekr')];
     expect(applyListOp(afterCreate, { type: 'list-rename', from: 'Wekr', to: 'Werk' })[0].list).toBe('Werk');
   });
+  it('mergeLists bewaart shared van de server, zoals id', () => {
+    const shared = { id: 'L1', mine: true, owner: { id: 'u1', name: 'Ik' }, members: [], notify_done: false };
+    const out = mergeLists([{ name: 'Boodschappen', open: 0, id: 'L1', shared }, { name: 'Werk', open: 0, id: 'L2', shared: null }], [], []);
+    expect(out).toEqual([
+      { name: 'Inbox', open: 0 }, { name: 'Boodschappen', open: 0, id: 'L1', shared }, { name: 'Werk', open: 0, id: 'L2' },
+    ]);
+  });
 });
