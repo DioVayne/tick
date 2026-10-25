@@ -6,6 +6,7 @@ import { normalizeRule, zonedParts } from '../public/repeat.js';
 import { inZone } from './time';
 import type { User } from './users';
 import { readTickTickText, tickTickRows } from '../public/ticktick.js';
+import { attachStmts, listOf, type ListRef } from './sharedlists';
 
 /** Kolommen van `tasks` die in een backup horen; alles daarbuiten wordt genegeerd. */
 const TASK_COLUMNS: (keyof TaskRow)[] = [
@@ -182,8 +183,34 @@ importApi.post('/backup', async (c) => {
   // deleted_at = NULL: een taak uit het bestand die in de prullenbak staat, komt terug.
   await insertBatched(db, ordered.map((t) => upsert(db, 'tasks', [...TASK_COLUMNS, 'deleted_at'], { ...t, deleted_at: null }, userId)));
   await insertBatched(db, placeStmts);
+  await attachImported(db, userId, ordered.filter((t) => !isStr(t.parent_id)).map((t) => t.id as string));
   return c.json({ tasks: ordered.length, places: placeStmts.length, skipped });
 });
+
+/**
+ * Een geïmporteerde hoofdtaak in de naam van een van jouw gedeelde lijsten hoort bij die lijst, net als een nieuwe
+ * taak daar (`attachStmts`): anders ziet alleen jij hem. Niet een taak die al per taak gedeeld is; die kan er ook
+ * niet in gesleept worden. Per taak één batch-deel, zodat een taak nooit half in de lijst komt.
+ */
+async function attachImported(db: D1Database, userId: string, ids: string[]): Promise<void> {
+  const refs = new Map<string, ListRef | null>();
+  const parts: D1PreparedStatement[][] = [];
+  for (let i = 0; i < ids.length; i += 50) {
+    const chunk = ids.slice(i, i + 50);
+    const { results } = await db.prepare(
+      `SELECT id, list, position FROM tasks WHERE user_id = ?1 AND id IN (${chunk.map(() => '?').join(',')}) AND parent_id IS NULL ` +
+      "AND shared_list IS NULL AND deleted_at IS NULL AND list IN (SELECT name FROM list_members WHERE user_id = ?1 AND status = 'accepted') " +
+      "AND NOT EXISTS (SELECT 1 FROM task_shares s WHERE s.task_id = tasks.id AND s.mode = 'shared')",
+    ).bind(userId, ...chunk).all<{ id: string; list: string; position: number }>();
+    for (const t of results) {
+      if (!refs.has(t.list)) refs.set(t.list, await listOf(db, userId, t.list));
+      const ref = refs.get(t.list);
+      if (ref) parts.push(await attachStmts(db, t, ref, userId, t.position));
+    }
+  }
+  const per = Math.max(1, Math.floor(50 / (parts[0]?.length || 1)));
+  for (let i = 0; i < parts.length; i += per) await db.batch(parts.slice(i, i + per).flat());
+}
 
 const MAX_TICKTICK = 10 * 1024 * 1024;
 /** TickTick-backup (CSV) importeren; bestaande ids blijven ongemoeid (INSERT OR IGNORE). */

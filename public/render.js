@@ -181,8 +181,9 @@ function taskItem(t, children) {
   li.append(row);
 
   const meta = [];
-  // Gedeelde lijst: wie het meeneemt, vooraan in de metaregel (alleen bij een open hoofdtaak).
-  if (t.shared_list && !t.parent_id && !done) meta.push(claimControl(t));
+  // Gedeelde lijst: wie het meeneemt, vooraan in de metaregel (alleen bij een open hoofdtaak). Wie de taak per taak
+  // deelt zonder lid te zijn, heeft hem in een eigen lijst (geen sharedOf) en neemt hem niet mee.
+  if (t.shared_list && sharedOf(t.list) && !t.parent_id && !done) meta.push(claimControl(t));
   if (t.remind_at && !done) {
     const past = new Date(t.remind_at) < new Date();
     meta.push(el('span', { class: 'bell' + (past ? ' past' : '') }, icon('bell', 'sm'), fmt(t.remind_at), t.repeat ? icon('repeat', 'sm') : null));

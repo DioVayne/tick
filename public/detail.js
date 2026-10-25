@@ -477,7 +477,7 @@ function fill(t) {
   v.check.setAttribute('aria-label', lockedBy ? tr('slist.claimed_by', { name: lockedBy.name })
     : tr(state.justDone.has(t.id) ? 'render.undo_named' : done ? 'render.reopen_named' : 'render.check_named', { title: t.title }));
   v.check.title = lockedBy ? tr('slist.claimed_by', { name: lockedBy.name }) : '';
-  v.watchRow.hidden = done || !!t.parent_id || !t.shared_list || !!sharedOf(t.list)?.notify_done;
+  v.watchRow.hidden = done || !!t.parent_id || !t.shared_list || !sharedOf(t.list) || sharedOf(t.list).notify_done; // geen lid: geen sharedOf
   v.watch.setAttribute('aria-pressed', String(!!t.watch));
   v.watch.classList.toggle('on', !!t.watch);
   if (v.pin) {

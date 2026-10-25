@@ -63,13 +63,15 @@ async function notifyInvite(env: Env, shareId: string, toUser: string, fromName:
 
 /**
  * Push naar de eigenaar en de geaccepteerde deelnemers van een gedeelde hoofdtaak, behalve naar wie het deed.
- * Zonder abonnement via de eigen fallback-webhook (zoals bij uitnodigingen).
+ * Zonder abonnement via de eigen fallback-webhook (zoals bij uitnodigingen). In een gedeelde lijst niet naar de
+ * leden (die hebben hun eigen meldingen), alleen naar wie de taak per taak deelt zonder lid te zijn.
  */
 async function notifyShareMembers(env: Env, task: TaskRow, actorId: string, make: (locale: string) => Payload, defaultLocale: 'en' | 'nl', send: Sender): Promise<void> {
   if (task.parent_id) return;
   const { results } = await env.DB.prepare(
-    "SELECT ? AS uid UNION SELECT to_user FROM task_shares WHERE task_id = ? AND mode = 'shared' AND status = 'accepted'",
-  ).bind(task.user_id, task.id).all<{ uid: string }>();
+    "SELECT uid FROM (SELECT ?1 AS uid UNION SELECT to_user FROM task_shares WHERE task_id = ?2 AND mode = 'shared' AND status = 'accepted') " +
+    "WHERE ?3 IS NULL OR uid NOT IN (SELECT user_id FROM list_members WHERE list_id = ?3 AND status = 'accepted')",
+  ).bind(task.user_id, task.id, task.shared_list ?? null).all<{ uid: string }>();
   for (const { uid } of results) {
     if (uid === actorId) continue;
     const { total } = await send(env, uid, make, defaultLocale);
@@ -213,9 +215,13 @@ sharesApi.post('/:id/decline', async (c) => {
 sharesApi.delete('/:id', async (c) => {
   const db = c.env.DB;
   const userId = c.get('auth').userId;
-  const s = await db.prepare('SELECT s.id, s.task_id, s.to_user FROM task_shares s JOIN tasks t ON t.id = s.task_id WHERE s.id = ? AND (s.to_user = ?2 OR t.user_id = ?2)')
-    .bind(c.req.param('id'), userId).first<{ id: string; task_id: string; to_user: string }>();
+  const s = await db.prepare(
+    'SELECT s.id, s.task_id, s.to_user, EXISTS (SELECT 1 FROM list_members m WHERE m.list_id = t.shared_list AND m.user_id = s.to_user ' +
+    "AND m.status = 'accepted') AS in_list FROM task_shares s JOIN tasks t ON t.id = s.task_id WHERE s.id = ?1 AND (s.to_user = ?2 OR t.user_id = ?2)",
+  ).bind(c.req.param('id'), userId).first<{ id: string; task_id: string; to_user: string; in_list: number }>();
   if (!s) throw new HttpError(404, 'err.not_found');
+  // De deelrij van een lid van de gedeelde lijst hoort bij de lijst: daar vertrek je, of haalt de eigenaar je eruit.
+  if (s.in_list) throw new HttpError(400, 'err.share_is_list');
   await db.batch(leaveShareStmts(db, s.id, s.task_id, s.to_user));
   return c.json({ ok: true });
 });
