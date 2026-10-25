@@ -285,12 +285,12 @@ body.settings-open #btn-search, body.settings-open #search, body.calendar-open #
 #side { --side-blk: color-mix(in srgb, var(--side), var(--text) 5%); }
 #side-lists { display: grid; gap: 0; }
 .side-grp { display: grid; gap: 1px; padding: 4px; border-radius: 10px; background: var(--side-blk); }
-.side-h { margin: 14px 10px 6px; color: var(--muted); font-size: .75rem; }
+.side-h { margin: 10px 10px 4px; color: var(--muted); font-size: .75rem; }
 .side-mine { border-radius: 10px 10px 0 0; padding-bottom: 0; }
 .side-mine:empty { padding: 2px 0 0; }
 #side-new { padding: 1px 4px 4px; border-radius: 0 0 10px 10px; background: var(--side-blk); }
-.side-more { margin-top: 14px; }
-#side .item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 6px 10px; border-radius: 7px; background: transparent; color: var(--text); text-align: left; font-size: .9375rem; }
+.side-more { margin-top: 10px; }
+#side .item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 32px; padding: 4px 10px; border-radius: 7px; background: transparent; color: var(--text); text-align: left; font-size: .9375rem; }
 #side .item:hover { background: color-mix(in srgb, var(--side), var(--text) 10%); }
 #side .item .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #side .item .count { color: var(--muted); font-size: .8125rem; }
@@ -301,8 +301,8 @@ body.settings-open #btn-search, body.settings-open #search, body.calendar-open #
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 20%, transparent); }
 #side .item.on .ico, #side .item[aria-pressed="true"] .ico { stroke: var(--accent); }
 #side .item.muted { color: var(--muted); }
-/* Met een vinger: de items van het menu even hoog als een vingertop */
-@media (pointer: coarse) { #side .item { min-height: 44px; } }
+/* Met een vinger: hoog genoeg voor een vingertop, maar compact genoeg dat ook veel lijsten passen */
+@media (pointer: coarse) { #side .item { min-height: 38px; } }
 #side .item.drop { outline: 2px dashed var(--accent); outline-offset: -2px; background: var(--sel); }
 #side #btn-trash.drop { outline-color: var(--danger); color: var(--danger); }
 #side [hidden] { display: none; }
@@ -765,8 +765,9 @@ html[data-boot-task] #detail::before {
 #side .item .slist-ico { flex: none; display: inline-flex; color: var(--muted); }
 #side .item .slist-ico .ico { stroke: currentColor; }
 .meta .claim { display: inline-flex; align-items: center; gap: 3px; padding: 0 8px; min-height: 22px; border-radius: 999px; font-size: .75rem; line-height: 1.4; }
-.meta button.claim { border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
-.meta button.claim:hover { border-color: var(--muted); color: var(--text); }
+/* De knop valt op (accentrand en -tekst), zodat je hem tussen de taken ziet staan. */
+.meta button.claim { border: 1px solid var(--accent); background: transparent; color: var(--link, var(--accent)); font-weight: 500; cursor: pointer; }
+.meta button.claim:hover { background: var(--sel); }
 .meta button.claim.mine { border-color: var(--accent); background: var(--sel); color: var(--text); }
 .meta span.claim.other { background: var(--fill); color: var(--text); }
 .meta .claim .ico.sm { margin-right: 0; }
