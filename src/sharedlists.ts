@@ -207,7 +207,8 @@ sharedListsApi.get('/incoming', async (c) => {
 /**
  * Accepteren: je lidmaatschap krijgt een naam die je nog niet hebt, en elke hoofdtaak van de lijst een deelrij,
  * bovenaan in jouw volgorde en in die van de eigenaar. De deelrijen lezen de taken in dezelfde batch, zodat er geen
- * taak tussendoor valt; een taak die al per taak met je gedeeld was, houdt zijn rij.
+ * taak tussendoor valt; een taak die al per taak met je gedeeld was, houdt zijn rij, en een openstaande uitnodiging
+ * per taak wordt een deelname in de lijst.
  */
 sharedListsApi.post('/:id/accept', async (c) => {
   const db = c.env.DB;
@@ -235,7 +236,9 @@ sharedListsApi.post('/:id/accept', async (c) => {
       'SELECT id, user_id, row_number() OVER (ORDER BY position, id) AS rn, count(*) OVER () AS n FROM tasks ' +
       'WHERE shared_list = ?1 AND parent_id IS NULL AND deleted_at IS NULL) ' +
       "WHERE EXISTS (SELECT 1 FROM list_members WHERE list_id = ?1 AND user_id = ?2 AND status = 'accepted') " +
-      'ON CONFLICT (task_id, to_user) DO NOTHING',
+      // Een openstaande uitnodiging per taak (gedeeld of kopie) wordt een gewone deelname; een geaccepteerde blijft.
+      "ON CONFLICT (task_id, to_user) DO UPDATE SET mode = 'shared', status = 'accepted', list = excluded.list, position = excluded.position, " +
+      "responded_at = excluded.responded_at WHERE task_shares.status = 'pending'",
     ).bind(listId, userId, name, top, STEP, ts),
   ]);
   if (!res.meta.changes) throw new HttpError(404, 'err.not_found'); // intussen geweigerd of ingetrokken

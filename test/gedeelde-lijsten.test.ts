@@ -128,6 +128,23 @@ describe('gedeelde lijsten', () => {
     expect((await callAs(c.cookie, `/api/shared-lists/${id}/me`, { method: 'PATCH', json: { notify_done: true } })).status).toBe(404);
   });
 
+  it('een openstaande uitnodiging per taak wordt bij accepteren een deelname in de lijst', async () => {
+    const { name, id, tasks: [gedeeld, kopie] } = await sharedList(b, ['Per taak gedeeld', 'Per taak kopie']);
+    const invites: string[] = [];
+    for (const [t, mode] of [[gedeeld, 'shared'], [kopie, 'copy']] as const) {
+      const res = await call('/api/shares', { method: 'POST', json: { task_id: t.id, to_user: b.id, mode } });
+      expect(res.status).toBe(201);
+      invites.push((await json<{ id: string }>(res)).id);
+    }
+    expect((await accept(b, id)).status).toBe(200);
+    const mine = await tasksOf(b);
+    for (const t of [gedeeld, kopie]) expect(mine.find((x) => x.id === t.id)).toMatchObject({ list: name });
+    for (const t of [gedeeld, kopie]) expect(await sharesOn(t.id)).toMatchObject([{ to_user: b.id, mode: 'shared', status: 'accepted', list: name }]);
+    const incoming = await json<{ id: string }[]>(await callAs(b.cookie, '/api/shares/incoming'));
+    expect(incoming.map((i) => i.id)).not.toEqual(expect.arrayContaining([invites[0]]));
+    expect(incoming.map((i) => i.id)).not.toEqual(expect.arrayContaining([invites[1]]));
+  });
+
   it('een lid zonder taken in de lijst ziet hem toch', async () => {
     const name = `Leeg ${uniq()}`;
     await call('/api/lists', { method: 'POST', json: { name } });
