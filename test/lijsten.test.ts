@@ -18,8 +18,8 @@ describe('lijsten', () => {
     await createTask({ title: 'kind', parent_id: p.id });
     await finish(await createTask({ title: 'k', list: b }));
     const all = await lists();
-    expect(all.find((l) => l.name === a)).toEqual({ name: a, open: 2, id: expect.any(String) });
-    expect(all.find((l) => l.name === b)).toEqual({ name: b, open: 0, id: expect.any(String) });
+    expect(all.find((l) => l.name === a)).toEqual({ name: a, open: 2, id: expect.any(String), shared: null });
+    expect(all.find((l) => l.name === b)).toEqual({ name: b, open: 0, id: expect.any(String), shared: null });
     expect(all.some((l) => l.name === 'Inbox')).toBe(true);
   });
 
@@ -173,9 +173,9 @@ describe('lijsten', () => {
     expect(res.status).toBe(201);
     expect(await json(res)).toEqual({ name: a });
     expect((await make(a)).status).toBe(201); // nog eens: verandert niets
-    expect((await lists()).filter((l) => l.name === a)).toEqual([{ name: a, open: 0, id: expect.any(String) }]);
+    expect((await lists()).filter((l) => l.name === a)).toEqual([{ name: a, open: 0, id: expect.any(String), shared: null }]);
     await createTask({ title: 't', list: a });
-    expect((await lists()).filter((l) => l.name === a)).toEqual([{ name: a, open: 1, id: expect.any(String) }]);
+    expect((await lists()).filter((l) => l.name === a)).toEqual([{ name: a, open: 1, id: expect.any(String), shared: null }]);
     expect((await make('  ')).status).toBe(400);
     expect((await make('x'.repeat(101))).status).toBe(400);
     expect((await make('Inbox')).status).toBe(201);

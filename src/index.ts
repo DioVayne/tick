@@ -23,6 +23,7 @@ import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
 import { leaveShareStmts, notifyShareDone, notifyShareLocation, sharesApi } from './shares';
+import { listSharing, sharedListsApi } from './sharedlists';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxUpload, sweepAttachments } from './attachments';
@@ -65,6 +66,8 @@ export type TaskRow = {
   loc_trigger: string | null; loc_notified: number;
   repeat_rule: string | null; repeat_start: string | null; repeat_at: string | null; repeat_prev: string | null;
   deleted_at: string | null; copy_group: string | null; pinned: number;
+  /** De gedeelde lijst van een hoofdtaak; wie hem afvinkte; op wiens naam hij staat (alleen in een gedeelde lijst). */
+  shared_list: string | null; done_by: string | null; claimed_by: string | null;
 };
 
 export type AppEnv = {
@@ -201,6 +204,7 @@ app.route('/api/devices', devicesApi);
 app.route('/api/export', exportApi);
 app.route('/api/import', importApi);
 app.route('/api/shares', sharesApi);
+app.route('/api/shared-lists', sharedListsApi);
 app.route('/api', attachmentsApi);
 app.route('/api/background', backgroundApi);
 // De MCP-tools roepen deze app zelf aan (met dezelfde sleutel); pas bij een request, dus alle routes staan er dan.
@@ -841,11 +845,14 @@ app.get('/api/lists', async (c) => {
   const lists = results.map((r) => ({ name: r.name, open: r.open }));
   // Een aangemaakte lijst met taken staat er al: dan niet nog eens.
   for (const r of made.results) if (!lists.some((l) => l.name === r.name)) lists.push({ name: r.name, open: 0 });
+  // Een gedeelde lijst waar je lid van bent, staat er ook zonder taken.
+  const sharing = await listSharing(db, userId);
+  for (const name of sharing.keys()) if (!lists.some((l) => l.name === name)) lists.push({ name, open: 0 });
   // Inbox is vast en moet er ook zijn zonder taken.
   if (!lists.some((l) => l.name === 'Inbox')) lists.push({ name: 'Inbox', open: 0 });
   lists.sort((a, b) => a.name.localeCompare(b.name, c.get('lang'), { sensitivity: 'base' }));
   const ids = await listIds(db, userId, lists.map((l) => l.name));
-  return c.json(lists.map((l) => ({ ...l, id: ids.get(l.name) })));
+  return c.json(lists.map((l) => ({ ...l, id: ids.get(l.name), shared: sharing.get(l.name) ?? null })));
 });
 
 /** De vaste id van elke naam (voor bladwijzers); een naam die er nog geen heeft, krijgt er nu een. */
