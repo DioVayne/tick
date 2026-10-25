@@ -44,6 +44,10 @@ export async function touchLastSeen(db: D1Database, user: User): Promise<void> {
 /** Alles van één gebruiker wissen, in een volgorde die de verwijzingen respecteert; de aanroeper draait het als batch. */
 export function deleteUserStmts(db: D1Database, id: string): D1PreparedStatement[] {
   return [
+    // Gedeelde lijsten (de eigendom ging al over via transferListsStmts): lidmaatschappen, meldrijen en claims weg.
+    db.prepare('UPDATE tasks SET claimed_by = NULL WHERE claimed_by = ?').bind(id),
+    db.prepare('DELETE FROM task_watch WHERE user_id = ?').bind(id),
+    db.prepare('DELETE FROM list_members WHERE user_id = ?').bind(id),
     db.prepare('DELETE FROM devices WHERE key_id IN (SELECT id FROM api_keys WHERE user_id = ?)').bind(id),
     // Delen: deelrijen van en naar deze gebruiker, en op zijn taken (die verdwijnen ook bij de ontvangers).
     db.prepare('DELETE FROM task_shares WHERE to_user = ?1 OR from_user = ?1 OR task_id IN (SELECT id FROM tasks WHERE user_id = ?1)').bind(id),
