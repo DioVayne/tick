@@ -84,10 +84,26 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 #add button { min-height: 32px; padding: 4px 12px; font-size: .875rem; }
 #add:not(:focus-within):has(#add-title:placeholder-shown) > :not(#add-title, .add-key) { display: none; }
 ul.tasks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
-ul.sub { margin-left: 24px; padding-bottom: 2px; gap: 0; }
+/* Subtaken: in het vlak van hun hoofdtaak, kleiner en lichter, met een boomlijn. De lijn loopt recht onder het vinkje van de
+   hoofdtaak; --bx (waar dat vinkje staat), --up (afstand tot dat vinkje) en per rij --ew (lengte van het takje) meet
+   alignBranches() in render.js, omdat de plek van het vinkje van het greepje en de lettergrootte afhangt. */
+:root { --ind: 24px; }
+ul.sub { --bx: 28px; --up: 6px; --branch: color-mix(in srgb, var(--muted) 40%, var(--fill)); margin: 0; padding: 0 0 4px var(--ind); gap: 0; }
 /* Elke taak een eigen vlak; subtaken liggen in het vlak van hun hoofdtaak */
 li.task { border-radius: 8px; background: var(--fill); }
-ul.sub > li.task { background: transparent; }
+ul.sub > li.task { background: transparent; position: relative; }
+ul.sub > li.task > .row { position: relative; }
+/* Het takje: een L die de lijn naar het vinkje buigt; bij de laatste subtaak stopt de lijn daar, bij de andere loopt hij door */
+ul.sub > li.task > .row::before { content: ""; position: absolute; pointer-events: none; left: calc(var(--bx) - var(--ind) - 1px); top: 0; width: var(--ew, 12px); height: 50%;
+  border: 0 solid var(--branch); border-left-width: 2px; border-bottom-width: 2px; border-bottom-left-radius: 6px; }
+ul.sub > li.task:first-child > .row::before { top: calc(-1 * var(--up)); height: calc(50% + var(--up)); }
+ul.sub > li.task:not(:last-child)::after { content: ""; position: absolute; pointer-events: none; left: calc(var(--bx) - var(--ind) - 1px); top: 0; bottom: 0; border-left: 2px solid var(--branch); }
+ul.sub .check { width: 14px; height: 14px; min-width: 14px; min-height: 14px; margin: 0 6px; border-radius: 3px; }
+ul.sub .check::before { inset: -15px; }
+ul.sub .check[aria-checked="true"]::after { left: 3.5px; top: .5px; width: 3.5px; height: 7px; border-width: 0 1.75px 1.75px 0; }
+ul.sub .title { min-height: 32px; font-size: .8125rem; }
+ul.sub li.task:not(.done) .title { color: color-mix(in srgb, var(--text) 82%, var(--muted)); }
+ul.sub textarea.title-edit { padding: 7px 2px; }
 li.task:has(> .row:hover) { background: color-mix(in srgb, var(--fill), var(--text) 5%); }
 /* De gekozen taak: een dun accentrandje met een zachte gloed */
 li.task.sel, li.task.sel:has(> .row:hover) { background: color-mix(in srgb, var(--fill), var(--accent) 8%);

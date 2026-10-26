@@ -241,6 +241,25 @@ function taskList(tasks) {
 /** Vastgepinde hoofdtaken staan bovenaan, elk deel in zijn eigen volgorde. */
 const pinnedOf = (t) => !!t?.pinned && !t.parent_id;
 
+/**
+ * De boomlijn van de subtaken (zie style.css) loopt onder het midden van het vinkje van de hoofdtaak en buigt bij elke
+ * subtaak naar haar vinkje. Waar die staan hangt af van het greepje en de lettergrootte, dus we meten ze.
+ */
+function alignBranches(root) {
+  for (const ul of root.querySelectorAll('ul.sub')) {
+    const mark = ul.parentElement.querySelector(':scope > .row > .check');
+    if (!mark) continue;
+    const u = ul.getBoundingClientRect(), m = mark.getBoundingClientRect();
+    const bx = m.left + m.width / 2 - u.left;
+    ul.style.setProperty('--bx', bx + 'px');
+    ul.style.setProperty('--up', Math.max(0, u.top - m.bottom - 3) + 'px');
+    for (const row of ul.querySelectorAll(':scope > li > .row')) {
+      const c = row.querySelector(':scope > .check')?.getBoundingClientRect();
+      if (c) row.style.setProperty('--ew', Math.max(4, c.left - u.left - bx - 2) + 'px');
+    }
+  }
+}
+
 /** Open taken, plus net afgevinkte die tijdens de ongedaan-maken-periode zichtbaar blijven. */
 function openTasks() {
   const shown = state.open.filter((t) => (!t.done || state.justDone.has(t.id)) && !swipedAway(t));
@@ -260,6 +279,7 @@ export function render() {
     ? { start: a.selectionStart, end: a.selectionEnd, dir: a.selectionDirection } : null;
   rebuilding = true;
   try { renderList(root); } finally { rebuilding = false; pillNames = null; }
+  alignBranches(root);
   const f = root.querySelector('.title-edit');
   if (!(f instanceof HTMLTextAreaElement)) return;
   autoGrow(f);
