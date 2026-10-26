@@ -150,6 +150,7 @@ textarea.title-edit { display: block; min-width: 0; min-height: 0; margin: 0; bo
 .meta .bell { color: var(--bell); }
 .meta .ico.sm { margin-right: 3px; }
 .meta .ico.sm + .ico.sm { margin: 0 0 0 4px; } /* het ritme achter de datum */
+.subcount { flex: none; font-size: .75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .row .pinned { flex: none; display: grid; place-items: center; margin-left: auto; padding: 2px 4px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); line-height: 1; cursor: pointer; }
 .row .pinned:hover { background: var(--fill); }
 /* De lijst van een taak als pilletje in de kleur van die lijst (Inbox grijs); rechts in de rij. */

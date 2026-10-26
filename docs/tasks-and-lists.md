@@ -8,7 +8,7 @@ Open a task to give it a reminder, a place, notes, subtasks or attachments. On a
 Tick off a task with the box in front of it. A ticked-off task goes to **Completed**; tick the box again there to reopen it. Right after ticking off, *Undo* shows at the bottom for a few seconds.
 
 ## Subtasks
-A task can have one level of subtasks. A subtask follows its parent: same list, and ticking off the parent ticks off its subtasks. In the list, a task and its subtasks share one grey block: the subtasks are smaller and lighter, and a thin line runs from the parent's box to each subtask, so you can see what belongs together.
+A task can have one level of subtasks. A subtask follows its parent: same list, and ticking off the parent ticks off its subtasks. In the list, a task and its subtasks share one grey block: the subtasks are smaller and lighter, and a thin line runs from the parent's box to each subtask, so you can see what belongs together. Next to the parent's title a small counter such as **2/4** shows how many of its subtasks are done.
 
 ## Lists
 - **Inbox** is always there and cannot be renamed or deleted.

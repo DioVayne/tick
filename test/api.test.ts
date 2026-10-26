@@ -112,6 +112,23 @@ describe('taken', () => {
     expect(ids).not.toContain(parent.id);
     expect(ids).not.toContain(child.id);
   });
+
+  it('geeft een hoofdtaak het aantal afgeronde subtaken (sub_done), een subtaak niet', async () => {
+    const parent = await createTask({ title: 'verhuizen' });
+    const a = await createTask({ title: 'dozen', parent_id: parent.id });
+    const b = await createTask({ title: 'busje', parent_id: parent.id });
+    await createTask({ title: 'inpakken', parent_id: parent.id });
+    const subDone = async () => (await openTasks() as (Task & { sub_done?: number })[]);
+    expect((await subDone()).find((t) => t.id === parent.id)?.sub_done).toBe(0);
+    await call(`/api/tasks/${a.id}/done`, { method: 'POST' });
+    await call(`/api/tasks/${b.id}/done`, { method: 'POST' });
+    const open = await subDone();
+    expect(open.find((t) => t.id === parent.id)?.sub_done).toBe(2);
+    expect(open.find((t) => t.parent_id === parent.id)).not.toHaveProperty('sub_done');
+    // Een afgeronde subtaak in de prullenbak telt niet meer mee.
+    await call(`/api/tasks/${a.id}`, { method: 'DELETE' });
+    expect((await subDone()).find((t) => t.id === parent.id)?.sub_done).toBe(1);
+  });
 });
 
 describe('inbox (automations)', () => {

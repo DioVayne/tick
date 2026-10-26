@@ -153,6 +153,20 @@ function openTask(e, id) {
   f.setSelectionRange(at, at);
 }
 
+/**
+ * "2/4" bij een hoofdtaak met subtaken: afgerond van alle. De server telt de afgeronde (`sub_done`, die staan niet in de
+ * lijst); de open subtaken, ook de net lokaal afgevinkte, tellen we uit wat we hebben, zodat het ook offline klopt.
+ */
+function subCount(t) {
+  if (t.parent_id) return null;
+  const kids = state.open.filter((k) => k.parent_id === t.id);
+  const base = t.sub_done ?? 0;
+  const total = base + kids.length;
+  if (!total) return null;
+  const done = base + kids.filter((k) => k.done).length;
+  return el('span', { class: 'subcount', title: tr('render.subs_progress', { done, total }), 'aria-label': tr('render.subs_progress', { done, total }) }, `${done}/${total}`);
+}
+
 function taskItem(t, children) {
   const selected = state.selected === t.id;
   const done = t.done || state.justDone.has(t.id);
@@ -171,6 +185,7 @@ function taskItem(t, children) {
     }),
     selected && !done && wide.matches ? titleField(t)
       : el('button', { class: 'title', 'aria-current': selected ? 'true' : false, onclick: (e) => openTask(e, t.id) }, ...highlight(t.title)),
+    done ? null : subCount(t),
     // Waar taken uit meer lijsten samen staan (Alle, Afgerond): de lijst als pilletje in zijn kleur. Subtaken volgen hun hoofdtaak.
     !t.parent_id && (!state.list || state.showDone) ? listPill(t.list) : null,
     // Rechts in de rij; een klik maakt de taak los.

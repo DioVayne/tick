@@ -235,7 +235,8 @@ const byPin = (a: { pinned: boolean; position: number }, b: { pinned: boolean; p
  * Taken voor de client zoals `userId` ze ziet: lijst en volgorde uit zijn deelrij, en `share` op de hoofdtaak
  * (null op subtaken en op taken die met niemand gedeeld zijn), en `copies` uit `copiesFor` (null zonder kopiegroep).
  * `done_by` en `claimed_by` worden `{ id, name }` met de naam uit `names` (een verwijderd account geeft null);
- * `watch` zegt of `userId` een melding bij afvinken van deze taak heeft (`watched`).
+ * `watch` zegt of `userId` een melding bij afvinken van deze taak heeft (`watched`). Een hoofdtaak heeft `sub_done`, het
+ * aantal afgeronde subtaken (de open staan zelf in de lijst).
  */
 function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, copies: Map<string, Copies>, files = new Map<string, Attachment[]>(),
   names = new Map<string, string>(), watched = new Set<string>()) {
@@ -244,10 +245,10 @@ function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, c
     return name === undefined ? null : { id: id!, name };
   };
   return rows.map((r) => {
-    const { share_id, share_list, share_position, share_pinned, share_loc_notified, has_share, has_copy_invite, ...t } = overlay(r);
+    const { share_id, share_list, share_position, share_pinned, share_loc_notified, has_share, has_copy_invite, sub_done, ...t } = overlay(r);
     const s = t.parent_id ? undefined : info.get(t.id);
     return {
-      ...asBool(t), done_by: person(t.done_by), claimed_by: person(t.claimed_by), watch: watched.has(t.id),
+      ...asBool(t), ...(t.parent_id ? {} : { sub_done }), done_by: person(t.done_by), claimed_by: person(t.claimed_by), watch: watched.has(t.id),
       share: s ? { ...s, mine: s.owner.id === userId } : null, copies: (!t.parent_id && copies.get(t.id)) || null,
       attachments: files.get(t.id) ?? [],
     };
