@@ -97,6 +97,7 @@ li.task.sortable-ghost { opacity: .4; }
 /* Vegen (swipe.js): de taak schuift over een gekleurde laag; links rood (verwijderen), rechts blauw (lijst) */
 ul.tasks { position: relative; }
 li.task { touch-action: pan-y; }
+@media (pointer: coarse) { li.task { -webkit-touch-callout: none; user-select: none; } li.task input, li.task textarea { user-select: text; } }
 li.task.swiping { position: relative; z-index: 1; background: var(--fill); }
 li.task.swipe-go { transition: translate .18s ease-in; }
 .swipe-back { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-radius: 8px; background: var(--fill); color: var(--text); }
