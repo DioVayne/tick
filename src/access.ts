@@ -6,6 +6,7 @@ import type { TaskRow } from './index';
  */
 export type Access = TaskRow & {
   share_id: string | null; share_list: string | null; share_position: number | null; share_pinned: number | null; share_loc_notified: number | null; has_share: number | null; has_copy_invite: number | null;
+  sub_done: number;
 };
 
 /** Afstand tussen posities na aanmaken of herverdelen; slepen halveert het gat. */
@@ -14,9 +15,11 @@ export const STEP = 1_000_000;
 // ?1 is altijd de gebruiker; een gewone ? daarna krijgt het volgende nummer (?2, ?3, …).
 // has_share: de taak heeft deelrijen (dan is shareInfo nodig); zonder één zo'n taak slaat de route die query over.
 // has_copy_invite: er staat een kopie-uitnodiging open (dan is copiesFor nodig, ook zonder groep).
+// sub_done: het aantal afgeronde subtaken (voor de teller bij een hoofdtaak; de open subtaken telt de client zelf).
 const COLS = "t.*, s.id AS share_id, s.list AS share_list, s.position AS share_position, s.pinned AS share_pinned, s.loc_notified AS share_loc_notified, " +
   "(SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'shared' LIMIT 1) AS has_share, " +
-  "(SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'copy' AND x.status = 'pending' LIMIT 1) AS has_copy_invite";
+  "(SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'copy' AND x.status = 'pending' LIMIT 1) AS has_copy_invite, " +
+  "(SELECT COUNT(*) FROM tasks k WHERE k.parent_id = t.id AND k.done = 1 AND k.deleted_at IS NULL) AS sub_done";
 const JOIN = "LEFT JOIN task_shares s ON s.task_id = COALESCE(t.parent_id, t.id) AND s.to_user = ?1 AND s.status = 'accepted'";
 // Drie takken die elk een index gebruiken (eigen taken, deelrijen, subtaken van een gedeelde taak). Een OR met
 // `s.id IS NOT NULL` leest de hele tabel tasks bij elke aanvraag, en D1 telt elke gelezen rij mee in de dagelijkse limiet.
