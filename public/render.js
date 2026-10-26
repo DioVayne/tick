@@ -359,10 +359,16 @@ function stopListDrop() {
 
 const findOpen = (id) => state.open.find((t) => t.id === id);
 
+const isTouch = (evt) => evt.pointerType === 'touch' || evt.type === 'touchstart';
+
 function enableSorting(root) {
   root.querySelectorAll('ul.tasks').forEach((ul) => {
     new Sortable(ul, {
-      handle: '.grip', animation: 150, delay: 0, direction: 'vertical',
+      // Muis: alleen aan het greepje. Aanraking: ook de rij vasthouden en slepen (kort scrollen of vegen blijft gewoon werken).
+      filter: (evt) => !isTouch(evt) && !evt.target.closest('.grip') || isTouch(evt) && !!evt.target.closest('input, textarea, button, a, select'),
+      preventOnFilter: false,
+      delay: 250, delayOnTouchOnly: true, touchStartThreshold: 8,
+      animation: 150, direction: 'vertical',
       onStart: (evt) => { if (ul.dataset.parent === '' && wide.matches) startListDrop(evt.item.dataset.id); },
       // Slepen blijft binnen het eigen deel: een vastgepinde taak niet tussen de andere, en andersom.
       onMove: (evt) => pinnedOf(findOpen(evt.dragged.dataset.id)) === pinnedOf(findOpen(evt.related.dataset.id)),
