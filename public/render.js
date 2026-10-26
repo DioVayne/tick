@@ -361,6 +361,12 @@ const findOpen = (id) => state.open.find((t) => t.id === id);
 
 const isTouch = (evt) => evt.pointerType === 'touch' || evt.type === 'touchstart';
 
+// Een vinger die na het slepen loslaat op het vinkje mag de taak niet afvinken.
+let dragEnded = 0;
+document.addEventListener('click', (e) => {
+  if (performance.now() - dragEnded < 350) { e.stopPropagation(); e.preventDefault(); }
+}, true);
+
 // Tijdens het slepen met een vinger mag de pagina niet meescrollen (touch-action wordt al bij het aanraken vastgelegd).
 document.addEventListener('touchmove', (e) => { if (e.cancelable && document.querySelector('.sortable-chosen')) e.preventDefault(); }, { passive: false });
 
@@ -368,7 +374,7 @@ function enableSorting(root) {
   root.querySelectorAll('ul.tasks').forEach((ul) => {
     const sortable = new Sortable(ul, {
       // Muis: alleen aan het greepje. Aanraking: ook de rij vasthouden en slepen (kort scrollen of vegen blijft gewoon werken).
-      filter: (evt) => !isTouch(evt) && !evt.target.closest('.grip') || isTouch(evt) && !!evt.target.closest('input, textarea, button:not(.title), a, select'),
+      filter: (evt) => !isTouch(evt) && !evt.target.closest('.grip') || isTouch(evt) && !!evt.target.closest('input, textarea, button:not(.title, .check), a, select'),
       preventOnFilter: false,
       delay: 250, delayOnTouchOnly: true, touchStartThreshold: 8,
       animation: 150, direction: 'vertical',
@@ -376,6 +382,7 @@ function enableSorting(root) {
       // Slepen blijft binnen het eigen deel: een vastgepinde taak niet tussen de andere, en andersom.
       onMove: (evt) => pinnedOf(findOpen(evt.dragged.dataset.id)) === pinnedOf(findOpen(evt.related.dataset.id)),
       onEnd: (evt) => {
+        dragEnded = performance.now();
         const target = stopListDrop();
         if (target) {
           // Neergezet op een lijst of de prullenbak: de taak blijft in Sortable op zijn plek (geen positiewijziging).
