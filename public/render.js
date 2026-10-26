@@ -242,8 +242,8 @@ function taskList(tasks) {
 const pinnedOf = (t) => !!t?.pinned && !t.parent_id;
 
 /**
- * De boomlijn van de subtaken (zie style.css) loopt onder het midden van het vinkje van de hoofdtaak en buigt bij elke
- * subtaak naar haar vinkje. Waar die staan hangt af van het greepje en de lettergrootte, dus we meten ze.
+ * De boomlijn van de subtaken (zie style.css) loopt in één stuk onder het midden van het vinkje van de hoofdtaak tot de
+ * laatste subtaak, met een takje naar het vinkje van elke subtaak. Waar die staan hangt af van het greepje en de lettergrootte, dus we meten ze.
  */
 function alignBranches(root) {
   for (const ul of root.querySelectorAll('ul.sub')) {
@@ -253,10 +253,13 @@ function alignBranches(root) {
     const bx = m.left + m.width / 2 - u.left;
     ul.style.setProperty('--bx', bx + 'px');
     ul.style.setProperty('--up', Math.max(0, u.top - m.bottom - 3) + 'px');
-    for (const row of ul.querySelectorAll(':scope > li > .row')) {
+    const rows = [...ul.querySelectorAll(':scope > li > .row')];
+    for (const row of rows) {
       const c = row.querySelector(':scope > .check')?.getBoundingClientRect();
       if (c) row.style.setProperty('--ew', Math.max(4, c.left - u.left - bx - 2) + 'px');
     }
+    const last = rows.at(-1)?.getBoundingClientRect();
+    if (last) ul.style.setProperty('--ly', Math.max(0, (last.top + last.bottom) / 2 - u.top + Number.parseFloat(ul.style.getPropertyValue('--up'))) + 'px');
   }
 }
 
