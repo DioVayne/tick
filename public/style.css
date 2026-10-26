@@ -109,6 +109,8 @@ li.task.swipe-go { transition: translate .18s ease-in; }
 .swipe-back.go { color: #fff; }
 .row { display: flex; align-items: center; gap: 6px; padding: var(--row-pad) 6px; }
 .grip { cursor: grab; touch-action: none; color: var(--muted); padding: 6px 2px; user-select: none; font-size: 1rem; line-height: 1; }
+/* Op een touchscreen een ruimer vlak, en niet helemaal aan de rand (daar pakt Android de terug-veeg) */
+@media (pointer: coarse) { .grip { padding: 14px 12px 14px 4px; margin-right: -6px; } }
 /* Met een muis verschijnt de greep pas bij hover, zoals in TickTick */
 @media (hover: hover) { .grip { opacity: 0; transition: opacity .1s; } .row:hover > .grip, .grip:focus-visible { opacity: 1; } }
 .check { width: 18px; height: 18px; min-width: 18px; min-height: 18px; padding: 0; border-radius: 4px; border: 1.5px solid var(--muted); background: transparent; margin: 0 4px; }
