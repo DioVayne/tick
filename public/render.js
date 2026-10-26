@@ -366,7 +366,7 @@ document.addEventListener('touchmove', (e) => { if (e.cancelable && document.que
 
 function enableSorting(root) {
   root.querySelectorAll('ul.tasks').forEach((ul) => {
-    new Sortable(ul, {
+    const sortable = new Sortable(ul, {
       // Muis: alleen aan het greepje. Aanraking: ook de rij vasthouden en slepen (kort scrollen of vegen blijft gewoon werken).
       filter: (evt) => !isTouch(evt) && !evt.target.closest('.grip') || isTouch(evt) && !!evt.target.closest('input, textarea, button:not(.title), a, select'),
       preventOnFilter: false,
@@ -404,5 +404,9 @@ function enableSorting(root) {
         update(items[idx].dataset.id, { position: p });
       },
     });
+    // Aan het greepje meteen slepen (dat scrolt niet, dus de vinger beweegt direct); elders eerst vasthouden.
+    // In de capture-fase, zodat dit gebeurt voordat Sortable zelf op de aanraking reageert.
+    ul.addEventListener('pointerdown', (e) => sortable.option('delay', e.target.closest('.grip') ? 0 : 250), true);
+    ul.addEventListener('touchstart', (e) => sortable.option('delay', e.target.closest('.grip') ? 0 : 250), true);
   });
 }
