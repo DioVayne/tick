@@ -137,7 +137,9 @@ function buildScreen(L, { loc, place }, resolve) {
   document.body.classList.add('map-open');
 
   // ---------- kaart ----------
-  const map = L.map(mapEl, { zoomControl: true });
+  // De pin staat vast midden op het scherm en de plek is het midden van de kaart: zoomen moet dus rond dat midden,
+  // niet rond je vinger of muis, anders schuift de plek onder de pin vandaan.
+  const map = L.map(mapEl, { zoomControl: true, scrollWheelZoom: 'center', doubleClickZoom: 'center', touchZoom: 'center' });
   L.tileLayer(TILES, { maxZoom: 19, referrerPolicy: 'strict-origin-when-cross-origin', attribution: '© OpenStreetMap' }).addTo(map);
   if (loc) map.setView([loc.lat, loc.lng], ZOOM);
   else map.setView(NL, 7);
