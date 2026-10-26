@@ -361,11 +361,14 @@ const findOpen = (id) => state.open.find((t) => t.id === id);
 
 const isTouch = (evt) => evt.pointerType === 'touch' || evt.type === 'touchstart';
 
+// Tijdens het slepen met een vinger mag de pagina niet meescrollen (touch-action wordt al bij het aanraken vastgelegd).
+document.addEventListener('touchmove', (e) => { if (e.cancelable && document.querySelector('.sortable-chosen')) e.preventDefault(); }, { passive: false });
+
 function enableSorting(root) {
   root.querySelectorAll('ul.tasks').forEach((ul) => {
     new Sortable(ul, {
       // Muis: alleen aan het greepje. Aanraking: ook de rij vasthouden en slepen (kort scrollen of vegen blijft gewoon werken).
-      filter: (evt) => !isTouch(evt) && !evt.target.closest('.grip') || isTouch(evt) && !!evt.target.closest('input, textarea, button, a, select'),
+      filter: (evt) => !isTouch(evt) && !evt.target.closest('.grip') || isTouch(evt) && !!evt.target.closest('input, textarea, button:not(.title), a, select'),
       preventOnFilter: false,
       delay: 250, delayOnTouchOnly: true, touchStartThreshold: 8,
       animation: 150, direction: 'vertical',
