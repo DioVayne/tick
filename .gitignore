@@ -17,6 +17,7 @@ import.sql
 # eigen instellingen en notities (zie wrangler.example.jsonc)
 wrangler.jsonc
 .claude/settings.local.json
+.claude/hooks/
 notes/
 
 .claude/launch.json
