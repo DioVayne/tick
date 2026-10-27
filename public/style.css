@@ -388,14 +388,15 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 .pill.remind.none { color: var(--muted); }
 .prow .pill:not(.mini) { flex: 1 1 auto; justify-content: flex-start; }
 .prow .pill:not(:disabled):hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
-.pill.mini.icon-only { padding: 3px 7px; }
-.prow.loc-row { flex-wrap: nowrap; min-width: 0; } /* labeltje en ✕ blijven naast de plek; de naam wordt zo nodig afgekort */
-.prow.loc-row .pill.loc { min-width: 0; }
-/* Plek al gemeld: een klein labeltje dat de plek met één tik weer klaarzet; daarna even "wordt weer gemeld". */
-.loc-tag { display: inline-flex; flex: none; align-items: center; gap: 3px; min-height: 24px; padding: 1px 7px; border: 0; border-radius: 5px; background: color-mix(in srgb, var(--text) 7%, transparent); color: var(--muted); font-size: .75rem; white-space: nowrap; }
-.loc-tag:hover { background: color-mix(in srgb, var(--text) 12%, transparent); }
-.loc-tag .ico.sm { width: 12px; height: 12px; }
-.loc-done { flex: none; padding: 0 6px; color: var(--ok); font-size: .75rem; white-space: nowrap; animation: loc-done 2s forwards; }
+/* Plek: Wissen blijft rechts naast de plek; een lange naam loopt door op een volgende regel in plaats van afgekort. */
+.prow.loc-row { flex-wrap: nowrap; min-width: 0; }
+.prow.loc-row .pill.loc { min-width: 0; text-align: left; }
+.prow.loc-row .pill.loc .lbl { white-space: normal; }
+/* Al gemeld: een regel onder de plek, ingesprongen tot de tekst erboven; alleen "Opnieuw melden" is een knop. */
+.loc-sub { margin-top: -2px; padding: 0 12px 6px 36px; background: var(--fill); color: var(--muted); font-size: .75rem; }
+.linkbtn { min-height: 28px; padding: 4px 2px; border: 0; background: none; color: var(--link, var(--accent)); font: inherit; cursor: pointer; }
+.linkbtn:hover { text-decoration: underline; }
+.loc-done { display: inline-block; padding: 6px 0; color: var(--ok); animation: loc-done 2s forwards; }
 @keyframes loc-done { 70% { opacity: 1; } to { opacity: 0; } }
 /* De onderdelen eronder: elk een eigen vlak, zonder scheidingslijnen */
 .desc, .subs, .dfiles, .dshare, .dcopies { margin-top: 8px; padding: 8px 12px; border-radius: 10px; background: var(--fill); }

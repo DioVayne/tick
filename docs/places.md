@@ -15,7 +15,7 @@ The place is named after the favorite or search result, or "Pinned place". You g
 
 Not the right moment? **Swipe the notification away** and it comes back the next time you arrive (or leave), not while you are still there. Tap **Done** to finish the task for good.
 
-Already notified, and you want it again? Tap the small **Already notified** label next to the place. It then notifies you the next time you arrive (or leave). The **✕** next to it removes the place.
+Already notified, and you want it again? Under the place it says "Already notified"; tap **Notify again** there. It then notifies you the next time you arrive (or leave). **Clear** next to the place removes it from the task.
 
 ## Favorite places
 **Save as favorite** on the map keeps a place with its name and radius, so next time it is one tap. Manage your favorites under **⚙ Settings → Places**. A favorite is a template: editing or deleting it does not change tasks that already use it.
