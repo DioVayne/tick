@@ -15,9 +15,9 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/mobile-home.png" width="250" alt="The task list on a phone, in dark mode: Buy groceries at the top with a time, the supermarket and a housemate it is shared with">
+  <img src="docs/screenshots/mobile-home.png" width="250" alt="The Home list on a phone, in dark mode: Buy groceries pinned at the top with a time, the supermarket and the housemate it is shared with, then Paint the bathroom with two of its four subtasks done">
   <img src="docs/screenshots/mobile-location.png" width="250" alt="The location picker on a phone: a map of Amsterdam with the chosen place and its radius, two favorite places, a radius slider, and the choice between on arrival and on leaving">
-  <img src="docs/screenshots/mobile-task.png" width="250" alt="The open task Buy groceries on a phone: a reminder at 17:30, the supermarket at 150 m on arrival, and a shopping checklist">
+  <img src="docs/screenshots/mobile-task.png" width="250" alt="The open task Buy groceries on a phone: a reminder at 17:30, the supermarket at 200 m on arrival, a shopping checklist, and shared with Sanne">
 </p>
 
 ## Why Tick?
@@ -32,7 +32,7 @@ Tick reminds you **where it matters**:
 - **🔒 Nobody tracks you.** Your phone watches the places itself and only tells Tick that a reminder went off. There is no log of where you have been, and it all runs on your own Cloudflare account, not on someone else's servers.
 - **💸 Free.** It runs on Cloudflare's free plan. No subscription, no ads, no account with a company that might shut down or raise its prices.
 
-And it's a complete to-do app on top of that: lists, subtasks, repeating reminders, a calendar, sharing with your household, a home-screen widget and offline support.
+And it's a complete to-do app on top of that: lists, subtasks, repeating reminders, a calendar, shared lists for your household or a trip with friends, a home-screen widget and offline support.
 
 > [!NOTE]
 > Place reminders need the **Android app**. On your phone, [download the app](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk), open it and type the address of your Tick. No Android SDK needed, and the app tells you when there is an update. Building it yourself is still possible, see [SETUP.md](SETUP.md#10-optional-android-app). On an iPhone, or any other device, Tick works as an installable web app with time reminders.
@@ -49,20 +49,28 @@ Claude asks a few questions (language, time zone, Android app or not), sets ever
 
 <p>
   <img src="docs/screenshots/demo.gif" width="280" alt="Demo of Tick on a phone: add the task Buy screws, link it to the hardware store on a map with an on-arrival reminder, then tick it off from the Android notification that appears on arrival">
-  <img src="docs/screenshots/mobile-menu.png" width="260" alt="The menu on a phone: All and Inbox, the lists Home, Personal and Work each with their own colour, then Calendar, Completed and Trash">
+  <img src="docs/screenshots/mobile-menu.png" width="260" alt="The menu on a phone: All and Inbox, the lists Home, Personal, Weekend away (shared, with a people icon) and Work, each with their own colour and count, then Calendar, Completed and Trash">
 </p>
 
 <sub>The notification in the demo is a mock-up of what the Tick Android app shows when you arrive at a place; everything else is the real app. <a href="docs/screenshots/demo.mp4">Watch it as a video</a>.</sub>
 
 **On your phone** Tick is an installable app that also works offline: changes you make without a connection sync once you are back online. Add a task, give it a time or a place, tick it off and a little burst of confetti comes out of the checkbox. The Android app adds a **home-screen widget**: tick tasks off right there (with 3 seconds to undo) or add one with ➕.
 
-![Tick in light mode on the desktop: the task "Buy groceries" is open with a reminder at 17:30 and a location reminder at the supermarket, 150 m, on arrival](docs/screenshots/desktop-light.png)
+![Tick in light mode on the desktop: the Home list with Buy groceries open on the right, with a reminder at 17:30, a location reminder at the supermarket (200 m, on arrival), a checklist and a housemate it is shared with](docs/screenshots/desktop-light.png)
 
-**On the desktop:** your lists on the left, the tasks in the middle, the open task on the right. "Buy groceries" here has a time *and* its 📍 supermarket, and its checklist lives right in the notes.
+**On the desktop:** your lists on the left, the tasks in the middle, the open task on the right. "Buy groceries" here has a time *and* its 📍 supermarket, and its checklist lives right in the notes. "Paint the bathroom" shows **2/4**: two of its four subtasks are done.
 
-![Tick on the desktop in dark mode with a task shared between two people](docs/screenshots/desktop-dark.png)
+**Share with your household.** Invite your partner or housemates to your Tick, each with their own account. Then share a whole list, or a single task.
 
-**Share with your household.** Invite your partner or housemates to your Tick, each with their own account. Share a task as *one* task (done is done for everyone) or give someone their own copy and see how far they are. A reminder on a shared task reaches everyone on it, so whoever passes the supermarket first gets the groceries.
+![Tick on the desktop in dark mode: the shared list Weekend away, with I'll take it buttons, Sanne and Alex each on a task, and a Ticked off block showing who ticked off what](docs/screenshots/desktop-dark.png)
+
+**Shared lists:** a packing list for a weekend away, the groceries for the house. Everyone in the list can add, change and tick off tasks. Tap **I'll take it** and the others see *Sanne is on it*, so nobody buys the board games twice. Ticked-off tasks stay at the bottom with who did it and when.
+
+<p>
+  <img src="docs/screenshots/shared-list.png" width="250" alt="The shared list Weekend away on a phone: Groceries for Friday and Hiking map with an I'll take it button, Sanne and Alex on Board games and Rent a car, You on Firewood, and two ticked-off tasks with who ticked them off">
+</p>
+
+**One task:** share it as *one* task (done is done for everyone) or give someone their own copy and see how far they are. A reminder on a shared task reaches everyone on it, so whoever passes the supermarket first gets the groceries.
 
 ![The share dialog: pick someone, then choose a shared task or a copy](docs/screenshots/sharing.png)
 
@@ -78,11 +86,11 @@ Claude asks a few questions (language, time zone, Android app or not), sets ever
 ## All features
 Each topic has its own page in the [user guide](docs/README.md).
 
-- **[Places](docs/places.md):** a notification when you arrive at or leave a place, set on a map, with favorite places (with the Android app).
-- **[Tasks and lists](docs/tasks-and-lists.md):** lists, one level of subtasks, drag to sort, swipe on a phone, search, pinning, notes in markdown with clickable checklists, optional photos and files (stored in Cloudflare R2, photos lose their EXIF data), and a trash that keeps deleted tasks for 30 days. Works offline as an installable web app; changes sync when you are back online.
+- **[Places](docs/places.md):** a notification when you arrive at or leave a place, set on a map, with favorite places; *Notify again* when you want it once more, and *On time on the road*, which makes circles bigger while you drive or cycle so the notification is not late (with the Android app).
+- **[Tasks and lists](docs/tasks-and-lists.md):** lists, one level of subtasks with a counter (2/4), drag to sort (on a phone: hold and drag), swipe on a phone, search, pinning, notes in markdown with clickable checklists, optional photos and files (stored in Cloudflare R2, photos lose their EXIF data), and a trash that keeps deleted tasks for 30 days. Works offline as an installable web app; changes sync when you are back online.
 - **[Reminders](docs/reminders.md):** web push at a time, repeating (daily, weekly, monthly, yearly, custom rules, until an end date if you like), a daily notification for overdue tasks with *Done* and *Tomorrow*, a calendar with a month grid and agenda, and a counter on the app icon.
-- **[Sharing](docs/sharing.md):** several accounts on one Tick; share a task as one shared task (done is done for everyone) or as linked copies where you see how far the others are.
-- **[Android app](docs/android.md):** place reminders, a resizable home-screen widget (tick off with 3 seconds to undo, quick add, a list or *Today* per widget), notifications as Tick instead of Chrome, and an update check. [Download it](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk).
+- **[Sharing](docs/sharing.md):** several accounts on one Tick; share a whole list (everyone adds and ticks off, *I'll take it* puts a task on your name, ticked-off tasks show who did it), or share one task as a shared task (done is done for everyone) or as linked copies where you see how far the others are.
+- **[Android app](docs/android.md):** place reminders (on time on the road too), a resizable home-screen widget (tick off with 3 seconds to undo, quick add, a list or *Today* per widget), notifications as Tick instead of Chrome, and an update check. [Download it](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk).
 - **[Settings](docs/settings.md):** theme, colour theme (such as *Retro 70s*) and your own background photo, text size, language per device, time zone, password, keys, your devices, backup and restore, and TickTick import. After the install you rarely need the config again.
 - **[Integrations](docs/integrations.md):** an MCP server so Claude can manage your tasks, an inbox API for automations, a Home Assistant package, and a fallback webhook.
 - Desktop layout with a sidebar and a detail panel; a full-screen task view on mobile. Confetti when you tick off a task (not when your device asks for reduced motion).

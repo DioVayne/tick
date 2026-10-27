@@ -10,6 +10,8 @@ Forgot a password? The administrator makes a **Reset link** (valid for 1 hour) a
 ## Sharing a list
 Working on one list together, such as a packing list for a holiday or a weekend away with friends? Share the whole list, and every task in it is shared with everyone in the list. Nobody has to accept tasks one by one.
 
+<img src="screenshots/shared-list.png" width="250" alt="A shared list on a phone: tasks with an I'll take it button, tasks that Sanne, Alex or you are on, and a Ticked off block with who ticked off what">
+
 - **Share:** open the list menu (right-click, a long press, **⋯**, or the list name at the top) and choose **Share…**. Pick one or more people. The dialog shows who is in the list and who has not answered yet. A shared list has a small people icon next to its name in the sidebar.
 - **Accept once:** the other person gets a notification with **Accept** and **Decline**, and a bar at the top of Tick. After accepting, the list is in their sidebar with all its tasks. If they already have a list with that name, the shared one gets the owner's name after it, such as "Holiday (Dio)"; each person can rename it for themselves.
 - **Everyone can do everything:** anyone in the list can add, change, tick off and delete tasks. A new task is shared with everyone straight away. A deleted task goes to everyone's trash.
@@ -29,6 +31,8 @@ A task that you had already shared on its own with someone outside the list, bef
 
 ## Sharing a task
 Open a top-level task and tap **Share**. Pick someone and choose how:
+
+![The share dialog: pick Alex or Sanne, or type a name, then choose Shared or Copy](screenshots/sharing.png)
 
 - **Shared:** one task for everyone. Done is done for everyone, and everyone can change it and add subtasks. Each person keeps it in their own list and order. A reminder (time or place) reaches everyone on it, so whoever passes the supermarket first does the shopping. When someone ticks it off or gives it a place, the others get a notification.
 - **Copy:** the other person gets their own copy, with all subtasks open. You each tick off your own.

@@ -305,8 +305,9 @@ body.settings-open #btn-search, body.settings-open #search, body.calendar-open #
 .brand { margin: 4px 8px 8px; font-size: 1.25rem; }
 /* Zijbalk in blokken: Alle en Inbox, de eigen lijsten (met Nieuwe lijst), en Kalender/Afgerond/Prullenbak. */
 #side { --side-blk: color-mix(in srgb, var(--side), var(--text) 5%); }
-#side-lists { display: grid; gap: 0; }
-.side-grp { display: grid; gap: 1px; padding: 4px; border-radius: 10px; background: var(--side-blk); }
+#side-lists { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+/* minmax(0, …): anders groeit de kolom mee met een lange lijstnaam en krijgt de zijbalk een horizontale scrollbalk. */
+.side-grp { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; padding: 4px; border-radius: 10px; background: var(--side-blk); }
 .side-h { margin: 10px 10px 4px; color: var(--muted); font-size: .75rem; }
 .side-mine { border-radius: 10px 10px 0 0; padding-bottom: 0; }
 .side-mine:empty { padding: 2px 0 0; }
