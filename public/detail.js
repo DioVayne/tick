@@ -341,22 +341,24 @@ function build(t, readOnly) {
     },
   }, icon('place'), locLabel);
   const clearLoc = el('button', {
-    class: 'pill mini icon-only', type: 'button', title: tr('detail.remove_location'), 'aria-label': tr('detail.remove_location'),
+    class: 'pill mini', type: 'button', title: tr('detail.remove_location'),
     onclick: () => setLocation(null, current(id)?.updated_at ?? ''),
-  }, icon('x', 'sm'));
-  // Al gemeld: een tik zet de plek weer klaar (de Android-app zet de geofence terug via de wake) en zegt dat even.
-  const rearmDone = el('span', { class: 'loc-done', hidden: true }, tr('detail.rearmed'));
-  let rearmTimer;
+  }, tr('detail.clear'));
+  // Al gemeld: een eigen regel onder de plek, met de status als tekst en alleen "Opnieuw melden" als knop. Een tik
+  // zet de plek weer klaar (de Android-app zet de geofence terug via de wake); de regel zegt dat nog even (.flash).
   const rearmLoc = el('button', {
-    class: 'loc-tag', type: 'button', title: tr('detail.rearm_location_hint'), 'aria-label': tr('detail.rearm_location_hint'),
+    class: 'linkbtn', type: 'button',
     onclick: () => {
       const since = current(id)?.updated_at ?? '';
-      rearmDone.hidden = false;
-      clearTimeout(rearmTimer);
-      rearmTimer = setTimeout(() => { rearmDone.hidden = true; }, 2000);
+      locSub.classList.add('flash');
+      clearTimeout(locSub.timer);
+      locSub.timer = setTimeout(() => { locSub.classList.remove('flash'); render(); }, 2000);
       save(updateQueued(id, { location_notified: false }).then(() => wakeAndroidApp(id, since)));
     },
-  }, icon('refresh', 'sm'), tr('detail.already_notified'));
+  }, tr('detail.rearm_location'));
+  const locSubIdle = el('span', {}, tr('detail.already_notified'), ' · ', rearmLoc);
+  const rearmDone = el('span', { class: 'loc-done', hidden: true }, tr('detail.rearmed'));
+  const locSub = el('div', { class: 'loc-sub', hidden: true }, locSubIdle, rearmDone);
 
   const listLabel = el('span', { class: 'lbl' });
   const listPill = el('button', {
@@ -462,7 +464,8 @@ function build(t, readOnly) {
     el('div', { class: 'dprops' },
       el('div', { class: 'prow when' }, remindPill, plusHour, clearRemind),
       repeatRow,
-      el('div', { class: 'prow loc-row' }, locPill, rearmLoc, rearmDone, clearLoc),
+      el('div', { class: 'prow loc-row' }, locPill, clearLoc),
+      locSub,
       el('div', { class: 'prow' }, listPill),
       watchRow),
     desc,
@@ -474,7 +477,7 @@ function build(t, readOnly) {
     shareBox,
     el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, reopen, del)),
   ].filter(Boolean));
-  view = { watch, watchRow, reopen, repeatRow, filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remindLabel, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, rearmLoc, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
+  view = { watch, watchRow, reopen, repeatRow, filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remindLabel, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, locSub, locSubIdle, rearmLoc, rearmDone, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
 }
 
 function fill(t) {
@@ -514,9 +517,13 @@ function fill(t) {
   const rep = t.repeat;
   v.repeatLabel.textContent = (rep ? describeRule(rep.rule, rep.start) : tr('rep.none'));
   v.repeatRow.hidden = v.repeatPill.hidden || (!remindAt && !rep);
-  // Al gemeld: de plek doet niets meer tot hij opnieuw gekozen wordt of het labeltje ernaast getikt.
+  // Al gemeld: de plek doet niets meer tot hij opnieuw gekozen wordt of "Opnieuw melden" eronder getikt.
   v.locLabel.textContent = t.location ? locationLabel(t.location) : tr('detail.no_location');
-  v.rearmLoc.hidden = done || v.readOnly || !t.location || !t.location_notified;
+  const flash = v.locSub.classList.contains('flash');
+  v.locSub.hidden = done || !t.location || !(t.location_notified || flash);
+  v.locSubIdle.hidden = flash;
+  v.rearmDone.hidden = !flash;
+  v.rearmLoc.hidden = v.readOnly;
   v.clearLoc.hidden = done || !t.location;
   v.listLabel.textContent = t.list + ' ▾';
 
