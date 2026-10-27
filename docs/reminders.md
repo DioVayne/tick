@@ -14,7 +14,7 @@ Under **Repeat** at a reminder you choose how often: daily, weekly, monthly or y
 
 - Ticking off a repeating task moves it on to the next time; it stays open. Subtasks reopen.
 - Missed times are skipped: the next time is always in the future.
-- Snoozing, *Tomorrow* or another date in the picker only move this one time.
+- Snoozing, *Tomorrow* or another date in the picker only move this one time; the date picker says so. To change all times, change the rhythm under **Repeat**.
 - Removing the reminder also removes the repeat.
 - Times follow the clock of your time zone, so 10:00 stays 10:00 when daylight saving time changes. "On the 31st" falls on the last day of shorter months.
 
