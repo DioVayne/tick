@@ -341,17 +341,22 @@ function build(t, readOnly) {
     },
   }, icon('place'), locLabel);
   const clearLoc = el('button', {
-    class: 'pill mini', type: 'button', title: tr('detail.remove_location'),
+    class: 'pill mini icon-only', type: 'button', title: tr('detail.remove_location'), 'aria-label': tr('detail.remove_location'),
     onclick: () => setLocation(null, current(id)?.updated_at ?? ''),
-  }, tr('detail.clear'));
-  // Al gemeld: zet de plek weer klaar; de Android-app zet de geofence terug via de wake.
+  }, icon('x', 'sm'));
+  // Al gemeld: een tik zet de plek weer klaar (de Android-app zet de geofence terug via de wake) en zegt dat even.
+  const rearmDone = el('span', { class: 'loc-done', hidden: true }, tr('detail.rearmed'));
+  let rearmTimer;
   const rearmLoc = el('button', {
-    class: 'pill mini', type: 'button', title: tr('detail.rearm_location_hint'),
+    class: 'loc-tag', type: 'button', title: tr('detail.rearm_location_hint'), 'aria-label': tr('detail.rearm_location_hint'),
     onclick: () => {
       const since = current(id)?.updated_at ?? '';
+      rearmDone.hidden = false;
+      clearTimeout(rearmTimer);
+      rearmTimer = setTimeout(() => { rearmDone.hidden = true; }, 2000);
       save(updateQueued(id, { location_notified: false }).then(() => wakeAndroidApp(id, since)));
     },
-  }, tr('detail.rearm_location'));
+  }, icon('refresh', 'sm'), tr('detail.already_notified'));
 
   const listLabel = el('span', { class: 'lbl' });
   const listPill = el('button', {
@@ -457,7 +462,7 @@ function build(t, readOnly) {
     el('div', { class: 'dprops' },
       el('div', { class: 'prow when' }, remindPill, plusHour, clearRemind),
       repeatRow,
-      el('div', { class: 'prow' }, locPill, rearmLoc, clearLoc),
+      el('div', { class: 'prow loc-row' }, locPill, rearmLoc, rearmDone, clearLoc),
       el('div', { class: 'prow' }, listPill),
       watchRow),
     desc,
@@ -509,8 +514,8 @@ function fill(t) {
   const rep = t.repeat;
   v.repeatLabel.textContent = (rep ? describeRule(rep.rule, rep.start) : tr('rep.none'));
   v.repeatRow.hidden = v.repeatPill.hidden || (!remindAt && !rep);
-  // Al gemeld: de plek doet niets meer tot hij opnieuw gekozen wordt.
-  v.locLabel.textContent = t.location ? locationLabel(t.location) + (t.location_notified ? tr('detail.already_notified') : '') : tr('detail.no_location');
+  // Al gemeld: de plek doet niets meer tot hij opnieuw gekozen wordt of het labeltje ernaast getikt.
+  v.locLabel.textContent = t.location ? locationLabel(t.location) : tr('detail.no_location');
   v.rearmLoc.hidden = done || v.readOnly || !t.location || !t.location_notified;
   v.clearLoc.hidden = done || !t.location;
   v.listLabel.textContent = t.list + ' ▾';
