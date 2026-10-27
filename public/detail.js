@@ -344,6 +344,14 @@ function build(t, readOnly) {
     class: 'pill mini', type: 'button', title: tr('detail.remove_location'),
     onclick: () => setLocation(null, current(id)?.updated_at ?? ''),
   }, tr('detail.clear'));
+  // Al gemeld: zet de plek weer klaar; de Android-app zet de geofence terug via de wake.
+  const rearmLoc = el('button', {
+    class: 'pill mini', type: 'button', title: tr('detail.rearm_location_hint'),
+    onclick: () => {
+      const since = current(id)?.updated_at ?? '';
+      save(updateQueued(id, { location_notified: false }).then(() => wakeAndroidApp(id, since)));
+    },
+  }, tr('detail.rearm_location'));
 
   const listLabel = el('span', { class: 'lbl' });
   const listPill = el('button', {
@@ -449,7 +457,7 @@ function build(t, readOnly) {
     el('div', { class: 'dprops' },
       el('div', { class: 'prow when' }, remindPill, plusHour, clearRemind),
       repeatRow,
-      el('div', { class: 'prow' }, locPill, clearLoc),
+      el('div', { class: 'prow' }, locPill, rearmLoc, clearLoc),
       el('div', { class: 'prow' }, listPill),
       watchRow),
     desc,
@@ -461,7 +469,7 @@ function build(t, readOnly) {
     shareBox,
     el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, reopen, del)),
   ].filter(Boolean));
-  view = { watch, watchRow, reopen, repeatRow, filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remindLabel, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
+  view = { watch, watchRow, reopen, repeatRow, filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remindLabel, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, rearmLoc, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
 }
 
 function fill(t) {
@@ -503,6 +511,7 @@ function fill(t) {
   v.repeatRow.hidden = v.repeatPill.hidden || (!remindAt && !rep);
   // Al gemeld: de plek doet niets meer tot hij opnieuw gekozen wordt.
   v.locLabel.textContent = t.location ? locationLabel(t.location) + (t.location_notified ? tr('detail.already_notified') : '') : tr('detail.no_location');
+  v.rearmLoc.hidden = done || v.readOnly || !t.location || !t.location_notified;
   v.clearLoc.hidden = done || !t.location;
   v.listLabel.textContent = t.list + ' ▾';
 
