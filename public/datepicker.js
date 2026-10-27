@@ -21,8 +21,9 @@ const fromKey = (key) => { const [y, m, d] = key.split('-').map(Number); return 
  * @param {HTMLElement} anchor de knop die de kiezer opent (focus gaat daar weer heen)
  * @param {string} value 'YYYY-MM-DDTHH:MM', of '' voor geen datum
  * @param {(value: string | null) => void} onPick met de gekozen waarde, of null bij Wissen; niet bij annuleren
+ * @param {{ note?: string }} [opts] note: een korte uitleg bovenaan (bij een herhalende taak: alleen deze keer)
  */
-export function openDatePicker(anchor, value, onPick) {
+export function openDatePicker(anchor, value, onPick, opts = {}) {
   const n = new Date();
   const now = { y: n.getFullYear(), m: n.getMonth() + 1, d: n.getDate(), h: n.getHours(), mi: n.getMinutes() };
   const nowTime = `${p2(now.h)}:${p2(now.mi)}`;
@@ -74,6 +75,7 @@ export function openDatePicker(anchor, value, onPick) {
     el('button', { type: 'button', class: 'dp-back', onclick: () => showTime(false) }, '‹ ', t('dp.back_calendar')));
 
   const dialog = /** @type {HTMLDialogElement} */ (el('dialog', { class: 'dpick' + (narrow.matches ? ' sheet' : ''), 'aria-label': t('dp.title') },
+    opts.note ? el('p', { class: 'dp-note' }, opts.note) : null,
     el('div', { class: 'dp-quick' }, ...quickButtons),
     calArea,
     timeArea,

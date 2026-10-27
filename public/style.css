@@ -755,6 +755,7 @@ button.secbtn:not(:disabled):hover { border-color: var(--muted); background: var
 .tp-note { margin: 6px 0 0; color: var(--muted); font-size: .75rem; }
 .tpick { width: min(320px, calc(100vw - 16px)); }
 .time-btn { min-height: 36px; padding: 4px 14px; border: 1px solid var(--line); background: var(--card); color: var(--text); font-variant-numeric: tabular-nums; }
+.dp-note { margin: 0 0 10px; color: var(--muted); font-size: .8125rem; }
 .dp-quick { display: flex; gap: 6px; margin-bottom: 10px; }
 .dp-quick button { flex: 1 1 0; min-width: 0; min-height: 34px; padding: 4px 6px; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); font-size: .875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dp-quick button[aria-pressed="true"] { outline: 1px solid var(--accent); color: var(--link); }

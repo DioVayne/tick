@@ -301,7 +301,7 @@ function build(t, readOnly) {
         setPending(id, 'remind_at', fromLocalInput(value));
         flushSoon();
         render(); // de knop en Herhalen meteen bijwerken, niet pas na het opslaan
-      });
+      }, { note: task.repeat ? tr('dp.only_this_time') : undefined }); // het ritme (repeat_at) blijft staan
     },
   }, icon('bell'), remindLabel);
   // Verzetten en wissen winnen van een gekozen, nog niet opgeslagen tijd (die anders na de klik alsnog zou gaan).
