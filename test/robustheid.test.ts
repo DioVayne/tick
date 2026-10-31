@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { call, createTask, INBOX, json, openTasks, type Task } from './helpers';
 
 const patch = (id: string, body: unknown) => call(`/api/tasks/${id}`, { method: 'PATCH', json: body });
@@ -197,5 +197,20 @@ describe('posities', () => {
     const mid = (a.position + b.position) / 2;
     const c = await createTask({ title: 'c', parent_id: parent.id });
     expect((await json<Task>(await patch(c.id, { position: mid }))).position).toBe(mid);
+  });
+});
+
+describe('cron', () => {
+  it('een stap die faalt, houdt de volgende stappen niet tegen', async () => {
+    const { runEach } = await import('../src/index');
+    const ran: string[] = [];
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await runEach([
+        ['a', async () => { ran.push('a'); throw new Error('kapot'); }],
+        ['b', async () => { ran.push('b'); }],
+      ]);
+    } finally { quiet.mockRestore(); }
+    expect(ran).toEqual(['a', 'b']);
   });
 });

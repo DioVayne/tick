@@ -770,7 +770,8 @@ async function patchTask(c: Context<AppEnv>, id: string, b: Record<string, unkno
     if (parent) list = parent.list;
     if (parent && !('pinned' in b)) set('pinned', 0); // een subtaak pint niet
   }
-  const target = list;
+  // Een losgemaakte subtaak houdt haar lijst; is dat een gedeelde lijst, dan moet de nieuwe hoofdtaak er ook in.
+  const target = list ?? (t.parent_id && !parentId ? overlay(t).list : null);
   const move = target !== null && !parentId ? await listMove(db, t, userId, target, outsider) : null;
   // Een deelnemer heeft lijst en volgorde van de hoofdtaak in zijn eigen deelrij; bij zijn subtaken volgt de lijst de ouder.
   const member = !!t.share_id;
@@ -1249,17 +1250,30 @@ app.onError((e, c) => {
 // Alles wat geen API is: statische bestanden (alleen na auth).
 app.all('*', asset);
 
+/** Draait de stappen na elkaar; een stap die faalt, wordt gelogd en houdt de volgende niet tegen. */
+export async function runEach(steps: [name: string, run: () => Promise<unknown>][]): Promise<void> {
+  for (const [name, run] of steps) {
+    try {
+      await run();
+    } catch (e) {
+      console.error(`cron: ${name} mislukt`, e);
+    }
+  }
+}
+
 export default {
   fetch: app.fetch,
   scheduled: (_e: ScheduledController, env: Env, ctx: ExecutionContext) => {
     ctx.waitUntil((async () => {
       // runReminders leest per taak de instellingen van de eigenaar; er zit geen globale zone tussen.
       const install = await loadInstallPrefs(env);
-      await runReminders(env, install);
-      await runOverdue(env, install);
-      await purgeTrash(env.DB, Date.now());
-      // Na het wissen: de bijlagen van taken die nu weg zijn, ook in R2.
-      await sweepAttachments(env, Date.now());
+      await runEach([
+        ['reminders', () => runReminders(env, install)],
+        ['verlopen', () => runOverdue(env, install)],
+        ['prullenbak', () => purgeTrash(env.DB, Date.now())],
+        // Na het wissen: de bijlagen van taken die nu weg zijn, ook in R2.
+        ['bijlagen', () => sweepAttachments(env, Date.now())],
+      ]);
     })());
   },
 };

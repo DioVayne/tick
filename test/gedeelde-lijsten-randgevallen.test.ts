@@ -148,6 +148,28 @@ describe('gedeelde lijsten: randgevallen', () => {
     expect(await taskOf(b, t.id)).toMatchObject({ list: name, shared_list: id });
   });
 
+  it('een subtaak losmaken in een gedeelde lijst: de nieuwe hoofdtaak hoort bij de lijst', async () => {
+    const [a, b] = [await mk(), await mk()];
+    const name = `Los ${uniq()}`;
+    const t = await addTask(a, { title: 'Ouder', list: name });
+    const kid = await addTask(a, { title: 'Kind', parent_id: t.id });
+    const id = await shareList(a, name, [b]);
+    const res = await patch(a, kid.id, { parent_id: null });
+    expect(res.status).toBe(200);
+    expect(await json<ListTask>(res)).toMatchObject({ parent_id: null, list: name, shared_list: id });
+    expect(await row(kid.id)).toMatchObject({ user_id: a.id, parent_id: null, list: name, shared_list: id });
+    expect(await taskOf(b, kid.id)).toMatchObject({ parent_id: null, list: name, shared_list: id });
+  });
+
+  it('een subtaak losmaken in een gewone lijst blijft een gewone taak', async () => {
+    const a = await mk();
+    const name = `Gewoon ${uniq()}`;
+    const t = await addTask(a, { title: 'Ouder', list: name });
+    const kid = await addTask(a, { title: 'Kind', parent_id: t.id });
+    expect((await patch(a, kid.id, { parent_id: null })).status).toBe(200);
+    expect(await row(kid.id)).toMatchObject({ parent_id: null, list: name, shared_list: null });
+  });
+
   it('een backup importeren in een gedeelde lijst: de taak hoort bij de lijst', async () => {
     const [a, b] = [await mk(), await mk()];
     const name = `Import ${uniq()}`;

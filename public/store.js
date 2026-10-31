@@ -277,7 +277,8 @@ let again = null; // de ene ronde daarna, voor iedereen die intussen om een load
  */
 export function load() {
   if (!loading) return (loading = loadOnce().finally(() => { loading = null; }));
-  again ??= loading.then(() => { again = null; return load(); });
+  // Ook na een mislukte ronde: anders blijft `again` op die fout staan en volgt er nooit meer een ronde.
+  again ??= loading.catch(() => {}).then(() => { again = null; return load(); });
   return again;
 }
 
@@ -285,7 +286,8 @@ export function load() {
 const soft = (p) => p.catch((e) => { if (e instanceof Offline) throw e; return null; });
 
 async function loadOnce() {
-  await sync();
+  // Een fout in de outbox (IndexedDB) houdt het ophalen van de server niet tegen; de wijzigingen blijven erin staan.
+  await sync().catch((e) => report(tr('store.save_failed', { reason: e.message })));
   try {
     // Alles tegelijk: elk verzoek is een ronde over het netwerk. Afgeronde taken laden we maar tot 200, dus daarin zoekt de server.
     const q = state.query.trim();
