@@ -2,9 +2,7 @@ import { countTasks } from '../public/markdown.js';
 import { translate } from '../public/i18n.js';
 import type { Access } from './access';
 import type { Env, TaskRow } from './index';
-import { loadUserPrefs } from './prefs';
-import { type Locale, type Payload, postWebhook, type Sender, sendToAll } from './push';
-import { getUser } from './users';
+import { type Locale, notifyUser, type Payload, type Sender, sendToAll } from './push';
 
 /**
  * Kopiegroep: hoofdtaken met dezelfde `copy_group` zijn exemplaren van dezelfde klus, één per persoon. Van een ander lid
@@ -107,10 +105,6 @@ export async function notifyCopyDone(env: Env, task: TaskRow, actorName: string,
     const make = (locale: string): Payload => ({
       title: translate(locale, 'copy.push_done', { name: actorName }), body: r.title, url: `/?task=${r.id}`, tag: `copy-${group}`, actions: [],
     });
-    const { total } = await send(env, r.uid, make, defaultLocale);
-    if (total) continue;
-    const user = await getUser(env.DB, r.uid);
-    const hook = user && (await loadUserPrefs(env, user)).fallbackWebhook;
-    if (hook) await postWebhook(hook, { ...make(defaultLocale), actions: undefined });
+    await notifyUser(env, r.uid, make, defaultLocale, send);
   }
 }

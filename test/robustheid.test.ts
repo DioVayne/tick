@@ -214,3 +214,32 @@ describe('cron', () => {
     expect(ran).toEqual(['a', 'b']);
   });
 });
+
+describe('cron-schema', () => {
+  it('herinneringen elke minuut, opruimen alleen in de eerste minuut van het uur', async () => {
+    const { cronSteps } = await import('../src/index');
+    const install = { defaultLocale: 'en' as const, envApiTokenOff: false, envInboxTokenOff: false, envApiTokenUsed: null, envInboxTokenUsed: null };
+    const names = (iso: string) => cronSteps(env, install, Date.parse(iso)).map(([n]) => n);
+    expect(names('2030-01-01T10:00:30Z')).toEqual(['reminders', 'verlopen', 'prullenbak', 'bijlagen']);
+    expect(names('2030-01-01T10:05:00Z')).toEqual(['reminders', 'verlopen']);
+  });
+});
+
+describe('foutmeldingen', () => {
+  it('afmelden zonder endpoint geeft 400 in plaats van een serverfout', async () => {
+    const res = await call('/api/push/subscribe', { method: 'DELETE', json: {} });
+    expect(res.status).toBe(400);
+  });
+
+  it('een verboden route geeft een vertaalde JSON-fout', async () => {
+    const res = await call('/api/tasks', { auth: INBOX });
+    expect(res.status).toBe(403);
+    expect((await res.json<{ error: string }>()).error).toBeTruthy();
+  });
+
+  it('zonder inlog geeft de API een JSON-fout', async () => {
+    const res = await call('/api/tasks', { auth: null });
+    expect(res.status).toBe(401);
+    expect((await res.json<{ error: string }>()).error).toBeTruthy();
+  });
+});

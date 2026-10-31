@@ -74,6 +74,27 @@ export async function postWebhook(url: string, payload: Payload): Promise<boolea
   } catch { return false; }
 }
 
+/**
+ * Push naar één persoon in de taal van elk abonnement; zonder abonnement via zijn fallback-webhook. Voor meldingen
+ * aan anderen (uitnodigingen, afvinken, een plek); `send` is te vervangen in tests.
+ */
+export async function notifyUser(env: Env, userId: string, make: (locale: Locale) => Payload, defaultLocale: Locale, send: Sender = sendToAll): Promise<void> {
+  const { total } = await send(env, userId, make, defaultLocale);
+  if (total) return;
+  const user = await getUser(env.DB, userId);
+  const hook = user && (await loadUserPrefs(env, user)).fallbackWebhook;
+  if (hook) await postWebhook(hook, { ...make(defaultLocale), actions: undefined });
+}
+
+/**
+ * Een melding die het antwoord niet ophoudt: met waitUntil op de achtergrond (zonder executionCtx, zoals in sommige
+ * tests, wachten we erop). Mislukt hij, dan wordt dat gelogd en blijft de wijziging staan.
+ */
+export async function inBackground(c: { executionCtx: { waitUntil(p: Promise<unknown>): void } }, sending: Promise<unknown>, what: string): Promise<void> {
+  const p = sending.catch((e) => console.warn(`${what} melden mislukt`, (e as Error).message));
+  try { c.executionCtx.waitUntil(p); } catch { await p; }
+}
+
 /** Pushbericht voor een taak. Bij een herhalende taak gaat de keer (repeat_at) mee, zodat 'Klaar' niet dubbel doorschuift. */
 export function reminderPayload(t: { id: string; title: string; description: string; repeat_at?: string | null }, locale?: string): Payload {
   const actions: Payload['actions'] = [

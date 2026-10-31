@@ -1,7 +1,8 @@
 import { env } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { STRINGS } from '../public/i18n.js';
-import { BASE, call } from './helpers';
+import { BASE, call, callAs, createUser } from './helpers';
+const D1Prepare = env.DB.prepare;
 
 describe('instellingen en vertaalde shell', () => {
   it('/config.js geeft taal, tijdzone en Android-package als module', async () => {
@@ -57,5 +58,25 @@ describe('instellingen en vertaalde shell', () => {
     const html = await (await call('/', { headers: { accept: 'text/html' } })).text();
     expect(html).toContain('id="btn-settings"');
     for (const id of ['btn-theme', 'btn-push', 'btn-logout']) expect(html).not.toContain(id);
+  });
+});
+
+describe('statische bestanden', () => {
+  it('een script met een sessiecookie kost één query (de inlog), zonder de instellingen', async () => {
+    const u = await createUser({ name: `Statisch ${crypto.randomUUID().slice(0, 8)}` });
+    const seen: string[] = [];
+    const spy = vi.spyOn(env.DB, 'prepare').mockImplementation(function (this: D1Database, sql: string) {
+      seen.push(sql);
+      return D1Prepare.call(this, sql);
+    });
+    let res: Response;
+    try { res = await callAs(u.cookie, '/app.js'); } finally { spy.mockRestore(); }
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('javascript');
+    expect(seen.filter((s) => /FROM (settings|user_settings)\b/.test(s))).toEqual([]);
+  });
+
+  it('een script zonder inlog geeft 401', async () => {
+    expect((await call('/app.js', { auth: null })).status).toBe(401);
   });
 });

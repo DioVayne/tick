@@ -12,7 +12,7 @@ export const deviceApi = new Hono<AppEnv>();
 
 deviceApi.post('/', async (c) => {
   const auth = c.get('auth');
-  if (auth?.kind !== 'token') return c.text('Forbidden', 403);
+  if (auth?.kind !== 'token') throw new HttpError(403, 'err.forbidden');
   const b = await c.req.json<Record<string, unknown>>().catch(() => null);
   if (!b || typeof b !== 'object' || Array.isArray(b)) throw new HttpError(400, 'err.invalid_json');
   const name = typeof b.name === 'string' ? b.name.trim() : '';
