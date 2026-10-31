@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // De Workers-runtime heeft geen IndexedDB: db.js valt dan terug op geheugen, en dat lezen we hier uit.
 import { nextOccurrence } from '../public/repeat.js';
 import * as db from '../public/db.js';
-import { claim, createList, deleteList, doneInList, ensureOwner, init, load, renameList, sharedOf, state, sync, toggleDone, update } from '../public/store.js';
+import { claim, createList, deleteList, doneInList, ensureOwner, init, load, on, renameList, sharedOf, state, sync, toggleDone, update } from '../public/store.js';
 
 describe('store: lijst-ops', () => {
   it('een nieuwe lege lijst gaat via de outbox naar de server, en hernoemen en verwijderen gaan mee', async () => {
@@ -196,6 +196,21 @@ describe('store: verversen', () => {
     expect(calls.filter((c) => c === 'GET /api/tasks')).toHaveLength(2);
     expect(calls.filter((c) => c.startsWith('PATCH'))).toHaveLength(3);
     expect(await db.outboxAll()).toEqual([]);
+  });
+
+  it('een mislukte ronde houdt de volgende rondes niet tegen', async () => {
+    const { calls } = fakeServer(20);
+    let fail = true;
+    on('change', () => { if (fail) throw new Error('kapot'); });
+    const first = load();
+    const queued = load(); // wacht op de mislukte ronde
+    await expect(first).rejects.toThrow('kapot');
+    fail = false;
+    await queued;
+    const later = load();
+    const after = load(); // tijdens een ronde: precies één nieuwe erachteraan
+    await Promise.all([later, after]);
+    expect(calls.filter((c) => c === 'GET /api/tasks')).toHaveLength(4);
   });
 
   it('de verzoeken van één ronde starten tegelijk', async () => {
