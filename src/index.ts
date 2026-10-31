@@ -12,7 +12,7 @@ import { nextOccurrence } from '../public/repeat.js';
 import { loadInstallPrefs, loadUserPrefs, requestLocale, type InstallPrefs, type Prefs, userSettingRows } from './prefs';
 import { findLoginUser, getUser, touchLastSeen, type User } from './users';
 import { inZone, localToUtcIso, type Zone } from './time';
-import { runReminders, sendToAll } from './push';
+import { inBackground, runReminders, sendToAll } from './push';
 import { localNow, runOverdue } from './overdue';
 import { settingsApi } from './settings-api';
 import { accountApi } from './account';
@@ -80,9 +80,25 @@ export type AppEnv = {
 
 const app = new Hono<AppEnv>();
 
+/** Bestanden die de Worker zelf maakt of bewerkt: die hebben de instellingen wel nodig. */
+const EDITED = new Set(['/config.js', '/manifest.webmanifest']);
+
+/**
+ * Een gewoon statisch bestand (script, stijl, icoon) met alleen een cookie: dat heeft alleen de inlogcontrole nodig,
+ * niet de instellingen. Zo kost het één query in plaats van drie; bij het eerste laden zijn dat er zo'n vijftig.
+ * Met een Bearer-sleutel wel de instellingen: die zeggen of de oude secrets nog gelden.
+ */
+function plainAsset(c: Context<AppEnv>): boolean {
+  const path = c.req.path;
+  return c.req.method === 'GET' && /\.[a-z0-9]+$/i.test(path) && !path.startsWith('/api/') && !path.startsWith('/mcp')
+    && !EDITED.has(path) && !c.req.header('authorization');
+}
+
 // Eerst de instellingen van de installatie: de taal van het verzoek en de schakelaars van de oude secrets.
 app.use('*', async (c, next) => {
-  const install = await loadInstallPrefs(c.env);
+  const install = plainAsset(c)
+    ? { defaultLocale: normLocale(c.env.LOCALE), envApiTokenOff: false, envInboxTokenOff: false, envApiTokenUsed: null, envInboxTokenUsed: null }
+    : await loadInstallPrefs(c.env);
   c.set('install', install);
   c.set('lang', requestLocale(c.req.raw, install.defaultLocale));
   await next();
@@ -161,7 +177,8 @@ function cookieUserId(req: Request): string | null {
 app.use('*', async (c, next) => {
   // Tegelijk met de sessiecontrole al de instellingen van die gebruiker: dat scheelt een ronde naar D1. Ze tellen pas
   // als de sessie geldig blijkt en bij dezelfde gebruiker hoort; anders vervalt de prefetch.
-  const guess = cookieUserId(c.req.raw);
+  const asset = plainAsset(c);
+  const guess = asset ? null : cookieUserId(c.req.raw);
   const prefetch = guess ? userSettingRows(c.env.DB, guess) : null;
   prefetch?.catch(() => {}); // niet gebruikt of mislukt: geen onafgehandelde rejection
   const found = await authorize(c.req.raw, c.env, c.get('install'));
@@ -169,14 +186,18 @@ app.use('*', async (c, next) => {
     const { user: known, ...auth } = found;
     // Een sleutel van een verwijderd account (of een cookie van een verdwenen gebruiker) geeft geen toegang.
     const user = known ?? await getUser(c.env.DB, auth.userId);
-    if (!user) return c.text('Unauthorized', 401);
+    if (!user) throw new HttpError(401, 'err.unauthorized');
     const isInbox = c.req.path === '/api/inbox';
     // Het inbox-token mag alleen taken in de inbox zetten, en de inbox is alleen voor het inbox-token.
-    if (auth.kind === 'inbox' && !(isInbox && c.req.method === 'POST')) return c.text('Forbidden', 403);
-    if (auth.kind === 'token' && isInbox) return c.text('Forbidden', 403);
+    if (auth.kind === 'inbox' && !(isInbox && c.req.method === 'POST')) throw new HttpError(403, 'err.forbidden');
+    if (auth.kind === 'token' && isInbox) throw new HttpError(403, 'err.forbidden');
     await touchLastSeen(c.env.DB, user);
     c.set('auth', auth);
     c.set('user', user);
+    if (asset) {
+      await next();
+      return;
+    }
     const rows = prefetch && guess === user.id ? prefetch : undefined;
     const prefs: Prefs = { ...c.get('install'), ...await loadUserPrefs(c.env, user, rows) };
     // Tijdberekeningen krijgen prefs (timeZone, reminderTime) per aanroep mee; geen globale zone over een await.
@@ -189,7 +210,7 @@ app.use('*', async (c, next) => {
     return;
   }
   const wantsPage = c.req.method === 'GET' && !c.req.path.startsWith('/api/') && c.req.header('accept')?.includes('text/html');
-  if (!wantsPage) return c.text('Unauthorized', 401);
+  if (!wantsPage) throw new HttpError(401, 'err.unauthorized');
   // Na het inloggen terug naar de opgevraagde pagina, met query (de Android-app opent /?app=android&pair=1).
   const target = new URL(c.req.url);
   const back = target.pathname + target.search;
@@ -255,10 +276,12 @@ function present(rows: Access[], userId: string, info: Map<string, ShareInfo>, c
   });
 }
 
-/** De namen voor `done_by` en `claimed_by`: één query op users, alleen als een rij er een heeft. */
+/** De namen voor `done_by` en `claimed_by`: één query op alleen die gebruikers, alleen als een rij er een heeft. */
 async function personNames(db: D1Database, rows: TaskRow[]): Promise<Map<string, string>> {
-  if (!rows.some((r) => r.done_by || r.claimed_by)) return new Map();
-  const { results } = await db.prepare('SELECT id, name FROM users').all<{ id: string; name: string }>();
+  const ids = [...new Set(rows.flatMap((r) => [r.done_by, r.claimed_by].filter((id): id is string => !!id)))];
+  if (!ids.length) return new Map();
+  const { results } = await db.prepare('SELECT id, name FROM users WHERE id IN (SELECT value FROM json_each(?))')
+    .bind(JSON.stringify(ids)).all<{ id: string; name: string }>();
   return new Map(results.map((u) => [u.id, u.name]));
 }
 
@@ -502,9 +525,8 @@ async function plainDone(db: D1Database, t: TaskRow, done: boolean, actorId: str
  */
 async function placeShared(c: Context<AppEnv>, t: TaskRow) {
   if (t.parent_id) return;
-  const sending = notifyShareLocation(c.env, t, c.get('auth').userId, c.get('user').name, c.get('install').defaultLocale, listPush.send)
-    .catch((e) => console.warn('plek op gedeelde taak melden mislukt', (e as Error).message));
-  try { c.executionCtx.waitUntil(sending); } catch { await sending; }
+  await inBackground(c, notifyShareLocation(c.env, t, c.get('auth').userId, c.get('user').name, c.get('install').defaultLocale, listPush.send),
+    'plek op gedeelde taak');
 }
 
 /**
@@ -515,14 +537,13 @@ async function placeShared(c: Context<AppEnv>, t: TaskRow) {
 async function copyDone(c: Context<AppEnv>, t: TaskRow) {
   if (t.parent_id) return;
   const user = c.get('user'), locale = c.get('install').defaultLocale, actorId = c.get('auth').userId;
-  const sending = Promise.all([
-    t.copy_group && notifyCopyDone(c.env, t, user.name, locale).catch((e) => console.warn('kopie klaar melden mislukt', (e as Error).message)),
-    Promise.all([
+  await Promise.all([
+    t.copy_group && inBackground(c, notifyCopyDone(c.env, t, user.name, locale), 'kopie klaar'),
+    inBackground(c, Promise.all([
       t.shared_list && notifyListDone(c.env, t, actorId, user.name, locale, listPush.send),
       notifyShareDone(c.env, t, actorId, user.name, locale, listPush.send),
-    ]).catch((e) => console.warn('gedeelde taak klaar melden mislukt', (e as Error).message)),
+    ]), 'gedeelde taak klaar'),
   ]);
-  try { c.executionCtx.waitUntil(sending); } catch { await sending; }
 }
 
 /**
@@ -1160,7 +1181,8 @@ app.post('/api/push/subscribe', async (c) => {
 });
 
 app.delete('/api/push/subscribe', async (c) => {
-  const { endpoint } = await body<{ endpoint: string }>(c);
+  const { endpoint } = await body<{ endpoint?: unknown }>(c);
+  if (typeof endpoint !== 'string' || !endpoint) throw new HttpError(400, 'err.invalid_subscription');
   await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint = ? AND user_id = ?').bind(endpoint, c.get('auth').userId).run();
   return c.json({ ok: true });
 });
@@ -1261,19 +1283,31 @@ export async function runEach(steps: [name: string, run: () => Promise<unknown>]
   }
 }
 
+/**
+ * De stappen van de cron op tijdstip `at` (ms). Herinneringen en verlopen taken elke minuut; opruimen (prullenbak en
+ * bijlagen) alleen in de eerste minuut van elk uur: elke minuut zou de hele tabel attachments lezen voor bijna niets.
+ */
+export function cronSteps(env: Env, install: InstallPrefs, at: number): [string, () => Promise<unknown>][] {
+  // runReminders leest per taak de instellingen van de eigenaar; er zit geen globale zone tussen.
+  const steps: [string, () => Promise<unknown>][] = [
+    ['reminders', () => runReminders(env, install)],
+    ['verlopen', () => runOverdue(env, install)],
+  ];
+  if (new Date(at).getUTCMinutes() === 0) {
+    steps.push(
+      ['prullenbak', () => purgeTrash(env.DB, Date.now())],
+      // Na het wissen: de bijlagen van taken die nu weg zijn, ook in R2.
+      ['bijlagen', () => sweepAttachments(env, Date.now())],
+    );
+  }
+  return steps;
+}
+
 export default {
   fetch: app.fetch,
-  scheduled: (_e: ScheduledController, env: Env, ctx: ExecutionContext) => {
+  scheduled: (e: ScheduledController, env: Env, ctx: ExecutionContext) => {
     ctx.waitUntil((async () => {
-      // runReminders leest per taak de instellingen van de eigenaar; er zit geen globale zone tussen.
-      const install = await loadInstallPrefs(env);
-      await runEach([
-        ['reminders', () => runReminders(env, install)],
-        ['verlopen', () => runOverdue(env, install)],
-        ['prullenbak', () => purgeTrash(env.DB, Date.now())],
-        // Na het wissen: de bijlagen van taken die nu weg zijn, ook in R2.
-        ['bijlagen', () => sweepAttachments(env, Date.now())],
-      ]);
+      await runEach(cronSteps(env, await loadInstallPrefs(env), e.scheduledTime));
     })());
   },
 };

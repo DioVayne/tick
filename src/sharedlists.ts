@@ -2,9 +2,7 @@ import { Hono, type Context } from 'hono';
 import type { AppEnv, Env, TaskRow } from './index';
 import { HttpError } from './errors';
 import { STEP, topMin } from './access';
-import { postWebhook, sendToAll, type Payload, type Sender } from './push';
-import { loadUserPrefs } from './prefs';
-import { getUser } from './users';
+import { inBackground, notifyUser, sendToAll, type Payload, type Sender } from './push';
 import { recipientOf } from './shares';
 import { translate } from '../public/i18n.js';
 
@@ -210,14 +208,9 @@ export async function listSharing(db: D1Database, userId: string): Promise<Map<s
   return out;
 }
 
-/** Push naar één persoon in de taal van elk abonnement; zonder abonnement via zijn fallback-webhook (zoals bij taken). */
-async function notify(env: Env, userId: string, make: (locale: string) => Payload, defaultLocale: 'en' | 'nl', send: Sender = listPush.send): Promise<void> {
-  const { total } = await send(env, userId, make, defaultLocale);
-  if (total) return;
-  const user = await getUser(env.DB, userId);
-  const hook = user && (await loadUserPrefs(env, user)).fallbackWebhook;
-  if (hook) await postWebhook(hook, { ...make(defaultLocale), actions: undefined });
-}
+/** `notifyUser` met de sender van deze routes (`listPush.send`, in tests een nep-sender). */
+const notify = (env: Env, userId: string, make: (locale: string) => Payload, defaultLocale: 'en' | 'nl', send: Sender = listPush.send) =>
+  notifyUser(env, userId, make, defaultLocale, send);
 
 /**
  * Afvinken of heropenen mag alleen wie de hoofdtaak (de taak zelf, of de ouder van een subtaak) op naam heeft, of
@@ -251,12 +244,6 @@ export async function notifyListDone(env: Env, task: TaskRow, actorId: string, a
       title: translate(locale, 'share.push_done', { name: actorName }), body: task.title, url: `/?task=${task.id}`, tag: `share-${task.id}`, actions: [],
     }), defaultLocale, send);
   }
-}
-
-/** Een melding die het antwoord niet ophoudt; mislukt hij, dan blijft de wijziging staan. */
-async function inBackground(c: Context<AppEnv>, sending: Promise<void>, what: string) {
-  const p = sending.catch((e) => console.warn(`${what} melden mislukt`, (e as Error).message));
-  try { c.executionCtx.waitUntil(p); } catch { await p; }
 }
 
 async function readBody(c: Context<AppEnv>): Promise<Record<string, unknown>> {

@@ -1,5 +1,6 @@
 import { Hono, type ExecutionContext } from 'hono';
 import type { AppEnv, Env } from './index';
+import { HttpError } from './errors';
 
 /**
  * MCP-server (Model Context Protocol) voor Claude Code en Claude Desktop: stateless "Streamable HTTP", dus JSON-RPC via
@@ -159,9 +160,9 @@ export function mcpApi(api: Api) {
   mcp.post('/', async (c) => {
     const kind = c.get('auth').kind;
     // Alleen een full-sleutel (of lokaal de bypass): een browsersessie hoort hier niet, dat sluit ook CSRF uit.
-    if (kind !== 'token' && kind !== 'dev') return c.text('Forbidden', 403);
+    if (kind !== 'token' && kind !== 'dev') throw new HttpError(403, 'err.forbidden');
     const origin = c.req.header('origin');
-    if (origin && origin !== new URL(c.req.url).origin) return c.text('Forbidden', 403); // DNS-rebinding
+    if (origin && origin !== new URL(c.req.url).origin) throw new HttpError(403, 'err.forbidden'); // DNS-rebinding
     const msg = await c.req.json<Args>().catch(() => null);
     if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.method !== 'string') {
       return c.json(rpcError(null, -32600, 'Invalid request'), 400);

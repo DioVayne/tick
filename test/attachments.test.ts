@@ -54,6 +54,17 @@ describe('bijlagen', () => {
     expect(part.status).toBe(206);
     expect(part.headers.get('content-range')).toBe('bytes 0-99/1234');
     expect((await part.arrayBuffer()).byteLength).toBe(100);
+    // De laatste 100 bytes, en een bereik buiten het bestand: dan het hele bestand.
+    const tail = await call(`/api/attachments/${a.id}`, { headers: { range: 'bytes=-100' } });
+    expect(tail.status).toBe(206);
+    expect(tail.headers.get('content-range')).toBe('bytes 1134-1233/1234');
+    expect((await tail.arrayBuffer()).byteLength).toBe(100);
+    const open = await call(`/api/attachments/${a.id}`, { headers: { range: 'bytes=1200-' } });
+    expect(open.headers.get('content-range')).toBe('bytes 1200-1233/1234');
+    expect((await open.arrayBuffer()).byteLength).toBe(34);
+    const outside = await call(`/api/attachments/${a.id}`, { headers: { range: 'bytes=5000-' } });
+    expect(outside.status).toBe(200);
+    expect((await outside.arrayBuffer()).byteLength).toBe(1234);
 
     const key = (await row(a.id))!.r2_key;
     expect((await call(`/api/attachments/${a.id}`, { method: 'DELETE' })).status).toBe(200);

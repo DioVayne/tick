@@ -2,9 +2,7 @@ import { Hono } from 'hono';
 import type { AppEnv, Env, TaskRow } from './index';
 import { HttpError } from './errors';
 import { getAccess, STEP, topMin } from './access';
-import { postWebhook, sendToAll, type Payload, type Sender } from './push';
-import { loadUserPrefs } from './prefs';
-import { getUser } from './users';
+import { inBackground, notifyUser, sendToAll, type Payload, type Sender } from './push';
 import { translate } from '../public/i18n.js';
 import { copyAttachmentStmt } from './attachments';
 
@@ -54,11 +52,7 @@ async function notifyInvite(env: Env, shareId: string, toUser: string, fromName:
     body: title, url: `/?share=${shareId}`, shareId,
     actions: [{ action: 'accept', title: translate(locale, 'push.accept') }, { action: 'decline', title: translate(locale, 'push.decline') }],
   });
-  const { total } = await sendToAll(env, toUser, make, defaultLocale);
-  if (total) return;
-  const user = await getUser(env.DB, toUser);
-  const hook = user && (await loadUserPrefs(env, user)).fallbackWebhook;
-  if (hook) await postWebhook(hook, { ...make(defaultLocale), actions: undefined });
+  await notifyUser(env, toUser, make, defaultLocale);
 }
 
 /**
@@ -73,12 +67,7 @@ async function notifyShareMembers(env: Env, task: TaskRow, actorId: string, make
     "WHERE ?3 IS NULL OR uid NOT IN (SELECT user_id FROM list_members WHERE list_id = ?3 AND status = 'accepted')",
   ).bind(task.user_id, task.id, task.shared_list ?? null).all<{ uid: string }>();
   for (const { uid } of results) {
-    if (uid === actorId) continue;
-    const { total } = await send(env, uid, make, defaultLocale);
-    if (total) continue;
-    const user = await getUser(env.DB, uid);
-    const hook = user && (await loadUserPrefs(env, user)).fallbackWebhook;
-    if (hook) await postWebhook(hook, { ...make(defaultLocale), actions: undefined });
+    if (uid !== actorId) await notifyUser(env, uid, make, defaultLocale, send);
   }
 }
 
@@ -121,9 +110,7 @@ sharesApi.post('/', async (c) => {
     'ON CONFLICT (task_id, to_user) DO NOTHING').bind(row.id, row.task_id, userId, toUser, row.mode, 'pending', row.created_at).run();
   if (!res.meta.changes) throw new HttpError(409, 'err.share_exists');
   // Een mislukte melding laat de uitnodiging staan; die is altijd in de app te zien.
-  const sending = notifyInvite(c.env, row.id, toUser, c.get('user').name, task.title, row.mode, c.get('install').defaultLocale)
-    .catch((e) => console.warn('uitnodiging melden mislukt', (e as Error).message));
-  try { c.executionCtx.waitUntil(sending); } catch { await sending; }
+  await inBackground(c, notifyInvite(c.env, row.id, toUser, c.get('user').name, task.title, row.mode, c.get('install').defaultLocale), 'uitnodiging');
   return c.json(row, 201);
 });
 
