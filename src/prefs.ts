@@ -48,7 +48,11 @@ const validTime = (s: string | undefined | null): s is string => !!s && /^([01]\
 /** Leest de instellingen van de installatie met één query en valideert wat er staat. */
 export async function loadInstallPrefs(env: Env): Promise<InstallPrefs> {
   const { results } = await env.DB.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>();
-  const row = new Map(results.map((r) => [r.key, r.value]));
+  return installPrefsFrom(env, new Map(results.map((r) => [r.key, r.value])));
+}
+
+/** De instellingen van de installatie uit de rijen van `settings`; zonder rijen alleen wat de config zegt. */
+export function installPrefsFrom(env: Pick<Env, 'LOCALE'>, row = new Map<string, string>()): InstallPrefs {
   return {
     defaultLocale: normLocale(row.get('default_locale') || env.LOCALE),
     envApiTokenOff: row.get('env_api_token_off') === '1',

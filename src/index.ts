@@ -9,7 +9,7 @@ import { normLocale, translate } from '../public/i18n.js';
 import { cleanLocation, cleanPlace, locColumns, locFromRow, type Place } from './location';
 import { repeatColumns, repeatFromRow, todayDefaultIso } from './repeat';
 import { nextOccurrence } from '../public/repeat.js';
-import { loadInstallPrefs, loadUserPrefs, requestLocale, type InstallPrefs, type Prefs, userSettingRows } from './prefs';
+import { installPrefsFrom, loadInstallPrefs, loadUserPrefs, requestLocale, type InstallPrefs, type Prefs, userSettingRows } from './prefs';
 import { findLoginUser, getUser, touchLastSeen, type User } from './users';
 import { inZone, localToUtcIso, type Zone } from './time';
 import { inBackground, runReminders, sendToAll } from './push';
@@ -75,7 +75,7 @@ export type TaskRow = {
 export type AppEnv = {
   Bindings: Env;
   /** `install` staat er altijd (vóór de auth); `prefs` (installatie plus de gebruiker) en `user` alleen na de auth. */
-  Variables: { install: InstallPrefs; prefs: Prefs; lang: 'en' | 'nl'; auth: Auth; user: User };
+  Variables: { install: InstallPrefs; prefs: Prefs; lang: 'en' | 'nl'; auth: Auth; user: User; asset: boolean };
 };
 
 const app = new Hono<AppEnv>();
@@ -96,9 +96,9 @@ function plainAsset(c: Context<AppEnv>): boolean {
 
 // Eerst de instellingen van de installatie: de taal van het verzoek en de schakelaars van de oude secrets.
 app.use('*', async (c, next) => {
-  const install = plainAsset(c)
-    ? { defaultLocale: normLocale(c.env.LOCALE), envApiTokenOff: false, envInboxTokenOff: false, envApiTokenUsed: null, envInboxTokenUsed: null }
-    : await loadInstallPrefs(c.env);
+  const asset = plainAsset(c);
+  const install = asset ? installPrefsFrom(c.env) : await loadInstallPrefs(c.env);
+  c.set('asset', asset);
   c.set('install', install);
   c.set('lang', requestLocale(c.req.raw, install.defaultLocale));
   await next();
@@ -177,7 +177,7 @@ function cookieUserId(req: Request): string | null {
 app.use('*', async (c, next) => {
   // Tegelijk met de sessiecontrole al de instellingen van die gebruiker: dat scheelt een ronde naar D1. Ze tellen pas
   // als de sessie geldig blijkt en bij dezelfde gebruiker hoort; anders vervalt de prefetch.
-  const asset = plainAsset(c);
+  const asset = c.get('asset');
   const guess = asset ? null : cookieUserId(c.req.raw);
   const prefetch = guess ? userSettingRows(c.env.DB, guess) : null;
   prefetch?.catch(() => {}); // niet gebruikt of mislukt: geen onafgehandelde rejection

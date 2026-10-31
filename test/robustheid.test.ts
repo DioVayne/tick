@@ -218,8 +218,8 @@ describe('cron', () => {
 describe('cron-schema', () => {
   it('herinneringen elke minuut, opruimen alleen in de eerste minuut van het uur', async () => {
     const { cronSteps } = await import('../src/index');
-    const install = { defaultLocale: 'en' as const, envApiTokenOff: false, envInboxTokenOff: false, envApiTokenUsed: null, envInboxTokenUsed: null };
-    const names = (iso: string) => cronSteps(env, install, Date.parse(iso)).map(([n]) => n);
+    const { installPrefsFrom } = await import('../src/prefs');
+    const names = (iso: string) => cronSteps(env, installPrefsFrom(env), Date.parse(iso)).map(([n]) => n);
     expect(names('2030-01-01T10:00:30Z')).toEqual(['reminders', 'verlopen', 'prullenbak', 'bijlagen']);
     expect(names('2030-01-01T10:05:00Z')).toEqual(['reminders', 'verlopen']);
   });
