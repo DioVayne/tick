@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono';
 import type { AppEnv, Env, TaskRow } from './index';
 import { HttpError } from './errors';
 import { STEP, topMin } from './access';
-import { inBackground, notifyUser, sendToAll, type Payload, type Sender } from './push';
+import { inBackground, notifyUser, sendToAll, type Sender } from './push';
 import { recipientOf } from './shares';
 import { translate } from '../public/i18n.js';
 
@@ -208,10 +208,6 @@ export async function listSharing(db: D1Database, userId: string): Promise<Map<s
   return out;
 }
 
-/** `notifyUser` met de sender van deze routes (`listPush.send`, in tests een nep-sender). */
-const notify = (env: Env, userId: string, make: (locale: string) => Payload, defaultLocale: 'en' | 'nl', send: Sender = listPush.send) =>
-  notifyUser(env, userId, make, defaultLocale, send);
-
 /**
  * Afvinken of heropenen mag alleen wie de hoofdtaak (de taak zelf, of de ouder van een subtaak) op naam heeft, of
  * iedereen als niemand hem heeft. Anders 403 `err.claimed` met de naam van wie hem meeneemt.
@@ -240,7 +236,7 @@ export async function notifyListDone(env: Env, task: TaskRow, actorId: string, a
     'AND (m.notify_done = 1 OR EXISTS (SELECT 1 FROM task_watch w WHERE w.task_id = ?2 AND w.user_id = m.user_id))',
   ).bind(task.shared_list, task.id, actorId).all<{ user_id: string }>();
   for (const { user_id } of results) {
-    await notify(env, user_id, (locale) => ({
+    await notifyUser(env, user_id, (locale) => ({
       title: translate(locale, 'share.push_done', { name: actorName }), body: task.title, url: `/?task=${task.id}`, tag: `share-${task.id}`, actions: [],
     }), defaultLocale, send);
   }
@@ -282,11 +278,11 @@ sharedListsApi.post('/', async (c) => {
   const res = await db.batch(stmts);
   if (!res.at(-1)!.meta.changes) throw new HttpError(409, 'err.list_member_exists');
   const fromName = c.get('user').name;
-  await inBackground(c, notify(c.env, toUser, (locale) => ({
+  await inBackground(c, notifyUser(c.env, toUser, (locale) => ({
     title: translate(locale, 'slist.push_invite', { name: fromName, list: name }), body: '',
     url: `/?listInvite=${listId}`, listInviteId: listId, tag: `slist-${listId}`,
     actions: [{ action: 'accept', title: translate(locale, 'push.accept') }, { action: 'decline', title: translate(locale, 'push.decline') }],
-  }), c.get('install').defaultLocale), 'lijstuitnodiging');
+  }), c.get('install').defaultLocale, listPush.send), 'lijstuitnodiging');
   return c.json({ id: listId, list_id: listId, status: 'pending' }, 201);
 });
 
@@ -371,9 +367,9 @@ sharedListsApi.delete('/:id/members/:userId', async (c) => {
   await db.batch(leaveListStmts(db, listId, target));
   if (target !== me && theirs.status === 'accepted') {
     const fromName = c.get('user').name;
-    await inBackground(c, notify(c.env, target, (locale) => ({
+    await inBackground(c, notifyUser(c.env, target, (locale) => ({
       title: translate(locale, 'slist.push_removed', { name: fromName, list: theirs.name }), body: '', url: '/', tag: `slist-${listId}`, actions: [],
-    }), c.get('install').defaultLocale), 'uit lijst gehaald');
+    }), c.get('install').defaultLocale, listPush.send), 'uit lijst gehaald');
   }
   return c.json({ ok: true });
 });

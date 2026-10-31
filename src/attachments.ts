@@ -191,16 +191,10 @@ attachmentsApi.get('/attachments/:id', async (c) => {
   const row = await attachmentFor(c, c.req.param('id'));
   const headers = c.req.raw.headers;
   const want = parseRange(c.req.header('range'));
-  const get = (range?: R2Range) => c.env.FILES!.get(row.r2_key, { onlyIf: headers, ...(range ? { range } : {}) });
-  // Het bereik gaat in één keer mee. Weigert R2 het (het valt buiten het bestand), dan het hele bestand.
-  let obj: R2ObjectBody | R2Object | null = want ?await get(want).catch(() => get()) : await get();
+  // De grootte staat al in de rij: valt het bereik buiten het bestand, dan meteen het hele bestand, in één keer uit R2.
+  const part = want ? byteRange(want, row.size) : null;
+  const obj = await c.env.FILES!.get(row.r2_key, { onlyIf: headers, ...(part ? { range: { offset: part.from, length: part.to - part.from + 1 } } : {}) });
   if (!obj) throw new HttpError(404, 'err.not_found');
-  const part = want && 'body' in obj ? byteRange(want, obj.size) : null;
-  // Gaf R2 toch iets terug voor een bereik dat er niet in valt: dan alsnog het hele bestand.
-  if (want && 'body' in obj && !part) {
-    obj = await get();
-    if (!obj) throw new HttpError(404, 'err.not_found');
-  }
   const inline = INLINE.has(row.mime) && !c.req.query('download');
   const out = new Headers({
     'content-type': inline ? row.mime : 'application/octet-stream',
@@ -214,7 +208,7 @@ attachmentsApi.get('/attachments/:id', async (c) => {
   });
   if (!('body' in obj)) return new Response(null, { status: 304, headers: out });
   if (part) {
-    out.set('content-range', `bytes ${part.from}-${part.to}/${obj.size}`);
+    out.set('content-range', `bytes ${part.from}-${part.to}/${row.size}`);
     return new Response(obj.body, { status: 206, headers: out });
   }
   return new Response(obj.body, { status: 200, headers: out });
