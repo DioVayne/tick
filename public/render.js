@@ -116,10 +116,18 @@ function snippet(description) {
 
 // ---------- weergave ----------
 
-/** "Wordt opgeslagen…" zolang er iets niet bij de server is; offline "offline" of "Nog niet opgeslagen – geen verbinding". */
+/**
+ * "Wordt opgeslagen…" als er na 2 seconden nog iets niet bij de server is; offline meteen "offline" of "Nog niet
+ * opgeslagen – geen verbinding". Online is opslaan meestal binnen een tel klaar: een regel die dan even verschijnt,
+ * duwt bij elke wijziging de hele lijst omlaag en weer omhoog.
+ */
+let slowTimer = null;
+let slow = false;
 function renderNet() {
   const waiting = state.pending > 0;
-  const text = state.offline ? t(waiting ? 'render.pending_offline' : 'render.offline') : waiting ? t('render.pending') : '';
+  if (!waiting || state.offline) { clearTimeout(slowTimer); slowTimer = null; slow = false; }
+  else if (!slow && !slowTimer) slowTimer = setTimeout(() => { slowTimer = null; slow = true; renderNet(); }, 2000);
+  const text = state.offline ? t(waiting ? 'render.pending_offline' : 'render.offline') : waiting && slow ? t('render.pending') : '';
   const net = $('#net');
   net.textContent = text;
   net.hidden = !text;
