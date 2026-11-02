@@ -1,6 +1,6 @@
 import { monthGrid, pickerDefault, quickDays } from './calendar.js';
 import { dateLocale, t } from './i18n.js';
-import { narrow, place } from './popover.js';
+import { backCloses, narrow, place } from './popover.js';
 import { el } from './render.js';
 import { chipDays, getDefaultTime } from './repeat.js';
 import { timeGrid } from './timepicker.js';
@@ -21,7 +21,8 @@ const fromKey = (key) => { const [y, m, d] = key.split('-').map(Number); return 
  * @param {HTMLElement} anchor de knop die de kiezer opent (focus gaat daar weer heen)
  * @param {string} value 'YYYY-MM-DDTHH:MM', of '' voor geen datum
  * @param {(value: string | null) => void} onPick met de gekozen waarde, of null bij Wissen; niet bij annuleren
- * @param {{ note?: string }} [opts] note: een korte uitleg bovenaan (bij een herhalende taak: alleen deze keer)
+ * @param {{ note?: string, quick?: boolean }} [opts] note: een korte uitleg bovenaan (bij een herhalende taak: alleen deze keer);
+ *   quick: false laat Vandaag/Morgen/Volgende week weg (de invoerkaart heeft die al in zijn eigen menu)
  */
 export function openDatePicker(anchor, value, onPick, opts = {}) {
   const n = new Date();
@@ -76,7 +77,7 @@ export function openDatePicker(anchor, value, onPick, opts = {}) {
 
   const dialog = /** @type {HTMLDialogElement} */ (el('dialog', { class: 'dpick' + (narrow.matches ? ' sheet' : ''), 'aria-label': t('dp.title') },
     opts.note ? el('p', { class: 'dp-note' }, opts.note) : null,
-    el('div', { class: 'dp-quick' }, ...quickButtons),
+    opts.quick === false ? null : el('div', { class: 'dp-quick' }, ...quickButtons),
     calArea,
     timeArea,
     timeField,
@@ -85,6 +86,7 @@ export function openDatePicker(anchor, value, onPick, opts = {}) {
       summary,
       el('div', { class: 'dp-actions' },
         value ? el('button', { class: 'dp-clear', type: 'button', onclick: () => finish(null) }, t('dp.clear')) : null,
+        el('button', { class: 'ghost', type: 'button', onclick: () => finish(undefined) }, t('dialog.cancel')),
         el('button', { type: 'button', onclick: () => { if (tgrid.commit()) finish(`${day}T${time}`); } }, t('dp.done'))))));
 
   function drawDays() {
@@ -149,9 +151,11 @@ export function openDatePicker(anchor, value, onPick, opts = {}) {
   });
 
   let done = false;
+  let release = null; // op een smal scherm: de terugknop sluit de kiezer (zie backCloses)
   function finish(result) {
     if (done) return;
     done = true;
+    release?.();
     if (dialog.open) dialog.close();
     dialog.remove();
     anchor.focus();
@@ -167,6 +171,7 @@ export function openDatePicker(anchor, value, onPick, opts = {}) {
   document.body.append(dialog);
   dialog.showModal();
   if (!narrow.matches) place(dialog, anchor);
+  else release = backCloses(() => finish(undefined));
   /** @type {HTMLElement | null} */ (grid.querySelector('[aria-pressed="true"]'))?.focus();
 }
 

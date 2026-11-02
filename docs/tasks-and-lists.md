@@ -4,14 +4,14 @@
 Type in the field at the top of a list (or press **N**) and press Enter. A new task goes into the list you are looking at; in *All* it goes into the Inbox.
 
 As soon as you type, the field opens into a card with a short line for each thing you can add straight away:
-- **Remind me…** opens the date and time picker.
+- **Remind me…** offers *Today*, *Tomorrow* and *Next week*; *Other day and time…* opens the full date and time picker.
 - **Repeat** opens the same choices as in a task (every day, every week, and so on).
 - **Remind me at a place** opens the map, with your favorites, search and *On arrival* or *On leaving*. See [Places](places.md).
 - **In Inbox** shows where the task goes; tap it to pick another list.
 - **Do it together with…** picks someone on this Tick, or a name or email address. Not shown in a shared list, where everyone is in already.
 - **Description, subtasks or attachment** adds three more lines: a description (Enter starts a new line), subtasks (Enter adds one), and a photo or file. You can also paste a picture or drop a file on the card.
 
-A line you filled in shows your choice in color, with *Clear* behind it. Press Enter in the title (or **Add**) to add the task; the field stays ready for the next one. **Shift+Enter** adds the task and opens it right away. **Esc** empties the card.
+A line you filled in shows your choice in color, with *Clear* behind it. Press Enter in the title (or **Add**) to add the task; the field stays ready for the next one. **Shift+Enter** adds the task and opens it right away. **Esc** empties the card. On a phone, *Cancel* or the back button closes a picker without changing anything.
 
 Sharing and attachments are sent once the task is on your Tick, so they need a connection. Offline, Tick adds the task and tells you to add those from the task later.
 
