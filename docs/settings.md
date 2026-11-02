@@ -7,6 +7,7 @@ Everything is under **⚙ Settings** in the sidebar. Some settings belong to **t
 - **Color theme:** default or *Retro 70s*, each in light and dark.
 - **Text size** and **space between tasks.** An example task changes along.
 - **Background photo** (when attachments are set up): one photo for all your devices; another device picks it up after you open Settings there.
+- **Driving mode** (you, on all your devices): on by default. See [Driving mode](driving-mode.md).
 
 ## Language and time
 - **Language** (this device): automatic, English or Nederlands. Notifications come in the language of the device they go to.

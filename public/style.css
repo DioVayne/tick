@@ -817,3 +817,33 @@ html[data-boot-task] #detail::before {
 .slist-invite[hidden] { display: none; }
 .slist-invite label[for] { font-size: .8125rem; color: var(--muted); }
 .slist-hint { margin: 0; color: var(--muted); font-size: .8125rem; }
+
+/* Rijmodus (driveview.js): balk bovenin, de taken van vandaag en vlakbij groot, en alles groter (ook toevoegen en het
+   taakscherm, met alle opties: scrollen mag). Na html[data-font] zodat hij die overschrijft. */
+.drive-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; padding: 12px 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg)); position: sticky; top: 0; z-index: 5; }
+.drive-bar[hidden], #drive[hidden] { display: none; }
+.drive-bar p { margin: 0; flex: 1 1 12rem; font-weight: 700; font-size: 1.1rem; color: var(--link); }
+.drive-bar .ico { width: 1.3em; height: 1.3em; vertical-align: -.3em; }
+.drive-actions { display: flex; gap: 8px; flex: 1 1 14rem; }
+.drive-actions button { flex: 1; background: var(--card); }
+html[data-drive] #list, html[data-drive] #fab { display: none; }
+#drive h2 { margin: 18px 4px 4px; font-size: .875rem; font-weight: 600; color: var(--muted); }
+#drive ul { list-style: none; margin: 0; padding: 0; }
+.drive-task { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
+.drive-check { flex: none; width: 48px; height: 48px; min-height: 48px; padding: 0; border-radius: 50%; border: 3px solid var(--muted); background: transparent; }
+.drive-check:active { background: var(--ok); border-color: var(--ok); }
+.drive-title { flex: 1; min-width: 0; display: grid; gap: 2px; text-align: left; padding: 14px 4px; background: transparent; color: var(--text); font-size: 1.2rem; font-weight: 600; }
+.drive-title span { overflow-wrap: anywhere; }
+.drive-title .drive-meta { font-size: .875rem; font-weight: 400; color: var(--muted); }
+.drive-empty, .drive-rest { margin: 16px 4px; color: var(--muted); text-align: center; }
+.drive-add { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 20px; min-height: 60px; border-radius: 14px; font-size: 1.15rem; font-weight: 600; }
+.drive-add .ico { width: 24px; height: 24px; }
+html[data-drive] { font-size: 21px; }
+html[data-drive] button, html[data-drive] select { min-height: 52px; }
+html[data-drive] input:not([type="checkbox"]):not([type="radio"]), html[data-drive] textarea { min-height: 52px; }
+html[data-drive] .ico { width: 24px; height: 24px; vertical-align: -6px; }
+html[data-drive] .iconbtn { width: 52px; height: 52px; }
+html[data-drive] .check { width: 30px; height: 30px; min-width: 30px; min-height: 30px; }
+html[data-drive] #add { padding: 8px 10px; }
+html[data-drive] body.task-open .dback { min-height: 52px; }
