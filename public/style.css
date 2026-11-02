@@ -90,9 +90,10 @@ ul.tasks { list-style: none; margin: 0; padding: 0; display: grid; grid-template
    vinkje van het greepje en de lettergrootte afhangt. */
 :root { --ind: 24px; }
 ul.sub { --bx: 28px; --up: 6px; --ly: 50%; --branch: color-mix(in srgb, var(--muted) 30%, var(--fill)); position: relative; margin: 0; padding: 0 0 2px var(--ind); gap: 0; }
-/* Elke taak een eigen vlak; subtaken liggen in het vlak van hun hoofdtaak */
-li.task { border-radius: 8px; background: var(--fill); }
-ul.sub > li.task { background: transparent; }
+/* Elke taak een eigen vlak, heel licht verlopend met een dun lichtrandje bovenaan; subtaken liggen in het vlak van hun hoofdtaak */
+li.task { border-radius: 12px; background: linear-gradient(color-mix(in srgb, var(--fill), #fff 3%), color-mix(in srgb, var(--fill), #000 3%));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
+ul.sub > li.task { background: transparent; box-shadow: none; }
 ul.sub::before { content: ""; position: absolute; pointer-events: none; left: calc(var(--bx) - .5px); top: calc(-1 * var(--up)); height: calc(var(--ly) - 6px); border-left: 1px solid var(--branch); }
 ul.sub > li.task > .row { position: relative; padding-block: calc(var(--row-pad) / 2); }
 /* Het takje naar het vinkje; bij de laatste subtaak buigt de lijn erheen */
@@ -118,7 +119,7 @@ li.task { touch-action: pan-y; }
 @media (pointer: coarse) { li.task { -webkit-touch-callout: none; user-select: none; } li.task input, li.task textarea { user-select: text; } }
 li.task.swiping { position: relative; z-index: 1; background: var(--fill); }
 li.task.swipe-go { transition: translate .18s ease-in; }
-.swipe-back { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-radius: 8px; background: var(--fill); color: var(--text); }
+.swipe-back { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-radius: 12px; background: var(--fill); color: var(--text); }
 .swipe-back.left > .ico:first-child, .swipe-back.right > .ico:last-child { visibility: hidden; }
 .swipe-back.left { background: color-mix(in srgb, var(--danger), transparent 70%); }
 .swipe-back.right { background: color-mix(in srgb, var(--accent), transparent 70%); }
@@ -145,9 +146,9 @@ li.task.swipe-go { transition: translate .18s ease-in; }
 .done .title { text-decoration: line-through; color: var(--muted); }
 /* Titelveld van de gekozen taak (desktop): even hoog als de knop, de tekst op dezelfde plek. */
 textarea.title-edit { display: block; min-width: 0; min-height: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none; outline: none; padding: 8.5px 2px; line-height: 1.4; resize: none; overflow: hidden; overflow-wrap: anywhere; cursor: text; }
-.meta { font-size: .75rem; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; padding: 0 10px 6px 60px; margin-top: -6px; overflow-wrap: anywhere; }
+/* Informatie (tijd, wie, omschrijving) blijft grijs; alleen wat te laat is of een actie vraagt krijgt kleur. */
+.meta { font-size: .75rem; color: var(--muted); display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; padding: 0 10px 6px 60px; margin-top: -6px; overflow-wrap: anywhere; }
 .meta > * { min-width: 0; }
-.meta .bell { color: var(--bell); }
 .meta .ico.sm { margin-right: 3px; }
 .meta .ico.sm + .ico.sm { margin: 0 0 0 4px; } /* het ritme achter de datum */
 .subcount { flex: none; font-size: .75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -798,12 +799,14 @@ html[data-boot-task] #detail::before {
 /* Gedeelde lijsten: icoon in de zijbalk, "ik pak het op", het blok Afgevinkt, meldingen per taak en de deeldialoog. */
 #side .item .slist-ico { flex: none; display: inline-flex; color: var(--muted); }
 #side .item .slist-ico .ico { stroke: currentColor; }
-.meta .claim { display: inline-flex; align-items: center; gap: 3px; padding: 0 8px; min-height: 22px; border-radius: 999px; font-size: .75rem; line-height: 1.4; }
-/* De knop valt op (accentrand en -tekst), zodat je hem tussen de taken ziet staan. */
-.meta button.claim { border: 1px solid var(--accent); background: transparent; color: var(--link, var(--accent)); font-weight: 500; cursor: pointer; }
-.meta button.claim:hover { background: var(--sel); }
-.meta button.claim.mine { border-color: var(--accent); background: var(--sel); color: var(--text); }
-.meta span.claim.other { background: var(--fill); color: var(--text); }
+.meta .claim { display: inline-flex; align-items: center; gap: 4px; min-height: 22px; font-size: .75rem; line-height: 1.4; }
+/* Wie het oppakt is informatie: grijze tekst (de eigen tik je aan om los te laten). Alleen Oppakken vraagt iets en valt op. */
+.meta button.claim { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.meta button.claim.free { padding: 0 10px; min-height: 24px; border-radius: 999px; font-weight: 500;
+  background: linear-gradient(color-mix(in srgb, var(--accent) 36%, var(--fill)), color-mix(in srgb, var(--accent) 28%, var(--fill)));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07); color: color-mix(in srgb, var(--accent) 22%, var(--text)); }
+.meta button.claim.free:hover { background: color-mix(in srgb, var(--accent) 42%, var(--fill)); }
+.meta button.claim.mine:hover { color: var(--text); }
 .meta .claim .ico.sm { margin-right: 0; }
 .check:disabled { opacity: .45; cursor: not-allowed; }
 .done-block { margin-top: 18px; }
