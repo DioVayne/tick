@@ -17,6 +17,10 @@ Sharing and attachments are sent once the task is on your Tick, so they need a c
 
 Open a task to give it a reminder, a place, notes, subtasks or attachments. On a wide screen the task opens in a panel on the right (drag its edge to make it wider or narrower); on a phone it fills the screen and **‹** or the back button takes you back. Title and notes save while you type.
 
+The task looks like the card you added it with. Under the title is the same line of sentences, each with its colored dot: **Remind me…**, **Repeat**, **Remind me at a place**, **In Inbox** and **Do it together with…**. A sentence in grey is not set yet; tap it to set it, with the same pickers as in the card. Something you set shows in color, with *Clear* behind it; the reminder also has **+1 hour**. Under a place it says when you were already notified, with **Notify again**. Who you share the task with is listed under *Together with*, with *Remove* or *Leave*. In a shared list the line **Notify me when this is ticked off** takes the place of sharing. A subtask has no *Repeat*, and its list says it follows the parent task.
+
+Below the sentences are the **Description**, **Subtasks** and **Attachments**. A completed task shows only what it has, and you cannot change it until you reopen it.
+
 Tick off a task with the box in front of it. The task drops straight to the bottom of the list, in reversed colours with *Undo* on it and a thin bar that runs out in five seconds; then it goes to **Completed**. The rest of the list moves up at once, so you can tick off the next task right away. In a long list the ticked-off tasks stay in view at the bottom of the screen; with more than three at once the oldest fold into one line (**+2 done**) that opens them again. A ticked-off subtask drops to the bottom of its parent, and a repeating task stays where it is (it moves on to its next time). In **Completed**, tick the box again to reopen a task.
 
 ## Subtasks

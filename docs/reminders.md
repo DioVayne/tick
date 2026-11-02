@@ -1,7 +1,7 @@
 # Reminders
 
 ## A reminder at a time
-The bell on a task picks a date and a time. At that moment Tick sends a notification to each device where you turned notifications on. A new reminder starts at the next whole hour; a date without a time uses your *reminder without a time* setting (09:00 unless you changed it).
+**Remind me…** on a task (the line with the bell) offers *Today*, *Tomorrow* and *Next week*; *Other day and time…* opens the date and time picker. At that moment Tick sends a notification to each device where you turned notifications on. A new reminder starts at the next whole hour; a date without a time uses your *reminder without a time* setting (09:00 unless you changed it).
 
 The reminder is also the task's deadline: there is no separate due date.
 

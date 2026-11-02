@@ -58,7 +58,7 @@ function row(name, done, doneAt, progress) {
 }
 
 /**
- * Het blok "Kopieën" in het detailpaneel; leeg en hidden zonder copies. Bouwt alleen opnieuw op als er iets veranderde.
+ * De regels onder de stap "Kopieën" in het detailpaneel: per lid klaar of hoe ver; leeg en hidden zonder copies. Bouwt alleen opnieuw op als er iets veranderde.
  * @param {HTMLElement} box
  */
 export function fillCopiesBox(box, task) {
@@ -71,7 +71,6 @@ export function fillCopiesBox(box, task) {
   if (!c) { box.replaceChildren(); return; }
   const [myDone, myDoneAt, myProgress] = me;
   box.replaceChildren(
-    el('h3', {}, t('copy.heading')),
     el('ul', { class: 'copy-list' },
       ...c.members.map((m) => row(m.name, m.done, m.done_at, m.progress)),
       row(t('share.you'), myDone, myDoneAt, myProgress),

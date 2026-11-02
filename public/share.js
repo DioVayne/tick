@@ -1,5 +1,4 @@
 import { request, Offline } from './api.js';
-import { icon } from './icons.js';
 import { ask } from './dialog.js';
 import { t } from './i18n.js';
 import { el, toast } from './render.js';
@@ -107,47 +106,42 @@ async function removeMember(task, member) {
 }
 
 /**
- * Het deelblok in het detailpaneel van een hoofdtaak: wie er op zitten (met status en acties) en de knop Delen
- * (alleen voor de eigenaar). Bouwt alleen opnieuw op als er iets veranderde.
+ * Wie er op een gedeelde hoofdtaak zitten, voor de stap "Samen met" in het detailpaneel: eigenaar en deelnemers, met
+ * status en Verwijderen of Verlaten. Namen voor in de zin geeft `shareNames`; uitnodigen gaat via de stap zelf
+ * (openShareDialog). Leeg en hidden in een gedeelde lijst (daar staan de leden bij de lijst) en zonder deelnemers.
+ * Bouwt alleen opnieuw op als er iets veranderde.
  * @param {HTMLElement} box
  */
 export function fillShareBox(box, task, readOnly) {
   const s = task.share;
   const owner = !s || s.mine;
-  const key = JSON.stringify([task.id, readOnly, s]);
+  const key = JSON.stringify([task.id, readOnly, s, task.shared_list && !!sharedOf(task.list)]);
   if (box.dataset.key === key) return;
   box.dataset.key = key;
-  box.hidden = !!task.parent_id || (!s && readOnly);
-  if (box.hidden) { box.replaceChildren(); return; }
   const rows = [];
-  // In een gedeelde lijst staan de leden bij de lijst; hier alleen de knop voor een kopie (voor de eigenaar). Wie de
-  // taak per taak deelt zonder lid te zijn, heeft hem in een eigen lijst (geen sharedOf) en ziet het gewone vak.
-  if (task.shared_list && sharedOf(task.list)) {
-    box.hidden = !sharedOf(task.list)?.mine || readOnly; // de eigenaar van de lijst is eigenaar van elke taak erin
-    box.replaceChildren(...(box.hidden ? [] : [
-      el('h3', {}, t('share.heading')),
-      el('button', { class: 'ghost secbtn', type: 'button', onclick: () => openShareDialog(task) }, icon('users'), t('share.with_someone')),
-    ]));
-    return;
+  if (!(task.shared_list && sharedOf(task.list))) {
+    if (s && !s.mine) rows.push(el('li', {}, el('span', { class: 'who' }, s.owner.name), el('span', { class: 'state' }, t('share.owner'))));
+    for (const m of s?.members ?? []) {
+      const self = m.user_id === CONFIG.userId;
+      // Een ontvanger ziet de andere deelnemers, maar kan alleen zichzelf eraf halen.
+      const action = !readOnly && (owner || self)
+        ? el('button', { class: 'step-act', type: 'button', onclick: () => removeMember(task, m) }, self ? t('share.leave') : t('share.remove'))
+        : null;
+      rows.push(el('li', {},
+        el('span', { class: 'who' }, self ? t('share.you') : m.name),
+        el('span', { class: 'state' }, m.status === 'pending' ? t('share.pending') : t('share.accepted')),
+        action));
+    }
   }
-  if (s && !s.mine) rows.push(el('li', {}, el('span', { class: 'who' }, s.owner.name), el('span', { class: 'state' }, t('share.owner'))));
-  for (const m of s?.members ?? []) {
-    const self = m.user_id === CONFIG.userId;
-    // Een ontvanger ziet de andere deelnemers, maar kan alleen zichzelf eraf halen.
-    const action = !readOnly && (owner || self)
-      ? el('button', { class: 'ghost small', type: 'button', onclick: () => removeMember(task, m) }, self ? t('share.leave') : t('share.remove'))
-      : null;
-    rows.push(el('li', {},
-      el('span', { class: 'who' }, self ? t('share.you') : m.name),
-      el('span', { class: 'state' }, m.status === 'pending' ? t('share.pending') : t('share.accepted')),
-      action));
-  }
-  box.replaceChildren(...[
-    el('h3', {}, rows.length ? t('share.members') : t('share.heading')),
-    rows.length ? el('ul', { class: 'share-list' }, ...rows) : null,
-    owner && !readOnly ? el('button', { class: 'ghost secbtn', type: 'button', onclick: () => openShareDialog(task) }, icon('users'), t(rows.length ? 'share.button' : 'share.with_someone')) : null,
-  ].filter(Boolean));
+  box.hidden = !rows.length;
+  box.replaceChildren(...(rows.length ? [el('ul', { class: 'share-list' }, ...rows)] : []));
 }
+
+/** De namen in de zin "Samen met …": de eigenaar (als jij het niet bent) en de deelnemers, behalve jijzelf. */
+export const shareNames = (task) => [
+  task.share && !task.share.mine ? task.share.owner.name : null,
+  ...(task.share?.members ?? []).filter((m) => m.user_id !== CONFIG.userId).map((m) => m.name),
+].filter(Boolean);
 
 /** Balk per openstaande uitnodiging bovenaan de takenlijst, met Accepteren en Weigeren; lijstuitnodigingen eerst. */
 export function renderInvites(root) {
