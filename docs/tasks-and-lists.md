@@ -11,7 +11,7 @@ As soon as you type, the field opens into a card with a short line for each thin
 - **Do it together with…** picks someone on this Tick, or a name or email address. Not shown in a shared list, where everyone is in already.
 - **Description, subtasks or attachment** adds three more lines: a description (Enter starts a new line), subtasks (Enter adds one), and a photo or file. You can also paste a picture or drop a file on the card.
 
-A line you filled in shows your choice in color, with *Clear* behind it. Press Enter in the title (or **Add**) to add the task; the field stays ready for the next one. **Shift+Enter** adds the task and opens it right away. **Esc** empties the card. On a phone, *Cancel* or the back button closes a picker without changing anything.
+A line you filled in shows your choice in color, with *Clear* behind it. Press Enter in the title (or **Add**) to add the task; the field stays ready for the next one. **Shift+Enter** adds the task and opens it right away. **✕** (or **Esc**) empties the card and closes it. On a phone, *Cancel* or the back button closes a picker without changing anything.
 
 Sharing and attachments are sent once the task is on your Tick, so they need a connection. Offline, Tick adds the task and tells you to add those from the task later.
 
