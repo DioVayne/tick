@@ -48,11 +48,16 @@ export function toast(msg, kind, action) {
   toastTimer = setTimeout(() => { toastEl.hidden = true; }, action?.ms ?? 4000);
 }
 
-/** Afvinken of terugzetten; na afvinken een melding met "Ongedaan maken" zolang dat kan. */
+/**
+ * Afvinken of terugzetten. Staat de taak in beeld in de lijst, dan staat Annuleren op de taak zelf (onderin, zie
+ * renderList); anders, zoals vanuit de rijweergave of de taak op een telefoon, een melding met "Ongedaan maken".
+ */
 export function checkOff(task) {
   const fresh = !task.done && !state.justDone.has(task.id);
+  const row = document.querySelector(`#list li.task[data-id="${task.id}"]`);
+  const inView = !!row?.checkVisibility() && (wide.matches || !document.body.classList.contains('task-open'));
   toggleDone(task);
-  if (!fresh) return;
+  if (!fresh || inView) return;
   toast(tr('render.checked_off'), 'ok', {
     label: tr('render.undo'), ms: UNDO_MS,
     run: () => { if (state.justDone.has(task.id)) toggleDone(task); },
@@ -169,8 +174,9 @@ function subCount(t) {
 
 function taskItem(t, children) {
   const selected = state.selected === t.id;
-  const done = t.done || state.justDone.has(t.id);
-  const li = el('li', { class: 'task' + (done ? ' done' : '') + (selected ? ' sel' : ''), 'data-id': t.id });
+  const pending = state.justDone.get(t.id);
+  const done = t.done || !!pending;
+  const li = el('li', { class: 'task' + (done ? ' done' : '') + (pending ? ' pending' : '') + (selected ? ' sel' : ''), 'data-id': t.id });
   // Op naam van een ander (in een gedeelde lijst): alleen die vinkt hem af.
   const locked = claimedByOther(t);
   const lockedBy = locked ? (t.claimed_by ?? state.open.find((p) => p.id === t.parent_id)?.claimed_by) : null;
@@ -192,14 +198,26 @@ function taskItem(t, children) {
     t.pinned && !t.parent_id && !done
       ? el('button', { class: 'pinned', type: 'button', title: tr('render.pinned'), 'aria-label': tr('render.pinned'), onclick: () => update(t.id, { pinned: false }) }, icon('pin', 'sm'))
       : null,
+    pending ? el('button', {
+      class: 'undo', type: 'button', 'aria-label': tr('render.undo_named', { title: t.title }),
+      onclick: () => { if (state.justDone.has(t.id)) toggleDone(t); },
+    }, tr('render.cancel')) : null,
   );
   li.append(row);
+  if (pending) {
+    // Aftelbalkje: loopt leeg in UNDO_MS. Een nieuwe render bouwt de rij opnieuw, dus hij begint waar hij was.
+    const bar = el('span', { class: 'undo-bar', 'aria-hidden': 'true' });
+    bar.style.setProperty('--undo-ms', UNDO_MS + 'ms');
+    bar.style.setProperty('--elapsed', Math.min(UNDO_MS, Date.now() - (pending.at ?? Date.now())) + 'ms');
+    li.append(bar);
+  }
 
   const meta = [];
   // Gedeelde lijst: wie het meeneemt, vooraan in de metaregel (alleen bij een open hoofdtaak). Wie de taak per taak
   // deelt zonder lid te zijn, heeft hem in een eigen lijst (geen sharedOf) en neemt hem niet mee.
   if (t.shared_list && sharedOf(t.list) && !t.parent_id && !done) meta.push(claimControl(t));
-  if (t.remind_at && !done) {
+  // Een doorgeschoven herhaling (net afgevinkt, nog open) toont meteen de volgende keer; de rij houdt zo ook zijn hoogte.
+  if (t.remind_at && (!done || !t.done)) {
     const past = new Date(t.remind_at) < new Date();
     meta.push(el('span', { class: 'bell' + (past ? ' past' : '') }, icon('bell', 'sm'), fmt(t.remind_at), t.repeat ? icon('repeat', 'sm') : null));
   }
@@ -222,7 +240,9 @@ function taskItem(t, children) {
 
   if (children && children.length) {
     const ul = el('ul', { class: 'tasks sub', 'data-parent': t.id });
-    children.forEach((c) => ul.append(taskItem(c)));
+    // Een net afgevinkte subtaak zakt naar onderen binnen haar hoofdtaak.
+    const sunk = (c) => Number(state.justDone.has(c.id) && !!c.done);
+    [...children].sort((a, b) => sunk(a) - sunk(b)).forEach((c) => ul.append(taskItem(c)));
     li.append(ul);
   }
   if (!done && !state.showDone) enableSwipe(li, t);
@@ -245,10 +265,10 @@ function topTasks(tasks) {
 }
 
 /** Een <ul> met de taken, subtaken onder hun parent (als die erbij is). */
-function taskList(tasks) {
+function taskList(tasks, cls = 'tasks') {
   const byParent = new Map();
   for (const t of tasks) if (t.parent_id) (byParent.get(t.parent_id) ?? byParent.set(t.parent_id, []).get(t.parent_id)).push(t);
-  const ul = el('ul', { class: 'tasks', 'data-parent': '' });
+  const ul = el('ul', { class: cls, 'data-parent': '' });
   topTasks(tasks).forEach((t) => ul.append(taskItem(t, byParent.get(t.id))));
   return ul;
 }
@@ -295,9 +315,18 @@ export function render() {
   const a = document.activeElement;
   const typing = a instanceof HTMLTextAreaElement && a.classList.contains('title-edit') && root.contains(a)
     ? { start: a.selectionStart, end: a.selectionEnd, dir: a.selectionDirection } : null;
+  // Dezelfde weergave als de vorige keer en in beeld (verborgen, zoals achter de instellingen, staat alles op 0): wat
+  // verschuift, glijdt (zie glide).
+  const view = JSON.stringify([state.list, state.showDone, state.showTrash, state.query]);
+  const before = view === lastView && root.checkVisibility() ? rowTops(root) : null;
   rebuilding = true;
   try { renderList(root); } finally { rebuilding = false; pillNames = null; }
   alignBranches(root);
+  const shown = root.checkVisibility();
+  const after = shown ? rowTops(root) : new Map(); // nieuwe rijen: nog zonder animatie
+  if (before && shown) glide(root, before, after);
+  layout = after;
+  lastView = shown ? view : '';
   const f = root.querySelector('.title-edit');
   if (!(f instanceof HTMLTextAreaElement)) return;
   autoGrow(f);
@@ -337,7 +366,8 @@ function renderList(root) {
   const doneHits = q && !state.showDone && state.doneHits?.q === state.query.trim()
     ? state.doneHits.tasks.filter((t) => t.done && !ids.has(t.id) && !state.justDone.has(t.id) && (!state.list || t.list === state.list))
     : [];
-  const tops = topTasks(visible);
+  const { main, tray, hidden } = state.showDone ? { main: visible, tray: [], hidden: 0 } : splitTray(visible);
+  const tops = topTasks(main);
   // Een gedeelde lijst: onder de open taken het blok Afgevinkt (niet in Alle, Afgerond, zoeken of de prullenbak).
   const block = state.list && !state.showDone && !q && sharedOf(state.list) ? doneBlock(state.list) : null;
   if (!tops.length && !doneHits.length) {
@@ -345,14 +375,91 @@ function renderList(root) {
       : state.showDone ? (state.offline ? t('render.done_offline') : state.doneLoading ? t('render.loading') : t('render.nothing_done'))
       : t('render.nothing_to_do');
     root.append(el('p', { class: 'empty' }, empty));
-    if (block) root.append(block);
-    return;
   }
-  if (tops.length) root.append(taskList(visible));
+  if (tops.length) root.append(taskList(main));
   if (doneHits.length) root.append(el('h2', { class: 'list-head' }, t('ui.completed')), taskList(doneHits));
   if (!state.showDone && !q) enableSorting(root); // in een gefilterde lijst zou slepen posities verkeerd berekenen
-  if (block) root.append(block); // na enableSorting: het blok sorteert niet mee
+  // Na enableSorting: het bakje en het blok sorteren niet mee.
+  if (tray.length || hidden) root.append(trayList(tray, hidden));
+  if (block) root.append(block);
 }
+
+// ---------- net afgevinkt ----------
+// Een afgevinkte hoofdtaak zakt meteen naar een bakje onderin de lijst, in omgekeerde kleuren met Annuleren erop, en
+// verdwijnt daar na UNDO_MS. De lijst erboven verspringt dus één keer, op het moment dat je zelf tikt, en daarna niet
+// meer. Het bakje blijft onderaan het scherm (sticky) zodat Annuleren in een lange lijst in beeld is. Er staan er hooguit
+// TRAY_MAX helemaal in; oudere vouwen in tot één regel "+2 afgevinkt" die het bakje openklapt.
+// Een herhalende taak schuift door en blijft open: die blijft op zijn plek staan, ook met Annuleren.
+const TRAY_MAX = 3;
+let trayOpen = false;
+
+/** Splitst de zichtbare taken in de lijst zelf en het bakje (net afgevinkte hoofdtaken, met hun subtaken). */
+function splitTray(visible) {
+  const order = [...state.justDone.keys()]; // oudste eerst, de nieuwste onderaan
+  const tops = topTasks(visible).filter((t) => t.done && state.justDone.has(t.id))
+    .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  if (!tops.length) trayOpen = false;
+  const hidden = trayOpen ? 0 : Math.max(0, tops.length - TRAY_MAX);
+  const all = new Set(tops.map((t) => t.id));
+  const shown = new Set(tops.slice(hidden).map((t) => t.id));
+  return {
+    main: visible.filter((t) => !all.has(t.id) && !all.has(t.parent_id)),
+    tray: visible.filter((t) => shown.has(t.id) || shown.has(t.parent_id)).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)),
+    hidden,
+  };
+}
+
+function trayList(tray, hidden) {
+  const ul = taskList(tray, 'tasks tray');
+  if (hidden) {
+    ul.prepend(el('li', { class: 'tray-more' },
+      el('button', { type: 'button', onclick: () => { trayOpen = true; render(); } }, tr('render.more_done', { n: hidden }))));
+  }
+  return ul;
+}
+
+// Alles wat bij een nieuwe render van plek verandert, glijdt erheen (FLIP): de afgevinkte taak naar het bakje, de taken
+// eronder omhoog, een volgorde van de server. Alleen binnen dezelfde weergave; een andere lijst kiezen springt gewoon.
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const GLIDE_MS = 220;
+let lastView = '';
+/** Wanneer de rij (op id) voor het laatst verschoof: een tik op een vinkje dat net onder je vinger kwam, telt niet. */
+const moved = new Map();
+const SETTLE_MS = 350;
+
+/** Waar de rijen staan, ten opzichte van de lijst: scrollen telt dan niet als verschuiven. */
+let layout = new Map();
+const rowTops = (root) => {
+  const top = root.getBoundingClientRect().top;
+  return new Map([...root.querySelectorAll('li.task[data-id]')].map((li) => [li.dataset.id, li.getBoundingClientRect().top - top]));
+};
+
+/**
+ * `before` is waar de rijen te zien waren (een lopende animatie meegeteld), zodat ze vanaf daar verder glijden. Voor het
+ * vangnet telt alleen een echte verschuiving tegenover de vorige render, niet het restje van een animatie.
+ */
+function glide(root, before, after) {
+  const now = performance.now();
+  for (const [id, top] of after) if (Math.abs(top - (layout.get(id) ?? top)) >= 1) moved.set(id, now);
+  if (reduced.matches) return;
+  // Eerst alles meten (after), dan pas animeren: een lopende animatie verschuift de rijen die erin staan.
+  const shift = new Map(); // li → hoeveel hij verschoof; een subtaak beweegt al mee met haar hoofdtaak
+  for (const li of root.querySelectorAll('li.task[data-id]')) {
+    const was = before.get(li.dataset.id);
+    if (was != null) shift.set(li, was - after.get(li.dataset.id));
+  }
+  for (const [li, dy] of shift) {
+    const own = dy - (shift.get(li.parentElement?.closest('li.task')) ?? 0);
+    if (Math.abs(own) < 1) continue;
+    li.animate([{ transform: `translateY(${own}px)` }, { transform: 'none' }], { duration: GLIDE_MS, easing: 'cubic-bezier(.2, .7, .3, 1)' });
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const check = e.target instanceof Element ? e.target.closest('#list .check') : null;
+  const id = check?.closest('li.task')?.dataset.id;
+  if (id && performance.now() - (moved.get(id) ?? -Infinity) < SETTLE_MS) { e.stopPropagation(); e.preventDefault(); }
+}, true);
 
 // ---------- handmatig sorteren ----------
 const wide = matchMedia('(min-width: 1024px)');
