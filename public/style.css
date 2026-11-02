@@ -83,7 +83,10 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 #add-title { flex: 1 1 180px; min-width: 0; }
 #add[hidden] { display: none; } /* niet in Afgerond, de prullenbak en tijdens zoeken */
 #add #add-send { min-height: 32px; padding: 4px 14px; border-radius: 999px; font-size: .875rem; }
-#add:not(.open) #add-send { display: none; }
+#add:not(.open) #add-send, #add:not(.open) #add-cancel { display: none; }
+#add #add-cancel { display: grid; place-items: center; width: 32px; height: 32px; min-height: 32px; padding: 0; border-radius: 50%; background: transparent; color: var(--muted); }
+#add #add-cancel:hover { background: var(--hover); color: var(--text); }
+#add #add-cancel .ico { width: 18px; height: 18px; }
 .add-fold { flex: 1 0 100%; display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows .18s ease-out, visibility .18s; }
 #add.open .add-fold { grid-template-rows: 1fr; visibility: visible; }
 .add-fold > div { min-height: 0; overflow: hidden; }

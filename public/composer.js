@@ -50,6 +50,8 @@ export function initComposer() {
   form.append(el('div', { class: 'add-fold' }, el('div', {}, rail, moreButton)), fileInput);
 
   form.addEventListener('submit', (e) => { e.preventDefault(); submit(false); });
+  // ✕: alles weg en dicht, ook het toetsenbord.
+  $('#add-cancel').addEventListener('click', () => { reset(); input.blur(); });
   input.addEventListener('input', () => form.classList.toggle('open', isOpen()));
   // Terug in de titel: een open tekstvak klapt dicht (de tekst blijft), en de lijst waar je naar kijkt kan veranderd zijn.
   input.addEventListener('focus', () => { editing = null; draw(); });
