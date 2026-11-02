@@ -178,10 +178,10 @@ function goTo(route, { push = false } = {}) {
 
 // ---------- detailpaneel ----------
 // Terug (ook de Android-terugknop) sluit het taakscherm; vooruit opent de taak weer.
-// De kaart heeft een eigen history-item; die popstate is van de kaart (deze listener loopt vóór die van de kaart).
 // De instellingen hebben ook een eigen history-item: terug sluit ze, vooruit opent ze weer (zonder de taak te raken).
 window.addEventListener('popstate', (e) => {
-  if (document.body.classList.contains('map-open')) return;
+  // De kaart en een kiezer-sheet hebben een eigen history-item (zie backCloses in popover.js); die stap is van hen.
+  if (document.body.classList.contains('map-open') || document.body.classList.contains('sheet-open')) return;
   // Een bladwijzer of getypt adres in de open app: een nieuwe stap met een adres dat render.js niet schreef.
   const route = location.hash && e.state?.hash !== location.hash ? parseHash(location.hash) : null;
   if (route) { goTo(route); return; }

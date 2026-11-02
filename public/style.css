@@ -87,9 +87,9 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 .add-fold { flex: 1 0 100%; display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows .18s ease-out, visibility .18s; }
 #add.open .add-fold { grid-template-rows: 1fr; visibility: visible; }
 .add-fold > div { min-height: 0; overflow: hidden; }
-.add-rail { padding: 4px 0 0; }
+.add-rail { padding: 4px 0 0 6px; } /* stippen recht onder het plusje, en hun rand niet afgeknipt */
 .step { position: relative; --c: var(--muted); }
-.step:not(:last-child)::after { content: ""; position: absolute; left: 13px; top: 36px; bottom: -6px; width: 2px; border-radius: 1px; background: color-mix(in srgb, var(--muted) 35%, transparent); }
+.step:not(:last-child)::after { content: ""; position: absolute; left: 13px; top: 36px; bottom: -8px; width: 2px; border-radius: 1px; background: color-mix(in srgb, var(--muted) 35%, transparent); }
 .step-when { --c: var(--bell); }
 .step-repeat { --c: #7f77dd; }
 .step-place { --c: #1d9e75; }
@@ -101,11 +101,10 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 .step-dot { position: relative; z-index: 1; flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--c); background: var(--card); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--c) 50%, transparent); transition: background .15s, box-shadow .15s; }
 .step-dot .ico { width: 16px; height: 16px; }
 .step.on .step-dot { background: color-mix(in srgb, var(--c) 20%, var(--card)); box-shadow: 0 0 0 1.5px var(--c); }
-.step-txt { flex: 1; min-width: 0; padding: 10px 0; border-bottom: 1px dashed var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step-txt { flex: 1; min-width: 0; padding: 10px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .step.on .step-txt, #add .step-head:hover .step-txt, #add .step-head:focus-visible .step-txt { color: var(--text); }
-.step.on .step-txt { border-bottom-style: solid; }
 .step-txt b { font-weight: 600; color: color-mix(in srgb, var(--c) 70%, var(--text)); }
-.step-list .step-txt b, .step-note .step-txt b { color: var(--text); }
+.step-list .step-txt b, .step-note .step-txt b { color: inherit; font-weight: 500; }
 #add .step-clear { min-height: 32px; padding: 4px 6px; background: transparent; color: var(--muted); font-size: .8125rem; }
 #add .step-clear:hover { color: var(--text); }
 .step-body { margin: 2px 0 10px 40px; }
@@ -116,10 +115,10 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 .step-sublist li { display: flex; align-items: center; gap: 8px; min-height: 30px; font-size: .9375rem; }
 .step-box { flex: none; width: 14px; height: 14px; border: 1.5px solid var(--muted); border-radius: 4px; }
 #add .step-x { min-height: 28px; margin-left: auto; padding: 0 8px; background: transparent; color: var(--muted); }
-#add .add-more-btn { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 4px 0 6px 6px; background: transparent; color: var(--muted); font-size: .875rem; }
+#add .add-more-btn { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 4px 0 6px 12px; background: transparent; color: var(--muted); font-size: .875rem; }
 #add .add-more-btn:hover { color: var(--text); }
 #add .add-more-btn[hidden] { display: none; }
-#add .add-more-btn .ico { width: 16px; height: 16px; margin-right: 8px; }
+#add .add-more-btn .ico { width: 16px; height: 16px; margin-right: 10px; }
 @media (prefers-reduced-motion: reduce) { #add, .add-fold, .step-dot { transition: none; } }
 ul.tasks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 /* Subtaken: in het vlak van hun hoofdtaak, kleiner en lichter, met een boomlijn. De lijn loopt recht onder het vinkje van de
@@ -469,6 +468,9 @@ body.resizing { cursor: col-resize; user-select: none; }
 .menu-item.muted { color: var(--muted); }
 .menu-item.menu-danger { color: var(--danger); } /* niet .danger: button.danger geeft een rand */
 .menu-sep { border-top: 1px solid var(--line); margin: 4px 2px; }
+.menu-when { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.menu-when small { color: var(--muted); font-size: .8125rem; }
+.menu-cancel { justify-content: center; text-align: center; color: var(--muted); }
 .menu-input { margin: 2px 0; padding: 6px 8px; font-size: .875rem; }
 /* Lijst- en ritmekiezer op een smal scherm (popover.js): van onderen, net als de datumkiezer (.dpick.sheet), alles minstens 44px hoog */
 .sheet-scrim { position: fixed; inset: 0; z-index: 17; background: var(--scrim); }
