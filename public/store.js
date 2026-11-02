@@ -81,9 +81,26 @@ export function createList(name) {
 // Elke wijziging is een op: { type: 'create' | 'update' | 'delete', ... }. Die passen we meteen lokaal toe
 // (optimistisch), zetten we in de outbox en spelen we op volgorde af zodra de server bereikbaar is.
 
+/** Zet een ritme lokaal zoals de server het doet: de eerste keer vanaf `remindAt` (of vandaag op de standaardtijd). */
+function applyRepeat(t, repeat, remindAt) {
+  try {
+    const rule = normalizeRule(repeat);
+    const p = zonedParts(Date.now());
+    const start = remindAt ?? new Date(zonedToUtc(p.y, p.m, p.d, getDefaultTime().h, getDefaultTime().mi)).toISOString();
+    const at = nextOccurrence(rule, start, Date.now() - 1);
+    if (at === null) throw new Error('einddatum voorbij');
+    t.repeat = { rule, start, at };
+    t.remind_at = at;
+    t.notified = false;
+  } catch { /* ongeldig ritme: de server weigert het en load() zet de stand recht */ }
+}
+
 function applyLocal(op) {
   if (op.type === 'create') {
-    if (!find(op.task.id)) state.open.push({ ...op.task });
+    if (find(op.task.id)) return;
+    const t = { ...op.task };
+    if (typeof op.body.repeat === 'string') applyRepeat(t, op.body.repeat, t.remind_at);
+    state.open.push(t);
     return;
   }
   if (op.type === 'delete') {
@@ -126,18 +143,7 @@ function applyLocal(op) {
   if ('parent_id' in fields && fields.parent_id !== null) t.repeat = null;
   if ('remind_at' in fields || 'repeat' in fields) undoRepeat.delete(t.id); // een nieuwe tijd of ritme: niets meer om terug te draaien
   if (repeat === null || fields.remind_at === null) t.repeat = null; // zonder reminder bestaat geen ritme (ook niet als er een regel meekomt)
-  else if (typeof repeat === 'string') {
-    try {
-      const rule = normalizeRule(repeat);
-      const p = zonedParts(Date.now());
-      const start = fields.remind_at ?? t.remind_at ?? new Date(zonedToUtc(p.y, p.m, p.d, getDefaultTime().h, getDefaultTime().mi)).toISOString();
-      const at = nextOccurrence(rule, start, Date.now() - 1);
-      if (at === null) throw new Error('einddatum voorbij');
-      t.repeat = { rule, start, at };
-      t.remind_at = at;
-      t.notified = false;
-    } catch { /* ongeldig ritme: de server weigert het en load() zet de stand recht */ }
-  }
+  else if (typeof repeat === 'string') applyRepeat(t, repeat, fields.remind_at ?? t.remind_at);
   if ('location' in fields) t.location_notified = false;
   if ('list' in fields) for (const x of state.open) if (x.parent_id === t.id) x.list = fields.list;
   // Herhalende taak: schuift door naar de volgende keer en blijft open (alleen als dit de verwachte keer is).
@@ -433,12 +439,17 @@ const newTask = (fields) => ({
   id: crypto.randomUUID(), description: '', remind_at: null, notified: false, location: null, location_notified: false, pinned: false, done: false, done_at: null, source: 'app', ...fields,
 });
 
-/** Nieuwe taak bovenaan; de server bepaalt bij het versturen de definitieve positie. Geeft het id terug (staat direct lokaal). */
-export function addTask(title, remind_at, list) {
+/**
+ * Nieuwe taak bovenaan; de server bepaalt bij het versturen de definitieve positie. Geeft het id terug (staat direct lokaal).
+ * @param {{ description?: string, repeat?: string | null, location?: object | null }} [extra] wat de invoerkaart nog meer meegeeft
+ */
+export function addTask(title, remind_at, list, extra = {}) {
   const tops = state.open.filter((t) => !t.done);
   const position = tops.length ? Math.min(...tops.map((t) => t.position)) - STEP : 0;
-  const task = newTask({ title, remind_at, list, parent_id: null, position });
-  mutate({ type: 'create', task, body: { id: task.id, title, remind_at, list } });
+  const more = Object.fromEntries(Object.entries(extra).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+  const { repeat, ...fields } = more;
+  const task = newTask({ title, remind_at, list, parent_id: null, position, ...fields });
+  mutate({ type: 'create', task, body: { id: task.id, title, remind_at, list, ...more } });
   return task.id;
 }
 

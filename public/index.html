@@ -21,6 +21,7 @@
   <link rel="modulepreload" href="/route.js">
   <link rel="modulepreload" href="/calendar.js">
   <link rel="modulepreload" href="/calendarview.js">
+  <link rel="modulepreload" href="/composer.js">
   <link rel="modulepreload" href="/confetti.js">
   <link rel="modulepreload" href="/config.js">
   <link rel="modulepreload" href="/copies.js">
@@ -88,10 +89,7 @@
       <form id="add" autocomplete="off">
         <input id="add-title" data-i18n-attr="placeholder:ui.new_task_placeholder;aria-label:ui.new_task" placeholder="New task…" aria-label="New task" maxlength="500" enterkeyhint="done" autocomplete="off" required>
         <kbd class="add-key" aria-hidden="true">N</kbd>
-        <input id="add-remind" type="hidden">
-        <button id="add-when" type="button" aria-haspopup="dialog" data-i18n-attr="aria-label:ui.reminder;title:ui.reminder" aria-label="Reminder" title="Reminder"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></svg></button>
-        <button type="submit" data-i18n="ui.add">Add</button>
-        <button id="add-open" type="button" class="ghost" data-i18n="ui.add_details" data-i18n-attr="title:ui.add_details_title" title="Add and open the details (Shift+Enter)">Details</button>
+        <button id="add-send" type="submit" data-i18n="ui.add" data-i18n-attr="title:ui.add_title" title="Add (Shift+Enter: add and open)">Add</button>
       </form>
       <div id="drive" hidden></div>
       <div id="list" aria-live="polite"></div>
