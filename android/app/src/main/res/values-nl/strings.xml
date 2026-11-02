@@ -136,4 +136,20 @@
     <string name="quick_keep_open">Hierna nog een toevoegen</string>
     <string name="quick_added_named">Toegevoegd: %s</string>
     <string name="quick_failed">Niet toegevoegd (%s). Je tekst staat er nog, dus je kunt het opnieuw proberen.</string>
+    <string name="quick_place">Plek</string>
+    <string name="quick_place_when">Melden</string>
+    <string name="quick_place_enter">Bij aankomst</string>
+    <string name="quick_place_exit">Bij vertrek</string>
+    <string name="quick_place_here">Mijn huidige locatie</string>
+    <string name="quick_place_here_name">Locatie van %s</string>
+    <string name="quick_place_search">Adres zoeken</string>
+    <string name="quick_place_search_hint">Adres of naam van een plek</string>
+    <string name="quick_place_search_go">Zoeken</string>
+    <string name="quick_place_searching">Zoeken…</string>
+    <string name="quick_place_search_failed">Zoeken mislukt (%s).</string>
+    <string name="quick_place_nothing_found">Niets gevonden voor “%s”.</string>
+    <string name="quick_place_clear">Plek weghalen</string>
+    <string name="quick_place_locating">Je locatie opzoeken…</string>
+    <string name="quick_place_no_location">Je locatie is niet gevonden. Staat locatie aan?</string>
+    <string name="quick_place_no_permission">Tick mag je locatie nog niet altijd gebruiken, dus deze plek meldt niets. Sta het toe in Tick op deze telefoon.</string>
 </resources>

@@ -136,4 +136,20 @@
     <string name="quick_keep_open">Add another one after this</string>
     <string name="quick_added_named">Added: %s</string>
     <string name="quick_failed">Not added (%s). Your text is still here, so you can try again.</string>
+    <string name="quick_place">Place</string>
+    <string name="quick_place_when">Notify</string>
+    <string name="quick_place_enter">On arrival</string>
+    <string name="quick_place_exit">On leaving</string>
+    <string name="quick_place_here">My current location</string>
+    <string name="quick_place_here_name">Location of %s</string>
+    <string name="quick_place_search">Search for an address</string>
+    <string name="quick_place_search_hint">Address or name of a place</string>
+    <string name="quick_place_search_go">Search</string>
+    <string name="quick_place_searching">Searching…</string>
+    <string name="quick_place_search_failed">Search failed (%s).</string>
+    <string name="quick_place_nothing_found">Nothing found for “%s”.</string>
+    <string name="quick_place_clear">Remove place</string>
+    <string name="quick_place_locating">Finding your location…</string>
+    <string name="quick_place_no_location">Could not find your location. Is location on?</string>
+    <string name="quick_place_no_permission">Tick may not use your location all the time yet, so this place will not notify you. Allow it in Tick on this phone.</string>
 </resources>
