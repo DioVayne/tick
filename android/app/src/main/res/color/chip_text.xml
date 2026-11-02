@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tekst en icoon van een snelknop: wit op de gekozen (blauwe) knop. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#FFFFFF" android:state_selected="true" />
+    <item android:color="@color/widget_text" />
+</selector>

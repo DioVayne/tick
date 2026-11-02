@@ -58,7 +58,6 @@
     <string name="main_connected">Verbonden. %d open taken. Voeg nu de widget toe via je startscherm (lang indrukken, dan Widgets, dan Tick).</string>
     <string name="failed">Mislukt: %s</string>
     <string name="quick_hint">Nieuwe taak...</string>
-    <string name="quick_clear_reminder">Reminder wissen</string>
     <string name="quick_add">Toevoegen</string>
     <string name="quick_added">Toegevoegd</string>
     <string name="settings_reset">Standaard herstellen</string>
@@ -70,7 +69,6 @@
         <item>Brood halen</item>
         <item>Filmpje editen</item>
     </string-array>
-    <string name="quick_set_reminder">🔔 Reminder instellen</string>
     <string name="error_no_key">Geen sleutel ingesteld</string>
     <string name="widget_refreshed">Bijgewerkt ✓</string>
     <string name="widget_synced_at">Bijgewerkt %s</string>
@@ -116,9 +114,26 @@
     <string name="widget_view_today">Vandaag</string>
     <string name="widget_view_today_long">Vandaag en te laat</string>
     <string name="widget_empty_today">Niets meer voor vandaag</string>
-    <string name="quick_hint_list">Nieuwe taak in %s…</string>
     <string name="meta_repeat">Herhaalt</string>
     <string name="meta_place">Locatie</string>
     <string name="meta_shared">Gedeeld</string>
     <string name="meta_subtasks">Subtaken</string>
+    <!-- Snelle taak (QuickAddActivity) -->
+    <string name="quick_notes_hint">Omschrijving</string>
+    <string name="quick_today">Vandaag</string>
+    <string name="quick_tomorrow">Morgen</string>
+    <string name="quick_next_week">Volgende week</string>
+    <string name="quick_pick">Kies…</string>
+    <string name="quick_repeat">Herhalen</string>
+    <string name="quick_repeat_none">Niet herhalen</string>
+    <string name="quick_repeat_daily">Elke dag</string>
+    <string name="quick_repeat_weekly">Elke %s</string>
+    <string name="quick_repeat_biweekly">Om de week op %s</string>
+    <string name="quick_repeat_monthly">Elke maand op dag %d</string>
+    <string name="quick_repeat_yearly">Elk jaar op %s</string>
+    <string name="quick_notes">Omschrijving</string>
+    <string name="quick_list">Lijst</string>
+    <string name="quick_keep_open">Hierna nog een toevoegen</string>
+    <string name="quick_added_named">Toegevoegd: %s</string>
+    <string name="quick_failed">Niet toegevoegd (%s). Je tekst staat er nog, dus je kunt het opnieuw proberen.</string>
 </resources>

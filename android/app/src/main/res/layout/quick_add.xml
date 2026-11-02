@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Snelle taak (QuickAddActivity): een paneel onderaan over een donkere waas. Tik op de waas om te sluiten. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scrim"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#66000000">
+
+    <LinearLayout
+        android:id="@+id/sheet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/sheet_bg"
+        android:clickable="true"
+        android:focusable="false"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="16dp">
+
+        <View
+            android:layout_width="36dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:background="@drawable/sheet_handle" />
+
+        <!-- De lijst van de nieuwe taak; tik om een andere te kiezen. -->
+        <TextView
+            android:id="@+id/list"
+            style="@style/QuickChip"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/pill_bg"
+            android:drawablePadding="8dp"
+            android:drawableEnd="@drawable/ic_expand"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="bottom"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/field_bg"
+                android:hint="@string/quick_hint"
+                android:imeOptions="actionSend"
+                android:importantForAutofill="no"
+                android:inputType="textCapSentences"
+                android:maxLines="4"
+                android:minHeight="48dp"
+                android:paddingStart="14dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="10dp"
+                android:textColor="@color/widget_text"
+                android:textColorHint="@color/widget_muted"
+                android:textSize="17sp" />
+
+            <ImageButton
+                android:id="@+id/send"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/send_bg"
+                android:contentDescription="@string/quick_add"
+                android:src="@drawable/ic_send" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/notes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/field_bg"
+            android:gravity="top"
+            android:hint="@string/quick_notes_hint"
+            android:importantForAutofill="no"
+            android:inputType="textCapSentences|textMultiLine"
+            android:maxLines="6"
+            android:minLines="2"
+            android:paddingStart="14dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="10dp"
+            android:textColor="@color/widget_text"
+            android:textColorHint="@color/widget_muted"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
+        <!-- Wanneer: snelknoppen; de gekozen is blauw. -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginEnd="8dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_bell" />
+
+                <TextView android:id="@+id/when_today" style="@style/QuickChip" android:text="@string/quick_today" />
+                <TextView android:id="@+id/when_tomorrow" style="@style/QuickChip" android:text="@string/quick_tomorrow" />
+                <TextView android:id="@+id/when_week" style="@style/QuickChip" android:text="@string/quick_next_week" />
+                <TextView
+                    android:id="@+id/when_pick"
+                    style="@style/QuickChip"
+                    android:drawableStart="@drawable/ic_calendar"
+                    android:text="@string/quick_pick" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Herhalen en omschrijving. -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/repeat"
+                    style="@style/QuickChip"
+                    android:drawableStart="@drawable/ic_repeat"
+                    android:text="@string/quick_repeat" />
+
+                <TextView
+                    android:id="@+id/notes_toggle"
+                    style="@style/QuickChip"
+                    android:drawableStart="@drawable/ic_notes"
+                    android:text="@string/quick_notes" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Fout (rood) of "Toegevoegd" als de popup openblijft. -->
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <CheckBox
+            android:id="@+id/keep_open"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:buttonTint="@color/accent"
+            android:text="@string/quick_keep_open"
+            android:textColor="@color/widget_muted"
+            android:textSize="14sp" />
+    </LinearLayout>
+</FrameLayout>
