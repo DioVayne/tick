@@ -177,7 +177,7 @@ export function claimControl(task) {
     }, icon('user', 'sm'), t('slist.you_take'));
   }
   if (by) return el('span', { class: 'claim other' }, icon('user', 'sm'), t('slist.takes', { name: by.name }));
-  return el('button', { type: 'button', class: 'claim free', onclick: () => claim(task.id, true) }, t('slist.i_take'));
+  return el('button', { type: 'button', class: 'claim free', onclick: () => claim(task.id, true) }, icon('plus', 'sm'), t('slist.i_take'));
 }
 
 /** Het blok "Afgevinkt" onder de open taken van gedeelde lijst `name`, of null als er niets afgevinkt is. */
