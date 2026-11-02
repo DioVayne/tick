@@ -30,14 +30,14 @@ Within a shared list, only the list's owner can send someone a **copy** of a tas
 A task that you had already shared on its own with someone outside the list, before you shared the list, stays shared with them as an ordinary shared task: they keep it in their own list, get the usual notifications, and cannot use **Take it**.
 
 ## Sharing a task
-Open a top-level task and tap **Share**. Pick someone and choose how:
+Open a top-level task and tap **Do it together with…**. Pick someone and choose how:
 
 ![The share dialog: pick Alex or Sanne, or type a name, then choose Shared or Copy](screenshots/sharing.png)
 
 - **Shared:** one task for everyone. Done is done for everyone, and everyone can change it and add subtasks. Each person keeps it in their own list and order. A reminder (time or place) reaches everyone on it, so whoever passes the supermarket first does the shopping. When someone ticks it off or gives it a place, the others get a notification.
 - **Copy:** the other person gets their own copy, with all subtasks open. You each tick off your own.
 
-The other person gets a notification with **Accept** and **Decline**, and a bar in the app; an accepted task lands in their Inbox. Only the owner can invite others. Anyone on a shared task can leave it; the owner can remove people or withdraw an invitation. Deleting a shared task deletes it for everyone.
+The other person gets a notification with **Accept** and **Decline**, and a bar in the app; an accepted task lands in their Inbox. Only the owner can invite others. Anyone on a shared task can leave it; the owner can remove people or withdraw an invitation. Who is on it is listed in the task under *Together with*. Deleting a shared task deletes it for everyone.
 
 ## Seeing how far the others are
 Copies stay linked. On your copy you see a pill per person: their name with a small progress bar, or their name with ✓ when they are done. Progress counts their subtasks and the checklist lines in their notes. You never see their title, notes or subtasks.

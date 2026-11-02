@@ -1,7 +1,6 @@
 import { bindDrop, fillAttachmentsBox } from './attachments.js';
 import { confetti, isCouple } from './confetti.js';
 import { fillCopiesBox } from './copies.js';
-import { openDatePicker } from './datepicker.js';
 import { ask } from './dialog.js';
 import { autoGrow, createEditor } from './editor.js';
 import { icon } from './icons.js';
@@ -11,10 +10,11 @@ import { describeRule } from './repeat.js';
 import { openRepeatPicker } from './repeatpicker.js';
 import { openMap } from './map.js';
 import { renderMarkdown } from './markdown.js';
-import { locationLabel, wakeAndroidApp } from './places.js';
+import { formatRadius, wakeAndroidApp } from './places.js';
 import { $, checkOff, el, fmt, fromLocalInput, render, toLocalInput } from './render.js';
 import { addSubtask, claimedByOther, findDone, remove, sharedOf, snooze, state, toggleDone, update, updateQueued, watchTask } from './store.js';
-import { fillShareBox } from './share.js';
+import { fillShareBox, openShareDialog, shareNames } from './share.js';
+import { openWhenMenu, step } from './steps.js';
 
 // Detailpaneel (desktop) en taakscherm (mobiel): één opbouw per gekozen taak, daarna alleen bijwerken.
 // Zo overschrijft een verversing nooit het veld waarin je typt.
@@ -289,63 +289,47 @@ function build(t, readOnly) {
   });
   titleSize.observe(title);
 
-  // De reminder kies je in de eigen datumkiezer (met weekdagen); wissen daar is hetzelfde als Wissen ernaast.
-  const remindLabel = el('span', { class: 'lbl' });
-  const remindPill = el('button', {
-    class: 'pill remind', type: 'button', 'aria-haspopup': 'dialog', disabled: readOnly,
-    onclick: () => {
-      const task = current(id);
-      if (!task) return;
-      openDatePicker(remindPill, toLocalInput(remindOf(task)), (value) => {
-        if (value === null) { dropField(id, 'remind_at'); save(update(id, { remind_at: null })); return; }
-        setPending(id, 'remind_at', fromLocalInput(value));
-        flushSoon();
-        render(); // de knop en Herhalen meteen bijwerken, niet pas na het opslaan
-      }, { note: task.repeat ? tr('dp.only_this_time') : undefined }); // het ritme (repeat_at) blijft staan
-    },
-  }, icon('bell'), remindLabel);
+  // Wanneer, ritme, plek, lijst en delen: de tijdlijn van de invoerkaart (steps.js), getekend in fill(). Hier de acties.
+  // De reminder: eerst het korte menu, dan pas de datumkiezer; wissen daar is hetzelfde als Wissen ernaast.
+  const pickWhen = (anchor) => {
+    const task = current(id);
+    if (!task) return;
+    openWhenMenu(anchor, toLocalInput(remindOf(task)), (value) => {
+      if (!value) { dropField(id, 'remind_at'); save(update(id, { remind_at: null })); return; }
+      setPending(id, 'remind_at', fromLocalInput(value));
+      flushSoon();
+      render(); // de stap en Herhalen meteen bijwerken, niet pas na het opslaan
+    }, { note: task.repeat ? tr('dp.only_this_time') : undefined }); // het ritme (repeat_at) blijft staan
+  };
   // Verzetten en wissen winnen van een gekozen, nog niet opgeslagen tijd (die anders na de klik alsnog zou gaan).
-  const plusHour = el('button', { class: 'pill mini', type: 'button', onclick: () => { dropField(id, 'remind_at'); save(snooze(id, 60)); } }, tr('push.snooze'));
-  const clearRemind = el('button', {
-    class: 'pill mini', type: 'button', title: tr('detail.remove_reminder'),
-    onclick: () => { dropField(id, 'remind_at'); save(update(id, { remind_at: null })); },
-  }, tr('detail.clear'));
+  const snoozeRemind = () => { dropField(id, 'remind_at'); save(snooze(id, 60)); };
+  const clearRemind = () => { dropField(id, 'remind_at'); save(update(id, { remind_at: null })); };
 
   // Ritme: een gekozen, nog niet opgeslagen reminder gaat in dezelfde wijziging mee en wordt de nieuwe start.
-  const repeatLabel = el('span', { class: 'lbl' });
-  const repeatPill = el('button', {
-    class: 'pill repeat', type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', hidden: readOnly || !!t.parent_id,
-    onclick: () => {
-      const task = current(id);
-      if (!task) return;
-      const unsaved = hasPending(id, 'remind_at') ? pending.get(id).remind_at : null;
-      openRepeatPicker(repeatPill, task, (rule) => {
-        const body = { repeat: rule };
-        if (unsaved) { body.remind_at = unsaved; dropField(id, 'remind_at'); }
-        save(update(id, body));
-      }, unsaved);
-    },
-  }, icon('repeat'), repeatLabel);
+  const pickRepeat = (anchor) => {
+    const task = current(id);
+    if (!task) return;
+    const unsaved = hasPending(id, 'remind_at') ? pending.get(id).remind_at : null;
+    openRepeatPicker(anchor, task, (rule) => {
+      const body = { repeat: rule };
+      if (unsaved) { body.remind_at = unsaved; dropField(id, 'remind_at'); }
+      save(update(id, body));
+    }, unsaved);
+  };
+  const clearRepeat = () => save(update(id, { repeat: null }));
 
   // De Android-app pas wekken als de wijziging in de outbox staat: de intent kan de pagina laten navigeren.
   const setLocation = (location, since) => save(updateQueued(id, { location }).then(() => wakeAndroidApp(id, since)));
-  const locLabel = el('span', { class: 'lbl' });
-  const locPill = el('button', {
-    class: 'pill loc', type: 'button', disabled: readOnly,
-    onclick: async () => {
-      const task = current(id);
-      if (!task) return;
-      const since = task.updated_at ?? '';
-      const location = await openMap(task);
-      if (location) setLocation(location, since);
-    },
-  }, icon('place'), locLabel);
-  const clearLoc = el('button', {
-    class: 'pill mini', type: 'button', title: tr('detail.remove_location'),
-    onclick: () => setLocation(null, current(id)?.updated_at ?? ''),
-  }, tr('detail.clear'));
-  // Al gemeld: een eigen regel onder de plek, met de status als tekst en alleen "Opnieuw melden" als knop. Een tik
-  // zet de plek weer klaar (de Android-app zet de geofence terug via de wake); de regel zegt dat nog even (.flash).
+  const pickPlace = async () => {
+    const task = current(id);
+    if (!task) return;
+    const since = task.updated_at ?? '';
+    const location = await openMap(task);
+    if (location) setLocation(location, since);
+  };
+  const clearLoc = () => setLocation(null, current(id)?.updated_at ?? '');
+  // Al gemeld: een regel onder de plek, met de status als tekst en alleen "Opnieuw melden" als knop. Een tik zet de
+  // plek weer klaar (de Android-app zet de geofence terug via de wake); de regel zegt dat nog even (.flash).
   const rearmLoc = el('button', {
     class: 'linkbtn', type: 'button',
     onclick: () => {
@@ -360,22 +344,13 @@ function build(t, readOnly) {
   const rearmDone = el('span', { class: 'loc-done', hidden: true }, tr('detail.rearmed'));
   const locSub = el('div', { class: 'loc-sub', hidden: true }, locSubIdle, rearmDone);
 
-  const listLabel = el('span', { class: 'lbl' });
-  const listPill = el('button', {
-    class: 'pill list', type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false',
-    disabled: readOnly || !!t.parent_id, title: t.parent_id ? tr('detail.follows_parent') : false,
-    onclick: () => {
-      const task = current(id);
-      if (task) openListPicker(listPill, task.list, (name) => save(update(id, { list: name })));
-    },
-  }, icon('folder'), listLabel);
-
-  // Gedeelde lijst: per taak een melding bij afvinken, alleen als die voor de hele lijst uit staat (zie fill).
-  const watch = el('button', {
-    class: 'pill watch', type: 'button', 'aria-pressed': 'false',
-    onclick: () => { const task = current(id); if (task) save(watchTask(id, !task.watch)); },
-  }, icon('bell'), el('span', { class: 'lbl' }, tr('slist.watch')));
-  const watchRow = el('div', { class: 'prow', hidden: true }, watch);
+  const pickList = (anchor) => {
+    const task = current(id);
+    if (task) openListPicker(anchor, task.list, (name) => save(update(id, { list: name })));
+  };
+  // Gedeelde lijst: per taak een melding bij afvinken, alleen als die voor de hele lijst uit staat (zie drawRail).
+  const toggleWatch = () => { const task = current(id); if (task) save(watchTask(id, !task.watch)); };
+  const pickShare = () => { const task = current(id); if (task) openShareDialog(task); };
 
   const desc = el('div', { class: 'desc' });
   let editor = null;
@@ -402,7 +377,7 @@ function build(t, readOnly) {
   if (!t.parent_id) {
     subList = el('ul');
     const subInput = el('input', { placeholder: tr('detail.add_subtask_placeholder'), 'aria-label': tr('detail.add_subtask'), maxlength: '500' });
-    subs = el('div', { class: 'subs' },
+    subs = el('section', { class: 'subs dsect sect-subs' },
       el('h3', {}, tr('detail.subtasks')),
       subList,
       readOnly ? null : el('form', {
@@ -451,33 +426,30 @@ function build(t, readOnly) {
     },
   }, tr('detail.delete'));
 
-  // Herhalen hoort bij een datum: de rij verschijnt pas als er een reminder (of al een ritme) is; zie fill().
-  const repeatRow = el('div', { class: 'prow', hidden: true }, repeatPill);
-  const filesBox = el('section', { class: 'dfiles', hidden: true });
-  const shareBox = el('section', { class: 'dshare', hidden: true });
-  const copiesBox = el('section', { class: 'dcopies', hidden: true });
+  const rail = el('div', { class: 'rail' });
+  // Onder de stappen Samen met en Kopieën: wie er op zitten (share.js, copies.js).
+  const shareBox = el('div', { class: 'step-body dshare', hidden: true });
+  const copiesBox = el('div', { class: 'step-body dcopies', hidden: true });
+  // Omschrijving, subtaken en bijlagen: secties over de volle breedte, met een gekleurd puntje in de kop.
+  const filesBox = el('section', { class: 'dfiles dsect sect-file', hidden: true });
+  const noteSect = el('section', { class: 'dsect sect-note' }, el('h3', {}, tr('detail.description')), desc,
+    readOnly ? null : el('p', { class: 'md-hint' }, tr('detail.markdown_hint') + ' ',
+      el('a', { href: 'https://www.markdownguide.org/cheat-sheet/', target: '_blank', rel: 'noopener' }, tr('detail.markdown_link'))));
   $('#detail').replaceChildren(...[
     back,
     crumb,
     el('div', { class: 'dhead' }, check, title, pin),
-    // Wanneer, ritme, plek en lijst: één blok met een rij per eigenschap.
-    el('div', { class: 'dprops' },
-      el('div', { class: 'prow when' }, remindPill, plusHour, clearRemind),
-      repeatRow,
-      el('div', { class: 'prow loc-row' }, locPill, clearLoc),
-      locSub,
-      el('div', { class: 'prow' }, listPill),
-      watchRow),
-    desc,
-    readOnly ? null : el('p', { class: 'md-hint' }, tr('detail.markdown_hint') + ' ',
-      el('a', { href: 'https://www.markdownguide.org/cheat-sheet/', target: '_blank', rel: 'noopener' }, tr('detail.markdown_link'))),
+    rail,
+    noteSect,
     subs,
     filesBox,
-    copiesBox,
-    shareBox,
     el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, reopen, del)),
   ].filter(Boolean));
-  view = { watch, watchRow, reopen, repeatRow, filesBox, shareBox, copiesBox, id, readOnly, pin, title, titleSize, remindLabel, remindPill, plusHour, clearRemind, repeatPill, repeatLabel, locLabel, locSub, locSubIdle, rearmLoc, rearmDone, clearLoc, listLabel, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status };
+  view = {
+    id, readOnly, rail, railKey: '', lastKind: null, reopen, filesBox, shareBox, copiesBox, noteSect, pin, title, titleSize,
+    locSub, locSubIdle, rearmLoc, rearmDone, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status,
+    pickWhen, snoozeRemind, clearRemind, pickRepeat, clearRepeat, pickPlace, clearLoc, pickList, toggleWatch, pickShare,
+  };
 }
 
 function fill(t) {
@@ -493,9 +465,6 @@ function fill(t) {
   v.check.setAttribute('aria-label', lockedBy ? tr('slist.claimed_by', { name: lockedBy.name })
     : tr(state.justDone.has(t.id) ? 'render.undo_named' : done ? 'render.reopen_named' : 'render.check_named', { title: t.title }));
   v.check.title = lockedBy ? tr('slist.claimed_by', { name: lockedBy.name }) : '';
-  v.watchRow.hidden = done || !!t.parent_id || !t.shared_list || !sharedOf(t.list) || sharedOf(t.list).notify_done; // geen lid: geen sharedOf
-  v.watch.setAttribute('aria-pressed', String(!!t.watch));
-  v.watch.classList.toggle('on', !!t.watch);
   if (v.pin) {
     v.pin.setAttribute('aria-pressed', String(!!t.pinned));
     v.pin.title = tr(t.pinned ? 'detail.unpin' : 'detail.pin');
@@ -505,27 +474,15 @@ function fill(t) {
   // Het veld waarin je typt (focus of nog niet opgeslagen) blijft staan; de rest volgt de server.
   if (document.activeElement !== v.title && !hasPending(t.id, 'title') && v.title.value !== t.title) v.title.value = t.title;
   autoGrow(v.title);
-  const remindAt = remindOf(t);
-  v.remindLabel.textContent = remindAt ? fmt(remindAt) : tr('detail.set_reminder');
-  const past = remindAt && new Date(remindAt) < new Date();
-  v.remindPill.classList.toggle('b', !!remindAt && !past);
-  v.remindPill.classList.toggle('past', !!past);
-  v.remindPill.classList.toggle('none', !remindAt);
-  v.remindPill.title = remindAt ? tr('detail.reminder_at', { when: fmt(remindAt) }) : tr('ui.reminder');
-  v.plusHour.hidden = done || !remindAt;
-  v.clearRemind.hidden = done || !remindAt;
-  const rep = t.repeat;
-  v.repeatLabel.textContent = (rep ? describeRule(rep.rule, rep.start) : tr('rep.none'));
-  v.repeatRow.hidden = v.repeatPill.hidden || (!remindAt && !rep);
+  fillShareBox(v.shareBox, t, done);
+  fillCopiesBox(v.copiesBox, t);
+  drawRail(t);
   // Al gemeld: de plek doet niets meer tot hij opnieuw gekozen wordt of "Opnieuw melden" eronder getikt.
-  v.locLabel.textContent = t.location ? locationLabel(t.location) : tr('detail.no_location');
   const flash = v.locSub.classList.contains('flash');
   v.locSub.hidden = done || !t.location || !(t.location_notified || flash);
   v.locSubIdle.hidden = flash;
   v.rearmDone.hidden = !flash;
   v.rearmLoc.hidden = v.readOnly;
-  v.clearLoc.hidden = done || !t.location;
-  v.listLabel.textContent = t.list + ' ▾';
 
   const text = t.description ?? '';
   if (v.descValue !== text) {
@@ -564,8 +521,62 @@ function fill(t) {
     }
     v.subs.hidden = done && !kids.length; // afgerond zonder subtaken: geen leeg kopje
   }
+  v.noteSect.hidden = done && !text.trim(); // afgerond zonder omschrijving: geen leeg kopje
   fillAttachmentsBox(v.filesBox, t, done);
-  fillCopiesBox(v.copiesBox, t);
-  fillShareBox(v.shareBox, t, done);
   showStatus();
+}
+
+/**
+ * De tijdlijn: herinnering, ritme, plek, lijst, en delen of de melding bij afvinken in een gedeelde lijst. Alleen
+ * opnieuw opbouwen als er iets veranderde: een stap die onder je vinger vervangen wordt, slikt op een touchscherm de tik.
+ */
+function drawRail(t) {
+  const v = view;
+  const done = v.readOnly;
+  const remindAt = remindOf(t);
+  const past = !!remindAt && new Date(remindAt) < new Date();
+  const loc = t.location;
+  const list = t.shared_list ? sharedOf(t.list) : null; // geen lid: geen sharedOf
+  const watchable = !done && !t.parent_id && !!list && !list.notify_done;
+  const names = shareNames(t);
+  const owner = !t.share || t.share.mine;
+  // In een gedeelde lijst staan de leden bij de lijst; de eigenaar kan wel een kopie geven aan iemand anders.
+  const shareShown = !t.parent_id && (list ? list.mine && !done : !!t.share || !done);
+  const key = JSON.stringify([done, remindAt, past, t.repeat, loc, t.list, t.parent_id, watchable, !!t.watch, shareShown, names, owner, !!t.copies && !t.parent_id]);
+  if (v.railKey === key) return;
+  v.railKey = key;
+  // Na een keuze is de knop waarmee de kiezer openging vervangen: de focus gaat terug naar dezelfde stap.
+  const active = /** @type {HTMLElement | null} */ (document.activeElement);
+  const refocus = v.rail.contains(active) ? active?.closest('.step')?.className.match(/step-(\w+)/)?.[1]
+    : !active || active === document.body ? v.lastKind : null;
+  v.lastKind = null;
+  const opener = (kind, fn) => (done ? null : (anchor) => { v.lastKind = kind; fn(anchor); });
+  const clear = (run, title) => ({ label: tr('detail.clear'), title, run });
+  v.rail.replaceChildren(...[
+    // Afgerond: alleen wat er was, geen lege zinnen.
+    done && !remindAt ? null : step({
+      kind: 'when', icon: 'bell', on: !!remindAt, past, lead: tr(remindAt ? 'add.when_set' : 'add.when'), value: remindAt ? fmt(remindAt) : null,
+      open: opener('when', v.pickWhen),
+      actions: done || !remindAt ? [] : [{ label: tr('push.snooze'), run: v.snoozeRemind }, clear(v.clearRemind, tr('detail.remove_reminder'))],
+    }),
+    // Een subtaak herhaalt niet; afgerond alleen als er een ritme was.
+    t.parent_id || done && !t.repeat ? null : step({
+      kind: 'repeat', icon: 'repeat', on: !!t.repeat, lead: t.repeat ? '' : tr('add.repeat'), value: t.repeat ? describeRule(t.repeat.rule, t.repeat.start) : null,
+      open: opener('repeat', v.pickRepeat), actions: done || !t.repeat ? [] : [clear(v.clearRepeat)],
+    }),
+    done && !loc ? null : step({
+      kind: 'place', icon: 'place', on: !!loc, lead: loc ? tr(loc.trigger === 'exit' ? 'add.leave' : 'add.arrive') : tr('add.place'),
+      value: loc?.name ?? null, note: loc ? formatRadius(loc.radius) : null, sub: v.locSub,
+      open: opener('place', v.pickPlace), actions: done || !loc ? [] : [clear(v.clearLoc, tr('detail.remove_location'))],
+    }),
+    // Een subtaak volgt de lijst van de hoofdtaak: gewone tekst, geen knop.
+    step({ kind: 'list', icon: 'folder', on: false, lead: tr('add.in'), value: t.list, note: t.parent_id ? tr('detail.follows_parent') : null, open: t.parent_id ? null : opener('list', v.pickList) }),
+    watchable ? step({ kind: 'watch', icon: 'eye', on: !!t.watch, lead: tr('slist.watch'), open: opener('watch', v.toggleWatch), pressed: !!t.watch }) : null,
+    shareShown ? step({
+      kind: 'share', icon: 'users', on: names.length > 0, lead: list ? tr('share.with_someone') : tr(names.length ? 'add.share_set' : 'add.share'),
+      value: names.join(', ') || null, open: owner ? opener('share', v.pickShare) : null, body: v.shareBox,
+    }) : null,
+    t.copies && !t.parent_id ? step({ kind: 'copies', icon: 'users', on: true, lead: tr('copy.heading'), body: v.copiesBox }) : null,
+  ].filter(Boolean));
+  if (refocus) /** @type {HTMLElement | null} */ (v.rail.querySelector(`.step-${refocus} button.step-head`))?.focus({ preventScroll: true });
 }
