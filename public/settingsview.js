@@ -19,6 +19,7 @@ import { formatRadius, loadPlaces } from './places.js';
 import { editPlace } from './map.js';
 import { timeButton } from './timepicker.js';
 import { badgeOff, setBadgeOff } from './badge.js';
+import { setDriveMode } from './driveview.js';
 
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
@@ -26,7 +27,7 @@ const MIN_PASSWORD = 8;
 const RESCUE = `npx wrangler d1 execute DB --remote --command "UPDATE users SET password_hash = NULL WHERE role = 'admin'"`;
 const ENV_SECRET = { 'env-api': 'API_TOKEN', 'env-inbox': 'INBOX_TOKEN' };
 
-/** @typedef {{ timeZone: string, reminderTime: string, overdueTime: string | null, weekStart: 'mon' | 'sun', defaultLocale: 'en' | 'nl', fallbackWebhook: string | null, fallbackFromEnv: boolean, fallbackOverride: boolean, fallbackEnvSet: boolean, background: string | null }} Settings */
+/** @typedef {{ timeZone: string, reminderTime: string, overdueTime: string | null, weekStart: 'mon' | 'sun', defaultLocale: 'en' | 'nl', fallbackWebhook: string | null, fallbackFromEnv: boolean, fallbackOverride: boolean, fallbackEnvSet: boolean, background: string | null, driveMode: boolean }} Settings */
 
 const S = {
   open: false,
@@ -216,6 +217,7 @@ function secret(label, value) {
 function setSettings(s) {
   S.settings = s;
   S.online = true;
+  if (typeof s.driveMode === 'boolean') CONFIG.driveMode = s.driveMode; // elders gewijzigd: de schakelaar klopt (aanzetten vraagt hier nog niets)
   applyBackground(s.background ?? null);
   // De URL uit de installatie is een secret: die komt niet in de cache.
   storeSet(CACHE_KEY, JSON.stringify(s.fallbackFromEnv ? { ...s, fallbackWebhook: null } : s));
@@ -227,7 +229,7 @@ function cachedSettings() {
     const c = JSON.parse(storeGet(CACHE_KEY) ?? 'null');
     if (c && typeof c === 'object' && typeof c.timeZone === 'string') return c;
   } catch { /* kapotte cache */ }
-  return { timeZone: CONFIG.timeZone, reminderTime: CONFIG.reminderTime, overdueTime: '09:00', weekStart: CONFIG.weekStart, defaultLocale: CONFIG.defaultLocale, fallbackWebhook: null, fallbackFromEnv: false, fallbackOverride: false, fallbackEnvSet: false, background: null };
+  return { timeZone: CONFIG.timeZone, reminderTime: CONFIG.reminderTime, overdueTime: '09:00', weekStart: CONFIG.weekStart, defaultLocale: CONFIG.defaultLocale, fallbackWebhook: null, fallbackFromEnv: false, fallbackOverride: false, fallbackEnvSet: false, background: null, driveMode: CONFIG.driveMode !== false };
 }
 
 async function fetchSettings() {
@@ -360,7 +362,20 @@ function paintDisplay() {
       ds.font ?? 'm', (v) => setDisplay('font', v))),
     row(t('set.density'), seg(t('set.density'), [['compact', t('set.density_compact')], ['normal', t('set.density_normal')], ['roomy', t('set.density_roomy')]],
       ds.density ?? 'normal', (v) => setDisplay('density', v))),
-    displayPreview());
+    displayPreview(),
+    driveRow());
+}
+
+/** Rijmodus: per account (op al je apparaten), dus alleen online te wijzigen. Aanzetten vraagt zo nodig om je locatie. */
+function driveRow() {
+  const sw = /** @type {HTMLInputElement} */ (el('input', { type: 'checkbox', role: 'switch', class: 'set-switch', 'aria-label': t('set.drive') }));
+  sw.checked = CONFIG.driveMode !== false;
+  sw.addEventListener('change', async () => {
+    const want = sw.checked;
+    if (!await save({ driveMode: want }, () => { sw.checked = !want; })) return;
+    if (!await setDriveMode(want)) toast(t('set.drive_no_location'));
+  });
+  return row(t('set.drive'), sw, t('set.drive_note'));
 }
 
 const displayPreview = () => el('ul', { class: 'tasks set-preview', 'aria-hidden': 'true' },

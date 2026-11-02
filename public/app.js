@@ -14,6 +14,7 @@ import { addTask, init, lists, load, on, state } from './store.js';
 import { parseHash } from './route.js';
 import { normName } from './lists.js';
 import { startBadge, updateBadge } from './badge.js';
+import { startDriveMode } from './driveview.js';
 
 on('change', () => { render(); refreshCalendar(); updateBadge(); });
 startBadge(() => state.open);
@@ -139,6 +140,7 @@ const params = new URLSearchParams(location.search);
 initAndroidApp(params, { openDevices: () => openSettings() }); // haalt ?app en ?pair uit de adresbalk
 const updateLocationBar = startLocationBar({ hasLocationTasks: () => state.open.some((t) => t.location), openDevices: () => openSettings() });
 on('change', updateLocationBar);
+startDriveMode();
 if (params.has('add')) $('#add-title').focus();
 // Uit een uitnodigingsmelding: de balk met Accepteren en Weigeren in beeld.
 const openShare = params.get('share');

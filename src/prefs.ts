@@ -29,6 +29,8 @@ export type UserPrefs = {
   fallbackEnvSet: boolean;
   /** Versie van de achtergrondfoto (zie background.ts), null als er geen is. */
   background: string | null;
+  /** Rijmodus: groter scherm als de PWA merkt dat je rijdt (public/drive.js). Standaard aan; de rij `drive_mode` = 'off' zet hem uit. */
+  driveMode: boolean;
 };
 
 export type Prefs = InstallPrefs & UserPrefs;
@@ -93,6 +95,7 @@ export async function loadUserPrefs(env: Env, user: Pick<User, 'id' | 'role'>, r
     fallbackOverride: override,
     fallbackEnvSet: !!envHook,
     background: env.FILES ? row.get('background') || null : null,
+    driveMode: row.get('drive_mode') !== 'off',
   };
 }
 

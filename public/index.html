@@ -29,6 +29,8 @@
   <link rel="modulepreload" href="/db.js">
   <link rel="modulepreload" href="/detail.js">
   <link rel="modulepreload" href="/dialog.js">
+  <link rel="modulepreload" href="/drive.js">
+  <link rel="modulepreload" href="/driveview.js">
   <link rel="modulepreload" href="/editor.js">
   <link rel="modulepreload" href="/help.js">
   <link rel="modulepreload" href="/i18n.js">
@@ -82,6 +84,7 @@
     <div class="scrim"></div>
     <main id="main">
       <p id="net" class="net" role="status" hidden></p>
+      <div id="drive-bar" class="drive-bar" role="status" hidden></div>
       <form id="add" autocomplete="off">
         <input id="add-title" data-i18n-attr="placeholder:ui.new_task_placeholder;aria-label:ui.new_task" placeholder="New task…" aria-label="New task" maxlength="500" enterkeyhint="done" autocomplete="off" required>
         <kbd class="add-key" aria-hidden="true">N</kbd>
@@ -90,6 +93,7 @@
         <button type="submit" data-i18n="ui.add">Add</button>
         <button id="add-open" type="button" class="ghost" data-i18n="ui.add_details" data-i18n-attr="title:ui.add_details_title" title="Add and open the details (Shift+Enter)">Details</button>
       </form>
+      <div id="drive" hidden></div>
       <div id="list" aria-live="polite"></div>
       <p id="status" class="status" role="status"></p>
     </main>

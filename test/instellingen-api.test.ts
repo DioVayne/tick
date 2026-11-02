@@ -58,10 +58,21 @@ describe('instellingen-API', () => {
   });
 
   it.each([
-    [{ timeZone: 'Mars/Olympus' }], [{ reminderTime: '25:00' }], [{ weekStart: 'tue' }], [{ defaultLocale: 'de' }],
+    [{ timeZone: 'Mars/Olympus' }], [{ reminderTime: '25:00' }], [{ weekStart: 'tue' }], [{ defaultLocale: 'de' }], [{ driveMode: 'off' }],
     [{ fallbackWebhook: 'http://x' }], [{ fallbackWebhook: `https://x.nl/${'a'.repeat(2000)}` }],
   ])('weigert %o met 400', async (body) => {
     expect((await patch(body)).status).toBe(400);
+  });
+
+  it('rijmodus: standaard aan, uit bewaard als rij, weer aan wist de rij; config.js geeft hem mee', async () => {
+    const cookie = await session();
+    expect(await json(await call('/api/settings', { auth: null, headers: { cookie } }))).toMatchObject({ driveMode: true });
+    expect(await json(await patch({ driveMode: false }))).toMatchObject({ driveMode: false });
+    const key = env.DB.prepare("SELECT value FROM user_settings WHERE user_id = ? AND key = 'drive_mode'").bind(ADMIN_ID);
+    expect((await key.first<{ value: string }>())?.value).toBe('off');
+    expect(await (await call('/config.js', { auth: null, headers: { cookie } })).text()).toContain('"driveMode":false');
+    expect(await json(await patch({ driveMode: true }))).toMatchObject({ driveMode: true });
+    expect(await key.first()).toBeNull();
   });
 
   it('webhook: een BOM en witruimte aan begin en eind gaan eraf vóór het opslaan', async () => {

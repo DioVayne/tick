@@ -14,9 +14,9 @@ const MAX_WEBHOOK = 2000;
 
 /** Het antwoord van de API; de URL uit FALLBACK_WEBHOOK is een secret en gaat nooit mee (alleen dat hij er is). */
 function view(p: Prefs) {
-  const { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background } = p;
+  const { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background, driveMode } = p;
   const fallbackWebhook = fallbackFromEnv ? null : p.fallbackWebhook;
-  return { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackWebhook, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background };
+  return { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackWebhook, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background, driveMode };
 }
 
 const validZone = (tz: unknown): tz is string => {
@@ -86,6 +86,11 @@ settingsApi.patch('/', async (c) => {
     if (body.weekStart !== 'mon' && body.weekStart !== 'sun') throw new HttpError(400, 'err.invalid_week_start');
     next.weekStart = body.weekStart;
     writes.push(['week_start', body.weekStart]);
+  }
+  if ('driveMode' in body) {
+    if (typeof body.driveMode !== 'boolean') throw new HttpError(400, 'err.invalid_drive_mode');
+    next.driveMode = body.driveMode;
+    writes.push(['drive_mode', body.driveMode ? null : 'off']); // aan = geen rij, de standaard
   }
   if ('defaultLocale' in body) {
     if (c.get('user').role !== 'admin') throw new HttpError(403, 'err.admin_only');
