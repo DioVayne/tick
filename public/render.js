@@ -512,8 +512,6 @@ function stopListDrop() {
 
 const findOpen = (id) => state.open.find((t) => t.id === id);
 
-const isTouch = (evt) => evt.pointerType === 'touch' || evt.type === 'touchstart';
-
 // Een vinger die na het slepen loslaat op het vinkje mag de taak niet afvinken.
 let dragEnded = 0;
 document.addEventListener('click', (e) => {
@@ -526,10 +524,11 @@ document.addEventListener('touchmove', (e) => { if (e.cancelable && document.que
 function enableSorting(root) {
   root.querySelectorAll('ul.tasks').forEach((ul) => {
     const sortable = new Sortable(ul, {
-      // Muis: alleen aan het greepje. Aanraking: ook de rij vasthouden en slepen (kort scrollen of vegen blijft gewoon werken).
-      filter: (evt) => !isTouch(evt) && !evt.target.closest('.grip') || isTouch(evt) && !!evt.target.closest('input, textarea, button:not(.title, .check), a, select'),
-      preventOnFilter: false,
-      delay: 250, delayOnTouchOnly: true, touchStartThreshold: 8,
+      // Muis en aanraking: de rij even vasthouden en dan slepen (kort scrollen, vegen of klikken blijft gewoon werken).
+      // Terugval in plaats van native slepen: in Firefox start native slepen niet vanaf een knop, zoals de titel.
+      filter: (evt) => !!evt.target.closest('input, textarea, button:not(.title, .check), a, select'),
+      preventOnFilter: false, forceFallback: true,
+      delay: 250, touchStartThreshold: 8,
       animation: 150, direction: 'vertical',
       onStart: (evt) => { if (ul.dataset.parent === '' && wide.matches) startListDrop(evt.item.dataset.id); },
       // Slepen blijft binnen het eigen deel: een vastgepinde taak niet tussen de andere, en andersom.

@@ -35,7 +35,7 @@ A task can have one level of subtasks. A subtask follows its parent: same list, 
 - A list can be shared with others, so you all work in the same list: see [Sharing a list](sharing.md#sharing-a-list).
 
 ## Order, pinning, dragging and swiping
-- **Drag** a task to change the order: with a mouse by its **⋮⋮** handle, on a touch screen by holding the task (the checkbox works too) for a moment and then dragging (a quick swipe up or down still scrolls, sideways still swipes). On a wide screen you can also drop it on a list in the sidebar to move it, or on **Trash** to delete it.
+- **Drag** a task to change the order: hold the task (the checkbox works too) for a moment and then drag. With a mouse, a short click still opens the task; on a touch screen a quick swipe up or down still scrolls and sideways still swipes, and the **⋮⋮** handle drags straight away. On a wide screen you can also drop it on a list in the sidebar to move it, or on **Trash** to delete it.
 - **Pin** a task to keep it at the top of its list. Only top-level tasks can be pinned.
 - **Swipe** (phone): to the left deletes the task, to the right puts it in another list. *Undo* shows for a few seconds.
 
