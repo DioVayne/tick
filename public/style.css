@@ -190,6 +190,25 @@ li.task.swipe-go { transition: translate .18s ease-in; }
 .done .title { transition: color .15s; }
 .title { flex: 1; text-align: left; background: transparent; color: var(--text); padding: 4px 2px; min-height: 38px; font-size: .9375rem; word-break: break-word; }
 .done .title { text-decoration: line-through; color: var(--muted); }
+/* Net afgevinkt (render.js): omgekeerde kleuren, Annuleren rechts en een balkje dat in UNDO_MS leegloopt. Hoofdtaken staan
+   in het bakje onderin, dat onderaan het scherm blijft; boven de +-knop als die er is (zelfde regel als de toast). */
+ul.tray { position: sticky; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 2; margin-top: 6px; }
+@media (max-width: 1023.98px) {
+  body:not(.task-open):not(.map-open):not(:has(.appbar)):not(:has(#add:focus-within)):has(#fab:not([hidden])) ul.tray { bottom: calc(84px + env(safe-area-inset-bottom)); }
+}
+ul.tray > li.task { box-shadow: 0 4px 16px var(--shadow); }
+li.task.pending, ul.sub > li.task.pending, li.task.pending:has(> .row:hover), li.task.sel.pending, li.task.sel.pending:has(> .row:hover) { position: relative; background: var(--text); color: var(--bg); }
+ul.sub > li.task.pending { border-radius: 8px; }
+li.task.pending > .row > .title { color: color-mix(in srgb, var(--bg) 72%, var(--text)); }
+li.task.pending > .row > .lpill { color: var(--bg); background: color-mix(in srgb, var(--bg) 18%, transparent); }
+li.task.pending > .meta { color: color-mix(in srgb, var(--bg) 72%, var(--text)); }
+.row > .undo { flex: none; margin-left: auto; min-height: 32px; padding: 4px 10px; border-radius: 999px; background: transparent; color: inherit; font-weight: 600; font-size: .875rem; }
+.row > .lpill ~ .undo { margin-left: 0; }
+.row > .undo:hover { background: color-mix(in srgb, var(--bg) 16%, transparent); }
+.undo-bar { position: absolute; left: 12px; right: 12px; bottom: 2px; height: 2px; border-radius: 1px; background: currentColor; opacity: .45; pointer-events: none;
+  transform-origin: left; animation: undo-drain var(--undo-ms, 5s) linear forwards; animation-delay: calc(-1 * var(--elapsed, 0ms)); }
+@keyframes undo-drain { to { transform: scaleX(0); } }
+.tray-more button { width: 100%; min-height: 30px; padding: 4px 12px; border-radius: 10px; background: color-mix(in srgb, var(--text) 82%, var(--bg)); color: var(--bg); font-size: .8125rem; text-align: left; box-shadow: 0 4px 16px var(--shadow); }
 /* Titelveld van de gekozen taak (desktop): even hoog als de knop, de tekst op dezelfde plek. */
 textarea.title-edit { display: block; min-width: 0; min-height: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none; outline: none; padding: 8.5px 2px; line-height: 1.4; resize: none; overflow: hidden; overflow-wrap: anywhere; cursor: text; }
 /* Informatie (tijd, wie, omschrijving) blijft grijs; alleen wat te laat is of een actie vraagt krijgt kleur. */

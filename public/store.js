@@ -12,7 +12,7 @@ const REPEAT_UNDO_MS = 15 * 60_000; // zo lang kan een doorgeschoven herhaling n
 // Oude stand van een doorgeschoven herhalende taak, alleen in het geheugen: id -> { next, at, remind_at, notified, location_notified, kids, ms }.
 const undoRepeat = new Map();
 
-// Net afgevinkte taken (justDone): blijven even zichtbaar (doorgestreept) zodat je ze kunt terugzetten en de lijst niet verspringt.
+// Net afgevinkte taken (justDone): blijven even zichtbaar (onderin de lijst, met Annuleren) zodat je ze kunt terugzetten.
 export const state = {
   open: [], done: [], showDone: false, doneLoading: false, list: null, selected: null, justDone: new Map(), query: '',
   // Afgeronde treffers bij zoeken buiten Afgerond (de server zoekt): { q, tasks } voor de zoekterm q, of null.
@@ -500,7 +500,7 @@ export function toggleDone(t) {
     state.justDone.delete(t.id);
     changed();
   }, UNDO_MS);
-  state.justDone.set(t.id, { timer, task: t });
+  state.justDone.set(t.id, { timer, task: t, at: Date.now() }); // at: voor het aftelbalkje in de lijst
   return update(t.id, t.repeat && !t.parent_id ? { done: true, occurrence: t.repeat.at } : { done: true });
 }
 
