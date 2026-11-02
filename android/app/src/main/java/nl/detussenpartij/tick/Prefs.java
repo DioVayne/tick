@@ -262,6 +262,15 @@ final class Prefs {
         sp(c).edit().putString("locRearm", r.toString()).commit();
     }
 
+    /** "Hierna nog een toevoegen" in de snelle-taak-popup: na Toevoegen blijft hij open. */
+    static boolean quickKeepOpen(Context c) {
+        return sp(c).getBoolean("quickKeepOpen", false);
+    }
+
+    static void setQuickKeepOpen(Context c, boolean on) {
+        sp(c).edit().putBoolean("quickKeepOpen", on).apply();
+    }
+
     /** "Op tijd melden onderweg" staat aan (de knop in "Tick op deze telefoon"). */
     static boolean roadOn(Context c) {
         return sp(c).getBoolean("roadOn", false);

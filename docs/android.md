@@ -23,7 +23,15 @@ Tick tasks off right there (you get 3 seconds to undo), tap a task to open it in
 Android notices a place a few minutes late, so by car or bike you would be past it. Turn on **On time on the road** in *Tick on this phone* and Tick makes arrival circles bigger while you drive or cycle. How it works: [Places, On the road](places.md#on-the-road).
 
 ## Quick add and sharing to Tick
-**➕** on the widget, the **New task** shortcut on the app icon, and *Share* from another app all add a task. A date without a time gets 09:00 here, not your own reminder time.
+**➕** on the widget, the **New task** shortcut on the app icon, and *Share* from another app all open a panel at the bottom of the screen. Type the title and tap **↑** (or Send on the keyboard). Under the title you can:
+- **choose the list** with the button at the top (it starts on the widget's list, or Inbox);
+- **set a reminder** with *Today* (the next whole hour), *Tomorrow* or *Next week* (09:00), or *Pick…* for any date and time. Tap the chosen button again to remove the reminder. From a *Today and overdue* widget the panel starts on *Today*, so the new task shows up in that widget;
+- **repeat** the task every day, every week or every other week on that weekday, every month on that day, or every year;
+- **add a description** with *Description*.
+
+Tick *Add another one after this* to keep the panel open, so you can type several tasks in a row; Tick remembers this choice. If adding fails (for example without a connection), the panel stays open with your text and says why, so you can try again.
+
+A date here uses 09:00, not your own reminder time.
 
 ## When something does not work
 - **No place notifications:** check in *Tick on this phone* that location is allowed all the time and that battery saving does not stop the app.

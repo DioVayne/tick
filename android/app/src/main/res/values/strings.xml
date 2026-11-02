@@ -58,7 +58,6 @@
     <string name="main_connected">Connected. %d open tasks. Now add the widget from your home screen (long-press, then Widgets, then Tick).</string>
     <string name="failed">Failed: %s</string>
     <string name="quick_hint">New task…</string>
-    <string name="quick_clear_reminder">Clear reminder</string>
     <string name="quick_add">Add</string>
     <string name="quick_added">Added</string>
     <string name="settings_reset">Restore defaults</string>
@@ -70,7 +69,6 @@
         <item>Buy bread</item>
         <item>Edit the video</item>
     </string-array>
-    <string name="quick_set_reminder">🔔 Set reminder</string>
     <string name="error_no_key">no API key set</string>
     <string name="widget_refreshed">Up to date ✓</string>
     <string name="widget_synced_at">Updated %s</string>
@@ -116,9 +114,26 @@
     <string name="widget_view_today">Today</string>
     <string name="widget_view_today_long">Today and overdue</string>
     <string name="widget_empty_today">Nothing left for today</string>
-    <string name="quick_hint_list">New task in %s…</string>
     <string name="meta_repeat">Repeats</string>
     <string name="meta_place">Location</string>
     <string name="meta_shared">Shared</string>
     <string name="meta_subtasks">Subtasks</string>
+    <!-- Snelle taak (QuickAddActivity) -->
+    <string name="quick_notes_hint">Description</string>
+    <string name="quick_today">Today</string>
+    <string name="quick_tomorrow">Tomorrow</string>
+    <string name="quick_next_week">Next week</string>
+    <string name="quick_pick">Pick…</string>
+    <string name="quick_repeat">Repeat</string>
+    <string name="quick_repeat_none">No repeat</string>
+    <string name="quick_repeat_daily">Every day</string>
+    <string name="quick_repeat_weekly">Every %s</string>
+    <string name="quick_repeat_biweekly">Every other %s</string>
+    <string name="quick_repeat_monthly">Monthly on day %d</string>
+    <string name="quick_repeat_yearly">Every year on %s</string>
+    <string name="quick_notes">Description</string>
+    <string name="quick_list">List</string>
+    <string name="quick_keep_open">Add another one after this</string>
+    <string name="quick_added_named">Added: %s</string>
+    <string name="quick_failed">Not added (%s). Your text is still here, so you can try again.</string>
 </resources>

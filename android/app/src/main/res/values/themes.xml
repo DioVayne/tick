@@ -15,5 +15,33 @@
         <item name="android:windowAnimationStyle">@null</item>
         <item name="android:backgroundDimEnabled">false</item>
     </style>
-    <style name="DialogTheme" parent="@android:style/Theme.DeviceDefault.Dialog.Alert" />
+    <!-- QuickAddActivity: paneel onderaan over een donkere waas (de waas en het paneel tekent de layout zelf). DayNight,
+         zodat de datum-, tijd- en lijstkiezers de donkere modus volgen. -->
+    <style name="QuickAddTheme" parent="@android:style/Theme.DeviceDefault.DayNight">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:windowSoftInputMode">stateVisible|adjustResize</item>
+    </style>
+    <!-- Snelknop in de popup (chip_bg): gekozen wordt hij blauw met witte tekst. -->
+    <style name="QuickChip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">36dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:background">@drawable/chip_bg</item>
+        <item name="android:textColor">@color/chip_text</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:drawablePadding">6dp</item>
+        <item name="android:drawableTint">@color/chip_text</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
 </resources>
