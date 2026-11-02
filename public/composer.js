@@ -34,6 +34,7 @@ let more = false; // omschrijving, subtaken en bijlage in beeld
 let editing = /** @type {'description' | 'subtasks' | null} */ (null);
 let focusEditor = false; // het tekstvak van `editing` krijgt bij de volgende draw de focus
 let form, input, rail, moreButton, fileInput;
+let peek = false; // het veld heeft de focus: de rij icoontjes staat (zolang de kaart nog niet open is)
 
 const defaultList = () => (!state.showDone && !state.showTrash && state.list) || 'Inbox';
 const listOf = () => v.list ?? defaultList();
@@ -47,12 +48,31 @@ export function initComposer() {
   rail = el('div', { class: 'add-rail' });
   moreButton = el('button', { type: 'button', class: 'add-more-btn', onclick: () => { more = true; draw(); } }, icon('plus'), t('add.more'));
   fileInput = el('input', { type: 'file', multiple: true, hidden: true, onchange: () => { addLocalFiles(fileInput.files); fileInput.value = ''; } });
-  form.append(el('div', { class: 'add-fold' }, el('div', {}, rail, moreButton)), fileInput);
+  // Bij focus, nog voor de eerste letter: één rij icoontjes. Elk opent meteen zijn kiezer, zodat je ook eerst een tijd
+  // of plek kunt kiezen en daarna de titel typt. Na de eerste letter (of een keuze) staat de volledige tijdlijn er.
+  const peekButton = (kind, ico, label, onOpen) => el('button', {
+    type: 'button', class: `add-peek-btn step-${kind}`, 'aria-label': label, title: label, onclick: (e) => onOpen(e.currentTarget),
+  }, icon(ico));
+  const peekRow = el('div', { class: 'add-peek' },
+    peekButton('when', 'bell', t('add.when'), pickWhen),
+    peekButton('repeat', 'repeat', t('add.repeat'), pickRepeat),
+    peekButton('place', 'place', t('add.place'), pickPlace),
+    peekButton('list', 'folder', t('add.list'), pickList),
+    peekButton('share', 'users', t('add.share'), pickShare),
+    peekButton('more', 'plus', t('add.more'), () => { more = true; done(); }));
+  form.append(peekRow, el('div', { class: 'add-fold' }, el('div', {}, rail, moreButton)), fileInput);
+  form.addEventListener('focusin', () => { peek = true; sync(); });
+  // Weg uit de kaart (en geen kiezer open): de rij verdwijnt weer. Een kiezer staat buiten het formulier in body.
+  form.addEventListener('focusout', () => setTimeout(() => {
+    if (form.contains(document.activeElement) || document.querySelector('.menu, dialog[open], body.map-open')) return;
+    peek = false;
+    sync();
+  }));
 
   form.addEventListener('submit', (e) => { e.preventDefault(); submit(false); });
   // ✕: alles weg en dicht, ook het toetsenbord.
   $('#add-cancel').addEventListener('click', () => { reset(); input.blur(); });
-  input.addEventListener('input', () => form.classList.toggle('open', isOpen()));
+  input.addEventListener('input', sync);
   // Terug in de titel: een open tekstvak klapt dicht (de tekst blijft), en de lijst waar je naar kijkt kan veranderd zijn.
   input.addEventListener('focus', () => { editing = null; draw(); });
   input.addEventListener('keydown', (e) => {
@@ -91,6 +111,7 @@ function addLocalFiles(files) {
 
 function reset() {
   input.value = '';
+  peek = false;
   v = blank();
   more = false;
   editing = null;
@@ -119,6 +140,12 @@ function step(kind, ico, on, lead, value, onOpen, onClear, body = null) {
   return el('div', { class: `step step-${kind}` + (on ? ' on' : '') }, el('div', { class: 'step-row' }, head, clear), body);
 }
 
+function sync() {
+  const open = isOpen();
+  form.classList.toggle('open', open);
+  form.classList.toggle('peek', peek && !open);
+}
+
 function draw() {
   if (!form) return;
   const loc = v.location;
@@ -142,7 +169,7 @@ function draw() {
   }
   rail.replaceChildren(...steps.filter(Boolean));
   moreButton.hidden = more;
-  form.classList.toggle('open', isOpen());
+  sync();
 }
 
 function toggle(which) {
