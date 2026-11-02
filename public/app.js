@@ -3,14 +3,13 @@ import { initAndroidApp, offerAppSync, startLocationBar } from './androidapp.js'
 import { t } from './i18n.js';
 import { closeTask, detailReady, flushPending, selectTask } from './detail.js';
 import { openListMenu } from './listmenu.js';
-import { openDatePicker } from './datepicker.js';
-import { icon } from './icons.js';
-import { $, el, fmt, fromLocalInput, render, status, toast } from './render.js';
+import { initComposer, refreshComposer } from './composer.js';
+import { $, el, render, status, toast } from './render.js';
 import { closeCalendar, hideCalendar, isCalendarOpen, openCalendar, refreshCalendar } from './calendarview.js';
 import { closeSettings, hideSettings, isSettingsOpen, openSettings } from './settingsview.js';
 import { closeHelp, hideHelp, isHelpOpen, openHelp } from './help.js';
 import { closeDrawer, onListContext, selectDone, selectList, selectTrash, setupSidebar } from './sidebar.js';
-import { addTask, init, lists, load, on, state } from './store.js';
+import { init, lists, load, on, state } from './store.js';
 import { parseHash } from './route.js';
 import { normName } from './lists.js';
 import { startBadge, updateBadge } from './badge.js';
@@ -22,41 +21,13 @@ on('error', toast);
 setupSidebar();
 onListContext(openListMenu);
 
-// Reminder voor de nieuwe taak: de waarde staat in een verborgen veld, het knopje toont hem.
-function setAddRemind(value) {
-  $('#add-remind').value = value ?? '';
-  $('#add-when').replaceChildren(icon('bell'), value ? ' ' + fmt(fromLocalInput(value)) : '');
-  $('#add-when').classList.toggle('on', !!value);
-}
-$('#add-when').addEventListener('click', () => {
-  openDatePicker($('#add-when'), $('#add-remind').value, (value) => {
-    setAddRemind(value);
-    $('#add-title').focus(); // het invoerveld blijft open, met de gekozen datum erin
-  });
-});
-/** Maakt de taak uit het invoerveld; met open=true gaat hij meteen open in het detailpaneel. */
-function submitAdd(open) {
-  const title = $('#add-title').value.trim();
-  if (!title) { $('#add-title').focus(); return; }
-  const id = addTask(title, fromLocalInput($('#add-remind').value), (!state.showDone && !state.showTrash && state.list) || 'Inbox');
-  $('#add-title').value = '';
-  setAddRemind(null);
-  if (open) {
-    $('#add-title').blur();
-    selectTask(id);
-  }
-}
+// De invoerkaart bovenaan (titel, en na de eerste letter de tijdlijn met herinnering, plek, lijst en meer).
+initComposer();
+on('change', refreshComposer);
 // De ronde +-knop (mobiel): naar het invoerveld bovenaan en daar typen. Focus meteen in de klik, anders geen toetsenbord op iOS.
 $('#fab').addEventListener('click', () => {
   $('#add-title').focus({ preventScroll: true });
   window.scrollTo({ top: 0, behavior: 'smooth' });
-});
-$('#add').addEventListener('submit', (e) => { e.preventDefault(); submitAdd(false); });
-$('#add-open').addEventListener('click', () => submitAdd(true));
-$('#add-title').addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' || !e.shiftKey || e.isComposing) return;
-  e.preventDefault();
-  submitAdd(true);
 });
 
 // Instellingen: een eigen pagina in de middenkolom (meldingen, thema en uitloggen staan daar).

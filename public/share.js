@@ -22,8 +22,14 @@ async function call(method, path, body) {
   }
 }
 
+/**
+ * Een taak samen doen met iemand (de invoerkaart, na het aanmaken): `who` is { to_user } of { to } (naam of e-mailadres).
+ * Een fout wordt een melding; geeft true als het lukte.
+ */
+export const inviteToTask = (taskId, who) => call('POST', '/api/shares', { task_id: taskId, mode: 'shared', ...who });
+
 /** De andere accounts op deze Tick (id en naam), voor de keuzelijst; offline of bij een fout een lege lijst. */
-async function people() {
+export async function people() {
   try {
     return await request('GET', '/api/shares/people');
   } catch {

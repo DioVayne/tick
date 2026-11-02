@@ -65,10 +65,14 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 .chips { display: flex; gap: 6px; overflow-x: auto; padding: 6px 0; }
 .chips button { background: var(--card); color: var(--text); border: 1px solid var(--line); white-space: nowrap; min-height: 34px; padding: 4px 12px; border-radius: 999px; }
 .chips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-/* Nieuwe taak: een getinte knop met een rond plusje; bij typen een gewoon veld, reminder en knoppen verschijnen dan pas. */
-#add { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 6px 0 14px; padding: 4px 8px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 13%, transparent); cursor: text; }
+/* Nieuwe taak: een getinte knop met een rond plusje. Na de eerste letter (of met iets gekozen) .open: een kaart met eronder
+   een tijdlijn (composer.js), één stap per eigenschap met een gekleurde stip en een zin. Kleur alleen als lijn, tint en
+   vette tekst (gemengd met --text, dus leesbaar in licht, donker en retro), nooit witte tekst op een felle kleur. */
+#add { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 6px 0 14px; padding: 4px 8px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 13%, transparent); cursor: text; transition: background .15s; }
 #add::before { content: "+"; flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-size: 1.125rem; line-height: 1; }
 #add:focus-within { background: var(--fill); outline: 1px solid var(--accent); }
+#add.open { background: var(--card); outline: 1px solid var(--line); box-shadow: 0 2px 12px color-mix(in srgb, var(--shadow) 45%, transparent); }
+#add.open:focus-within { outline-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
 #add input { border: 0; background: transparent; padding: 7px 4px; }
 #add input:focus { outline: none; }
 #add-title::placeholder { color: var(--link); font-weight: 600; opacity: 1; }
@@ -78,11 +82,45 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 @media (hover: none) { .add-key { display: none; } }
 #add-title { flex: 1 1 180px; min-width: 0; }
 #add[hidden] { display: none; } /* niet in Afgerond, de prullenbak en tijdens zoeken */
-#add #add-when { display: inline-flex; align-items: center; gap: 4px; background: transparent; color: var(--muted); padding: 4px 8px; }
-#add #add-when.on { color: var(--bell); }
-#add #add-when:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
-#add button { min-height: 32px; padding: 4px 12px; font-size: .875rem; }
-#add:not(:focus-within):has(#add-title:placeholder-shown) > :not(#add-title, .add-key) { display: none; }
+#add #add-send { min-height: 32px; padding: 4px 14px; border-radius: 999px; font-size: .875rem; }
+#add:not(.open) #add-send { display: none; }
+.add-fold { flex: 1 0 100%; display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows .18s ease-out, visibility .18s; }
+#add.open .add-fold { grid-template-rows: 1fr; visibility: visible; }
+.add-fold > div { min-height: 0; overflow: hidden; }
+.add-rail { padding: 4px 0 0; }
+.step { position: relative; --c: var(--muted); }
+.step:not(:last-child)::after { content: ""; position: absolute; left: 13px; top: 36px; bottom: -6px; width: 2px; border-radius: 1px; background: color-mix(in srgb, var(--muted) 35%, transparent); }
+.step-when { --c: var(--bell); }
+.step-repeat { --c: #7f77dd; }
+.step-place { --c: #1d9e75; }
+.step-share { --c: #378add; }
+.step-subs { --c: #d85a30; }
+.step-file { --c: #d4537e; }
+.step-row { display: flex; align-items: center; gap: 4px; }
+#add .step-head { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 44px; padding: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: .9375rem; text-align: left; }
+.step-dot { position: relative; z-index: 1; flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--c); background: var(--card); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--c) 50%, transparent); transition: background .15s, box-shadow .15s; }
+.step-dot .ico { width: 16px; height: 16px; }
+.step.on .step-dot { background: color-mix(in srgb, var(--c) 20%, var(--card)); box-shadow: 0 0 0 1.5px var(--c); }
+.step-txt { flex: 1; min-width: 0; padding: 10px 0; border-bottom: 1px dashed var(--line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step.on .step-txt, #add .step-head:hover .step-txt, #add .step-head:focus-visible .step-txt { color: var(--text); }
+.step.on .step-txt { border-bottom-style: solid; }
+.step-txt b { font-weight: 600; color: color-mix(in srgb, var(--c) 70%, var(--text)); }
+.step-list .step-txt b, .step-note .step-txt b { color: var(--text); }
+#add .step-clear { min-height: 32px; padding: 4px 6px; background: transparent; color: var(--muted); font-size: .8125rem; }
+#add .step-clear:hover { color: var(--text); }
+.step-body { margin: 2px 0 10px 40px; }
+#add .step-input { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; font-size: .9375rem; }
+#add .step-input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+#add textarea.step-input { display: block; min-height: 4.8em; line-height: 1.45; resize: vertical; }
+.step-sublist { list-style: none; margin: 0 0 6px; padding: 0; }
+.step-sublist li { display: flex; align-items: center; gap: 8px; min-height: 30px; font-size: .9375rem; }
+.step-box { flex: none; width: 14px; height: 14px; border: 1.5px solid var(--muted); border-radius: 4px; }
+#add .step-x { min-height: 28px; margin-left: auto; padding: 0 8px; background: transparent; color: var(--muted); }
+#add .add-more-btn { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 4px 0 6px 6px; background: transparent; color: var(--muted); font-size: .875rem; }
+#add .add-more-btn:hover { color: var(--text); }
+#add .add-more-btn[hidden] { display: none; }
+#add .add-more-btn .ico { width: 16px; height: 16px; margin-right: 8px; }
+@media (prefers-reduced-motion: reduce) { #add, .add-fold, .step-dot { transition: none; } }
 ul.tasks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 /* Subtaken: in het vlak van hun hoofdtaak, kleiner en lichter, met een boomlijn. De lijn loopt recht onder het vinkje van de
    hoofdtaak, in één stuk tot net in de bocht naar de laatste subtaak (die bocht tekent de rij zelf, zodat hij niet doorsteekt); --bx (waar dat vinkje staat), --up (afstand tot dat vinkje),
@@ -849,4 +887,5 @@ html[data-drive] .ico { width: 24px; height: 24px; vertical-align: -6px; }
 html[data-drive] .iconbtn { width: 52px; height: 52px; }
 html[data-drive] .check { width: 30px; height: 30px; min-width: 30px; min-height: 30px; }
 html[data-drive] #add { padding: 8px 10px; }
+html[data-drive] #add .add-fold { display: none; }
 html[data-drive] body.task-open .dback { min-height: 52px; }
