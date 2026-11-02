@@ -11,6 +11,8 @@ Open a task and tap **Location**. A map opens:
 2. Choose **On arrival** or **On leaving**.
 3. Set the radius, 200 m to 2 km. Until you move it yourself, it is 500 m on arrival and 200 m on leaving.
 
+In the Android app you can also add a place straight from **➕** on the widget, without the map: pick a favorite, a recent place, your current location or a search result, then *On arrival* or *On leaving*. See [Android, Quick add](android.md#quick-add-and-sharing-to-tick).
+
 The place is named after the favorite or search result, or "Pinned place". You get one notification per place; changing the place arms it again. A repeating task arms it again each time it moves on.
 
 Not the right moment? **Swipe the notification away** and it comes back the next time you arrive (or leave), not while you are still there. Tap **Done** to finish the task for good.
