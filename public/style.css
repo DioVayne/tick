@@ -110,9 +110,11 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 .step-head { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 44px; padding: 0 8px 0 0; border-radius: 22px; background: transparent; color: var(--muted); font-size: .9375rem; text-align: left; }
 button.step-head:focus-visible { background: var(--hover); }
 @media (hover: hover) { button.step-head:hover { background: var(--hover); } } /* niet op touch: daar blijft hover hangen */
-.step-dot { position: relative; z-index: 1; flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--c); background: var(--card); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--c) 75%, transparent); transition: background .15s, box-shadow .15s; }
+/* Grijs tot er iets is ingevuld, dan de eigen kleur. Een rand en geen box-shadow: een rand valt op hele schermpixels,
+   zodat elk rondje even dik is, ook bij schermschaal 125% of 150%. */
+.step-dot { position: relative; z-index: 1; flex: none; display: grid; place-items: center; width: 28px; height: 28px; border: 1.5px solid color-mix(in srgb, var(--muted) 75%, transparent); border-radius: 50%; color: var(--muted); background: var(--card); transition: background .15s, border-color .15s, color .15s; }
 .step-dot .ico { width: 16px; height: 16px; }
-.step.on .step-dot { background: color-mix(in srgb, var(--c) 20%, var(--card)); box-shadow: 0 0 0 1.5px var(--c); }
+.step.on .step-dot { color: var(--c); border-color: var(--c); background: color-mix(in srgb, var(--c) 20%, var(--card)); }
 .step-txt { flex: 1; min-width: 0; padding: 10px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .step.on .step-txt, button.step-head:hover .step-txt, button.step-head:focus-visible .step-txt { color: var(--text); }
 .step-txt b { font-weight: 600; color: color-mix(in srgb, var(--c) 70%, var(--text)); }
@@ -473,7 +475,8 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 .dsect.sect-subs { --c: #d85a30; }
 .dsect.sect-file { --c: #d4537e; }
 .dsect > h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; color: var(--text); font-size: .9375rem; font-weight: 600; }
-.dsect > h3::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.dsect > h3::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.dsect.on > h3::before { background: var(--c); } /* kleur pas als er iets in staat, net als de stippen */
 .desc { padding: 2px 10px; border-radius: 10px; background: var(--fill); }
 .desc .md { min-height: 96px; }
 .md-hint { margin: 4px 10px 0; color: var(--muted); font-size: .8125rem; }

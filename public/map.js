@@ -212,10 +212,16 @@ function buildScreen(L, { loc, place }, resolve) {
     results.hidden = false;
   }
 
+  // Nominatim begint een adres met het huisnummer ("38, Dorpsstraat, …"): dan "Dorpsstraat 38", niet alleen "38".
+  function shortName(full) {
+    const [first = '', second = ''] = full.split(',').map((x) => x.trim());
+    return /^\d+\s*[a-z]?(?:[-\s]\w+)?$/i.test(first) && second ? `${second} ${first}` : first;
+  }
+
   function pick(r) {
     go(r.lat, r.lng);
     markFav(null);
-    autoName = r.name.split(',')[0].trim();
+    autoName = shortName(r.name);
     if (managing && !name.value.trim()) name.value = autoName;
     results.hidden = true;
     results.replaceChildren();

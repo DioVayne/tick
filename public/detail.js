@@ -520,8 +520,12 @@ function fill(t) {
       }));
     }
     v.subs.hidden = done && !kids.length; // afgerond zonder subtaken: geen leeg kopje
+    v.subs.classList.toggle('on', kids.length > 0);
   }
   v.noteSect.hidden = done && !text.trim(); // afgerond zonder omschrijving: geen leeg kopje
+  // Het puntje in de kop krijgt pas kleur als er iets in staat, net als de stippen van de tijdlijn.
+  v.noteSect.classList.toggle('on', !!text.trim());
+  v.filesBox.classList.toggle('on', !!t.attachments?.length);
   fillAttachmentsBox(v.filesBox, t, done);
   showStatus();
 }
@@ -573,7 +577,7 @@ function drawRail(t) {
     step({ kind: 'list', icon: 'folder', on: false, lead: tr('add.in'), value: t.list, note: t.parent_id ? tr('detail.follows_parent') : null, open: t.parent_id ? null : opener('list', v.pickList) }),
     watchable ? step({ kind: 'watch', icon: 'eye', on: !!t.watch, lead: tr('slist.watch'), open: opener('watch', v.toggleWatch), pressed: !!t.watch }) : null,
     shareShown ? step({
-      kind: 'share', icon: 'users', on: names.length > 0, lead: list ? tr('share.with_someone') : tr(names.length ? 'add.share_set' : 'add.share'),
+      kind: 'share', icon: 'users', on: names.length > 0, lead: tr(names.length ? 'add.share_set' : list ? 'share.with_someone' : 'add.share'),
       value: names.join(', ') || null, open: owner ? opener('share', v.pickShare) : null, body: v.shareBox,
     }) : null,
     t.copies && !t.parent_id ? step({ kind: 'copies', icon: 'users', on: true, lead: tr('copy.heading'), body: v.copiesBox }) : null,
