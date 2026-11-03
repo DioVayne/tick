@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { call, callAs, createTask, createUser, json, type Task } from './helpers';
+import { call, callAs, createTask, createUser, json, session, type Task } from './helpers';
 
 type User = Awaited<ReturnType<typeof createUser>>;
 type ListItem = { name: string; id: string; review: boolean };
@@ -75,6 +75,16 @@ describe('Tickmanager: routes', () => {
     const mine = (await listNamed('Inbox')).id;
     const res = await setInclude(mine, 'nee');
     expect(res.status).toBe(400);
+    expect((await json<{ error: string }>(res)).error).toBe('include must be true or false');
+  });
+
+  it('een account verwijderen ruimt zijn overgeslagen lijsten op', async () => {
+    const m = await createUser({ name: `Mo ${uniq()}` });
+    const inbox = await listNamed('Inbox', m);
+    expect((await setInclude(inbox.id, false, m.cookie)).status).toBe(200);
+    expect(await skipRows(inbox.id)).toBe(1);
+    expect((await callAs(await session(), `/api/users/${m.id}`, { method: 'DELETE' })).status).toBe(200);
+    expect(await skipRows(inbox.id)).toBe(0);
   });
 
   it('overslaan overleeft hernoemen; verwijderen ruimt de rij op', async () => {
