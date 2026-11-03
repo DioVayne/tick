@@ -1,0 +1,87 @@
+<h2>README v2: telefoonframes en show-and-tell</h2>
+<p class="subtitle">De beelden zijn nog de oude screenshots als opvulling; alles wordt opnieuw geschoten in de huidige app.</p>
+
+<style>
+  .gh { background:#fff; color:#1f2328; border:1px solid #d0d7de; border-radius:8px; padding:32px 40px; max-width:860px; font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif; font-size:15px; line-height:1.5 }
+  .gh h1,.gh h3 { color:#1f2328; border:0 }
+  .c { text-align:center }
+  .note { background:#ddf4ff; border-left:4px solid #0969da; padding:12px 16px; border-radius:6px; margin:20px 0 }
+  .note b { color:#0969da }
+  .tag { display:inline-block; font:11px/1 monospace; background:#fff8c5; border:1px solid #d4a72c; color:#7d4e00; padding:3px 6px; border-radius:4px; margin-left:6px; vertical-align:middle }
+
+  /* phone frame */
+  .phone { width:var(--w,200px); aspect-ratio:9/19.5; background:#0d0f14; border-radius:calc(var(--w,200px) * .16); padding:calc(var(--w,200px) * .035); box-shadow:0 10px 30px rgba(0,0,0,.25), inset 0 0 0 2px #2a2f3a; position:relative; flex:none }
+  .phone .scr { width:100%; height:100%; border-radius:calc(var(--w,200px) * .13); overflow:hidden; position:relative; background:#1d2433 }
+  .phone .scr img { width:100%; display:block }
+  .phone::after { content:""; position:absolute; top:calc(var(--w,200px) * .06); left:50%; transform:translateX(-50%); width:28%; height:calc(var(--w,200px) * .06); background:#0d0f14; border-radius:99px }
+  .strip { display:flex; justify-content:center; align-items:flex-end; gap:22px; margin:26px 0 }
+
+  /* highlight: zoomed-in cut-out of a phone, rounded */
+  .row { display:flex; gap:32px; align-items:center; margin:36px 0 }
+  .row.rev { flex-direction:row-reverse }
+  .row .txt { flex:1 }
+  .row .txt h3 { margin:0 0 6px; font-size:20px }
+  .hl { width:300px; height:230px; border-radius:22px; overflow:hidden; position:relative; flex:none; background:#1d2433; box-shadow:0 10px 30px rgba(0,0,0,.22), inset 0 0 0 1px rgba(0,0,0,.08) }
+  .hl img { position:absolute }
+  .ph { display:flex; align-items:center; justify-content:center; color:#8b949e; font-size:12px; text-align:center; padding:10px; background:repeating-linear-gradient(45deg,#f6f8fa,#f6f8fa 10px,#eaeef2 10px,#eaeef2 20px) }
+
+  /* small feature tiles */
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:18px }
+  .tile .pic { height:120px; border-radius:14px; overflow:hidden; position:relative; background:#1d2433; box-shadow:0 4px 14px rgba(0,0,0,.15) }
+  .tile .pic img { position:absolute; width:260%; }
+  .tile b { display:block; margin-top:8px; font-size:14px }
+  .tile span { font-size:12.5px; color:#656d76 }
+</style>
+
+<div class="gh">
+  <div class="c">
+    <img src="/files/logo.svg" width="80"><br>
+    <h1 style="margin:6px 0 4px;font-size:34px">Tick</h1>
+    <b>Your own free to-do app, for the web and Android.</b><br>With reminders that know where you are.
+  </div>
+
+  <div class="note">
+    <b>What you're getting</b><br>
+    ☁️ Runs on <b>your own free Cloudflare account</b>, set up in about <b>15 minutes</b> with Claude Code.<br>
+    🤖 <b>Android:</b> app + home-screen widget · 🌐 <b>Web:</b> installable, works offline · 🍎 <b>iPhone:</b> web app only, no place reminders yet.
+  </div>
+
+  <div class="strip">
+    <div class="phone" style="--w:170px"><div class="scr"><img src="/files/mobile-home.png"></div></div>
+    <div class="phone" style="--w:200px"><div class="scr"><img src="/files/mobile-location.png"></div></div>
+    <div class="phone" style="--w:170px"><div class="scr"><img src="/files/shared-list.png"></div></div>
+  </div>
+  <p class="c" style="margin-top:-10px"><span class="tag">eerste indruk: hele app, in telefoonframes</span></p>
+
+  <div class="row">
+    <div class="hl"><img src="/files/mobile-location.png" style="width:560px;left:-140px;top:-190px"></div>
+    <div class="txt"><h3>📍 Reminders by place</h3>
+      Your shopping list pops up as you walk into the supermarket. Remember Google Keep had this, until they killed it?
+      <br><span class="tag">grote feature: ingezoomde uitsnede, ronde hoeken</span></div>
+  </div>
+  <div class="row rev">
+    <div class="hl"><img src="/files/shared-list.png" style="width:560px;left:-40px;top:-250px"></div>
+    <div class="txt"><h3>👥 Share with the people you live with</h3>
+      Partner, friends or family each get their own account. Share a list or one task; tap <i>I'll take it</i> and nobody buys the board games twice.</div>
+  </div>
+  <div class="row">
+    <div class="hl ph">Tickmanager<br>(nieuw te schieten)</div>
+    <div class="txt"><h3>⚡ Old tasks get a second chance</h3>
+      The Tickmanager brings back tasks you forgot about, one by one, and helps you plan them again.</div>
+  </div>
+
+  <h3 style="margin-top:34px">Also in the box <span class="tag">kleine show-and-tell-tegels</span></h3>
+  <div class="tiles">
+    <div class="tile"><div class="pic"><img src="/files/mobile-home.png" style="left:-20px;top:-120px"></div><b>☑️ Subtasks</b><span>2/4 done, right in the list</span></div>
+    <div class="tile"><div class="pic ph">widget</div><b>📱 Widget</b><span>Tick off from your home screen</span></div>
+    <div class="tile"><div class="pic ph">kalender</div><b>📅 Calendar</b><span>Month grid and agenda</span></div>
+    <div class="tile"><div class="pic ph">rijmodus</div><b>🚗 Driving mode</b><span>Big and simple on the road</span></div>
+    <div class="tile"><div class="pic ph">swipe</div><b>👆 Swipe</b><span>Delete or move with one gesture</span></div>
+    <div class="tile"><div class="pic ph">herhalen</div><b>🔁 Repeating</b><span>Daily, weekly, custom</span></div>
+    <div class="tile"><div class="pic ph">bijlage</div><b>📎 Attachments</b><span>Photos and files on a task</span></div>
+    <div class="tile"><div class="pic ph">groepstaak</div><b>👪 Group tasks</b><span>See how far everyone is</span></div>
+  </div>
+  <p style="color:#656d76;font-size:13px;margin-top:10px">… plus drag & drop, reminders, offline, colour themes, MCP for Claude (als tekstregel eronder)</p>
+
+  <p style="color:#656d76;margin-top:28px">— daarna: install, requirements, commands, security (ongewijzigd)</p>
+</div>
