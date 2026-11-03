@@ -25,7 +25,7 @@
 
 Your shopping list pops up as you walk into the supermarket. The screws, the moment you park at the hardware store. The parcel, as you step out the door.
 
-Pin a place on the map, set the radius and choose **on arrival** or **on leaving**. Favorite places are one tap away, and a task can have a time *and* a place. Driving or cycling? Tick makes the circle bigger so the reminder is not late.
+Pin a place on the map, set the radius and choose **on arrival** or **on leaving**. Favorite places are one tap away, and a task can have a time *and* a place. Driving or cycling? Turn on *On time on the road* in the Android app and Tick makes the circle bigger, so the reminder is not late.
 
 Your phone watches the places itself and only tells Tick that a reminder went off: there is no log of where you have been.
 
@@ -78,7 +78,7 @@ An orange button shows how many are waiting. Pinned, repeating and planned tasks
   <tr>
     <td valign="top"><img src="docs/screenshots/tile-driving.png" width="260" alt="Driving mode detected, with Not now and Never"><br><b>🚗 <a href="docs/driving-mode.md">Driving mode</a></b><br>Big and simple while you drive, nearby tasks first.</td>
     <td valign="top"><img src="docs/screenshots/tile-offline.png" width="260" alt="Not saved yet, no connection, above the list"><br><b>✈️ <a href="docs/tasks-and-lists.md">Works offline</a></b><br>Changes are sent when you are back online.</td>
-    <td valign="top"><img src="docs/screenshots/tile-dark-mode.png" width="260" alt="The Home list in dark mode"><br><b>🌙 <a href="docs/settings.md">Dark mode</a></b><br>And colour themes with your own background photo.</td>
+    <td valign="top"><img src="docs/screenshots/tile-dark-mode.png" width="260" alt="The Home list in dark mode"><br><b>🌙 <a href="docs/settings.md">Dark mode</a></b><br>And colour themes, such as <i>Retro 70s</i>.</td>
   </tr>
 </table>
 
