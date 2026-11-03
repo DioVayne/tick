@@ -15,7 +15,7 @@
 
   .phone { --w: 200px; width: var(--w); aspect-ratio: 390 / 844; flex: none; position: relative;
     background: #0d0f14; border-radius: calc(var(--w) * .16); padding: calc(var(--w) * .035);
-    box-shadow: inset 0 0 0 1.5px #3a404d, 0 10px 24px rgb(0 0 0 / .22), 0 2px 6px rgb(0 0 0 / .12); }
+    box-shadow: inset 0 0 0 2px #4b5563, 0 10px 24px rgb(0 0 0 / .22), 0 2px 6px rgb(0 0 0 / .12); }
   .phone .scr { width: 100%; height: 100%; border-radius: calc(var(--w) * .125); overflow: hidden; background: #fff; }
   /* A status bar above the app, so the notch does not cover its header */
   .phone .bar { height: calc(var(--w) * .12); display: flex; align-items: center; justify-content: space-between;
@@ -70,7 +70,84 @@
     box.append(img);
     stage.append(box);
   }
-  if (q.get('bg')) document.body.style.background = q.get('bg');
+  // A crop on a dark page: a hairline instead of a shadow, which would leave a haze on GitHub's dark background
+  // (and transparent room around it, so it floats in its table cell instead of touching the cell's borders)
+  if (type === 'crop' && q.get('flat')) {
+    stage.style.padding = '12px';
+    stage.firstChild.style.boxShadow = 'inset 0 0 0 1px rgb(255 255 255 / .1)';
+    stage.firstChild.style.background = '#' + (bars[0] || '1e1e1e');
+  }
+
+  /* ?type=banner&img=&img2=&img3=&bg=           three phones on a coloured card, running off its bottom edge
+     ?type=card&img=&bg=&accent=&pill=&ring=x,y,w,h[,round]&crop=x,y,cw,ch[&cimg=]
+       one phone on a coloured card, a ring around a detail and that detail magnified beside it.
+       ring and crop are in the CSS pixels of a 390 px wide screen. */
+  function panel(w, h, bg) {
+    stage.style.padding = '0';
+    const c = document.createElement('div');
+    c.style.cssText = `position:relative;overflow:hidden;width:${w}px;height:${h}px;border-radius:28px;background:#${bg}`;
+    stage.append(c);
+    return c;
+  }
+  function place(el, x, y) {
+    el.style.position = 'absolute';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    return el;
+  }
+  if (type === 'banner') {
+    const c = panel(880, 440, q.get('bg') || '1e293b');
+    // a soft yellow light behind the middle phone gives the card a focal point
+    c.style.background = `radial-gradient(420px 300px at 50% 70%, #facc1533, transparent), #${q.get('bg') || '1e293b'}`;
+    const side = (name, i, x) => {
+      const p = place(phone(name, 190, i), x, 112);
+      p.style.filter = 'brightness(.72)';
+      return p;
+    };
+    // the middle phone last, so it lies on top of the other two
+    c.append(side(q.get('img'), 0, 110), side(q.get('img3'), 2, 580), place(phone(q.get('img2'), 250, 1), 315, 44));
+  }
+  if (type === 'card') {
+    // &flip=1: phone on the right, magnified detail on the left; &h=: a shorter card when the screen is empty below
+    const W = 880, H = num('h', 420), accent = '#' + (q.get('accent') || 'fcd34d'), flip = !!q.get('flip');
+    const c = panel(W, H, q.get('bg') || '1e293b');
+    const pw = 250, px = flip ? W - 64 - pw : 64, py = 44;
+    c.append(place(phone(q.get('img'), pw, 0), px, py));
+    // where the screen content starts on the card, and its scale
+    const s = (pw - pw * 0.035 * 2) / 390, sx = px + pw * 0.035, sy = py + pw * 0.035 + pw * 0.12;
+
+    const [rx, ry, rw, rh] = q.get('ring').split(',').map(Number), round = q.get('ring').endsWith('round');
+    const ring = place(document.createElement('div'), sx + rx * s - 4, sy + ry * s - 4);
+    ring.style.cssText += `;width:${rw * s + 8}px;height:${rh * s + 8}px;border-radius:${round ? '50%' : '14px'};` +
+      `box-shadow:0 0 0 3px ${accent},0 0 18px 2px ${accent}55`;
+    c.append(ring);
+
+    const [cx, cy, cw, ch] = q.get('crop').split(',').map(Number);
+    const zw = 420, z = zw / cw, zh = ch * z, zx = flip ? 60 : 400, zy = Math.max(84, Math.min(H - zh - 40, (H - zh) / 2 + 20));
+    const zoom = place(document.createElement('div'), zx, zy);
+    zoom.style.cssText += `;width:${zw}px;height:${zh}px;overflow:hidden;border-radius:20px;background:#${bars[0] || '1e1e1e'};` +
+      `box-shadow:0 0 0 3px ${accent},0 24px 48px rgb(0 0 0 / .45)`;
+    const img = new Image();
+    img.src = src(q.get('cimg') || q.get('img'));
+    img.style.cssText = `position:absolute;width:${390 * z}px;left:${-cx * z}px;top:${-cy * z}px`;
+    zoom.append(img);
+
+    // a line from the ring to the magnified detail
+    const ax = flip ? sx + rx * s - 6 : sx + (rx + rw) * s + 6, ay = sy + (ry + rh / 2) * s;
+    const bx = flip ? zx + zw + 3 : zx - 3, by = zy + zh / 2;
+    const line = place(document.createElement('div'), ax, ay - 1.25);
+    line.style.cssText += `;width:${Math.hypot(bx - ax, by - ay)}px;height:2.5px;background:${accent};transform-origin:0 50%;` +
+      `transform:rotate(${Math.atan2(by - ay, bx - ax)}rad)`;
+    c.append(line, zoom);
+
+    if (q.get('pill')) {
+      const pill = place(document.createElement('span'), zx, 36);
+      pill.textContent = q.get('pill');
+      pill.style.cssText += `;font:600 15px/1 "Segoe UI",system-ui,sans-serif;color:#${q.get('bg')};background:${accent};padding:8px 14px;border-radius:99px`;
+      c.append(pill);
+    }
+  }
+  if (q.get('bg') && type !== 'banner' && type !== 'card') document.body.style.background = q.get('bg');
 </script>
 </body>
 </html>

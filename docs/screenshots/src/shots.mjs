@@ -28,7 +28,8 @@ const listId = (name) => {
 };
 
 /**
- * One scene = one raw PNG. `m` is a phone (390×844), `d` a desktop (1280×800), both at 2×.
+ * One scene = one raw PNG. `m` is a phone (390×844), `d` a desktop (1280×800), both at 2× (`dpr: 3` for screens
+ * that are magnified on a feature card, so the close-up stays sharp).
  * `go` runs on the page after the hash has loaded; `init` runs before the page loads.
  * @type {{ name: string, kind: 'm' | 'd', scheme: 'light' | 'dark', hash: string,
  *   go?: (page: import('playwright').Page) => Promise<void>, init?: string, geo?: boolean, offline?: boolean }[]}
@@ -40,7 +41,7 @@ for (const scheme of ['light', 'dark']) {
   scene({ name: 'm-all', kind: 'm', scheme, hash: '#/all' });
   scene({ name: 'm-home', kind: 'm', scheme, hash: () => '#/list/' + listId('Home') });
   scene({ name: 'm-groceries', kind: 'm', scheme, hash: () => '#/task/' + taskId('Buy groceries') });
-  scene({ name: 'm-shared-list', kind: 'm', scheme, hash: () => '#/list/' + listId('Weekend in the Ardennes') });
+  scene({ name: 'm-shared-list', kind: 'm', scheme, dpr: 3, hash: () => '#/list/' + listId('Weekend in the Ardennes') });
   scene({ name: 'm-manager', kind: 'm', scheme, hash: '#/manager' });
   scene({ name: 'm-calendar', kind: 'm', scheme, hash: '#/calendar' });
   scene({ name: 'm-bathroom', kind: 'm', scheme, hash: () => '#/task/' + taskId('Paint the bathroom') });
@@ -50,11 +51,11 @@ for (const scheme of ['light', 'dark']) {
 
   // Pickers and dialogs, opened the way a person would
   const tap = (text) => async (page) => { await page.getByText(text).locator('visible=true').first().click({ timeout: 8000 }); await page.waitForTimeout(1200); };
-  scene({ name: 'm-location', kind: 'm', scheme, geo: true, hash: () => '#/task/' + taskId('Buy groceries'), go: tap('When I arrive at') });
+  scene({ name: 'm-location', kind: 'm', scheme, geo: true, dpr: 3, hash: () => '#/task/' + taskId('Buy groceries'), go: tap('When I arrive at') });
   scene({ name: 'm-remind', kind: 'm', scheme, hash: () => '#/task/' + taskId('Buy groceries'), go: tap('Remind me') });
   scene({ name: 'm-repeat', kind: 'm', scheme, hash: () => '#/task/' + taskId('Water the plants'), go: tap('Every') });
   scene({ name: 'm-share', kind: 'm', scheme, hash: () => '#/task/' + taskId('Renew passport'), go: tap('Do it together with') });
-  scene({ name: 'm-manager-round', kind: 'm', scheme, hash: '#/manager', go: tap('Start tidying up') });
+  scene({ name: 'm-manager-round', kind: 'm', scheme, dpr: 3, hash: '#/manager', go: tap('Start tidying up') });
   scene({ name: 'm-agenda', kind: 'm', scheme, hash: '#/calendar', go: tap('Agenda') });
   scene({ name: 'm-offline', kind: 'm', scheme, hash: () => '#/list/' + listId('Home'),
     go: async (page) => {
@@ -68,14 +69,14 @@ for (const scheme of ['light', 'dark']) {
       await page.waitForTimeout(800);
     } });
 
-  // Swipe: a finger halfway to the left over a task, not let go
+  // Swipe: a finger halfway to the right over a task (move to another list), not let go, so its title stays in view
   scene({ name: 'm-swipe', kind: 'm', scheme, hash: () => '#/list/' + listId('Home'), go: async (page) => {
     await page.evaluate(async (title) => {
       const li = [...document.querySelectorAll('li.task')].find((x) => x.textContent.includes(title));
       const r = li.getBoundingClientRect();
       const at = (x) => ({ pointerId: 7, pointerType: 'touch', isPrimary: true, bubbles: true, clientX: x, clientY: r.top + 30 });
-      li.dispatchEvent(new PointerEvent('pointerdown', at(r.right - 40)));
-      for (let x = r.right - 40; x > r.right - 200; x -= 20) {
+      li.dispatchEvent(new PointerEvent('pointerdown', at(r.left + 60)));
+      for (let x = r.left + 60; x < r.left + 190; x += 16) {
         li.dispatchEvent(new PointerEvent('pointermove', at(x)));
         await new Promise((ok) => setTimeout(ok, 16));
       }
@@ -107,7 +108,7 @@ for (const s of SCENES) {
   const mobile = s.kind === 'm';
   const ctx = await browser.newContext({
     viewport: mobile ? { width: 390, height: 844 } : { width: 1280, height: 800 },
-    deviceScaleFactor: 2, colorScheme: s.scheme, isMobile: mobile, hasTouch: mobile,
+    deviceScaleFactor: s.dpr || 2, colorScheme: s.scheme, isMobile: mobile, hasTouch: mobile,
     locale: 'en-GB', timezoneId: 'Europe/Amsterdam',
     geolocation: AMSTERDAM, permissions: s.geo ? ['geolocation'] : [],
   });

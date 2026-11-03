@@ -11,51 +11,41 @@
 
 > [!NOTE]
 > **What you're getting**
-> - ☁️ Tick runs on **your own free Cloudflare account**. Setting it up takes **about 15 minutes** with [Claude Code](#get-your-own-in-about-15-minutes): no server, no subscription, no ads.
-> - 🤖 **Android:** an [app](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk) with a home-screen widget and reminders by place. 🌐 **Web:** any browser, installable, works offline.
-> - 🍎 **iPhone and iPad:** the [web app](docs/iphone.md) only for now, so reminders by time but **no reminders by place**.
+> - 💸 **Free:** no subscription, no ads, no company that can switch it off.
+> - 🤖 **Android:** an app with a home-screen widget and reminders by place. 🍎 **iPhone and iPad:** the [web app](docs/iphone.md), with reminders by time but **no reminders by place**. 🌐 Any browser works too, also offline.
+> - 🛠️ **Someone sets it up once** on a computer, in [about 15 minutes](#get-your-own-in-about-15-minutes): Claude Code does the work, on a free Cloudflare account. After that, everyone just uses the app. Not technical? Ask whoever helps you with computers to do this step.
+> - 📲 **Already have a Tick address?** [Download the Android app](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk), open it and type that address.
 
 <p align="center">
-  <img src="docs/screenshots/hero.png" width="628" alt="Three phones with Tick in light mode: the Home list with Buy groceries pinned at the top, the task Buy groceries with a reminder at 17:30, a place reminder at the supermarket, shared with Sanne and a shopping checklist, and the shared list Weekend in the Ardennes with Take it buttons and who is on what">
+  <img src="docs/screenshots/hero.png" width="880" alt="Three phones with Tick in dark mode on a slate blue card: the Home list, the task Buy groceries with a reminder at 17:30, a place reminder at the supermarket, shared with Sanne and a shopping checklist, and the shared list Weekend in the Ardennes with who is on what"><br>
+  <sub>Your lists, a task with a time <i>and</i> a place, and a list you share with friends.</sub>
 </p>
 
 ## 📍 Reminders by place
 
-<img src="docs/screenshots/feature-places.png" align="right" width="384" alt="The place picker: a map of Amsterdam with a pin and the circle around it, favorite places Hardware store, Home and Supermarket, and the choice between On arrival and On leaving">
+<img src="docs/screenshots/feature-places.png" width="880" alt="On a green card: the place picker on a phone, with a ring around the circle on the map and that circle magnified beside it: the pin at the supermarket and the area that counts as arriving. A label says Android app.">
 
 Your shopping list pops up as you walk into the supermarket. The screws, the moment you park at the hardware store. The parcel, as you step out the door.
 
-Pin a place on the map, set the radius and choose **on arrival** or **on leaving**. Favorite places are one tap away, and a task can have a time *and* a place. Driving or cycling? Turn on *On time on the road* in the Android app and Tick makes the circle bigger, so the reminder is not late.
-
-Your phone watches the places itself and only tells Tick that a reminder went off: there is no log of where you have been.
+Pin a place on the map, set the radius and choose **on arrival** or **on leaving**. Favorite places are one tap away, and a task can have a time *and* a place. Driving or cycling? Turn on *On time on the road* in the Android app and Tick makes the circle bigger, so the reminder is not late. Your phone watches the places itself and only tells Tick that a reminder went off: there is no log of where you have been.
 
 <sup>Remember <a href="https://www.howtogeek.com/google-killed-an-essential-keep-notes-feature-but-its-part-of-a-bigger-problem/">Google Keep</a> had this, until they took it away? Reminders by place need the Android app. More in [Places](docs/places.md).</sup>
 
-<br clear="right">
-
 ## 👥 Share with the people you live with
 
-<img src="docs/screenshots/feature-sharing.png" align="left" width="384" alt="The shared list Weekend in the Ardennes: Groceries for Friday and Hiking map with a Take it button, Sanne is on Board games, you are on Firewood, Alex is on Rent a car, and two ticked-off tasks with who ticked them off and when">
+<img src="docs/screenshots/feature-sharing.png" width="880" alt="On a blue card: the shared list Weekend in the Ardennes on a phone, with a ring around Board games and that task magnified beside it: Sanne is on it, and above it Groceries for Friday with a Take it button. A label says Web and Android.">
 
-Your partner, friends or family each get their own account on your Tick.
+Your partner, friends or family each get their own account on your Tick. **Share a whole list**, like the groceries for the house or the packing list for a weekend away: everyone adds and ticks off. Tap **Take it** and the others see *Sanne is on it*, so nobody buys the board games twice. Ticked-off tasks show who did it and when.
 
-**Share a whole list**, like the groceries for the house or the packing list for a weekend away. Everyone adds and ticks off. Tap **Take it** and the others see *Sanne is on it*, so nobody buys the board games twice. Ticked-off tasks show who did it and when.
-
-**Or share one task**: as one task (done is done for everyone), or as a copy for each person so you see how far the others are. A reminder on a shared task reaches everyone on it.
-
-More in [Sharing](docs/sharing.md).
-
-<br clear="left">
+**Or share one task**: as one task (done is done for everyone), or as a copy for each person so you see how far the others are. A reminder on a shared task reaches everyone on it. More in [Sharing](docs/sharing.md).
 
 ## ⚡ Old tasks get a second chance
 
-<img src="docs/screenshots/feature-tickmanager.png" align="right" width="384" alt="The Tickmanager: task 1 of 8, Clean out the shed in the list Home, not looked at for 4 months, with the buttons Schedule, Move to top, Leave it and Delete">
+<img src="docs/screenshots/feature-tickmanager.png" width="880" alt="On an amber card: the Tickmanager on a phone, with a ring around the task Clean out the shed and that part magnified beside it: in the list Home, not looked at for 4 months, with the buttons Schedule, Move to top, Leave it and Delete. A label says Web and Android.">
 
 Every list has them: tasks that sank to the bottom months ago. The **Tickmanager** brings them back one at a time, oldest first, and you decide in one tap: **schedule** it, **move it to the top**, **leave it** or **delete** it.
 
 An orange button shows how many are waiting. Pinned, repeating and planned tasks stay out of it, and you choose which lists take part. More in [Tickmanager](docs/tickmanager.md).
-
-<br clear="right">
 
 ## Also in the box
 
@@ -71,14 +61,14 @@ An orange button shows how many are waiting. Pinned, repeating and planned tasks
     <td valign="top"><img src="docs/screenshots/tile-attachments.png" width="260" alt="A task with a photo of three paint colours as an attachment"><br><b>📎 <a href="docs/tasks-and-lists.md">Photos and files</a></b><br>Add them to any task.</td>
   </tr>
   <tr>
-    <td valign="top"><img src="docs/screenshots/tile-swipe.png" width="260" alt="A task being swiped to the left, with a red delete area behind it"><br><b>👆 <a href="docs/tasks-and-lists.md">Swipe</a></b><br>Left to delete, right to move it to another list.</td>
+    <td valign="top"><img src="docs/screenshots/tile-swipe.png" width="260" alt="A task being swiped to the right, with a folder behind it to move it to another list"><br><b>👆 <a href="docs/tasks-and-lists.md">Swipe</a></b><br>Right to move it to another list, left to delete.</td>
     <td valign="top"><img src="docs/screenshots/tile-drag.png" width="260" alt="A task being dragged to another place in the list"><br><b>↕️ <a href="docs/tasks-and-lists.md">Drag and drop</a></b><br>Put your tasks in the order you want.</td>
     <td valign="top"><img src="docs/screenshots/tile-group-tasks.png" width="260" alt="Copies of a task for Alex, Sanne and you, with Sanne done"><br><b>👪 <a href="docs/sharing.md">Group tasks</a></b><br>Everyone their own copy; see who is done.</td>
   </tr>
   <tr>
     <td valign="top"><img src="docs/screenshots/tile-driving.png" width="260" alt="Driving mode detected, with Not now and Never"><br><b>🚗 <a href="docs/driving-mode.md">Driving mode</a></b><br>Big and simple while you drive, nearby tasks first.</td>
     <td valign="top"><img src="docs/screenshots/tile-offline.png" width="260" alt="Not saved yet, no connection, above the list"><br><b>✈️ <a href="docs/tasks-and-lists.md">Works offline</a></b><br>Changes are sent when you are back online.</td>
-    <td valign="top"><img src="docs/screenshots/tile-dark-mode.png" width="260" alt="The Home list in dark mode"><br><b>🌙 <a href="docs/settings.md">Dark mode</a></b><br>And colour themes, such as <i>Retro 70s</i>.</td>
+    <td valign="top"><img src="docs/screenshots/tile-light-mode.png" width="260" alt="The Home list in light mode"><br><b>☀️ <a href="docs/settings.md">Light or dark</a></b><br>And colour themes, such as <i>Retro 70s</i>.</td>
   </tr>
 </table>
 
@@ -115,12 +105,14 @@ Claude asks a few questions (language, time zone, Android app or not), sets ever
 
 </details>
 
-## Requirements
+## For the person setting it up
+
+### What you need
 1. [Claude Code](https://claude.com/claude-code) (or do it by hand with [SETUP.md](SETUP.md)).
-2. A free [Cloudflare](https://dash.cloudflare.com/sign-up) account. No credit card needed: only the optional attachments ask for a payment method on file (Cloudflare R2, see step 11 of [SETUP.md](SETUP.md)).
+2. A free [Cloudflare](https://dash.cloudflare.com/sign-up) account. No credit card needed. Only if you turn on photos and files on tasks (optional) does Cloudflare ask for a payment method on file (Cloudflare R2, see step 11 of [SETUP.md](SETUP.md)).
 3. [Node.js](https://nodejs.org) 22 or newer and [git](https://git-scm.com). Claude Code checks this and tells you if something is missing.
 
-## How to install (short version)
+### How to install (short version)
 1. Make a free Cloudflare account and open **Workers & Pages** once in the dashboard, so your account gets its `workers.dev` address.
 2. Open Claude Code in an empty folder that is **not** inside Google Drive, OneDrive or Dropbox (npm does not work well there).
 3. Paste this:
@@ -131,10 +123,13 @@ Claude asks a few questions (language, time zone, Android app or not), sets ever
 
 Updating later: open the folder in Claude Code and say *"update Tick"*.
 
-## Built with
+<details>
+<summary><b>For developers</b>: how it is built, commands, tests, the database and security</summary>
+
+### Built with
 A Cloudflare Worker ([Hono](https://hono.dev)) with D1, static assets and a cron trigger. The web app is vanilla JavaScript without a build step. Push through [@pushforge/builder](https://www.npmjs.com/package/@pushforge/builder), maps through [Leaflet](https://leafletjs.com) and OpenStreetMap.
 
-## Commands
+### Commands
 | | |
 |---|---|
 | `npm run dev` | Run locally on `http://127.0.0.1:8787` (copy `.dev.vars.example` to `.dev.vars`; `DEV_AUTH_BYPASS=1` skips the login, but only on `localhost` and `127.0.0.1`) |
@@ -147,14 +142,14 @@ A Cloudflare Worker ([Hono](https://hono.dev)) with D1, static assets and a cron
 | `node scripts/gen-vapid.mjs` | New key pair for web push |
 | `node scripts/import-ticktick.mjs <csv>` | Turn a TickTick backup into `import.sql` (the app can also import it: Settings → Data) |
 
-## Tests
+### Tests
 - Vitest stays on 4.1: with Vitest 5, `@cloudflare/vitest-plugin` 1.4 crashes on Windows ("File path must be a file: URL").
 - The tests use your `wrangler.jsonc` when it exists and `wrangler.example.jsonc` otherwise (as in CI).
 
-## Database and migrations
+### Database and migrations
 The schema lives in `migrations/` and is applied with `wrangler d1 migrations apply` (`npm run db:migrate`). A schema change is always a new file (`0006_….sql`); existing migrations are never edited.
 
-## Security
+### Security
 - Your own login, no Cloudflare Access: email address and password on `/login`, then an HttpOnly cookie for 30 days, renewed automatically when you use Tick in the second half of that period.
 - At most 5 login attempts per minute per IP (Workers Rate Limiting), then a 429.
 - Android: `Authorization: Bearer <key>` with a key you make in the app (or the old `API_TOKEN`): full access to the tasks, but not to settings, keys or your password.
@@ -164,8 +159,10 @@ The schema lives in `migrations/` and is applied with `wrangler d1 migrations ap
 - Without `SESSION_SECRET`, or without any password (none set in the app and no `LOGIN_PASSWORD`), nobody can log in (fail closed).
 - **Log out on other devices:** Settings → Account. **Forgot your password:** see "Good to know" in [SETUP.md](SETUP.md).
 
-## Contributing
+### Contributing
 Issues and pull requests are welcome. Every visible text goes into `public/i18n.js` in both `en` and `nl`; run `npm run typecheck` and `npm test` before you open a pull request.
+
+</details>
 
 ## License
 [MIT](LICENSE)
