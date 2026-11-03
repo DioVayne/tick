@@ -151,6 +151,17 @@ describe('backup', () => {
     expect(await r('bulk-past')).toEqual({ notified: 1, loc_notified: 0 });
     expect(await r('bulk-future')).toEqual({ notified: 0, loc_notified: 0 });
   });
+
+  it('back-up bevat reviewed_at en import zet hem terug', async () => {
+    const t = await track({ title: 'Bekeken' });
+    await env.DB.prepare('UPDATE tasks SET reviewed_at = ? WHERE id = ?').bind('2026-10-01T00:00:00.000Z', t.id).run();
+    const backup = await exportBackup();
+    expect(backup.tasks.find((x) => x.id === t.id).reviewed_at).toBe('2026-10-01T00:00:00.000Z');
+    await env.DB.prepare('DELETE FROM tasks WHERE id = ?').bind(t.id).run();
+    expect((await importBackup(backup)).status).toBe(200);
+    const row = await env.DB.prepare('SELECT reviewed_at FROM tasks WHERE id = ?').bind(t.id).first<{ reviewed_at: string | null }>();
+    expect(row!.reviewed_at).toBe('2026-10-01T00:00:00.000Z');
+  });
 });
 
 describe('backup per gebruiker', () => {

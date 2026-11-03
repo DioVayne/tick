@@ -68,6 +68,8 @@ export type TaskRow = {
   loc_trigger: string | null; loc_notified: number;
   repeat_rule: string | null; repeat_start: string | null; repeat_at: string | null; repeat_prev: string | null;
   deleted_at: string | null; copy_group: string | null; pinned: number;
+  /** Wanneer de taak voor het laatst in de Tickmanager bekeken is (null = nooit). */
+  reviewed_at: string | null;
   /** De gedeelde lijst van een hoofdtaak; wie hem afvinkte; op wiens naam hij staat (alleen in een gedeelde lijst). */
   shared_list: string | null; done_by: string | null; claimed_by: string | null;
 };
