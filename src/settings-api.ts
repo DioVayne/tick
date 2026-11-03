@@ -14,9 +14,9 @@ const MAX_WEBHOOK = 2000;
 
 /** Het antwoord van de API; de URL uit FALLBACK_WEBHOOK is een secret en gaat nooit mee (alleen dat hij er is). */
 function view(p: Prefs) {
-  const { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background, driveMode } = p;
+  const { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background, driveMode, tickmanager, reviewNewDays, reviewSeenDays } = p;
   const fallbackWebhook = fallbackFromEnv ? null : p.fallbackWebhook;
-  return { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackWebhook, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background, driveMode };
+  return { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackWebhook, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background, driveMode, tickmanager, reviewNewDays, reviewSeenDays };
 }
 
 const validZone = (tz: unknown): tz is string => {
@@ -91,6 +91,18 @@ settingsApi.patch('/', async (c) => {
     if (typeof body.driveMode !== 'boolean') throw new HttpError(400, 'err.invalid_drive_mode');
     next.driveMode = body.driveMode;
     writes.push(['drive_mode', body.driveMode ? null : 'off']); // aan = geen rij, de standaard
+  }
+  if ('tickmanager' in body) {
+    if (typeof body.tickmanager !== 'boolean') throw new HttpError(400, 'err.invalid_tickmanager');
+    next.tickmanager = body.tickmanager;
+    writes.push(['tickmanager', body.tickmanager ? null : 'off']); // aan = geen rij, de standaard
+  }
+  for (const [field, key] of [['reviewNewDays', 'review_new_days'], ['reviewSeenDays', 'review_seen_days']] as const) {
+    if (!(field in body)) continue;
+    const v = body[field];
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < 1 || v > 365) throw new HttpError(400, 'err.invalid_review_days');
+    next[field] = v;
+    writes.push([key, String(v)]);
   }
   if ('defaultLocale' in body) {
     if (c.get('user').role !== 'admin') throw new HttpError(403, 'err.admin_only');

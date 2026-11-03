@@ -27,7 +27,7 @@ const MIN_PASSWORD = 8;
 const RESCUE = `npx wrangler d1 execute DB --remote --command "UPDATE users SET password_hash = NULL WHERE role = 'admin'"`;
 const ENV_SECRET = { 'env-api': 'API_TOKEN', 'env-inbox': 'INBOX_TOKEN' };
 
-/** @typedef {{ timeZone: string, reminderTime: string, overdueTime: string | null, weekStart: 'mon' | 'sun', defaultLocale: 'en' | 'nl', fallbackWebhook: string | null, fallbackFromEnv: boolean, fallbackOverride: boolean, fallbackEnvSet: boolean, background: string | null, driveMode: boolean }} Settings */
+/** @typedef {{ timeZone: string, reminderTime: string, overdueTime: string | null, weekStart: 'mon' | 'sun', defaultLocale: 'en' | 'nl', fallbackWebhook: string | null, fallbackFromEnv: boolean, fallbackOverride: boolean, fallbackEnvSet: boolean, background: string | null, driveMode: boolean, tickmanager: boolean, reviewNewDays: number, reviewSeenDays: number }} Settings */
 
 const S = {
   open: false,
@@ -218,6 +218,9 @@ function setSettings(s) {
   S.settings = s;
   S.online = true;
   if (typeof s.driveMode === 'boolean') CONFIG.driveMode = s.driveMode; // elders gewijzigd: de schakelaar klopt (aanzetten vraagt hier nog niets)
+  if (typeof s.tickmanager === 'boolean') CONFIG.tickmanager = s.tickmanager;
+  if (typeof s.reviewNewDays === 'number') CONFIG.reviewNewDays = s.reviewNewDays;
+  if (typeof s.reviewSeenDays === 'number') CONFIG.reviewSeenDays = s.reviewSeenDays;
   applyBackground(s.background ?? null);
   // De URL uit de installatie is een secret: die komt niet in de cache.
   storeSet(CACHE_KEY, JSON.stringify(s.fallbackFromEnv ? { ...s, fallbackWebhook: null } : s));
@@ -229,7 +232,7 @@ function cachedSettings() {
     const c = JSON.parse(storeGet(CACHE_KEY) ?? 'null');
     if (c && typeof c === 'object' && typeof c.timeZone === 'string') return c;
   } catch { /* kapotte cache */ }
-  return { timeZone: CONFIG.timeZone, reminderTime: CONFIG.reminderTime, overdueTime: '09:00', weekStart: CONFIG.weekStart, defaultLocale: CONFIG.defaultLocale, fallbackWebhook: null, fallbackFromEnv: false, fallbackOverride: false, fallbackEnvSet: false, background: null, driveMode: CONFIG.driveMode !== false };
+  return { timeZone: CONFIG.timeZone, reminderTime: CONFIG.reminderTime, overdueTime: '09:00', weekStart: CONFIG.weekStart, defaultLocale: CONFIG.defaultLocale, fallbackWebhook: null, fallbackFromEnv: false, fallbackOverride: false, fallbackEnvSet: false, background: null, driveMode: CONFIG.driveMode !== false, tickmanager: CONFIG.tickmanager !== false, reviewNewDays: CONFIG.reviewNewDays ?? 14, reviewSeenDays: CONFIG.reviewSeenDays ?? 30 };
 }
 
 async function fetchSettings() {
