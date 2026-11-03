@@ -5,6 +5,7 @@ How to use Tick, one page per topic. Installing Tick is in [SETUP.md](../SETUP.m
 | Page | What it covers |
 |---|---|
 | [Tasks and lists](tasks-and-lists.md) | Adding tasks, subtasks, lists, pinning, dragging and swiping, search, notes, attachments, the trash |
+| [Tickmanager](tickmanager.md) | The round along old tasks: what counts as old, the orange button, the four choices, skipping lists, the settings |
 | [Reminders](reminders.md) | Reminders by time, repeating, the overdue nudge, the calendar, notifications on each device |
 | [Places](places.md) | Reminders on arrival or on leaving, favorite places, the radius, notifying again, on time on the road |
 | [Driving mode](driving-mode.md) | The bigger, simpler view while you drive, Not now and Never, adding and editing on the road |
