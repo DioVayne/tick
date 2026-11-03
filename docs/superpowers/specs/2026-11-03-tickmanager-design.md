@@ -1,100 +1,211 @@
 # Tickmanager — ontwerp
 
-Datum: 2026-11-03
+Datum: 2026-11-03 · Status: goedgekeurd ontwerp, nog niet gebouwd · Volgende stap: bouwplan (superpowers:writing-plans)
+in `docs/superpowers/plans/`, daarna bouwen.
 
-## Doel
+Dit document is genoeg om in een nieuwe sessie te beginnen. Lees eerst `CLAUDE.md` (regels voor wijzigingen) en
+`ARCHITECTURE.md` (hoe Tick is gebouwd). De beslissingen hieronder zijn met de gebruiker doorgesproken; heropen ze niet
+zonder reden.
+
+## 1. Doel
 
 Taken waar je lang niet naar hebt gekeken, komen terug, één voor één, en per taak beslis je wat ermee gebeurt. Zo raken
-taken zonder herinnering niet weg onderaan een lijst. Een apart prioriteitsveld komt er niet: pinnen en slepen zijn de
-prioriteit.
+taken zonder herinnering niet weg onderaan een lijst. Als hij aan staat, is dit een hoofdfeature van de app: hij heeft
+een eigen opvallende knop naast de plus.
 
-## Wanneer is een taak oud
+## 2. Beslissingen (met reden)
 
-Een taak doet mee in de ronde als alles hieronder klopt:
+| Beslissing | Reden |
+|---|---|
+| Geen prioriteitsveld | Pinnen en slepen zijn al prioriteit; een los veld botst daarmee en raakt vervuild ("alles hoog"). Pas heroverwegen als de behoefte "belangrijk over alle lijsten heen" opduikt. |
+| Jij start de ronde (knop met getal), geen melding of vast weekmoment | Valt op zonder te zeuren. |
+| "Laten staan" telt als bekeken (`reviewed_at`), los van `updated_at` | Anders komt de taak meteen terug. `updated_at` verandert bij elke wijziging en dient voor sync. |
+| Twee termijnen: nieuw 14 dagen, eerder bekeken 30 dagen, allebei instelbaar | Wie iets bewust liet staan, wil het niet elke twee weken terugzien. |
+| `reviewed_at` per taak, ook in een gedeelde lijst | "Nog actueel" is een feit over de taak; verwijderen en inplannen werken ook al voor iedereen. |
+| Lijsten overslaan per persoon (bijv. "Ooit") | Het gaat om wat jij in jouw ronde wilt zien. |
+| Kaart voor kaart | Een klein moment met begin en eind, je kunt halverwege stoppen. |
+| Eén Tickmanager-pagina voor start én instellingen | Alles op één plek; lijsten in één oogopslag aan/uit. |
+| Aan/uit-schakelaar in de gewone Instellingen, standaard aan | Staat hij uit, dan is de Tickmanager-knop weg en moet je hem ergens anders terug kunnen zetten. |
+| Geen opties per lijst (nog) | YAGNI; de lijstrijen zijn wel zo gebouwd dat ze later kunnen uitklappen. |
+| Inplannen loopt via een "planner" met voorstellen | Ruimte voor de toekomstige feature: inplannen op basis van een gekoppelde agenda (zie §9). |
+
+## 3. Wanneer is een taak oud
+
+Een taak doet mee in de ronde van persoon P als alles hieronder klopt:
 
 - open hoofdtaak: `done = 0`, `deleted_at IS NULL`, `parent_id IS NULL`;
-- niet vastgepind (voor deze persoon: `tasks.pinned` of `task_shares.pinned`);
-- geen herhaling;
-- geen herinnering in de toekomst (`remind_at IS NULL` of `remind_at` ligt in het verleden);
-- de lijst staat niet in `review_skip_lists` van deze persoon;
+- P heeft toegang: eigen taak (`tasks.user_id = P`) of een geaccepteerde deelrij (`task_shares.to_user = P`,
+  `status = 'accepted'`). Gebruik de bestaande helpers in `src/access.ts` (die voegen `list`, `position`, `pinned` per
+  persoon samen) in plaats van eigen joins;
+- niet vastgepind voor P (`tasks.pinned` voor de eigenaar, `task_shares.pinned` voor een deelnemer);
+- geen herhaling (`repeat_rule IS NULL`);
+- geen herinnering in de toekomst (`remind_at IS NULL` of `remind_at <= nu`). Verlopen herinneringen tellen dus mee;
+- de lijst (zoals P hem ziet) staat niet in `review_skip_lists` van P;
 - langer dan de termijn niet bekeken:
   - `reviewed_at IS NULL` en `created_at` ouder dan **termijn nieuw** (standaard 14 dagen), of
   - `reviewed_at` ouder dan **termijn bekeken** (standaard 30 dagen).
 
-Subtaken doen niet los mee; ze gaan mee met hun hoofdtaak. Volgorde in de ronde: oudste eerst (op de leeftijd hierboven).
+Subtaken doen niet los mee; ze gaan mee met hun hoofdtaak. Volgorde in de ronde: oudste eerst, op
+`coalesce(reviewed_at, created_at)`.
 
-## De ronde
+## 4. De Tickmanager-knop
 
-Kaart voor kaart: één taak in beeld met titel, lijst, leeftijd ("3 weken niet bekeken") en het begin van de notitie;
-een teller ("3 van 8"); altijd te stoppen. De lijst met taken wordt bij de start opgehaald en ligt daarna vast.
+- **Plek:**
+  - Smal scherm (`max-width: 1023.98px`): een ronde knop links van de bestaande `#fab` (de +, rechtsonder, 56px), op
+    dezelfde hoogte. De knop is kleiner (48px), met 12px tussenruimte.
+  - Breed scherm, waar `#fab` niet bestaat: een ronde knop direct links van het invoerveld `#add` (dat zelf een + als
+    `::before` heeft), even hoog als dat veld.
+- **Uiterlijk:** mild oranje achtergrond met een bliksem-icoon (nieuw icoon `bolt` in `public/icons.js`, bijvoorbeeld
+  pad `M13 2 4 14h7l-1 8 9-12h-7l1-8z`). De kleur wordt een nieuwe token `--manager` (met `--manager-text`) in
+  `public/style.css`, in elk blok waar de andere tokens staan: licht, donker (beide varianten) en het retro-palet.
+  Richtwaarden: licht `#f4a259` met donkere tekst `#3a1d00`; donker `#e8964a` met `#2a1400`. In het retro-palet is
+  `--accent` zelf al oranje (`#ff8c00`); kies daar een zachtere tint (bijvoorbeeld peru `#cd853f`), zodat de knop te
+  onderscheiden blijft van de +. Contrast tekst/icoon op de knop: minstens 3:1.
+- **Getal:** een klein rondje op de knop met het aantal oude taken; geen rondje bij 0.
+- **Zichtbaar:** alleen als de Tickmanager aan staat, en verder volgens dezelfde regels als `#fab` en `#add` (verborgen
+  als een taak open is, de kaart, de Android-balk of het invoerveld in beeld is; zie `style.css` rond `#fab` en
+  `sidebar.js`). Waar de onderste rij nu opschuift voor `#fab` (tray, toast), blijft dat zo; de knop staat op
+  dezelfde rij.
+- **Tik:** opent de Tickmanager-pagina (`#/manager`).
+- Toegankelijk: `aria-label` en `title` via i18n ("Tickmanager", met het aantal erin).
+
+## 5. De Tickmanager-pagina (`#/manager`)
+
+- Route: voeg `page: 'manager'` toe in `public/route.js` (zoals `settings` en `help`), met test in `test/route.test.ts`.
+- **Bovenaan:** "N taken zijn al een tijd niet bekeken" en een grote knop **Opruimen starten**. Bij 0 een rustige tekst
+  ("Alles is bij") en geen knop.
+- **Instellingen op de pagina:**
+  - termijn nieuw (dagen, standaard 14) en termijn bekeken (dagen, standaard 30); geheel getal 1–365;
+  - **Lijsten:** alle lijsten van P (eigen en gedeelde, uit `lists()` in `public/store.js`) onder elkaar, met een
+    vinkje **meenemen** en het aantal oude taken in die lijst. Elke rij is een eigen element dat later kan uitklappen
+    voor opties per lijst.
+- In de gewone Instellingen (`public/settingsview.js`, sectie Weergave): schakelaar **Tickmanager tonen**, standaard
+  aan. Uit = geen knop, geen getal; `#/manager` valt dan terug naar de gewone lijst.
+- Een ⓘ Help-regel in `public/help.js`.
+
+## 6. De ronde
+
+Start vanaf de pagina. De lijst met oude taken wordt bij de start opgehaald en ligt daarna vast. Kaart voor kaart:
+één taak in beeld met titel, lijst, leeftijd ("3 weken niet bekeken") en het begin van de notitie; een teller
+("3 van 8"); altijd te stoppen (terug naar de pagina, de rest blijft staan).
 
 | Knop | Effect |
 |---|---|
-| Inplannen | De bestaande datum/tijdkiezer; de taak krijgt `remind_at`; `reviewed_at` = nu. |
-| Bovenaan zetten | Taak bovenaan zijn lijst, onder de vastgepinde taken (`position` voor deze persoon); `reviewed_at` = nu. |
-| Laten staan | Alleen `reviewed_at` = nu. |
-| Verwijderen | Naar de prullenbak, met de bestaande ongedaan-maken. |
+| **Inplannen** | Toont voorstellen van de planner (§9) als knoppen, plus **Kies datum…** (de bestaande `public/datepicker.js`). Kiezen zet `remind_at` (via `store.update(id, { remind_at })`), daarna `reviewed_at` = nu. Annuleren laat de kaart staan. |
+| **Bovenaan zetten** | Taak bovenaan zijn lijst, onder de vastgepinde taken (zelfde manier als slepen: `position` voor P, zie `topOrder` in `src/access.ts` en hoe slepen de positie zet); daarna `reviewed_at` = nu. |
+| **Laten staan** | Alleen `reviewed_at` = nu. |
+| **Verwijderen** | Naar de prullenbak (`store.remove(id)`), met de bestaande ongedaan-maken-toast. |
 
-Annuleren in de datumkiezer laat de taak onaangeroerd op de kaart staan. Aan het eind een korte samenvatting
-("2 ingepland, 1 bovenaan, 1 verwijderd, 4 laten staan") en een knop terug.
+Aan het eind een samenvatting ("2 ingepland, 1 bovenaan, 1 verwijderd, 4 laten staan") en een knop terug naar je
+lijst. Daarna ververst het getal op de knop.
 
-`reviewed_at` hoort bij de taak, niet bij de persoon: in een gedeelde lijst geldt "bekeken" voor iedereen.
+Offline: de acties lopen via de bestaande wachtrij in `store.js` (`mutate`/`enqueue`), dus ook "bekeken" moet daar
+een op-type krijgen. Ophalen van de oude taken kan offline uit `state.open` (zie §8), zodat de ronde ook zonder
+netwerk werkt.
 
-## De Tickmanager-pagina
+## 7. Data
 
-- Zijbalkknop **Tickmanager** met een stil getal (aantal oude taken; geen getal bij 0). Bladwijzer `#/manager`.
-- Bovenaan: "N taken zijn al een tijd niet bekeken" + **Opruimen starten**; bij 0 een rustige tekst.
-- Instellingen:
-  - termijn nieuw (dagen, standaard 14) en termijn bekeken (dagen, standaard 30);
-  - alle lijsten van deze persoon (eigen en gedeelde) onder elkaar met een vinkje **meenemen** en het aantal oude
-    taken per lijst. De rijen zijn zo opgezet dat ze later kunnen uitklappen voor opties per lijst.
-- In de gewone Instellingen: schakelaar **Tickmanager tonen**, standaard aan. Uit = geen zijbalkknop, geen getal; de
-  pagina en `#/manager` zijn dan niet bereikbaar.
+Nieuwe migratie `migrations/0018_tickmanager.sql` (nooit een bestaande migratie aanpassen):
 
-## Data
+```sql
+-- Wanneer iemand de taak in de Tickmanager voor het laatst bekeek (laten staan, bovenaan, ingepland). Eén waarde per
+-- taak: in een gedeelde lijst geldt bekeken voor iedereen.
+ALTER TABLE tasks ADD COLUMN reviewed_at TEXT;
+-- Lijsten die iemand niet in zijn opruimronde wil, per persoon. list_id is de vaste id uit list_ids (overleeft hernoemen).
+CREATE TABLE review_skip_lists (
+  user_id TEXT NOT NULL REFERENCES users(id),
+  list_id TEXT NOT NULL,
+  PRIMARY KEY (user_id, list_id)
+);
+```
 
-Migratie `migrations/0018_tickmanager.sql`:
+- `reviewed_at` in UTC-ISO zoals de andere tijden; toevoegen aan de kolomlijst in `src/data.ts` (back-up/import, en
+  niet in `NOT_NULL`) en aan de taakgegevens die de PWA krijgt.
+- Instellingen per persoon in `user_settings` via `UserPrefs` in `src/prefs.ts`, zelfde patroon als `driveMode`
+  (`drive_mode` = 'off', geen rij = standaard):
+  - `tickmanager`: aan/uit, standaard aan (rij `tickmanager` = 'off' zet hem uit);
+  - `review_new_days`: standaard 14; `review_seen_days`: standaard 30.
+  - Geldigheid in `src/settings-api.ts` met `HttpError(400, 'err.…')`; doorgeven in `/api/settings` en `/config.js`.
+- Geen nieuwe config in `wrangler.jsonc`: dit zijn instellingen per persoon in de app.
 
-- `ALTER TABLE tasks ADD COLUMN reviewed_at TEXT;` (UTC, ISO zoals de andere tijden)
-- `CREATE TABLE review_skip_lists (user_id TEXT NOT NULL REFERENCES users(id), list_id TEXT NOT NULL, PRIMARY KEY (user_id, list_id));`
-  — `list_id` is de vaste id uit `list_ids`, zodat de keuze hernoemen overleeft.
+## 8. Server en PWA
 
-Per persoon in `user_settings` via `UserPrefs` (`src/prefs.ts`): `tickmanager` (aan/uit, standaard aan; rij 'off' =
-uit, net als `drive_mode`), `review_new_days` (14), `review_seen_days` (30).
+**Server** (`src/index.ts`, logica in een nieuw `src/review.ts`):
+- `POST /api/tasks/:id/reviewed` — zet `reviewed_at` = nu, en ook `updated_at`, zodat andere apparaten de wijziging
+  via sync krijgen. (De leeftijd in §3 kijkt alleen naar `reviewed_at` en `created_at`, nooit naar `updated_at`.)
+  Zelfde toegangscheck als andere taakwijzigingen (`getTask`, 404 als niet gevonden).
+- `PUT /api/review/lists/:listId` met `{ include: boolean }` — één lijst aan/uit in `review_skip_lists` voor P.
+  `listId` moet een lijst van P zijn (anders 404).
+- `GET /api/lists` geeft per lijst ook `review: boolean` (meenemen ja/nee), zodat de PWA niets extra hoeft op te halen.
+- Inplannen, bovenaan zetten en verwijderen gebruiken de bestaande routes; de bestaande routes veranderen niet.
 
-`reviewed_at` gaat mee in back-up en import (`src/data.ts`, kolomlijst) en in de taakgegevens naar de PWA.
+**Wie bepaalt wat oud is:** de PWA, uit `state.open` (alle open taken staan al in de client) en de instellingen. Zet de
+regel in een pure functie (`public/review.js`, `isStale(task, prefs, skipped, now)` en `staleTasks(...)`) die ook in
+de server-tests te importeren is, zoals `public/repeat.js` en `public/i18n.js` nu. Zo werken het getal en de ronde
+offline, en is er geen extra endpoint nodig om ze op te halen.
 
-## Server
+**PWA-modules:**
+- `public/review.js` — de regel (puur, getest).
+- `public/manager.js` — de pagina en de ronde.
+- `public/planner.js` — voorstellen voor inplannen (§9).
+- Allemaal in `SHELL` in `public/sw.js`, en `CACHE` ophogen (`test/offline.test.ts` controleert dat).
+- Knop in `public/index.html` naast `#fab` (met `hidden` en `data-i18n-attr` zoals `#fab`); tonen/verbergen en het
+  getal in de module die nu `#fab` regelt (`sidebar.js`).
+- Geen inline scripts of stijlen (CSP), geen build-stap.
 
-- `GET /api/review` — de oude taken van deze persoon (volgens de regel hierboven), plus het aantal per lijst.
-- `POST /api/tasks/:id/reviewed` — zet `reviewed_at` = nu; zelfde toegangscheck als andere taakwijzigingen.
-- `PUT /api/review/lists/:listId` met `{ include: boolean }` — één lijst aan/uit in `review_skip_lists`.
-- Inplannen, bovenaan zetten en verwijderen gebruiken de bestaande routes; na inplannen en bovenaan zetten roept de
-  PWA `POST /api/tasks/:id/reviewed` aan. De bestaande routes veranderen niet.
-- Fouten als `HttpError(status, key, vars)`.
+**Teksten:** alles in `public/i18n.js` met `en` én `nl` (`test/i18n.test.ts`). Server-fouten als
+`HttpError(status, key, vars)`, nooit een zin.
 
-## PWA
+## 9. Voorbereid op inplannen met een gekoppelde agenda (later)
 
-- Nieuwe modules (bijvoorbeeld `public/manager.js` voor de pagina, `public/review.js` voor de ronde), in `SHELL` in
-  `public/sw.js`; `CACHE` ophogen.
-- Route `#/manager` in `route.js`, zijbalkknop in `sidebar.js`, schakelaar in `settingsview.js`.
-- Alle teksten in `public/i18n.js` met `en` en `nl`. Geen inline scripts of stijlen.
-- Het getal in de zijbalk ververst bij het laden en na wijzigingen aan taken.
+Er komt later een feature die taken inplant op basis van een gekoppelde agenda (Google of een andere). Nu bouwen we
+die niet, maar de ronde moet er zonder verbouwing in passen:
 
-## Docs
+- **Eén plek voor voorstellen.** "Inplannen" vraagt `public/planner.js` om voorstellen:
+  `suggest(task, ctx) → Promise<Slot[]>`, met `Slot = { at: string /* UTC ISO */, label: string, source: string }`.
+  Nu levert de planner vaste voorstellen (`source: 'fixed'`): vandaag (alleen als de standaardtijd nog komt), morgen
+  en volgende week op de standaardtijd (`getDefaultTime` in `public/repeat.js`, `quickDays` in `public/calendar.js`).
+  Later komt er een bron bij die vrije momenten uit de agenda haalt (`source: 'calendar'`); de UI toont gewoon
+  wat de planner teruggeeft en hoeft niet te veranderen.
+- **Async vanaf het begin.** `suggest` is async, ook al is de vaste versie dat niet nodig, zodat een agenda-bron
+  later via de server kan (bijvoorbeeld een toekomstig `GET /api/planner/slots`).
+- **Inplannen zit los van bekeken.** De ronde roept na elk gekozen moment zelf `reviewed`; een toekomstige
+  agenda-planner hoeft daar niets van te weten.
+- **Wat er later nog bij moet (niet nu bouwen):** een koppeling met de agenda (OAuth, tokens versleuteld per persoon),
+  een geschatte duur per taak (nieuwe kolom, bijvoorbeeld `duration_min`) en eventueel meerdere taken tegelijk
+  inplannen. Dit ontwerp legt daar niets voor vast in de database.
 
-- Nieuwe pagina `docs/tickmanager.md` (Engels) en een rij in `docs/README.md`.
-- Schakelaar vermelden in `docs/settings.md`; korte zin in de Help-pagina van de app.
-- `ARCHITECTURE.md`: `reviewed_at`, `review_skip_lists` en de nieuwe endpoints.
+## 10. Docs
 
-## Testen
+- Nieuwe pagina `docs/tickmanager.md` (Engels, voor gebruikers): wat oud is, de knop, de ronde, de vier keuzes, de
+  instellingen, lijsten overslaan. Rij in de index `docs/README.md`.
+- `docs/settings.md`: de schakelaar "Show Tickmanager".
+- `ARCHITECTURE.md`: rij in het overzicht (`reviewed_at`, `review_skip_lists`, de regel in de client, de endpoints)
+  en de nieuwe instellingen.
 
-- De "oud"-regel: beide termijnen, vastgepind, herhalend, herinnering in de toekomst/verleden, subtaak, prullenbak,
-  overgeslagen lijst, gedeelde lijst (bekeken door een ander telt ook).
-- `reviewed`-endpoint: zet de tijd, weigert taken zonder toegang.
-- `i18n.test.ts` en `offline.test.ts` blijven groen.
-- UI in de browser met `npm run dev`: pagina, ronde met alle vier de knoppen, schakelaar uit.
+## 11. Testen en opleveren
 
-## Bewust weggelaten
+**Tests (vitest, map `test/`):**
+- `test/review.test.ts` — de regel: beide termijnen, grens van precies N dagen, vastgepind (eigen en deelrij),
+  herhalend, herinnering in de toekomst en in het verleden, subtaak, afgevinkt, prullenbak, overgeslagen lijst,
+  gedeelde lijst (bekeken door een ander telt ook), sortering oudste eerst.
+- API: `reviewed` zet de tijd, 404 zonder toegang, deelnemer van een gedeelde lijst mag het; `PUT /api/review/lists`
+  zet en wist; `GET /api/lists` geeft `review`; instellingen valideren (1–365) en standaardwaarden.
+- Migratie: `test/migratie*.test.ts`-patroon voor 0018.
+- `planner.js`: vaste voorstellen, "vandaag" alleen als de tijd nog komt.
+- `route.test.ts`, `i18n.test.ts`, `offline.test.ts` blijven groen.
 
-Prioriteitsveld, opties per lijst, een termijn per lijst, meldingen of een vast weekmoment om op te ruimen.
+**Controleren:** `npm run typecheck` en `npm test`. UI in de browser met `npm run dev`: knop op smal en breed scherm,
+in licht, donker en retro; pagina; ronde met alle vier de knoppen; schakelaar uit; offline een ronde doen.
+
+**Waar draaien:** het project staat op Google Drive (`H:\My Drive\Git\tick`); een hook blokkeert npm daar. Draai
+typecheck, tests, dev-server en deploy in een kopie onder `C:\dev` (robocopy zonder `node_modules`, `.git`,
+`.wrangler`, dan `npm ci`). git werkt gewoon op H:.
+
+**Opleveren:** commits in het Nederlands. Pushen en deployen mag zonder te vragen: `npm run db:migrate`, dan
+`npm run deploy`, dan `npx wrangler deployments list`.
+
+## 12. Bewust weggelaten
+
+Prioriteitsveld, opties of termijn per lijst, meldingen of een vast weekmoment om op te ruimen, de agenda-koppeling
+zelf (alleen de planner-aansluiting, §9).
