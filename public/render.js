@@ -524,10 +524,11 @@ document.addEventListener('touchmove', (e) => { if (e.cancelable && document.que
 function enableSorting(root) {
   root.querySelectorAll('ul.tasks').forEach((ul) => {
     const sortable = new Sortable(ul, {
-      // Muis en aanraking: de rij even vasthouden en dan slepen (kort scrollen, vegen of klikken blijft gewoon werken).
-      // Terugval in plaats van native slepen: in Firefox start native slepen niet vanaf een knop, zoals de titel.
+      // Muis: de rij indrukken en bewegen; een klik zonder beweging opent de taak nog. Aanraking: eerst vasthouden
+      // (kort scrollen of vegen blijft gewoon werken). Terugval in plaats van native slepen: in Firefox start native
+      // slepen niet vanaf een knop, zoals de titel.
       filter: (evt) => !!evt.target.closest('input, textarea, button:not(.title, .check), a, select'),
-      preventOnFilter: false, forceFallback: true,
+      preventOnFilter: false, forceFallback: true, fallbackTolerance: 5,
       delay: 250, touchStartThreshold: 8,
       animation: 150, direction: 'vertical',
       onStart: (evt) => { if (ul.dataset.parent === '' && wide.matches) startListDrop(evt.item.dataset.id); },
@@ -563,9 +564,9 @@ function enableSorting(root) {
         update(items[idx].dataset.id, { position: p });
       },
     });
-    // Aan het greepje meteen slepen (dat scrolt niet, dus de vinger beweegt direct); elders eerst vasthouden.
+    // Met de muis en aan het greepje meteen slepen (dat scrolt niet, dus de vinger beweegt direct); elders eerst vasthouden.
     // In de capture-fase, zodat dit gebeurt voordat Sortable zelf op de aanraking reageert.
-    ul.addEventListener('pointerdown', (e) => sortable.option('delay', e.target.closest('.grip') ? 0 : 250), true);
+    ul.addEventListener('pointerdown', (e) => sortable.option('delay', e.pointerType === 'mouse' || e.target.closest('.grip') ? 0 : 250), true);
     ul.addEventListener('touchstart', (e) => sortable.option('delay', e.target.closest('.grip') ? 0 : 250), true);
   });
 }
