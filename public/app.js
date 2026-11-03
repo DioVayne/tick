@@ -1,7 +1,7 @@
 import CONFIG from './settings.js'; // eerst: taal en tijdzone
 import { initAndroidApp, offerAppSync, startLocationBar } from './androidapp.js';
 import { t } from './i18n.js';
-import { closeTask, detailReady, flushPending, selectTask } from './detail.js';
+import { closeTask, detailReady, flushPending, onManagerStart, selectTask } from './detail.js';
 import { openListMenu } from './listmenu.js';
 import { initComposer, refreshComposer } from './composer.js';
 import { $, el, render, status, toast } from './render.js';
@@ -51,6 +51,19 @@ $('#btn-help').addEventListener('click', () => {
   hideManager();
   openHelp({ push: true });
 });
+// Tickmanager: de oranje knop (mobiel), het item onder Inbox in de zijbalk en Opruimen starten in het lege paneel.
+// openManager verbergt de andere pagina's niet zelf (zoals help.js), dus dat eerst.
+function showManager(start = false) {
+  hideSettings();
+  hideCalendar();
+  hideHelp();
+  openManager({ push: true, start }); // al open: geen nieuwe stap in de geschiedenis
+}
+$('#mgr-fab').addEventListener('click', () => showManager());
+$('#side-lists').addEventListener('click', (e) => {
+  if (e.target instanceof Element && e.target.closest('#btn-manager')) showManager();
+});
+onManagerStart(() => showManager(true));
 
 // ---------- zoeken ----------
 // Een vergrootglas in de kop; het zoekveld verschijnt pas bij gebruik (ook met /) en neemt dan de plek van de titel.
