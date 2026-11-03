@@ -12,7 +12,7 @@ import { attachStmts, listOf, type ListRef } from './sharedlists';
 const TASK_COLUMNS: (keyof TaskRow)[] = [
   'id', 'title', 'description', 'list', 'parent_id', 'position', 'remind_at', 'notified', 'done', 'done_at', 'source',
   'created_at', 'updated_at', 'loc_name', 'loc_lat', 'loc_lng', 'loc_radius', 'loc_trigger', 'loc_notified',
-  'repeat_rule', 'repeat_start', 'repeat_at', 'repeat_prev', 'pinned',
+  'repeat_rule', 'repeat_start', 'repeat_at', 'repeat_prev', 'pinned', 'reviewed_at',
 ];
 const PLACE_COLUMNS = ['id', 'name', 'lat', 'lng', 'radius', 'created_at', 'updated_at'] as const;
 
