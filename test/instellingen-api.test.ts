@@ -59,9 +59,44 @@ describe('instellingen-API', () => {
 
   it.each([
     [{ timeZone: 'Mars/Olympus' }], [{ reminderTime: '25:00' }], [{ weekStart: 'tue' }], [{ defaultLocale: 'de' }], [{ driveMode: 'off' }],
+    [{ tickmanager: 'off' }], [{ reviewNewDays: '14' }], [{ reviewNewDays: 1.5 }], [{ reviewNewDays: 0 }], [{ reviewSeenDays: 366 }], [{ reviewSeenDays: null }],
     [{ fallbackWebhook: 'http://x' }], [{ fallbackWebhook: `https://x.nl/${'a'.repeat(2000)}` }],
   ])('weigert %o met 400', async (body) => {
     expect((await patch(body)).status).toBe(400);
+    const rows = await env.DB.prepare("SELECT key FROM user_settings WHERE user_id = ? AND key LIKE 'review_%'").bind(ADMIN_ID).all();
+    expect(rows.results).toEqual([]);
+  });
+
+  it('Tickmanager: standaard aan, 14 en 30 dagen', async () => {
+    const cookie = await session();
+    expect(await json(await call('/api/settings', { auth: null, headers: { cookie } }))).toMatchObject({ tickmanager: true, reviewNewDays: 14, reviewSeenDays: 30 });
+    const cfg = await (await call('/config.js', { auth: null, headers: { cookie } })).text();
+    expect(cfg).toContain('"tickmanager":true');
+    expect(cfg).toContain('"reviewNewDays":14');
+    expect(cfg).toContain('"reviewSeenDays":30');
+  });
+
+  it('Tickmanager uit en termijnen bewaren', async () => {
+    const cookie = await session();
+    expect(await json(await patch({ tickmanager: false, reviewNewDays: 7, reviewSeenDays: 60 }))).toMatchObject({ tickmanager: false, reviewNewDays: 7, reviewSeenDays: 60 });
+    const key = env.DB.prepare("SELECT value FROM user_settings WHERE user_id = ? AND key = 'tickmanager'").bind(ADMIN_ID);
+    expect((await key.first<{ value: string }>())?.value).toBe('off');
+    const cfg = await (await call('/config.js', { auth: null, headers: { cookie } })).text();
+    expect(cfg).toContain('"tickmanager":false');
+    expect(cfg).toContain('"reviewNewDays":7');
+    expect(cfg).toContain('"reviewSeenDays":60');
+    expect(await json(await patch({ tickmanager: true }))).toMatchObject({ tickmanager: true, reviewNewDays: 7 });
+    expect(await key.first()).toBeNull();
+  });
+
+  it('grenzen 1 en 365 mogen', async () => {
+    expect(await json(await patch({ reviewNewDays: 1, reviewSeenDays: 365 }))).toMatchObject({ reviewNewDays: 1, reviewSeenDays: 365 });
+  });
+
+  it('een kapotte termijnrij geeft de standaard', async () => {
+    await env.DB.prepare("INSERT INTO user_settings (user_id, key, value) VALUES (?, 'review_new_days', 'abc')").bind(ADMIN_ID).run();
+    const cookie = await session();
+    expect(await json(await call('/api/settings', { auth: null, headers: { cookie } }))).toMatchObject({ reviewNewDays: 14 });
   });
 
   it('rijmodus: standaard aan, uit bewaard als rij, weer aan wist de rij; config.js geeft hem mee', async () => {

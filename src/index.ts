@@ -571,10 +571,10 @@ app.get('/api/config', (c) => c.json({ vapidPublicKey: c.env.VAPID_PUBLIC_KEY })
 
 // Instellingen voor de PWA als module, zodat de service worker ze met de shell cachet (offline de juiste taal en zone).
 app.get('/config.js', (c) => {
-  const { timeZone, reminderTime, weekStart, defaultLocale, driveMode } = c.get('prefs');
+  const { timeZone, reminderTime, weekStart, defaultLocale, driveMode, tickmanager, reviewNewDays, reviewSeenDays } = c.get('prefs');
   const user = c.get('user');
   const config = {
-    locale: c.get('lang'), defaultLocale, timeZone, reminderTime, weekStart, driveMode, androidPackage: c.env.ANDROID_PACKAGE || null,
+    locale: c.get('lang'), defaultLocale, timeZone, reminderTime, weekStart, driveMode, tickmanager, reviewNewDays, reviewSeenDays, androidPackage: c.env.ANDROID_PACKAGE || null,
     userId: user.id, userName: user.name, isAdmin: user.role === 'admin',
     attachments: !!c.env.FILES, maxUploadMb: maxUpload(c.env) / 1024 / 1024,
   };

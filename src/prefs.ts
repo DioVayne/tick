@@ -31,9 +31,21 @@ export type UserPrefs = {
   background: string | null;
   /** Rijmodus: groter scherm als de PWA merkt dat je rijdt (public/drive.js). Standaard aan; de rij `drive_mode` = 'off' zet hem uit. */
   driveMode: boolean;
+  /** Tickmanager (de ronde langs oude taken): standaard aan; de rij `tickmanager` = 'off' zet hem uit. */
+  tickmanager: boolean;
+  /** Een nieuwe taak is "oud" na zoveel dagen (1-365, standaard 14); rij `review_new_days`. */
+  reviewNewDays: number;
+  /** Een al bekeken taak komt na zoveel dagen terug (1-365, standaard 30); rij `review_seen_days`. */
+  reviewSeenDays: number;
 };
 
 export type Prefs = InstallPrefs & UserPrefs;
+
+/** Een termijn in hele dagen (1-365); alles anders (kapotte rij) geeft de standaard. */
+const days = (v: string | undefined, def: number): number => {
+  const n = Number(v);
+  return v !== undefined && /^\d+$/.test(v) && n >= 1 && n <= 365 ? n : def;
+};
 
 const validZone = (tz: string | undefined | null): tz is string => {
   if (!tz) return false;
@@ -96,6 +108,9 @@ export async function loadUserPrefs(env: Env, user: Pick<User, 'id' | 'role'>, r
     fallbackEnvSet: !!envHook,
     background: env.FILES ? row.get('background') || null : null,
     driveMode: row.get('drive_mode') !== 'off',
+    tickmanager: row.get('tickmanager') !== 'off',
+    reviewNewDays: days(row.get('review_new_days'), 14),
+    reviewSeenDays: days(row.get('review_seen_days'), 30),
   };
 }
 
