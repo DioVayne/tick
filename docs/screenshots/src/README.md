@@ -10,7 +10,6 @@ The images in `docs/screenshots/` are made from a local Tick filled with demo da
    `npx wrangler d1 execute DB --local --persist-to <state-dir> --file seed-old.sql`.
    The dates in `seed.mjs` fit a clock of 3 November 2026; seeding on another day can leave "ticked off" times in the future.
 4. **Raw screens.** Restart Tick with the bypass on (without `--var`), so the browser is Robin. `node shots.mjs <raw-dir> [scene ...]` takes the scenes listed in `shots.mjs` (phone 390×844 and desktop 1280×800, both at 2×, clock fixed at 3 November 2026, 16:20, Europe/Amsterdam).
-   `raw/a-*.png` come from the Android emulator (`adb exec-out screencap -p`).
 5. **Framing.** `node compose.mjs <docs/screenshots dir> [name ...]` renders `compose.html` (phone frames, close-ups, tiles) to the transparent PNGs in `docs/screenshots/`, compressed to palette PNGs with `sharp`.
 
 Run the scripts from a copy next to `node_modules`; `import 'playwright'` is resolved from the script's own folder.
