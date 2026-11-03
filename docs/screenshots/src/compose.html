@@ -1,0 +1,76 @@
+<!doctype html>
+<!-- Frames the raw screenshots in raw/ for the README. Rendered to transparent PNGs by compose.mjs.
+     ?type=phone&img=<raw name>[&w=<css px>]                 one phone in a frame
+     ?type=hero&img=<a>&img2=<b>&img3=<c>                    three phones, the middle one bigger
+     ?type=crop&img=<raw>&x=&y=&cw=&ch=&w=                   a close-up: the part of the screen at x,y (cw×ch, in the
+                                                             CSS pixels of a 390 px wide phone), shown w px wide -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: transparent; }
+  /* Room around the card so the shadow is not cut off */
+  #stage { display: inline-flex; align-items: flex-end; gap: 22px; padding: 18px 22px 30px; }
+
+  .phone { --w: 200px; width: var(--w); aspect-ratio: 390 / 844; flex: none; position: relative;
+    background: #0d0f14; border-radius: calc(var(--w) * .16); padding: calc(var(--w) * .035);
+    box-shadow: inset 0 0 0 1.5px #3a404d, 0 10px 24px rgb(0 0 0 / .22), 0 2px 6px rgb(0 0 0 / .12); }
+  .phone .scr { width: 100%; height: 100%; border-radius: calc(var(--w) * .125); overflow: hidden; background: #fff; }
+  /* A status bar above the app, so the notch does not cover its header */
+  .phone .bar { height: calc(var(--w) * .12); display: flex; align-items: center; justify-content: space-between;
+    padding: 0 calc(var(--w) * .1); font: 600 calc(var(--w) * .045) / 1 "Segoe UI", system-ui, sans-serif; color: #111; }
+  .phone.dark .bar { color: #f2f2f2; }
+  .phone .bar i { display: inline-block; width: calc(var(--w) * .06); height: calc(var(--w) * .03); border-radius: 2px;
+    border: 1.5px solid currentColor; }
+  .phone img { width: 100%; display: block; }
+  .phone::after { content: ""; position: absolute; top: calc(var(--w) * .055); left: 50%; translate: -50% 0;
+    width: 26%; height: calc(var(--w) * .055); background: #0d0f14; border-radius: 99px; }
+
+  .crop { position: relative; overflow: hidden; flex: none; background: #fff;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / .07), 0 8px 22px rgb(0 0 0 / .18), 0 2px 5px rgb(0 0 0 / .1); }
+  .crop img { position: absolute; display: block; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const stage = document.getElementById('stage');
+  const src = (name) => `raw/${name}.png`;
+  const num = (k, d) => (q.has(k) ? Number(q.get(k)) : d);
+
+  // bar=<hex>,<hex>,…: the colour of the status bar per phone (compose.mjs takes it from the top of each screen)
+  const bars = (q.get('bar') || '').split(',');
+  function phone(name, w, i) {
+    const p = document.createElement('div');
+    const bg = bars[i] || 'ffffff';
+    const dark = parseInt(bg.slice(0, 2), 16) < 0x60;
+    p.className = 'phone' + (dark ? ' dark' : '');
+    p.style.setProperty('--w', w + 'px');
+    p.innerHTML = `<div class="scr" style="background:#${bg}"><div class="bar"><span>16:20</span><i></i></div><img src="${src(name)}"></div>`;
+    return p;
+  }
+
+  const type = q.get('type');
+  if (type === 'phone') stage.append(phone(q.get('img'), num('w', 200), 0));
+  if (type === 'hero') stage.append(phone(q.get('img'), 170, 0), phone(q.get('img2'), 200, 1), phone(q.get('img3'), 170, 2));
+  if (type === 'crop') {
+    const w = num('w', 360), cw = num('cw', 390), ch = num('ch', 300), zoom = w / cw;
+    const box = document.createElement('div');
+    box.className = 'crop';
+    box.style.width = w + 'px';
+    box.style.height = Math.round(ch * zoom) + 'px';
+    box.style.borderRadius = num('r', 22) + 'px';
+    const img = new Image();
+    img.src = src(q.get('img'));
+    img.style.width = 390 * zoom + 'px';
+    img.style.left = -num('x', 0) * zoom + 'px';
+    img.style.top = -num('y', 0) * zoom + 'px';
+    box.append(img);
+    stage.append(box);
+  }
+  if (q.get('bg')) document.body.style.background = q.get('bg');
+</script>
+</body>
+</html>
