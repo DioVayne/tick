@@ -30,8 +30,8 @@ android {
         applicationId tickSetting('tickPackage') ?: 'com.example.tick'
         minSdk 31
         targetSdk 36
-        versionCode 21
-        versionName '1.11.0'
+        versionCode 22
+        versionName '1.12.0'
         // Beginadres (leeg in de algemene app); voor testen op de emulator: -PtickBase=http://localhost:8787 (met adb reverse)
         buildConfigField 'String', 'TICK_BASE', "\"${tickBase}\""
         manifestPlaceholders = [tickHost: tickHost, tickScheme: tickScheme]
@@ -75,6 +75,8 @@ tasks.matching { it.name == 'preReleaseBuild' }.configureEach {
 dependencies {
     implementation 'com.google.android.gms:play-services-location:21.4.0'
     implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.4'
+    // navigator.geolocation in de TWA (rijmodus, "mijn locatie" op de kaart); zie TickDelegationService
+    implementation 'com.google.androidbrowserhelper:locationdelegation:1.1.2'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.json:json:20240303'
 }
