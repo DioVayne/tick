@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // De Workers-runtime heeft geen IndexedDB: db.js valt dan terug op geheugen, en dat lezen we hier uit.
 import { nextOccurrence } from '../public/repeat.js';
 import * as db from '../public/db.js';
-import { claim, createList, deleteList, doneInList, ensureOwner, init, load, on, renameList, sharedOf, state, sync, toggleDone, update } from '../public/store.js';
+import { claim, createList, deleteList, doneInList, ensureOwner, init, load, markReviewed, on, renameList, sharedOf, skippedLists, staleNow, state, toHttp, sync, toggleDone, update } from '../public/store.js';
 
 describe('store: lijst-ops', () => {
   it('een nieuwe lege lijst gaat via de outbox naar de server, en hernoemen en verwijderen gaan mee', async () => {
@@ -344,5 +344,34 @@ describe('store: gedeelde lijsten', () => {
     expect((await db.outboxAll()).map((op: any) => [op.id, op.body])).toEqual([['x1', { done: false }]]);
     state.open = [];
     await clear();
+  });
+});
+
+describe('store: Tickmanager', () => {
+  const clear = async () => { for (const op of await db.outboxAll()) await db.outboxDelete(op.seq); };
+  const task = (id: string, list: string, created_at: string) => ({ id, title: id, list, parent_id: null, position: 0, done: false, done_at: null, remind_at: null, pinned: false, repeat: null, created_at, reviewed_at: null }) as any;
+
+  it('markReviewed zet reviewed_at meteen en stuurt POST …/reviewed', async () => {
+    await clear();
+    state.open = [task('r1', 'Inbox', '2020-01-01T00:00:00.000Z')] as any;
+    state.offline = true;
+    await markReviewed('r1');
+    expect((state.open[0] as any).reviewed_at).toBeTruthy();
+    const ops = await db.outboxAll();
+    expect(ops.map((o: { type: string; id: string }) => [o.type, o.id])).toEqual([['reviewed', 'r1']]);
+    expect(toHttp(ops[0])).toEqual(['POST', '/api/tasks/r1/reviewed', {}]);
+    state.open = [];
+    await clear();
+  });
+
+  it('staleNow slaat lijsten met review: false over', () => {
+    state.open = [task('a', 'Ooit', '2020-01-01T00:00:00.000Z'), task('b', 'Inbox', '2020-01-01T00:00:00.000Z')] as any;
+    state.serverLists = [{ name: 'Ooit', id: 'x', review: false, open: 1 }] as any;
+    expect([...skippedLists()]).toEqual(['Ooit']);
+    const prefs = { on: true, newDays: 14, seenDays: 30 };
+    expect(staleNow(prefs).map((t: { id: string }) => t.id)).toEqual(['b']);
+    expect(staleNow({ ...prefs, on: false })).toEqual([]);
+    state.open = [];
+    state.serverLists = [];
   });
 });

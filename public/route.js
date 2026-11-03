@@ -2,11 +2,11 @@
 // app.js leest het adres bij het starten en bij een bladwijzer, render.js schrijft het na elke render.
 
 /**
- * @typedef {{ page: 'all' | 'inbox' | 'done' | 'trash' | 'calendar' | 'settings' | 'help' }
+ * @typedef {{ page: 'all' | 'inbox' | 'done' | 'trash' | 'calendar' | 'settings' | 'help' | 'manager' }
  *   | { page: 'list', id: string } | { page: 'task', id: string }} Route
  */
 
-const PAGES = ['all', 'inbox', 'done', 'trash', 'calendar', 'settings', 'help'];
+const PAGES = ['all', 'inbox', 'done', 'trash', 'calendar', 'settings', 'help', 'manager'];
 
 /**
  * Het adres voor wat er in beeld is. Een pagina gaat voor een taak, een taak voor de lijst eronder. Een lijst zonder
@@ -14,7 +14,7 @@ const PAGES = ['all', 'inbox', 'done', 'trash', 'calendar', 'settings', 'help'];
  * @param {{ page: string | null, task: string | null, showDone: boolean, showTrash: boolean, list: string | null, listId?: string }} v
  */
 export function toHash(v) {
-  if (v.page === 'settings' || v.page === 'help') return '#/' + v.page;
+  if (v.page === 'settings' || v.page === 'help' || v.page === 'manager') return '#/' + v.page;
   if (v.task) return '#/task/' + encodeURIComponent(v.task);
   if (v.page === 'calendar') return '#/calendar';
   if (v.showTrash) return '#/trash';

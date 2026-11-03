@@ -4,6 +4,7 @@ import { t as tr } from './i18n.js'; // tr: t is hier meestal een taak
 import { zonedParts, zonedToUtc, getDefaultTime, nextOccurrence, normalizeRule } from './repeat.js';
 import { applyListOp, findList, mergeLists, normName } from './lists.js';
 import { PUSH_OFF_KEY } from './push.js';
+import { staleTasks } from './review.js';
 
 const STEP = 1_000_000;
 export const UNDO_MS = 5000;
@@ -96,6 +97,11 @@ function applyRepeat(t, repeat, remindAt) {
 }
 
 function applyLocal(op) {
+  if (op.type === 'reviewed') {
+    const t = find(op.id);
+    if (t) t.reviewed_at = op.at;
+    return;
+  }
   if (op.type === 'create') {
     if (find(op.task.id)) return;
     const t = { ...op.task };
@@ -208,9 +214,10 @@ function applyLocal(op) {
   }
 }
 
-function toHttp(op) {
+export function toHttp(op) {
   if (op.type === 'create') return ['POST', '/api/tasks', op.body];
   if (op.type === 'delete') return ['DELETE', `/api/tasks/${op.id}`];
+  if (op.type === 'reviewed') return ['POST', `/api/tasks/${op.id}/reviewed`, {}];
   if (op.type === 'list-create') return ['POST', '/api/lists', { name: op.name }];
   if (op.type === 'list-rename') return ['POST', '/api/lists/rename', { from: op.from, to: op.to }];
   if (op.type === 'list-delete') return ['POST', '/api/lists/delete', { name: op.name, tasks: op.tasks }];
@@ -556,3 +563,14 @@ export const removeListMember = (id, userId) => listAction('DELETE', `/api/share
 export const setListNotify = (id, on) => listAction('PATCH', `/api/shared-lists/${id}/me`, { notify_done: on });
 /** Alle afgevinkte taken in lijst `name` naar de prullenbak (in een gedeelde lijst voor iedereen). Geeft `{ deleted }`. */
 export const clearDone = (name) => listAction('POST', '/api/lists/clear-done', { name });
+
+// ---------- Tickmanager ----------
+
+/** Taak als bekeken markeren: meteen lokaal, de server zet de tijd daarna recht. Werkt ook offline (outbox). */
+export const markReviewed = (id) => mutate({ type: 'reviewed', id });
+/** Een lijst wel of niet meenemen in de ronde (alleen online, zoals de lijstacties). */
+export const setListReview = (listId, include) => listAction('PUT', `/api/review/lists/${listId}`, { include });
+/** Namen van lijsten die de persoon overslaat in de ronde. */
+export const skippedLists = () => new Set(state.serverLists.filter((l) => l.review === false).map((l) => l.name));
+/** De oude taken van dit moment; leeg als Tickmanager uit staat. */
+export const staleNow = (prefs) => (prefs.on ? staleTasks(state.open, prefs, skippedLists(), Date.now()) : []);
