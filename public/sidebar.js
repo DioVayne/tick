@@ -137,7 +137,7 @@ function updateHeader() {
   // De oranje knop van de Tickmanager (mobiel, links van de +): naar de pagina, met het aantal oude taken.
   const n = staleCount();
   const fab = $('#mgr-fab');
-  fab.hidden = !reviewPrefsOf(CONFIG).on || help || mgr || open || cal || state.showTrash || state.showDone;
+  fab.hidden = !reviewPrefsOf(CONFIG).on || help || mgr || open || cal || state.showTrash || state.showDone || !!state.query.trim();
   const label = n ? t(n === 1 ? 'mgr.open_count_one' : 'mgr.open_count', { n }) : t('mgr.open');
   fab.setAttribute('aria-label', label);
   fab.title = label;

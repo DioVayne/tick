@@ -360,6 +360,7 @@ describe('store: Tickmanager', () => {
     const ops = await db.outboxAll();
     expect(ops.map((o: { type: string; id: string }) => [o.type, o.id])).toEqual([['reviewed', 'r1']]);
     expect(toHttp(ops[0])).toEqual(['POST', '/api/tasks/r1/reviewed', {}]);
+    state.offline = false;
     state.open = [];
     await clear();
   });

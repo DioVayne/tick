@@ -21,7 +21,7 @@ The oldest task comes first.
 
 ## Where you find it
 A number shows how many old tasks there are; at 0 there is no number.
-- **Phone or narrow window:** an orange lightning button at the bottom left, opposite the **+**. It hides when a task, the card or the keyboard is in the way, like the **+**. The same item is also in the drawer (☰).
+- **Phone or narrow window:** an orange lightning button at the bottom left, opposite the **+**. It hides while a task is open, on the map, while you type a new task or search, and on the Tickmanager page itself. The same item is also in the drawer (☰).
 - **Wide screen:** an orange **Tickmanager** item in the sidebar under Inbox, always there, also while a task is open. When no task is selected, the empty panel on the right shows a card with a short explanation, the number of old tasks and the button **Start tidying up**. With nothing old it says that you are all caught up.
 
 Tap the button or the item to open the Tickmanager page.
@@ -29,7 +29,7 @@ Tap the button or the item to open the Tickmanager page.
 ## The page
 - **N tasks have not been looked at in a while** and the button **Start tidying up**. With nothing old: *All caught up*.
 - **A new task is old after (days)** and **A task you looked at is old again after (days)**: the two terms above. Settings are saved when you leave the field.
-- **Lists:** every list you can see, your own and shared ones, with a box **Include** and how many old tasks it has. Untick a list you do not want in your round, for example one called *Someday*. This is per person: it only changes your round. A list you just made can be skipped once it is saved (the box is grey until then).
+- **Lists:** every list you can see, your own and shared ones, with a box **Include** and how many old tasks it has. The count on a row also includes lists you skip, so you can see what you would get back by including it. Untick a list you do not want in your round, for example one called *Someday*. This is per person: it only changes your round. A list you just made can be skipped once it is saved (the box is grey until then).
 
 ## The round
 **Start tidying up** shows one task at a time as a card: its title, its list, how long it has not been looked at ("Not looked at for 3 weeks") and the start of its notes. At the top is a counter ("3 of 8") and **Stop**. The tasks of the round are fixed when you start; stopping takes you back to the page and the rest stays for next time.

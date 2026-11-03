@@ -291,7 +291,7 @@ export function renderDetail() {
       view = null;
     }
     // Geen taak gekozen en de Tickmanager aan: de kaart (elke render bijgewerkt). Anders het oude Kies een taak.
-    if (!state.selected && reviewPrefsOf(CONFIG).on) managerCard(root);
+    if (!state.selected && reviewPrefsOf(CONFIG).on && !document.body.classList.contains('manager-open')) managerCard(root);
     else {
       const text = state.selected ? '' : tr('ui.pick_task');
       if (root.querySelector(':scope > .detail-empty')?.textContent !== text) root.replaceChildren(el('p', { class: 'detail-empty' }, text));
