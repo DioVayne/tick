@@ -48,25 +48,40 @@ Een taak doet mee in de ronde van persoon P als alles hieronder klopt:
 Subtaken doen niet los mee; ze gaan mee met hun hoofdtaak. Volgorde in de ronde: oudste eerst, op
 `coalesce(reviewed_at, created_at)`.
 
-## 4. De Tickmanager-knop
+## 4. Waar je de Tickmanager vindt
 
-- **Plek:**
-  - Smal scherm (`max-width: 1023.98px`): een ronde knop links van de bestaande `#fab` (de +, rechtsonder, 56px), op
-    dezelfde hoogte. De knop is kleiner (48px), met 12px tussenruimte.
-  - Breed scherm, waar `#fab` niet bestaat: een ronde knop direct links van het invoerveld `#add` (dat zelf een + als
-    `::before` heeft), even hoog als dat veld.
-- **Uiterlijk:** mild oranje achtergrond met een bliksem-icoon (nieuw icoon `bolt` in `public/icons.js`, bijvoorbeeld
+Overal geldt: alleen als de Tickmanager aan staat, en het getal is het aantal oude taken (geen getal bij 0).
+
+**4a. Smal scherm (`max-width: 1023.98px`): de oranje knop.** Een ronde knop linksonder, op dezelfde hoogte als de
+bestaande `#fab` (de +, rechtsonder, 56px): `left: 16px`, dezelfde `bottom` als `#fab`, 56px groot. Zo staan de twee
+hoofdacties symmetrisch onderin, binnen bereik van beide duimen.
+
+**4b. Breed scherm: twee plekken, elk met een eigen rol.**
+- **Het lege detailpaneel** (rechts, waar nu "Kies een taak" staat; `public/detail.js`, `.detail-empty`). Als er geen
+  taak gekozen is, staat daar een kaart: een korte uitleg van de functie ("Taken waar je lang niet naar keek, komen
+  hier terug. Per taak kies je: inplannen, bovenaan, laten staan of weg."), het aantal oude taken en de oranje knop
+  **Opruimen starten**, die de ronde meteen start. Bij 0 oude taken een korte, rustige tekst in plaats van de knop.
+  "Kies een taak" blijft eronder staan, kleiner. Dit is de plek om de functie te *ontdekken*: hij staat in beeld
+  zolang je niets selecteert.
+- **De zijbalk** (`public/sidebar.js`): een vast item **Tickmanager** met bliksem-icoon (oranje) en het getal, in het
+  bovenste blok direct onder Inbox, dus vlak boven het kopje "Lijsten". Dit is de vaste ingang naar de pagina
+  (`#/manager`), ook als er een taak open staat en het detailpaneel bezet is. Het item staat dus niet tússen de
+  lijsten: het is geen lijst, en zou anders meeschuiven en tellen als een lijst. Het gebruikt wel dezelfde
+  `item`-opmaak (icoon, naam, getal rechts), en is gemarkeerd als de pagina open is (zoals Instellingen).
+- Op een smal scherm staat het zijbalk-item ook in de uitschuiflade; dat is dezelfde code.
+
+- **Uiterlijk van de oranje knop (4a en de knop in 4b):** mild oranje achtergrond met een bliksem-icoon (nieuw icoon `bolt` in `public/icons.js`, bijvoorbeeld
   pad `M13 2 4 14h7l-1 8 9-12h-7l1-8z`). De kleur wordt een nieuwe token `--manager` (met `--manager-text`) in
   `public/style.css`, in elk blok waar de andere tokens staan: licht, donker (beide varianten) en het retro-palet.
   Richtwaarden: licht `#f4a259` met donkere tekst `#3a1d00`; donker `#e8964a` met `#2a1400`. In het retro-palet is
   `--accent` zelf al oranje (`#ff8c00`); kies daar een zachtere tint (bijvoorbeeld peru `#cd853f`), zodat de knop te
   onderscheiden blijft van de +. Contrast tekst/icoon op de knop: minstens 3:1.
-- **Getal:** een klein rondje op de knop met het aantal oude taken; geen rondje bij 0.
-- **Zichtbaar:** alleen als de Tickmanager aan staat, en verder volgens dezelfde regels als `#fab` en `#add` (verborgen
-  als een taak open is, de kaart, de Android-balk of het invoerveld in beeld is; zie `style.css` rond `#fab` en
-  `sidebar.js`). Waar de onderste rij nu opschuift voor `#fab` (tray, toast), blijft dat zo; de knop staat op
-  dezelfde rij.
-- **Tik:** opent de Tickmanager-pagina (`#/manager`).
+- **Getal op de ronde knop (4a):** een klein rondje rechtsboven op de knop.
+- **Zichtbaar (4a):** volgens dezelfde regels als `#fab` (verborgen als een taak open is, de kaart, de Android-balk of
+  het invoerveld in beeld is; zie `style.css` rond `#fab`). Waar de onderste rij nu opschuift voor `#fab` (tray,
+  toast), blijft dat zo; de knop staat op dezelfde rij. Controleer dat de knop linksonder niets in de lijst afdekt
+  dat nu wel bereikbaar is (de lijst heeft al ruimte onderaan voor `#fab`).
+- **Tik op de ronde knop (4a):** opent de Tickmanager-pagina (`#/manager`).
 - Toegankelijk: `aria-label` en `title` via i18n ("Tickmanager", met het aantal erin).
 
 ## 5. De Tickmanager-pagina (`#/manager`)
@@ -149,8 +164,9 @@ offline, en is er geen extra endpoint nodig om ze op te halen.
 - `public/manager.js` — de pagina en de ronde.
 - `public/planner.js` — voorstellen voor inplannen (§9).
 - Allemaal in `SHELL` in `public/sw.js`, en `CACHE` ophogen (`test/offline.test.ts` controleert dat).
-- Knop in `public/index.html` naast `#fab` (met `hidden` en `data-i18n-attr` zoals `#fab`); tonen/verbergen en het
-  getal in de module die nu `#fab` regelt (`sidebar.js`).
+- Ronde knop in `public/index.html` naast `#fab` (met `hidden` en `data-i18n-attr` zoals `#fab`); tonen/verbergen en
+  het getal in de module die nu `#fab` regelt (`sidebar.js`), net als het zijbalk-item. De kaart in het lege
+  detailpaneel in `public/detail.js`.
 - Geen inline scripts of stijlen (CSP), geen build-stap.
 
 **Teksten:** alles in `public/i18n.js` met `en` én `nl` (`test/i18n.test.ts`). Server-fouten als
