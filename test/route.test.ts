@@ -16,9 +16,10 @@ describe('adres (route.js)', () => {
     expect(toHash({ ...view, page: 'calendar', task: 'x' })).toBe('#/task/x');
     expect(toHash({ ...view, page: 'settings', task: 'x' })).toBe('#/settings');
     expect(toHash({ ...view, page: 'help' })).toBe('#/help');
+    expect(toHash({ ...view, page: 'manager', task: 'x' })).toBe('#/manager');
   });
   it('parseHash leest terug wat toHash schrijft', () => {
-    for (const hash of ['#/all', '#/inbox', '#/done', '#/trash', '#/calendar', '#/settings', '#/help'])
+    for (const hash of ['#/all', '#/inbox', '#/done', '#/trash', '#/calendar', '#/settings', '#/help', '#/manager'])
       expect(parseHash(hash)).toEqual({ page: hash.slice(2) });
     expect(parseHash('#/list/ab12')).toEqual({ page: 'list', id: 'ab12' });
     expect(parseHash('#/task/t%201')).toEqual({ page: 'task', id: 't 1' });

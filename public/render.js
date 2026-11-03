@@ -349,7 +349,7 @@ export function render() {
  */
 function writeHash() {
   const on = (c) => document.body.classList.contains(c);
-  const page = on('settings-open') ? 'settings' : on('help-open') ? 'help' : on('calendar-open') ? 'calendar' : null;
+  const page = on('settings-open') ? 'settings' : on('help-open') ? 'help' : on('calendar-open') ? 'calendar' : on('manager-open') ? 'manager' : null;
   const listId = state.list ? lists().find((l) => l.name === state.list)?.id : undefined;
   const hash = toHash({ page, task: state.selected, showDone: state.showDone, showTrash: state.showTrash, list: state.list, listId });
   if (hash === location.hash && history.state?.hash === hash) return;
