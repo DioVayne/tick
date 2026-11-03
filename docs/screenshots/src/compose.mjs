@@ -24,7 +24,7 @@ export const IMAGES = {
   'tile-attachments.png': tile('m-bathroom-light', 0, 680),
   'tile-group-tasks.png': crop('m-potluck-light', 40, 332, 348, 209, 280) + '&r=16',
   'tile-subtasks.png': tile('m-home-light', 60, 548),
-  'tile-reminders.png': crop('m-remind-light', 0, 588, 390, 234, 280) + '&r=16',
+  'tile-reminders.png': crop('m-remind-light', 0, 597, 390, 234, 280) + '&r=16',
   'tile-repeat.png': tile('m-repeat-light', 0, 425),
   'tile-swipe.png': tile('m-swipe-light', 60, 150),
   'tile-drag.png': tile('m-drag-light', 0, 400),
