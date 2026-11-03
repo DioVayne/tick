@@ -4,7 +4,7 @@
 // nieuwe modules na een deploy), offline de laatst bewaarde. Verhoog de versie als de lijst hieronder verandert.
 const CACHE = 'tick-shell-v68';
 const SHELL = [
-  '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/review.js', '/push.js', '/style.css', '/sortable.min.js',
+  '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/review.js', '/planner.js', '/manager.js', '/push.js', '/style.css', '/sortable.min.js',
   '/markdown.js', '/lists.js', '/editor.js', '/sidebar.js', '/detail.js', '/listpicker.js', '/listmenu.js', '/dialog.js',
   '/repeat.js', '/i18n.js', '/config.js', '/settings.js', '/repeatpicker.js', '/places.js', '/map.js', '/leaflet.js', '/leaflet.css',
   '/theme.js', '/settingsview.js', '/androidapp.js', '/applink.js', '/swclick.js', '/next.js', '/trash.js', '/share.js', '/sharedlist.js', '/copies.js', '/confetti.js', '/attachments.js', '/calendar.js', '/calendarview.js', '/help.js', '/datepicker.js', '/timepicker.js', '/icons.js', '/popover.js', '/swipe.js', '/badge.js', '/route.js', '/drive.js', '/driveview.js', '/composer.js', '/steps.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/badge-96.png',

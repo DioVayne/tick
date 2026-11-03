@@ -373,8 +373,8 @@ textarea.editor { min-height: 120px; resize: none; overflow: hidden; font-size: 
 .iconbtn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 0; background: var(--fill); color: var(--muted); }
 .iconbtn:hover, .iconbtn[aria-expanded="true"] { color: var(--text); }
 #topbar .search { flex: 1; min-width: 0; height: 36px; padding: 6px 10px; }
-body.search-open:not(.settings-open):not(.calendar-open):not(.help-open) #topbar h1 { display: none; }
-body.settings-open #btn-search, body.settings-open #search, body.calendar-open #btn-search, body.calendar-open #search, body.help-open #btn-search, body.help-open #search { display: none; }
+body.search-open:not(.settings-open):not(.calendar-open):not(.help-open):not(.manager-open) #topbar h1 { display: none; }
+body.settings-open #btn-search, body.settings-open #search, body.calendar-open #btn-search, body.calendar-open #search, body.help-open #btn-search, body.help-open #search, body.manager-open #btn-search, body.manager-open #search { display: none; }
 #resizer, #detail { display: none; }
 #side { background: var(--side); border-right: 1px solid var(--line); padding: max(12px, env(safe-area-inset-top)) 8px 12px; display: flex; flex-direction: column; overflow-y: auto; }
 .brand { margin: 4px 8px 8px; font-size: 1.25rem; }
@@ -603,6 +603,34 @@ body.help-open #main > :not(#help):not(#net) { display: none; }
 .help-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .help-list h3 { margin: 0 0 2px; font-size: .9375rem; font-weight: 600; }
 .help-list p { margin: 0; line-height: 1.45; }
+
+/* Tickmanager */
+/* manager.js: de pagina (aantal, termijnen, lijsten), de kaart van de ronde en de samenvatting. --manager komt uit de
+   thema's; zonder valt hij terug op het accent. */
+body.manager-open #main > :not(#manager):not(#net) { display: none; }
+#manager { padding: 2px 0 24px; max-width: 40rem; }
+.mgr-head { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+.mgr-count { margin: 0; font-size: 1.0625rem; font-weight: 600; }
+.mgr-clear { color: var(--muted); font-weight: 400; }
+.mgr-start { background: var(--manager, var(--accent)); color: var(--manager-text, var(--accent-text)); font-weight: 600; min-height: 44px; padding: 10px 20px; }
+.mgr-terms { display: grid; gap: 10px; margin-bottom: 20px; }
+.mgr-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mgr-days { width: 6rem; flex: none; }
+.mgr-h { margin: 0 0 8px; font-size: .9375rem; font-weight: 600; }
+.mgr-lists { list-style: none; margin: 0; padding: 0; }
+.mgr-list { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.mgr-list-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mgr-list-count { color: var(--muted); font-size: .875rem; }
+.mgr-include-label { display: inline-flex; align-items: center; gap: 6px; font-size: .875rem; }
+.mgr-include { width: 18px; height: 18px; margin: 0; padding: 0; accent-color: var(--accent); }
+.mgr-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.mgr-progress { color: var(--muted); font-size: .875rem; }
+.mgr-card { padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); margin-bottom: 14px; }
+.mgr-title { margin: 0 0 6px; font-size: 1.0625rem; font-weight: 600; overflow-wrap: anywhere; }
+.mgr-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; color: var(--muted); font-size: .875rem; }
+.mgr-desc { margin: 10px 0 0; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.mgr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mgr-summary p { margin: 0 0 16px; line-height: 1.45; }
 
 /* ---------- Kalender (calendarview.js): maandraster en agenda ---------- */
 body.calendar-open #main > :not(#calendar):not(#net) { display: none; }
