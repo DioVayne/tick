@@ -8,6 +8,7 @@ import { $, el, render, status, toast } from './render.js';
 import { closeCalendar, hideCalendar, isCalendarOpen, openCalendar, refreshCalendar } from './calendarview.js';
 import { closeSettings, hideSettings, isSettingsOpen, openSettings } from './settingsview.js';
 import { closeHelp, hideHelp, isHelpOpen, openHelp } from './help.js';
+import { closeManager, hideManager, isManagerOpen, openManager, refreshManager } from './manager.js';
 import { closeDrawer, onListContext, selectDone, selectList, selectTrash, setupSidebar } from './sidebar.js';
 import { init, lists, load, on, state } from './store.js';
 import { parseHash } from './route.js';
@@ -24,6 +25,8 @@ onListContext(openListMenu);
 // De invoerkaart bovenaan (titel, en na de eerste letter de tijdlijn met herinnering, plek, lijst en meer).
 initComposer();
 on('change', refreshComposer);
+// Tickmanager: de pagina telt mee met elke wijziging (niet een lopende kaart, zie refreshManager).
+on('change', refreshManager);
 // De ronde +-knop (mobiel): naar het invoerveld bovenaan en daar typen. Focus meteen in de klik, anders geen toetsenbord op iOS.
 $('#fab').addEventListener('click', () => {
   $('#add-title').focus({ preventScroll: true });
@@ -31,12 +34,13 @@ $('#fab').addEventListener('click', () => {
 });
 
 // Instellingen: een eigen pagina in de middenkolom (meldingen, thema en uitloggen staan daar).
-$('#btn-settings').addEventListener('click', () => { hideCalendar(); hideHelp(); openSettings({ push: true }); });
+$('#btn-settings').addEventListener('click', () => { hideCalendar(); hideHelp(); hideManager(); openSettings({ push: true }); });
 // Kalender: maandraster en agenda van taken met een datum.
 $('#btn-calendar').addEventListener('click', () => {
   if (isCalendarOpen()) { closeDrawer(); return; }
   hideSettings();
   hideHelp();
+  hideManager();
   openCalendar({ push: true });
 });
 // Help: wat de knoppen doen.
@@ -44,6 +48,7 @@ $('#btn-help').addEventListener('click', () => {
   if (isHelpOpen()) { closeDrawer(); return; }
   hideSettings();
   hideCalendar();
+  hideManager();
   openHelp({ push: true });
 });
 
@@ -95,7 +100,7 @@ document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
   if (e.key !== '/' && e.key !== 'n' && e.key !== 'N') return;
   if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable], dialog')) return;
-  if (document.body.matches('.settings-open, .calendar-open, .help-open, .map-open')) return;
+  if (document.body.matches('.settings-open, .calendar-open, .help-open, .manager-open, .map-open')) return;
   e.preventDefault();
   if (e.key === '/') openSearch();
   else $('#add-title').focus();
@@ -161,6 +166,7 @@ function goTo(route, { push = false } = {}) {
   if (route.page !== 'settings') hideSettings();
   if (route.page !== 'calendar') hideCalendar();
   if (route.page !== 'help') hideHelp();
+  if (route.page !== 'manager') hideManager();
   if (route.page !== 'task') selectTask(null, { push: false });
   if (route.page === 'all') selectList(null);
   else if (route.page === 'inbox') selectList('Inbox');
@@ -173,6 +179,7 @@ function goTo(route, { push = false } = {}) {
   else if (route.page === 'calendar') openCalendar({ push });
   else if (route.page === 'settings') openSettings({ push });
   else if (route.page === 'help') openHelp({ push });
+  else if (route.page === 'manager') openManager({ push }); // uitgezet: doet niets, de gewone lijst blijft
   else if (route.page === 'task') selectTask(route.id, { push });
 }
 
@@ -185,23 +192,34 @@ window.addEventListener('popstate', (e) => {
   // Een bladwijzer of getypt adres in de open app: een nieuwe stap met een adres dat render.js niet schreef.
   const route = location.hash && e.state?.hash !== location.hash ? parseHash(location.hash) : null;
   if (route) { goTo(route); return; }
-  if (e.state?.settings) { hideCalendar(); hideHelp(); openSettings({ push: false }); return; }
+  if (e.state?.settings) { hideCalendar(); hideHelp(); hideManager(); openSettings({ push: false }); return; }
   if (e.state?.help) {
     hideSettings();
     hideCalendar();
+    hideManager();
     if (!isHelpOpen()) openHelp({ push: false });
+    selectTask(null, { push: false });
+    return;
+  }
+  if (e.state?.manager) {
+    hideSettings();
+    hideCalendar();
+    hideHelp();
+    if (!isManagerOpen()) openManager({ push: false });
     selectTask(null, { push: false });
     return;
   }
   if (e.state?.calendar) {
     hideSettings();
     hideHelp();
+    hideManager();
     if (!isCalendarOpen()) openCalendar({ push: false });
     selectTask(null, { push: false }); // terug vanuit een taak die over de kalender lag
     return;
   }
   if (isSettingsOpen()) { hideSettings(); return; }
   if (isHelpOpen()) { hideHelp(); return; }
+  if (isManagerOpen()) { hideManager(); return; }
   if (isCalendarOpen() && !e.state?.task) { hideCalendar(); return; }
   selectTask(e.state?.task ?? null, { push: false });
 });
@@ -220,6 +238,7 @@ $('#side').addEventListener('click', (e) => {
   if (isSettingsOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeSettings();
   if (isCalendarOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeCalendar();
   if (isHelpOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeHelp();
+  if (isManagerOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeManager();
   if (!state.selected) return;
   const b = e.target.closest('button[data-list], #btn-done, #btn-trash');
   if (!b) return;
@@ -231,6 +250,7 @@ $('#newlist-input').addEventListener('keydown', (e) => {
   if (isSettingsOpen()) closeSettings();
   if (isCalendarOpen()) closeCalendar();
   if (isHelpOpen()) closeHelp();
+  if (isManagerOpen()) closeManager();
   if (state.selected) closeTask();
 }, true);
 
@@ -273,6 +293,7 @@ navigator.serviceWorker?.addEventListener('message', (e) => {
   if (isSettingsOpen()) hideSettings();
   hideCalendar();
   hideHelp();
+  hideManager();
   selectTask(e.data.id);
   document.querySelector(`li.task[data-id="${CSS.escape(e.data.id)}"]`)?.scrollIntoView({ block: 'center' });
 });

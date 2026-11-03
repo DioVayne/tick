@@ -59,7 +59,7 @@ export function renderSidebar() {
   if ($('#side-lists .rename-input')) { updateHeader(); return; }
   const all = lists();
   // Met de instellingen open is geen lijst gekozen in de zijbalk; ⚙ Instellingen is dan gemarkeerd.
-  const current = (name) => !settingsOpen() && !calendarOpen() && !helpOpen() && !state.showDone && !state.showTrash && state.list === name;
+  const current = (name) => !settingsOpen() && !calendarOpen() && !helpOpen() && !managerOpen() && !state.showDone && !state.showTrash && state.list === name;
   const item = (name, label, count, lead, shared = false) =>
     el('button', {
       class: 'item' + (current(name) ? ' on' : ''),
@@ -93,24 +93,26 @@ function dot(name, names) {
 const settingsOpen = () => document.body.classList.contains('settings-open');
 const calendarOpen = () => document.body.classList.contains('calendar-open');
 const helpOpen = () => document.body.classList.contains('help-open');
+const managerOpen = () => document.body.classList.contains('manager-open');
 
 function updateHeader() {
   const open = settingsOpen();
   const cal = calendarOpen();
   const help = helpOpen();
-  $('#btn-done').setAttribute('aria-pressed', String(state.showDone && !open && !cal && !help));
-  $('#btn-trash').setAttribute('aria-pressed', String(state.showTrash && !open && !cal && !help));
+  const mgr = managerOpen();
+  $('#btn-done').setAttribute('aria-pressed', String(state.showDone && !open && !cal && !help && !mgr));
+  $('#btn-trash').setAttribute('aria-pressed', String(state.showTrash && !open && !cal && !help && !mgr));
   $('#btn-calendar').setAttribute('aria-pressed', String(cal));
   $('#btn-help')?.setAttribute('aria-pressed', String(help));
   $('#btn-settings')?.setAttribute('aria-pressed', String(open));
-  $('#title').textContent = open ? t('set.title') : cal ? t('cal.title') : help ? t('help.title')
+  $('#title').textContent = open ? t('set.title') : cal ? t('cal.title') : help ? t('help.title') : mgr ? t('mgr.title')
     : state.showTrash ? t('ui.trash') : state.showDone ? t('ui.completed') : state.list ?? t('ui.all');
   // Alleen een eigen lijst heeft een menu achter de titel; Alle, Inbox en de andere weergaven niet.
-  /** @type {HTMLButtonElement} */ ($('#title')).disabled = open || cal || help || state.showTrash || state.showDone || !state.list || state.list === 'Inbox';
+  /** @type {HTMLButtonElement} */ ($('#title')).disabled = open || cal || help || mgr || state.showTrash || state.showDone || !state.list || state.list === 'Inbox';
   // Afgerond toont alle lijsten; een nieuwe taak gaat daar naar Inbox, net als bij Alle.
   $('#add-title').placeholder = state.list && !state.showDone && !state.showTrash ? t('sidebar.add_to_list', { list: state.list }) : t('ui.new_task_placeholder');
-  // Geen nieuwe taak in Afgerond, de prullenbak of de help, en niet tijdens zoeken (de lijst toont dan alleen treffers).
-  $('#add').hidden = help || state.showDone || state.showTrash || !!state.query.trim();
+  // Geen nieuwe taak in Afgerond, de prullenbak, de help of de Tickmanager, en niet tijdens zoeken (de lijst toont dan alleen treffers).
+  $('#add').hidden = help || mgr || state.showDone || state.showTrash || !!state.query.trim();
   // De ronde +-knop (mobiel) onder dezelfde voorwaarde, en ook niet in de instellingen of de kalender (daar is geen invoerveld).
   $('#fab').hidden = $('#add').hidden || open || cal;
 }
