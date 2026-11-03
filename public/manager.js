@@ -14,7 +14,7 @@ import { deleteWithUndo, swipedAway } from './swipe.js';
 /**
  * view: wat er in beeld is. round: de ronde, met de ids die bij de start vastlagen en de tellers voor de samenvatting.
  * @type {{ open: boolean, root: HTMLElement | null, view: 'page' | 'card' | 'summary',
- *   round: { ids: string[], i: number, n: { planned: number, top: number, deleted: number, kept: number } } | null }}
+ *   round: { ids: string[], i: number, busy: boolean, n: { planned: number, top: number, deleted: number, kept: number } } | null }}
  */
 const S = { open: false, root: null, view: 'page', round: null };
 
@@ -110,7 +110,7 @@ function showPage() {
 function startRound() {
   const ids = staleShown().map((x) => x.id);
   if (!ids.length) { showPage(); return; }
-  S.round = { ids, i: 0, n: { planned: 0, top: 0, deleted: 0, kept: 0 } };
+  S.round = { ids, i: 0, busy: false, n: { planned: 0, top: 0, deleted: 0, kept: 0 } };
   showCard();
 }
 
@@ -132,11 +132,11 @@ function showCard() {
   S.view = 'card';
   const desc = (task.description ?? '').trim();
   const actions = el('div', { class: 'mgr-actions' });
-  const done = (/** @type {'planned' | 'top' | 'deleted' | 'kept'} */ kind) => { r.n[kind]++; r.i++; showCard(); };
+  const done = (/** @type {'planned' | 'top' | 'deleted' | 'kept'} */ kind) => { r.n[kind]++; r.i++; r.busy = false; showCard(); };
   const plan = async () => {
     const slots = await suggest(task);
     if (S.round !== r || r.ids[r.i] !== task.id) return; // intussen gestopt of verder
-    const pick = (remind_at) => { update(task.id, { remind_at }); markReviewed(task.id); done('planned'); };
+    const pick = (remind_at) => { r.busy = true; update(task.id, { remind_at }); markReviewed(task.id); done('planned'); };
     const dateBtn = el('button', { type: 'button', class: 'ghost', onclick: () => openDatePicker(dateBtn, '', (value) => {
       if (value) pick(fromLocalInput(value)); // Wissen: niets ingepland, de kaart blijft
     }) }, t('mgr.pick_date'));
@@ -150,13 +150,16 @@ function showCard() {
     actions.replaceChildren(
       el('button', { type: 'button', class: 'ghost', onclick: plan }, t('mgr.plan')),
       el('button', { type: 'button', class: 'ghost', onclick: () => {
+        r.busy = true;
         update(task.id, { position: topOf(task, state.open) });
         markReviewed(task.id);
         done('top');
       } }, t('mgr.top')),
-      el('button', { type: 'button', class: 'ghost', onclick: () => { markReviewed(task.id); done('kept'); } }, t('mgr.keep')),
+      el('button', { type: 'button', class: 'ghost', onclick: () => { r.busy = true; markReviewed(task.id); done('kept'); } }, t('mgr.keep')),
       el('button', { type: 'button', class: 'danger', onclick: async () => {
-        if (await deleteWithUndo(task)) done('deleted'); // geweigerd: de kaart blijft
+        r.busy = true; // deleteWithUndo geeft zelf een wijziging door; done() gaat daarna verder
+        if (await deleteWithUndo(task)) done('deleted');
+        else r.busy = false; // geweigerd: de kaart blijft
       } }, t('mgr.delete')));
     /** @type {HTMLElement | null} */ (actions.firstElementChild)?.focus({ preventScroll: true });
   }
@@ -186,9 +189,17 @@ function showSummary() {
 
 // ---------- openen en sluiten ----------
 
-/** De pagina opnieuw tekenen na een wijziging (getallen, lijsten); niet tijdens een kaart of de samenvatting. */
+/**
+ * De pagina opnieuw tekenen na een wijziging (getallen, lijsten). Op een kaart: is de taak intussen weg (elders
+ * verwijderd of afgevinkt), dan door naar de volgende; niet tijdens een eigen actie van de kaart (die gaat zelf verder).
+ */
 export function refreshManager() {
-  if (S.open && S.view === 'page') showPage();
+  if (!S.open) return;
+  if (S.view === 'page') showPage();
+  else if (S.view === 'card' && S.round && !S.round.busy) {
+    const id = S.round.ids[S.round.i];
+    if (!state.open.some((x) => x.id === id && !swipedAway(x))) showCard();
+  }
 }
 
 export function openManager({ push = true, start = false } = {}) {
