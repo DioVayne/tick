@@ -22,7 +22,7 @@ Everything is under **⚙ Settings** in the sidebar. Some settings belong to **t
 Your favorite places: add, edit, delete. See [Places](places.md#favorite-places).
 
 ## Notifications (this device)
-Turn notifications on or off for this browser and send a test notification. On an iPhone, add Tick to your home screen first.
+Turn notifications on or off for this browser and send a test notification. On an iPhone, add Tick to your home screen first (see [iPhone and iPad](iphone.md)).
 
 ## Devices
 This browser, your other browsers with notifications, and your Android phones with when they were last seen and whether notifications and location work, with a hint when something is off. **Connect an Android phone** is here too.

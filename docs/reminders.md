@@ -33,6 +33,6 @@ The app icon, the browser tab and the favicon show how many tasks are due today,
 Turn notifications on per device under **⚙ Settings → Notifications**, and use *Send test notification* to check.
 
 - **Android:** the [Android app](android.md) shows notifications as Tick, and adds place reminders.
-- **iPhone and iPad:** notifications only work when Tick is on the home screen: Share → *Add to Home Screen*, then open Tick from there.
+- **iPhone and iPad:** notifications only work when Tick is on the home screen: Share → *Add to Home Screen*, then open Tick from there. See [iPhone and iPad](iphone.md).
 - **Desktop:** any modern browser.
 - When no notification could be delivered within 15 minutes, or you have no device with notifications, Tick can send it to a webhook instead (see [Integrations](integrations.md#fallback-webhook)).

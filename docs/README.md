@@ -11,6 +11,7 @@ How to use Tick, one page per topic. Installing Tick is in [SETUP.md](../SETUP.m
 | [Driving mode](driving-mode.md) | The bigger, simpler view while you drive, Not now and Never, adding and editing on the road |
 | [Sharing](sharing.md) | Accounts for your household, sharing a list, sharing a task or a copy, seeing how far others are |
 | [Android app](android.md) | Download, linking, the home-screen widget, quick add, on time on the road, updates |
+| [iPhone and iPad](iphone.md) | Putting Tick on the home screen, notifications, what an iPhone cannot do |
 | [Settings](settings.md) | Display, language and time, devices, keys, backup and import, managing accounts |
 | [Integrations](integrations.md) | Claude (MCP), the inbox API for automations, Home Assistant, the fallback webhook |
 
