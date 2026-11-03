@@ -15,6 +15,7 @@ import { inZone, localToUtcIso, type Zone } from './time';
 import { inBackground, runReminders, sendToAll } from './push';
 import { localNow, runOverdue } from './overdue';
 import { settingsApi } from './settings-api';
+import { markReviewed, reviewApi } from './review';
 import { accountApi } from './account';
 import { usersApi } from './users-api';
 import { linkPages } from './links';
@@ -220,6 +221,7 @@ app.use('*', async (c, next) => {
 });
 
 app.route('/api/settings', settingsApi);
+app.route('/api/review', reviewApi);
 app.route('/api/keys', keysApi);
 app.route('/api/pair', pairApi);
 app.route('/api/account', accountApi);
@@ -1011,7 +1013,10 @@ app.get('/api/lists', async (c) => {
   if (!lists.some((l) => l.name === 'Inbox')) lists.push({ name: 'Inbox', open: 0 });
   lists.sort((a, b) => a.name.localeCompare(b.name, c.get('lang'), { sensitivity: 'base' }));
   const ids = await listIds(db, userId, lists.map((l) => l.name));
-  return c.json(lists.map((l) => ({ ...l, id: ids.get(l.name), shared: sharing.get(l.name) ?? null })));
+  // Tickmanager: lijsten die je van de ronde hebt uitgezonderd.
+  const skip = new Set((await db.prepare('SELECT list_id FROM review_skip_lists WHERE user_id = ?').bind(userId).all<{ list_id: string }>())
+    .results.map((r) => r.list_id));
+  return c.json(lists.map((l) => ({ ...l, id: ids.get(l.name), shared: sharing.get(l.name) ?? null, review: !skip.has(ids.get(l.name)!) })));
 });
 
 /** De vaste id van elke naam (voor bladwijzers); een naam die er nog geen heeft, krijgt er nu een. */
@@ -1080,6 +1085,7 @@ app.post('/api/lists/delete', async (c) => {
   // De bewaarde lijst (als die er is) gaat altijd weg, ook als hij geen taken had.
   // De id ook: komt de naam later terug, dan is dat een nieuwe lijst.
   const forget = [
+    db.prepare('DELETE FROM review_skip_lists WHERE user_id = ? AND list_id = (SELECT id FROM list_ids WHERE user_id = ? AND name = ?)').bind(userId, userId, name),
     db.prepare('DELETE FROM lists WHERE name = ? AND user_id = ?').bind(name, userId),
     db.prepare('DELETE FROM list_ids WHERE name = ? AND user_id = ?').bind(name, userId),
   ];
@@ -1136,6 +1142,13 @@ for (const [action, done] of [['done', true], ['reopen', false]] as const) {
     return c.json({ ok: true });
   });
 }
+
+// Tickmanager: "bekeken" zet de taak voor de ronde weer even opzij; bij een gedeelde taak voor iedereen.
+app.post('/api/tasks/:id/reviewed', async (c) => {
+  const t = await getTask(c.env.DB, c.get('auth').userId, c.req.param('id'));
+  if (!t) throw new HttpError(404, 'err.not_found');
+  return c.json({ ok: true, reviewed_at: await markReviewed(c.env.DB, t.id) });
+});
 
 app.post('/api/tasks/:id/snooze', async (c) => {
   const { minutes } = await c.req.json<{ minutes?: unknown }>().catch(() => ({ minutes: undefined }));
