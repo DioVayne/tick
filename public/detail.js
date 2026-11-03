@@ -1,3 +1,4 @@
+import CONFIG from './settings.js';
 import { bindDrop, fillAttachmentsBox } from './attachments.js';
 import { confetti, isCouple } from './confetti.js';
 import { fillCopiesBox } from './copies.js';
@@ -12,6 +13,8 @@ import { openMap } from './map.js';
 import { renderMarkdown } from './markdown.js';
 import { formatRadius, wakeAndroidApp } from './places.js';
 import { $, checkOff, el, fmt, fromLocalInput, render, toLocalInput } from './render.js';
+import { reviewPrefsOf } from './review.js';
+import { staleCount } from './sidebar.js';
 import { addSubtask, claimedByOther, findDone, remove, sharedOf, snooze, state, toggleDone, update, updateQueued, watchTask } from './store.js';
 import { fillShareBox, openShareDialog, shareNames } from './share.js';
 import { openWhenMenu, step } from './steps.js';
@@ -242,6 +245,34 @@ function vanished(id) {
 // render.js: die module importeert deze, en is hier nog niet klaar.
 bindDrop(/** @type {HTMLElement} */ (document.getElementById('detail')), () => (view && !view.readOnly ? view.id : null));
 
+let managerStart = () => {};
+/** Haak voor Opruimen starten op de kaart in het lege paneel; app.js opent dan de Tickmanager (zo importeert dit bestand manager.js niet). */
+export const onManagerStart = (fn) => { managerStart = fn; };
+
+/**
+ * Het lege paneel met de Tickmanager aan: een kaart met uitleg, het aantal oude taken en Opruimen starten (bij 0 een
+ * rustige tekst), Kies een taak klein eronder. Eén keer opgebouwd, daarna alleen bijgewerkt: de focus op de knop blijft.
+ */
+function managerCard(root) {
+  let card = /** @type {HTMLElement | null} */ (root.querySelector(':scope > .mgr-empty'));
+  if (!card) {
+    card = el('div', { class: 'mgr-card mgr-empty' },
+      icon('bolt', 'mgr-ico'),
+      el('h3', { class: 'mgr-title' }, tr('mgr.title')),
+      el('p', {}, tr('mgr.intro')),
+      el('p', { class: 'mgr-count' }),
+      el('p', { class: 'mgr-count mgr-clear' }, tr('mgr.all_clear')),
+      el('button', { type: 'button', class: 'mgr-start', onclick: () => managerStart() }, tr('mgr.start')));
+    root.replaceChildren(card, el('p', { class: 'mgr-pick' }, tr('ui.pick_task')));
+  }
+  const n = staleCount();
+  const [count, clear, start] = /** @type {HTMLElement[]} */ ([...card.querySelectorAll(':scope > .mgr-count, :scope > .mgr-start')]);
+  count.textContent = n ? tr(n === 1 ? 'mgr.count_one' : 'mgr.count', { n }) : '';
+  count.hidden = !n;
+  clear.hidden = !!n;
+  start.hidden = !n;
+}
+
 /** Bij elke render(): alleen opnieuw opbouwen bij een andere taak, anders de velden bijwerken. */
 export function renderDetail() {
   const root = $('#detail');
@@ -254,11 +285,16 @@ export function renderDetail() {
   // Het skelet van theme.js blijft tot de taak er is, of tot na de eerste load duidelijk is dat hij er niet is.
   if (t || ready || !state.selected) delete document.documentElement.dataset.bootTask;
   if (!t) {
-    if (view || !root.querySelector('.detail-empty')) {
-      view?.editor?.destroy();
-      view?.titleSize.disconnect();
+    if (view) {
+      view.editor?.destroy();
+      view.titleSize.disconnect();
       view = null;
-      root.replaceChildren(el('p', { class: 'detail-empty' }, state.selected ? '' : tr('ui.pick_task')));
+    }
+    // Geen taak gekozen en de Tickmanager aan: de kaart (elke render bijgewerkt). Anders het oude Kies een taak.
+    if (!state.selected && reviewPrefsOf(CONFIG).on) managerCard(root);
+    else {
+      const text = state.selected ? '' : tr('ui.pick_task');
+      if (root.querySelector(':scope > .detail-empty')?.textContent !== text) root.replaceChildren(el('p', { class: 'detail-empty' }, text));
     }
     return;
   }

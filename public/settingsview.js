@@ -366,7 +366,8 @@ function paintDisplay() {
     row(t('set.density'), seg(t('set.density'), [['compact', t('set.density_compact')], ['normal', t('set.density_normal')], ['roomy', t('set.density_roomy')]],
       ds.density ?? 'normal', (v) => setDisplay('density', v))),
     displayPreview(),
-    driveRow());
+    driveRow(),
+    managerRow());
 }
 
 /** Rijmodus: per account (op al je apparaten), dus alleen online te wijzigen. Aanzetten vraagt zo nodig om je locatie. */
@@ -379,6 +380,19 @@ function driveRow() {
     if (!await setDriveMode(want)) toast(t('set.drive_no_location'));
   });
   return row(t('set.drive'), sw, t('set.drive_note'));
+}
+
+/** Tickmanager tonen: per account, dus alleen online te wijzigen. Uit = geen knop, geen item, geen kaart. */
+function managerRow() {
+  const sw = /** @type {HTMLInputElement} */ (el('input', { type: 'checkbox', role: 'switch', class: 'set-switch', 'aria-label': t('set.tickmanager') }));
+  sw.checked = CONFIG.tickmanager !== false;
+  sw.addEventListener('change', async () => {
+    const want = sw.checked;
+    if (!await save({ tickmanager: want }, () => { sw.checked = !want; })) return;
+    CONFIG.tickmanager = want;
+    render(); // knop, zijbalk-item en de kaart in het lege paneel
+  });
+  return row(t('set.tickmanager'), sw, t('set.tickmanager_note'));
 }
 
 const displayPreview = () => el('ul', { class: 'tasks set-preview', 'aria-hidden': 'true' },

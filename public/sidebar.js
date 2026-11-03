@@ -1,8 +1,14 @@
+import CONFIG from './settings.js';
 import { t } from './i18n.js';
 import { $, el, render } from './render.js';
 import { icon } from './icons.js';
 import { listColor } from './lists.js';
-import { createList, lists, load, loadTrash, state } from './store.js';
+import { reviewPrefsOf } from './review.js';
+import { createList, lists, load, loadTrash, staleNow, state } from './store.js';
+import { swipedAway } from './swipe.js';
+
+/** Tickmanager: aantal oude taken nu (0 als hij uit staat), zonder een taak die net weggeveegd is (zoals de pagina). */
+export const staleCount = () => staleNow(reviewPrefsOf(CONFIG)).filter((x) => !swipedAway(x)).length;
 
 let contextHandler = () => {};
 /** Haak voor het lijstmenu (rechtsklik op een lijst); de aanroeper krijgt de naam en het knopelement. */
@@ -76,11 +82,24 @@ export function renderSidebar() {
   $('#side-lists').replaceChildren(
     el('div', { class: 'side-grp' },
       item(null, t('ui.all'), total, icon('all')),
-      inbox ? item(inbox.name, inbox.name, inbox.open, icon('inbox')) : null),
+      inbox ? item(inbox.name, inbox.name, inbox.open, icon('inbox')) : null,
+      managerItem()),
     el('p', { class: 'side-h' }, t('ui.lists')),
     el('div', { class: 'side-grp side-mine' }, ...all.filter((l) => l !== inbox).map((l) => item(l.name, l.name, l.open, dot(l.name, all.map((x) => x.name)), !!l.shared))),
   );
   updateHeader();
+}
+
+/**
+ * Tickmanager: een vast item onder Inbox, geen lijst (geen data-list: kiest geen lijst en is geen plek om op te slepen).
+ * De klik zit in app.js. Gemarkeerd zolang de pagina open is, zoals Instellingen.
+ */
+function managerItem() {
+  if (!reviewPrefsOf(CONFIG).on) return null;
+  const n = staleCount();
+  const on = managerOpen();
+  return el('button', { type: 'button', id: 'btn-manager', class: 'item' + (on ? ' on' : ''), 'aria-current': on ? 'true' : false },
+    icon('bolt', 'mgr-ico'), el('span', { class: 'name' }, t('mgr.title')), el('span', { class: 'count' }, n ? String(n) : ''));
 }
 
 /** Het kleurbolletje van een eigen lijst (de kleur volgt uit de naam, zie listColor). */
@@ -115,6 +134,16 @@ function updateHeader() {
   $('#add').hidden = help || mgr || state.showDone || state.showTrash || !!state.query.trim();
   // De ronde +-knop (mobiel) onder dezelfde voorwaarde, en ook niet in de instellingen of de kalender (daar is geen invoerveld).
   $('#fab').hidden = $('#add').hidden || open || cal;
+  // De oranje knop van de Tickmanager (mobiel, links van de +): naar de pagina, met het aantal oude taken.
+  const n = staleCount();
+  const fab = $('#mgr-fab');
+  fab.hidden = !reviewPrefsOf(CONFIG).on || help || mgr || open || cal || state.showTrash || state.showDone;
+  const label = n ? t(n === 1 ? 'mgr.open_count_one' : 'mgr.open_count', { n }) : t('mgr.open');
+  fab.setAttribute('aria-label', label);
+  fab.title = label;
+  const badge = /** @type {HTMLElement} */ (fab.querySelector('.mgr-badge'));
+  badge.textContent = n ? String(n) : '';
+  badge.hidden = !n;
 }
 
 const listButton = (e) => e.target.closest('button[data-list]');
