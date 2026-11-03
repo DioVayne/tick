@@ -15,6 +15,8 @@ import { on, state } from './store.js';
 
 const SNOOZE_KEY = 'tick.driveSnooze';
 const TICK_MS = 15_000;
+/** Zo lang (ms) zichtbaar kijken zonder één locatie, en Tick zegt dat de rijmodus zo niet kan werken. */
+const NO_FIX_MS = 60_000;
 
 const S = {
   detector: createDetector(),
@@ -23,6 +25,9 @@ const S = {
   pos: /** @type {{ lat: number, lng: number } | null} */ (null),
   allowed: false, // Tick mag je locatie gebruiken
   snoozed: false,
+  watchedSince: 0, // sinds wanneer Tick zichtbaar kijkt (0: niet)
+  gotFix: false, // er kwam deze keer al een locatie binnen
+  warned: false, // de melding "geen locatie" is al getoond
 };
 
 const storeGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -34,6 +39,7 @@ const active = () => CONFIG.driveMode !== false && S.detector.driving && !S.snoo
 
 function onFix(p) {
   const { latitude: lat, longitude: lng, accuracy, speed } = p.coords;
+  S.gotFix = true;
   if (accuracy <= 100) S.pos = { lat, lng };
   const changed = S.detector.update({ lat, lng, accuracy, speed, at: p.timestamp || Date.now() });
   if (S.snoozed && S.detector.driving) storeSet(SNOOZE_KEY, String(Date.now()));
@@ -44,14 +50,29 @@ function onFix(p) {
 function startWatch() {
   if (S.watch !== null || !S.allowed || CONFIG.driveMode === false || document.hidden || !navigator.geolocation) return;
   S.watch = navigator.geolocation.watchPosition(onFix, () => null, { enableHighAccuracy: true, maximumAge: 5000, timeout: 60_000 });
+  S.watchedSince = Date.now();
   // Stilstaan geeft vaak geen nieuwe locatie: zo merkt de detector toch dat de rit voorbij is.
-  S.timer = setInterval(() => { if (S.detector.tick(Date.now())) stateChanged(); }, TICK_MS);
+  S.timer = setInterval(() => {
+    if (S.detector.tick(Date.now())) stateChanged();
+    checkNoFix();
+  }, TICK_MS);
 }
 
 function stopWatch() {
   if (S.watch !== null) navigator.geolocation.clearWatch(S.watch);
   clearInterval(S.timer);
   S.watch = null;
+  S.watchedSince = 0;
+}
+
+/**
+ * Toestemming wel, maar nooit een locatie (zo ging het in een oude Android-app zonder locatie-doorgifte): één keer
+ * zeggen, want anders lijkt de rijmodus stuk terwijl hij niets kan zien.
+ */
+function checkNoFix() {
+  if (S.gotFix || S.warned || !S.watchedSince || Date.now() - S.watchedSince < NO_FIX_MS) return;
+  S.warned = true;
+  toast(t('drive.no_fix'), undefined, { label: t('drive.no_fix_ok'), run: () => null, ms: 15_000 });
 }
 
 function stateChanged() {

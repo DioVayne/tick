@@ -247,6 +247,8 @@ On the phone: `PairActivity` (transparent) handles `tick://pair?code=…` (`Pair
 
 Web push in the app: Browser Helper's `DelegationService` makes Chrome show the PWA's notifications as notifications of the app. The small icon is the site's `badge` (`/badge-96.png`); when Chrome cannot load it in time (for example a phone just out of Doze), it uses the service's `SMALL_ICON`. That has to be a bitmap (`ic_notify_bitmap`, PNGs per density from `scripts/make-icons.mjs`): Browser Helper hands Chrome a decoded bitmap, so with a vector drawable Chrome falls back to its own icon.
 
+Location in the app: in a TWA Chrome asks the app for `navigator.geolocation`, through the same service. `TickDelegationService` (a `DelegationService` with Browser Helper's `LocationDelegationExtraCommandHandler`, library `locationdelegation`) answers with the phone's location. Without it (app 1.11 and older) the permission reads `granted` but no position ever arrives, not even an error; `driveview.js` then says so once after a minute (`drive.no_fix`).
+
 ## Tests
 Vitest with `@cloudflare/vitest-plugin`: the tests run in the Workers runtime against a local D1 with the same migrations as production (`test/`). They use your `wrangler.jsonc` when it exists and `wrangler.example.jsonc` otherwise; the bindings in `vitest.config.ts` fix `LOCALE` (`en`), `TIMEZONE` (`Europe/Amsterdam`) and the test secrets. Android has JUnit tests for the geofence logic, start URLs, pair links and when to forget the key. CI (`.github/workflows/ci.yml`) runs typecheck and tests on every push and pull request.
 

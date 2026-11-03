@@ -85,9 +85,10 @@
 
         <!-- Meldingen van de PWA (web push) verschijnen als meldingen van deze app. SMALL_ICON moet een bitmap zijn: Chrome
              gebruikt het als de badge van de site niet laadt (bijv. telefoon net uit slaap), en bij een vector toont hij
-             zijn eigen icoon. De PNG's komen uit scripts/make-icons.mjs. -->
+             zijn eigen icoon. De PNG's komen uit scripts/make-icons.mjs. Ook je locatie voor de PWA loopt via deze
+             service (TickDelegationService). -->
         <service
-            android:name="com.google.androidbrowserhelper.trusted.DelegationService"
+            android:name=".TickDelegationService"
             android:enabled="true"
             android:exported="true">
             <meta-data
