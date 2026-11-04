@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { ADMIN_ID, call, callAs, createUser, json, session } from './helpers';
 import { translate } from '../public/i18n.js';
+import { contactEmail, deleteAccountPage } from '../src/login';
 
 type User = Awaited<ReturnType<typeof createUser>>;
 
@@ -83,5 +84,40 @@ describe('eigen account verwijderen', () => {
     const b = await createUser();
     expect((await del(b.cookie, {})).status).toBe(400);
     expect(await count('SELECT COUNT(*) n FROM users WHERE id = ?', b.id)).toBe(1);
+  });
+});
+
+describe('openbare pagina en bevestiging', () => {
+  const page = (lang: string, path = '/delete-account') => call(path, { auth: null, headers: { 'accept-language': lang, accept: 'text/html' } });
+
+  it('contactEmail: mailto wordt een adres; leeg, zonder mailto of example.com wordt null', () => {
+    expect(contactEmail('mailto:dio@ticktodo.nl')).toBe('dio@ticktodo.nl');
+    expect(contactEmail('')).toBeNull();
+    expect(contactEmail(undefined)).toBeNull();
+    expect(contactEmail('dio@ticktodo.nl')).toBeNull();
+    expect(contactEmail('mailto:you@EXAMPLE.com')).toBeNull();
+  });
+
+  it('/delete-account werkt zonder inloggen, in beide talen; het voorbeeldadres telt als niet ingevuld', async () => {
+    const nl = await page('nl');
+    expect(nl.status).toBe(200);
+    expect(nl.headers.get('content-type')).toMatch(/text\/html/);
+    const html = await nl.text();
+    expect(html).toContain(translate('nl', 'del.title'));
+    expect(html).toContain(translate('nl', 'del.retention'));
+    expect(html).toContain(translate('nl', 'del.no_login_admin'));
+    expect(html).not.toContain('mailto:');
+    expect(await (await page('en')).text()).toContain(translate('en', 'del.title'));
+  });
+
+  it('deleteAccountPage met een adres toont een mailto-link', () => {
+    const html = deleteAccountPage('nl', 'dio@ticktodo.nl');
+    expect(html).toContain('href="mailto:dio@ticktodo.nl"');
+    expect(html).not.toContain(translate('nl', 'del.no_login_admin'));
+  });
+
+  it('/login?deleted=1 toont de bevestiging, /login zonder niet', async () => {
+    expect(await (await page('nl', '/login?deleted=1')).text()).toContain(translate('nl', 'login.deleted'));
+    expect(await (await page('nl', '/login')).text()).not.toContain(translate('nl', 'login.deleted'));
   });
 });

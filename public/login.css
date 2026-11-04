@@ -10,3 +10,9 @@ form{background:var(--card);border:1px solid var(--line);border-radius:12px;padd
 h1{margin:0;font-size:20px}input,button{font:inherit;padding:11px;border-radius:8px;border:0;background:var(--fill);color:var(--text)}
 button{background:var(--accent);color:var(--accent-text,#fff);cursor:pointer}p{margin:0;color:#d1242f;min-height:1.2em;font-size:14px}
 p.hint{color:inherit;opacity:.7;min-height:0}
+p.ok{color:inherit;font-weight:600;min-height:0}
+/* Openbare uitlegpagina (/delete-account). */
+.page{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;width:100%;max-width:560px;box-sizing:border-box;line-height:1.5}
+.page h1{margin:0 0 12px}.page h2{font-size:16px;margin:20px 0 6px}
+.page p{color:inherit;min-height:0;font-size:16px;margin:0 0 10px}.page ol{margin:0 0 10px;padding-left:22px}
+.page a{color:var(--accent)}
