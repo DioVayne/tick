@@ -30,14 +30,14 @@ describe('zoeken', () => {
     expect(await search(k)).toEqual([`Open ${k}`]);
   });
 
-  // Acht requests: tegelijk, en met ruime marge, want onder de belasting van de hele suite liep hij over de 5 s.
+  // Acht requests, tegelijk; de ruime tijd per test staat in vitest.config.ts.
   it('behandelt % en _ letterlijk', async () => {
     const k = tag();
     await Promise.all([`${k} 100% klaar`, `${k} 100 klaar`, `${k} a_b`, `${k} axb`]
       .map(async (title) => finish(await createTask({ title }))));
     expect(await search(`${k} 100%`, true)).toEqual([`${k} 100% klaar`]);
     expect(await search(`${k} a_b`, true)).toEqual([`${k} a_b`]);
-  }, 15_000);
+  });
 
   it('negeert een lege zoekterm', async () => {
     const k = tag();

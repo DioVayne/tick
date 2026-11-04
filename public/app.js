@@ -17,7 +17,7 @@ import { startBadge, updateBadge } from './badge.js';
 import { startDriveMode } from './driveview.js';
 
 on('change', () => { render(); refreshCalendar(); updateBadge(); });
-startBadge(() => state.open);
+startBadge(() => state.open, render);
 on('error', toast);
 setupSidebar();
 onListContext(openListMenu);

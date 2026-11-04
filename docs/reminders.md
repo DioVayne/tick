@@ -29,6 +29,8 @@ Once a day (09:00 by default) Tick sends a notification for each task whose remi
 ## The counter on the icon
 The app icon, the browser tab and the favicon show how many tasks are due today, overdue ones included. The favicon gets a red dot when something is overdue. Switch it off per device in Settings.
 
+To see which tasks the number stands for, look at the top of the list: a bar **Due today** shows the same number, red when something is overdue. Tap it to fold it open: it lists those tasks from all your lists (shared ones too), the earliest first, each with the name of its list. Tap a task to open it, or tick it off right there. The bar stays open or closed on that device the way you left it, and it is gone when nothing is due or the counter is switched off.
+
 ## Notifications on your devices
 Turn notifications on per device under **⚙ Settings → Notifications**, and use *Send test notification* to check.
 

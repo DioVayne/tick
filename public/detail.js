@@ -263,7 +263,7 @@ function managerCard(root) {
       el('p', { class: 'mgr-count' }),
       el('p', { class: 'mgr-count mgr-clear' }, tr('mgr.all_clear')),
       el('button', { type: 'button', class: 'mgr-start', onclick: () => managerStart() }, tr('mgr.start')));
-    root.replaceChildren(card, el('p', { class: 'mgr-pick' }, tr('ui.pick_task')));
+    root.replaceChildren(card);
   }
   const n = staleCount();
   const [count, clear, start] = /** @type {HTMLElement[]} */ ([...card.querySelectorAll(':scope > .mgr-count, :scope > .mgr-start')]);
