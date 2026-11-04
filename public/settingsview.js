@@ -6,7 +6,7 @@ import { connectApp, isInApp, openPhoneSettings } from './androidapp.js';
 import { ask } from './dialog.js';
 import { icon } from './icons.js';
 import { dateLocale, t } from './i18n.js';
-import { disablePush, enablePush, pushState, resubscribeLocale } from './push.js';
+import { disablePush, enablePush, forgetPush, pushState, resubscribeLocale } from './push.js';
 import { setDefaultTime, setTimeZone, setWeekStart } from './repeat.js';
 import { $, el, render, toast } from './render.js';
 import CONFIG, { setLanguage } from './settings.js';
@@ -694,10 +694,41 @@ async function logout() {
     toast(t('app.logout_failed', { reason: navigator.onLine === false ? t('app.you_are_offline') : e.message }));
     return;
   }
+  await clearBrowser();
+  location.href = '/login';
+}
+
+/** Wist wat deze browser van het account bewaart: de lokale kopie, outbox en de cache van instellingen en config. */
+async function clearBrowser() {
   try { await clearAll(); } catch { /* geen lokale opslag */ }
   storeSet(CACHE_KEY, null);
   await forgetCachedConfig();
-  location.href = '/login';
+}
+
+/**
+ * Account verwijderen, na bevestiging met je wachtwoord. Daarna dezelfde opruiming als bij uitloggen; push alleen in
+ * de browser afmelden (de server wiste het abonnement al) en naar de inlogpagina met een bevestiging.
+ */
+async function deleteAccount() {
+  const pw = /** @type {HTMLInputElement} */ (el('input', { type: 'password', autocomplete: 'current-password', required: true }));
+  const password = await modal({
+    title: t('set.delete_account'),
+    body: [el('p', {}, t('set.delete_account_text')), el('p', {}, t('del.shared')), el('p', {}, t('del.retention')),
+      field(t('set.delete_account_password'), pw)],
+    // Zonder wachtwoord blijft de dialoog open, met de focus in het veld.
+    buttons: [{ label: t('set.delete_account_button'), value: () => pw.value || (pw.focus(), undefined), kind: 'danger' },
+      { label: t('set.cancel'), value: null, kind: 'ghost' }],
+  });
+  if (!password) return;
+  try {
+    await request('POST', '/api/account/delete', { password });
+  } catch (e) {
+    toast(t('set.delete_account_failed', { reason: offlineText(e) }));
+    return;
+  }
+  try { await forgetPush(S.reg ?? await getReg()); } catch { /* geen push: niets af te melden */ }
+  await clearBrowser();
+  location.href = '/login?deleted=1';
 }
 
 /** Naam en e-mailadres, met één knop Opslaan. */
@@ -743,7 +774,8 @@ function paintAccount() {
         toast(t('set.logout_others_done'), 'ok');
       } catch (e) { toast(offlineText(e)); }
     }, { disabled: off }), t('set.logout_others_note')),
-    row(t('set.logout_here'), btn(t('ui.logout'), logout)));
+    row(t('set.logout_here'), btn(t('ui.logout'), logout)),
+    row(t('set.delete_account'), btn(t('set.delete_account_button'), deleteAccount, { kind: 'danger', disabled: off }), t('set.delete_account_note')));
 }
 
 // ---------- 👥 Accounts (alleen de beheerder) ----------

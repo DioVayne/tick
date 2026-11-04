@@ -51,6 +51,17 @@ export async function disablePush(reg) {
   }
 }
 
+/**
+ * Meldt deze browser alleen in de browser zelf af, zonder serveraanroep: na het verwijderen van je account bestaat het
+ * abonnement op de server al niet meer, en een aanroep zou een 401 geven (en de app naar /login sturen).
+ */
+export async function forgetPush(reg) {
+  if (!supported(reg)) return;
+  markOff(true);
+  const sub = await reg.pushManager.getSubscription();
+  await sub?.unsubscribe();
+}
+
 /** Na een taalwissel: hetzelfde abonnement opnieuw melden, zodat meldingen in de nieuwe taal komen. */
 export async function resubscribeLocale(reg) {
   if (!supported(reg)) return;
