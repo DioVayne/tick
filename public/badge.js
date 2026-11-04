@@ -15,18 +15,23 @@ const DARK = '#1e293b';
  * @returns {{ count: number, overdue: number }}
  */
 export function dueCount(tasks, nowMs) {
+  const { tasks: due, today } = dueTasks(tasks, nowMs);
+  return { count: due.length, overdue: due.filter((t) => Date.parse(t.remind_at) < today).length };
+}
+
+/**
+ * De taken achter de teller (zie dueCount), de vroegste eerst; de strook "Voor vandaag" bovenaan de lijst toont ze.
+ * `today` is het begin van vandaag: wat daarvoor valt, is te laat.
+ * @param {any[]} tasks
+ * @param {number} nowMs
+ * @returns {{ tasks: any[], today: number }}
+ */
+export function dueTasks(tasks, nowMs) {
   const p = zonedParts(nowMs);
   const today = startOfDay(p.y, p.m, p.d);
   const end = startOfDay(p.y, p.m, p.d + 1);
-  let count = 0, overdue = 0;
-  for (const t of tasks) {
-    if (!t.remind_at || t.done || t.deleted_at || t.parent_id) continue;
-    const at = Date.parse(t.remind_at);
-    if (!(at < end)) continue;
-    count++;
-    if (at < today) overdue++;
-  }
-  return { count, overdue };
+  const due = tasks.filter((t) => t.remind_at && !t.done && !t.deleted_at && !t.parent_id && Date.parse(t.remind_at) < end);
+  return { tasks: due.sort((a, b) => Date.parse(a.remind_at) - Date.parse(b.remind_at)), today };
 }
 
 export const badgeLabel = (n) => (n > 99 ? '99+' : String(n));
@@ -51,10 +56,16 @@ export const badgeOff = () => { try { return localStorage.getItem(BADGE_OFF_KEY)
 let source = () => /** @type {any[]} */ ([]);
 let last = '';
 let midnight;
+let redraw = () => {};
 
-/** Waar de taken vandaan komen (een functie: de lijst wordt bij elke load vervangen); tekent meteen. */
-export function startBadge(getTasks) {
+/**
+ * Waar de taken vandaan komen (een functie: de lijst wordt bij elke load vervangen); tekent meteen. `onChange` tekent de
+ * lijst opnieuw (de strook "Voor vandaag") als de teller verandert zonder dat er een taak verandert: om middernacht of
+ * als je de teller aan- of uitzet.
+ */
+export function startBadge(getTasks, onChange = () => {}) {
   source = getTasks;
+  redraw = onChange;
   updateBadge();
 }
 
@@ -63,7 +74,7 @@ export function updateBadge() {
   const { count, overdue } = badgeOff() ? { count: 0, overdue: 0 } : dueCount(source(), Date.now());
   clearTimeout(midnight);
   const p = zonedParts(Date.now());
-  midnight = setTimeout(updateBadge, Math.max(1000, startOfDay(p.y, p.m, p.d + 1) - Date.now() + 1000));
+  midnight = setTimeout(() => { updateBadge(); redraw(); }, Math.max(1000, startOfDay(p.y, p.m, p.d + 1) - Date.now() + 1000));
   const key = `${count}/${overdue > 0}`;
   if (key === last) return;
   last = key;
@@ -79,4 +90,5 @@ export function updateBadge() {
 export function setBadgeOff(off) {
   try { if (off) localStorage.setItem(BADGE_OFF_KEY, '1'); else localStorage.removeItem(BADGE_OFF_KEY); } catch { /* geen opslag */ }
   updateBadge();
+  redraw();
 }

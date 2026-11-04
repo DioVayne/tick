@@ -252,6 +252,18 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
 .empty { text-align: center; color: var(--muted); padding: 32px 0; }
 /* Kopje boven de afgeronde treffers bij zoeken */
 .list-head { margin: 16px 0 4px; font-size: .8125rem; font-weight: 600; color: var(--muted); }
+/* Strook "Voor vandaag" bovenaan de lijst (duestrip.js): de taken achter de teller op het icoon. Ingeklapt één regel;
+   het getal rood als er iets te laat is, net als het bolletje op het icoon. */
+.due { margin: 0 0 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.due-head { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 6px 12px; background: transparent; color: var(--text); border-radius: 12px; text-align: left; }
+.due-head:hover { background: var(--hover); }
+.due-title { flex: 1; font-size: .875rem; font-weight: 600; }
+.due-count { min-width: 22px; padding: 0 7px; border-radius: 11px; background: var(--muted); color: var(--bg); font-size: .75rem; font-weight: 700; text-align: center; line-height: 20px; }
+.due-count.late { background: var(--danger); }
+.due-chev { color: var(--muted); }
+.due-list { list-style: none; margin: 0; padding: 0 4px 4px; }
+.due-item { border-top: 1px solid var(--line); }
+.due-item .meta { padding-left: 38px; }
 /* Prullenbak: uitleg en legen bovenaan, per taak terugzetten of definitief verwijderen */
 .trash-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 8px; }
 .trash-head .muted { color: var(--muted); font-size: .8125rem; margin: 0; flex: 1 1 220px; }
@@ -651,7 +663,6 @@ body.manager-open #main > :not(#manager):not(#net) { display: none; }
 .mgr-empty p { margin: 8px 0 0; line-height: 1.45; }
 .mgr-empty .mgr-start { margin-top: 14px; }
 .mgr-empty .mgr-clear { font-weight: 400; }
-.mgr-pick { color: var(--muted); font-size: .8125rem; text-align: center; margin: 14px 0 0; }
 
 /* ---------- Kalender (calendarview.js): maandraster en agenda ---------- */
 body.calendar-open #main > :not(#calendar):not(#net) { display: none; }

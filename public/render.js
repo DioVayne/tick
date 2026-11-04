@@ -13,6 +13,7 @@ import { renderTrash, shareLabel, shareNames } from './trash.js';
 import { renderInvites } from './share.js';
 import { claimControl, doneBlock } from './sharedlist.js';
 import { deleteWithUndo, enableSwipe, swipedAway } from './swipe.js';
+import { dueStrip } from './duestrip.js';
 
 export const $ = (s) => document.querySelector(s);
 
@@ -368,6 +369,9 @@ function renderList(root) {
     const hit = new Set(visible.filter((t) => matches(t, q)).flatMap((t) => (t.parent_id ? [t.id, t.parent_id] : [t.id])));
     visible = visible.filter((t) => hit.has(t.id));
   }
+  // Bovenaan: de taken achter de teller op het icoon, uit alle lijsten (niet in Afgerond of bij zoeken).
+  const due = state.showDone || q ? null : dueStrip();
+  if (due) root.append(due);
   const ids = new Set(visible.map((t) => t.id));
   // Zoeken buiten Afgerond: daaronder de afgeronde treffers van de server (alleen als ze bij deze zoekterm horen;
   // offline of mislukt: geen). Wat al bij de open taken staat, zoals een net afgevinkte taak, niet nog eens.

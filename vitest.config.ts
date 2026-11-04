@@ -41,7 +41,9 @@ export default defineConfig({
   ],
   test: {
     setupFiles: ['./test/setup.ts'],
-    // Dev-machine onder load: een lokale D1-aanroep kost hier tientallen ms, en elke request leest sinds de accounts ook de gebruiker.
-    testTimeout: 30000,
+    // Alle testbestanden draaien tegelijk, elk met een eigen Miniflare; op een drukke machine duurt een zware test
+    // (gedeelde lijsten, delen) dan ruim boven de 30 s zonder dat er iets mis is. Een ruime limiet kost niets zolang
+    // tests slagen; minder workers wel (twee keer zo lang voor de hele suite).
+    testTimeout: 120_000,
   },
 });
