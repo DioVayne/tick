@@ -30,6 +30,12 @@ This browser, your other browsers with notifications, and your Android phones wi
 ## Account
 Your name and email address, change your password, **log out on other devices**, and log out.
 
+**Delete account** erases everything in your account: tasks and subtasks, places, attachments, your background photo, settings, keys, linked devices and notifications. You confirm with your password, and it can't be undone. Shared lists pass to another member. Tasks you shared on their own disappear for the others too; copies stay. Your data is removed from Tick right away. Backups are erased automatically within 30 days. Afterwards you are logged out and see a confirmation on the login page. Want to keep your tasks? Download a backup first (see [Data](#data)).
+
+The administrator can't delete their own account, so a Tick never ends up without an administrator.
+
+The same steps are on a public page, `/delete-account` on your Tick's address (for example `https://tick.example.com/delete-account`), which works without logging in. It also tells people who can't log in whom to email: the address in `ADMIN_CONTACT`.
+
 ## Accounts (administrator)
 Everyone on this Tick with when they were last seen. **+ Invite someone** and **Reset link** make one-time links (see [Sharing](sharing.md#accounts)). Deleting an account erases all of that person's data; a shared list they own goes to the member who has been in it longest, and a list without members disappears.
 
