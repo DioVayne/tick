@@ -1,11 +1,20 @@
 import { Hono } from 'hono';
-import type { AppEnv } from './index';
+import type { AppEnv, Env } from './index';
 import { HttpError } from './errors';
 import { adminOnly } from './guards';
 import { createLink } from './links';
 import { backgroundKey } from './background';
 import { deleteUserStmts, getUser } from './users';
 import { transferListsStmts } from './sharedlists';
+
+/**
+ * Wist een account met alles erop en eraan: de enige wisroute, voor de beheerder en voor jezelf. Gedeelde lijsten gaan
+ * eerst over naar een lid, dan alle rijen, dan de achtergrondfoto in R2. Bijlagen in R2 ruimt `sweepAttachments` op.
+ */
+export async function deleteAccount(env: Env, id: string): Promise<void> {
+  await env.DB.batch([...transferListsStmts(env.DB, id), ...deleteUserStmts(env.DB, id)]);
+  await env.FILES?.delete(backgroundKey(id));
+}
 
 /** Accountbeheer, alleen voor de beheerder. */
 export const usersApi = new Hono<AppEnv>();
@@ -32,7 +41,6 @@ usersApi.delete('/:id', async (c) => {
   const id = c.req.param('id');
   if (id === c.get('user').id) throw new HttpError(400, 'err.cannot_delete_self');
   if (!(await getUser(c.env.DB, id))) throw new HttpError(404, 'err.not_found');
-  await c.env.DB.batch([...transferListsStmts(c.env.DB, id), ...deleteUserStmts(c.env.DB, id)]);
-  await c.env.FILES?.delete(backgroundKey(id));
+  await deleteAccount(c.env, id);
   return c.json({ ok: true });
 });

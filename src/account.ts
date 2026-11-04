@@ -2,9 +2,10 @@ import { Hono } from 'hono';
 import type { AppEnv } from './index';
 import { HttpError } from './errors';
 import { sessionOnly } from './guards';
-import { bumpSessionVersion, bumpSessionVersionStmt, passwordOk, sessionCookie } from './auth';
+import { bumpSessionVersion, bumpSessionVersionStmt, clearCookie, passwordOk, sessionCookie } from './auth';
 import { hashPassword } from './password';
 import { getUser } from './users';
+import { deleteAccount } from './users-api';
 
 export const accountApi = new Hono<AppEnv>();
 accountApi.use('*', sessionOnly);
@@ -27,6 +28,25 @@ accountApi.post('/password', async (c) => {
     bumpSessionVersionStmt(db, user.id),
   ]);
   c.header('Set-Cookie', await sessionCookie(c.env, (await getUser(db, user.id))!));
+  return c.json({ ok: true });
+});
+
+accountApi.post('/delete', async (c) => {
+  // Zelfde rem als /login: hier wordt een wachtwoord gecontroleerd.
+  const { success } = await c.env.LOGIN_LIMITER.limit({ key: c.req.header('cf-connecting-ip') ?? 'onbekend' });
+  if (!success) throw new HttpError(429, 'err.too_many_attempts');
+  const body = await c.req.json<{ password?: unknown }>().catch(() => null);
+  if (!body || typeof body.password !== 'string') throw new HttpError(400, 'err.invalid_json');
+  const user = c.get('user');
+  if (!(await passwordOk(c.env, user, body.password))) throw new HttpError(403, 'err.wrong_password'); // 403: bij 401 gaat de app naar /login
+  if (user.role === 'admin') {
+    // Nooit een Tick zonder beheerder.
+    const admins = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin'").first<{ n: number }>();
+    if ((admins?.n ?? 0) <= 1) throw new HttpError(409, 'err.last_admin');
+  }
+  await deleteAccount(c.env, user.id);
+  // De cookie hoort nu bij niemand meer; de middleware verlengt hem niet omdat de route zelf een cookie zet.
+  c.header('Set-Cookie', clearCookie);
   return c.json({ ok: true });
 });
 
