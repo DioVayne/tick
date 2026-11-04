@@ -3,7 +3,8 @@ import { MIN_PASSWORD } from './account';
 
 // Stijl en script staan in public/login.css en login.js: de CSP staat geen inline code toe.
 // emptyEmailHint: de beheerder heeft nog geen e-mailadres, dan zegt de pagina dat het veld leeg mag (de overgang).
-export function loginPage(locale: string | undefined, emptyEmailHint = false): string {
+// deleted: na het verwijderen van je account (/login?deleted=1) staat er een bevestiging boven het formulier.
+export function loginPage(locale: string | undefined, emptyEmailHint = false, deleted = false): string {
   const lang = normLocale(locale);
   const t = (key: string) => translate(lang, key);
   return `<!doctype html>
@@ -12,7 +13,7 @@ export function loginPage(locale: string | undefined, emptyEmailHint = false): s
 <title>${t('login.title')}</title><meta name="theme-color" content="#ffffff">
 <script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
 </head><body>
-<form id="f"><h1>Tick</h1>
+<form id="f"><h1>Tick</h1>${deleted ? `<p class="ok" role="status">${t('login.deleted')}</p>` : ''}
 <input type="email" id="email" placeholder="${t('login.email')}" autocomplete="username" autofocus>
 <input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="current-password" required>
 <button>${t('login.submit')}</button><p id="err" role="alert"></p>${emptyEmailHint ? `<p class="hint">${t('login.empty_email_hint')}</p>` : ''}</form>
@@ -41,6 +42,45 @@ ${kind === 'invite' ? `<input type="text" id="name" placeholder="${t('link.name'
 <script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
 </head><body data-kind="${kind}" data-short="${translate(lang, 'err.password_short', { min: MIN_PASSWORD })}">
 ${content}</body></html>`;
+}
+
+/**
+ * Het contactadres voor de openbare verwijderpagina, uit `ADMIN_CONTACT` (`mailto:…`). Leeg, geen `mailto:` of het
+ * voorbeeldadres op example.com uit wrangler.example.jsonc: null, dan noemt de pagina geen adres.
+ */
+export function contactEmail(adminContact: string | undefined): string | null {
+  const m = /^mailto:([^\s@?]+@([^\s@?]+))$/i.exec((adminContact ?? '').trim());
+  if (!m || m[2].toLowerCase() === 'example.com') return null;
+  return m[1];
+}
+
+const escapeHtml = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+
+/** Openbare pagina (zonder inlog) die uitlegt hoe je je account verwijdert: de link die Google Play vraagt. */
+export function deleteAccountPage(locale: string | undefined, contact: string | null): string {
+  const lang = normLocale(locale);
+  const t = (key: string, vars?: Record<string, string>) => translate(lang, key, vars);
+  const mail = contact ? escapeHtml(contact) : '';
+  const noLogin = contact ? t('del.no_login', { email: `<a href="mailto:${mail}">${mail}</a>` }) : t('del.no_login_admin');
+  return `<!doctype html>
+<html lang="${lang}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${t('del.title')}</title><meta name="theme-color" content="#ffffff">
+<script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
+</head><body><main class="page">
+<h1>${t('del.title')}</h1>
+<p>${t('del.intro')}</p>
+<h2>${t('del.steps_title')}</h2>
+<ol><li>${t('del.step1')}</li><li>${t('del.step2')}</li><li>${t('del.step3')}</li><li>${t('del.step4')}</li></ol>
+<h2>${t('del.what_title')}</h2>
+<p>${t('del.what')}</p>
+<p>${t('del.shared')}</p>
+<p>${t('del.retention')}</p>
+<p>${t('del.backup')}</p>
+<h2>${t('del.no_login_title')}</h2>
+<p>${noLogin}</p>
+<p><a href="/login">${t('del.to_login')}</a></p>
+</main></body></html>`;
 }
 
 /** Bestanden die de loginpagina zonder inlog nodig heeft. */
