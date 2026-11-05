@@ -39,6 +39,15 @@ Open a top-level task and tap **Do it together with…**. Pick someone and choos
 
 The other person gets a notification with **Accept** and **Decline**, and a bar in the app; an accepted task lands in their Inbox. Only the owner can invite others. Anyone on a shared task can leave it; the owner can remove people or withdraw an invitation. Who is on it is listed in the task under *Together with*. Deleting a shared task deletes it for everyone.
 
+## On an open Tick
+On a Tick where everyone makes their own account (such as the one behind the Android app in Google Play), sharing works the same, with three differences, so that nobody can find out who else uses it:
+
+- **By email address:** there is no list of accounts to pick from. Type the full email address of the person you want to share with. People you already share an accepted task or list with appear as a button.
+- **Confirm first:** you can share once your own email address is confirmed (see [Creating your own account](signup.md)).
+- **An address without an account:** Tick emails that address an invitation with your name, the name of the task or list, and how to get Tick. Once they make an account with that address and confirm it, the invitation is waiting for them in Tick. An invitation stays open for 30 days.
+
+You always see the same thing, whether or not the address has an account: *Together with* or the list dialog shows the address with "waiting for an answer" until they accept, and then their name. You can withdraw an invitation there with **Remove**.
+
 ## Seeing how far the others are
 Copies stay linked. On your copy you see a pill per person: their name with a small progress bar, or their name with ✓ when they are done. Progress counts their subtasks and the checklist lines in their notes. You never see their title, notes or subtasks.
 

@@ -116,7 +116,8 @@ ${forgot ? `<p>${t('del.no_login_forgot', { link: `<a href="/forgot">${t('del.fo
  * (wie deze Tick draait), `contact` uit `ADMIN_CONTACT` via contactEmail; zonder een van beide een algemene zin.
  */
 // mailOn: mailen staat aan, dan noemt de pagina Resend bij de diensten.
-export function privacyPage(locale: string | undefined, contact: string | null, operator?: string, mailOn = false): string {
+// open: een openbare Tick (OPEN_SIGNUP): ook uitnodigingen per mail en het opruimen van onbevestigde accounts.
+export function privacyPage(locale: string | undefined, contact: string | null, operator?: string, mailOn = false, open = false): string {
   const lang = normLocale(locale);
   const t = (key: string, vars?: Record<string, string>) => translate(lang, key, vars);
   const name = (operator ?? '').trim();
@@ -142,11 +143,12 @@ ${items(['priv.what_account', 'priv.what_content', 'priv.what_devices', 'priv.wh
 <p>${t('priv.not')}</p>
 <p>${t('priv.cookie')}</p>
 <h2>${t('priv.others_title')}</h2>
-${items(['priv.others_cloudflare', 'priv.others_push', 'priv.others_osm', ...(mailOn ? ['priv.others_mail'] : [])])}
+${items(['priv.others_cloudflare', 'priv.others_push', 'priv.others_osm', ...(mailOn ? ['priv.others_mail'] : []), ...(open ? ['priv.open_invites'] : [])])}
 <h2>${t('priv.why_title')}</h2>
 <p>${t('priv.why')}</p>
 <h2>${t('priv.keep_title')}</h2>
-<p>${t('priv.keep')}</p>
+<p>${t('priv.keep')}</p>${open ? `
+<p>${t('priv.open_unverified')}</p>` : ''}
 <h2>${t('priv.rights_title')}</h2>
 <p>${t('priv.rights', { link: `<a href="/delete-account">${t('del.title')}</a>` })}</p>
 <p>${t('priv.complaint')}</p>
