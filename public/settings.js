@@ -59,6 +59,7 @@ if (document.documentElement.lang !== getLocale()) applyI18n(document);
  * Instellingen van de ingelogde gebruiker plus de standaardtaal van de installatie.
  * @type {{ locale: 'en' | 'nl', defaultLocale: 'en' | 'nl', timeZone: string, reminderTime: string, weekStart: 'mon' | 'sun', driveMode: boolean,
  *   tickmanager: boolean, reviewNewDays: number, reviewSeenDays: number,
- *   androidPackage: string | null, userId: string, userName: string, isAdmin: boolean }}
+ *   androidPackage: string | null, userId: string, userName: string, isAdmin: boolean,
+ *   openSignup: boolean, emailVerified: boolean, verifyBy: string | null }}
  */
 export default CONFIG;
