@@ -95,7 +95,7 @@ describe('accountbeheer', () => {
     expect(await linkValid(env.DB, 'reset', code)).toBe(false);
     expect(await linkValid(env.DB, 'invite', code)).toBe(true);
     expect(await consumeLink(env.DB, 'reset', code)).toBeNull();
-    expect(await consumeLink(env.DB, 'invite', code)).toEqual({ user_id: null });
+    expect(await consumeLink(env.DB, 'invite', code)).toEqual({ user_id: null, created_by: ADMIN_ID });
     expect(await consumeLink(env.DB, 'invite', code)).toBeNull();
     expect(await linkValid(env.DB, 'invite', code)).toBe(false);
     const old = await createLink(env.DB, 'invite', ADMIN_ID, null);

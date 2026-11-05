@@ -19,7 +19,7 @@ import { markReviewed, reviewApi } from './review';
 import { accountApi } from './account';
 import { usersApi } from './users-api';
 import { linkPages } from './links';
-import { openSignup, signupPages } from './signup';
+import { openSignup, signupPages, verifyBy } from './signup';
 import { forgotPages } from './forgot';
 import { mailEnabled } from './mail';
 import { deviceApi, devicesApi } from './devices';
@@ -604,6 +604,7 @@ app.get('/config.js', (c) => {
     userId: user.id, userName: user.name, isAdmin: user.role === 'admin',
     attachments: !!c.env.FILES, maxUploadMb: maxUpload(c.env) / 1024 / 1024,
     maxAccountMb: c.env.FILES && maxAccount(c.env) !== null ? maxAccount(c.env)! / 1024 / 1024 : null,
+    openSignup: openSignup(c.env), emailVerified: !!user.email_verified_at, verifyBy: verifyBy(c.env, user),
   };
   return c.body(`export default ${JSON.stringify(config)};
 `, 200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' });

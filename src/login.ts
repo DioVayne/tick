@@ -172,5 +172,21 @@ export function forgotPage(locale: string | undefined): string {
 <script type="module" src="/forgot.js"></script></body></html>`;
 }
 
+/** Pagina achter de bevestigingslink (/verify/:code): bevestigd, of de link werkt niet (meer). */
+export function verifyPage(locale: string | undefined, done: boolean): string {
+  const lang = normLocale(locale);
+  const t = (key: string) => translate(lang, key);
+  const title = t(done ? 'verify.done_title' : 'verify.invalid_title');
+  return `<!doctype html>
+<html lang="${lang}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>${title}</title><meta name="theme-color" content="#ffffff">
+<script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
+</head><body><div id="f"><img class="logo" src="/icon.svg" alt="" width="64" height="64"><h1>${title}</h1>
+<p class="intro">${t(done ? 'verify.done_body' : 'verify.invalid')}</p>
+<p class="link"><a href="/">${t('verify.open_app')}</a></p></div></body></html>`;
+}
+
 /** Bestanden die de loginpagina zonder inlog nodig heeft. */
 export const loginAssets = ['/login.css', '/login.js', '/accountlink.js', '/forgot.js', '/signup.js', '/icon.svg', '/next.js', '/theme.js'];

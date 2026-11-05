@@ -6,6 +6,9 @@ import { bumpSessionVersion, bumpSessionVersionStmt, clearCookie, passwordOk, se
 import { hashPassword } from './password';
 import { getUser } from './users';
 import { deleteAccount } from './users-api';
+import { mailEnabled } from './mail';
+import { inBackground } from './push';
+import { openSignup, sendVerifyMail } from './signup';
 
 export const accountApi = new Hono<AppEnv>();
 accountApi.use('*', sessionOnly);
@@ -57,6 +60,14 @@ accountApi.post('/logout-others', async (c) => {
   return c.json({ ok: true });
 });
 
+/** Bevestigingsmail opnieuw sturen (openbare Tick, onbevestigd adres); de grenzen van reserveMail gelden. */
+accountApi.post('/verify', async (c) => {
+  const user = c.get('user');
+  if (!openSignup(c.env) || !mailEnabled(c.env) || user.email_verified_at || !user.email) throw new HttpError(400, 'err.already_verified');
+  await inBackground(c, sendVerifyMail(c.env, user.id, new URL(c.req.url).origin, c.get('lang')), 'bevestigingsmail');
+  return c.json({ ok: true });
+});
+
 accountApi.get('/', (c) => {
   const { id, name, email, role } = c.get('user');
   return c.json({ id, name, email, role });
@@ -84,10 +95,17 @@ accountApi.patch('/', async (c) => {
   if (body.name !== undefined) {
     sets.push('name = ?'); vals.push(cleanName(body.name));
   }
-  if (body.email !== undefined) {
-    sets.push('email = ?'); vals.push(cleanEmail(body.email));
-  }
   const id = c.get('user').id;
+  // Op een openbare Tick is een nieuw adres pas bevestigd na de mail; dezelfde in andere hoofdletters blijft bevestigd.
+  let reverify = false;
+  if (body.email !== undefined) {
+    const email = cleanEmail(body.email);
+    sets.push('email = ?'); vals.push(email);
+    if (openSignup(c.env) && email.toLowerCase() !== (c.get('user').email ?? '').toLowerCase()) {
+      sets.push('email_verified_at = NULL');
+      reverify = true;
+    }
+  }
   if (sets.length) {
     try {
       await c.env.DB.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, id).run();
@@ -96,6 +114,7 @@ accountApi.patch('/', async (c) => {
       throw e;
     }
   }
+  if (reverify) await inBackground(c, sendVerifyMail(c.env, id, new URL(c.req.url).origin, c.get('lang')), 'bevestigingsmail');
   const { name, email, role } = (await getUser(c.env.DB, id))!;
   return c.json({ id, name, email, role });
 });
