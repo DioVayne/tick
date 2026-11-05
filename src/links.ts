@@ -11,13 +11,15 @@ import { hashKey, newKey } from './keys';
 export const INVITE_TTL_MS = 7 * 86_400_000;
 export const RESET_TTL_MS = 3_600_000;
 
-export type LinkKind = 'invite' | 'reset';
+export const VERIFY_TTL_MS = 7 * 86_400_000;
+
+export type LinkKind = 'invite' | 'reset' | 'verify';
 
 /** Maakt een eenmalige link-code; alleen de hash komt in de database. Ruimt eerst verlopen en gebruikte links op. */
 export async function createLink(db: D1Database, kind: LinkKind, createdBy: string, userId: string | null): Promise<{ code: string; expires_at: string }> {
   const now = Date.now();
   const code = newKey().slice('tick_'.length);
-  const expires_at = new Date(now + (kind === 'invite' ? INVITE_TTL_MS : RESET_TTL_MS)).toISOString();
+  const expires_at = new Date(now + (kind === 'invite' ? INVITE_TTL_MS : kind === 'verify' ? VERIFY_TTL_MS : RESET_TTL_MS)).toISOString();
   await db.prepare('DELETE FROM account_links WHERE expires_at < ? OR used_at IS NOT NULL').bind(new Date(now).toISOString()).run();
   await db.prepare('INSERT INTO account_links (id, hash, kind, user_id, created_by, expires_at) VALUES (?, ?, ?, ?, ?, ?)')
     .bind(crypto.randomUUID(), await hashKey(code), kind, userId, createdBy, expires_at).run();
@@ -74,8 +76,10 @@ linkPages.post('/invite/:code', async (c) => {
   if (!(await consumeLink(db, 'invite', code))) throw new HttpError(400, 'err.link_invalid');
   const id = crypto.randomUUID();
   try {
-    await db.prepare("INSERT INTO users (id, name, email, password_hash, role, session_version, created_at) VALUES (?, ?, ?, ?, 'member', 1, ?)")
-      .bind(id, name, email, await hashPassword(password), new Date().toISOString()).run();
+    // Via een link van de beheerder: het adres geldt als bevestigd (de beheerder kent deze persoon).
+    const ts = new Date().toISOString();
+    await db.prepare("INSERT INTO users (id, name, email, password_hash, role, session_version, created_at, email_verified_at) VALUES (?, ?, ?, ?, 'member', 1, ?, ?)")
+      .bind(id, name, email, await hashPassword(password), ts, ts).run();
   } catch (e) {
     // Zelfde adres net tussendoor vergeven: de link is dan wel verbruikt.
     if (/UNIQUE constraint failed/.test((e as Error).message)) throw new HttpError(409, 'err.email_taken');

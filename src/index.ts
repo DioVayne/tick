@@ -71,6 +71,12 @@ export type Env = {
   MAIL_FROM?: string;
   /** Hoeveel mails Tick per UTC-dag hooguit verstuurt (standaard 50). */
   MAIL_DAILY_LIMIT?: string;
+  /** "true" = openbare Tick: iedereen kan zelf een account maken en accounts zien elkaar niet (standaard uit). */
+  OPEN_SIGNUP?: string;
+  /** Link naar de app in Google Play, voor de uitnodigingsmail op een openbare Tick (optioneel). */
+  PLAY_STORE_URL?: string;
+  /** Hoeveel accounts er per UTC-dag hooguit zelf aangemaakt worden op een openbare Tick (standaard 100). */
+  SIGNUP_DAILY_LIMIT?: string;
 };
 
 export type TaskRow = {

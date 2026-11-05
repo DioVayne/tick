@@ -63,7 +63,14 @@
     // Without both, Tick sends no email and the login page has no "Forgot password?" link.
     // "MAIL_FROM": "Tick <noreply@example.com>",
     // Most emails Tick sends per day (UTC), all kinds together (default 50; Resend's free plan allows 100 a day).
-    // "MAIL_DAILY_LIMIT": "50"
+    // "MAIL_DAILY_LIMIT": "50",
+    // Only for a Tick open to strangers (like a hosted app): "true" lets anyone create an account on /signup, and
+    // accounts can no longer see each other (sharing goes by email address). Set up email (above) first. Default off.
+    // "OPEN_SIGNUP": "true",
+    // With OPEN_SIGNUP: a Google Play link for the invitation email (optional).
+    // "PLAY_STORE_URL": "https://play.google.com/store/apps/details?id=com.example.tick",
+    // With OPEN_SIGNUP: most new accounts per day (UTC, default 100).
+    // "SIGNUP_DAILY_LIMIT": "100"
   },
   "observability": { "enabled": true }
 }

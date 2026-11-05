@@ -1,4 +1,6 @@
 import { env, exports } from 'cloudflare:workers';
+import { createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
+import worker, { type Env } from '../src/index';
 import { hashPassword } from '../src/password';
 
 export { ADMIN_ID } from '../src/users';
@@ -38,13 +40,14 @@ export function callAs(cookie: string, path: string, init: RequestInit & { json?
 }
 
 /** Maakt een lid direct in `users` (uniek e-mailadres) en logt in via /login. */
-export async function createUser(o: { name?: string; email?: string; password?: string } = {}):
+export async function createUser(o: { name?: string; email?: string; password?: string; verified?: boolean; createdAt?: string } = {}):
   Promise<{ id: string; email: string; password: string; cookie: string }> {
   const id = crypto.randomUUID();
   const email = o.email ?? `u-${crypto.randomUUID()}@example.test`;
   const password = o.password ?? 'lid-wachtwoord';
-  await env.DB.prepare("INSERT INTO users (id, name, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, 'member', ?)")
-    .bind(id, o.name ?? 'Lid', email, await hashPassword(password), new Date().toISOString()).run();
+  const ts = o.createdAt ?? new Date().toISOString();
+  await env.DB.prepare("INSERT INTO users (id, name, email, password_hash, role, created_at, email_verified_at) VALUES (?, ?, ?, ?, 'member', ?, ?)")
+    .bind(id, o.name ?? 'Lid', email, await hashPassword(password), ts, o.verified === false ? null : ts).run();
   const res = await login(password, randomIp(), email);
   if (res.status !== 200) throw new Error(`inloggen als lid mislukt: ${res.status} ${await res.text()}`);
   return { id, email, password, cookie: res.headers.get('set-cookie')!.split(';')[0] };
@@ -108,4 +111,19 @@ export async function untilRateLimited(attempt: () => Promise<Response>, limit =
   if (out.at(-1)!.status !== 429) throw new Error(`geen 429 na ${out.length} pogingen: ${out.map((r) => r.status).join(',')}`);
   if (out.length - 1 > allowed) throw new Error(`${out.length - 1} pogingen slaagden vóór de 429 (hoogstens ${allowed}): ${out.map((r) => r.status).join(',')}`);
   return out;
+}
+
+/** De env van een openbare Tick (OPEN_SIGNUP) met mail aan (Resend wordt in de tests nagebootst). */
+export const openEnv: Env = { ...env, OPEN_SIGNUP: 'true', RESEND_API_KEY: 'test-resend', MAIL_FROM: 'Tick <noreply@ticktodo.nl>' };
+
+/** Request met een eigen env (zonder Bearer); wacht ook op het werk op de achtergrond (waitUntil). */
+export async function callWith(e: Env, path: string, o: { method?: string; json?: unknown; cookie?: string; ip?: string; lang?: string; accept?: string } = {}) {
+  const headers = new Headers({ 'cf-connecting-ip': o.ip ?? randomIp(), 'accept-language': o.lang ?? 'en' });
+  if (o.accept) headers.set('accept', o.accept);
+  if (o.cookie) headers.set('cookie', o.cookie);
+  if (o.json !== undefined) headers.set('content-type', 'application/json');
+  const ctx = createExecutionContext();
+  const res = await worker.fetch(new Request(BASE + path, { method: o.method ?? 'GET', headers, body: o.json === undefined ? undefined : JSON.stringify(o.json), redirect: 'manual' }), e, ctx);
+  await waitOnExecutionContext(ctx);
+  return res;
 }
