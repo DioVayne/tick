@@ -6,6 +6,7 @@ import { sessionCookie } from './auth';
 import { linkPage } from './login';
 import { hashPassword } from './password';
 import { getUser } from './users';
+import { markVerified } from './signup';
 import { hashKey, newKey } from './keys';
 
 export const INVITE_TTL_MS = 7 * 86_400_000;
@@ -96,11 +97,11 @@ linkPages.post('/reset/:code', async (c) => {
   const db = c.env.DB;
   const link = await consumeLink(db, 'reset', c.req.param('code'));
   if (!link?.user_id) throw new HttpError(400, 'err.link_invalid');
+  await db.prepare('UPDATE users SET password_hash = ?, session_version = session_version + 1 WHERE id = ?')
+    .bind(await hashPassword(password), link.user_id).run();
   // Een link uit "Wachtwoord vergeten?" (/forgot, door het account zelf aangevraagd) is per mail gekomen: wie hem
-  // opent, heeft het adres in handen. Dat bevestigt het adres; een resetlink van de beheerder doet dat niet.
-  const verified = link.created_by === link.user_id ? ', email_verified_at = COALESCE(email_verified_at, ?3)' : '';
-  await db.prepare(`UPDATE users SET password_hash = ?1, session_version = session_version + 1${verified} WHERE id = ?2`)
-    .bind(await hashPassword(password), link.user_id, ...(verified ? [new Date().toISOString()] : [])).run();
+  // opent, heeft het adres in handen. Dat bevestigt het adres (en zet uitnodigingen om); een link van de beheerder niet.
+  if (link.created_by === link.user_id) await markVerified(c.env, link.user_id);
   const user = await getUser(db, link.user_id);
   if (!user) throw new HttpError(400, 'err.link_invalid'); // account intussen verwijderd
   c.header('Set-Cookie', await sessionCookie(c.env, user));

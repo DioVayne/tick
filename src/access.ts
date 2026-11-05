@@ -107,8 +107,9 @@ export async function shareInfo(db: D1Database, userId: string, taskId?: string,
     if (open && r.status === 'pending' && !mine) continue;
     let info = out.get(r.task_id);
     if (!info) out.set(r.task_id, info = { owner: { id: r.owner_id, name: r.owner_name }, members: [] });
-    const name = open && r.status === 'pending' ? r.email ?? r.name : r.name;
-    info.members.push({ share_id: r.id, user_id: r.to_user, name, status: r.status });
+    const pending = open && r.status === 'pending';
+    // Openstaand op een openbare Tick: adres en `mail:<share_id>`, met of zonder account erachter.
+    info.members.push({ share_id: r.id, user_id: pending ? `mail:${r.id}` : r.to_user, name: pending ? r.email ?? r.name : r.name, status: r.status });
   }
   // Voor een taak waar je alleen ontvanger bent zonder toegang (scope met taskId) hoort er niets in.
   if (taskId) {

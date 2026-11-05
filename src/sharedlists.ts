@@ -5,7 +5,7 @@ import { STEP, topMin } from './access';
 import { inBackground, notifyUser, sendToAll, type Sender } from './push';
 import { recipientOf } from './shares';
 import { translate } from '../public/i18n.js';
-import { addEmailInvite, afterEmailInvite, MAIL_PREFIX, resolveOpenRecipient, revokeEmailInvite } from './invites';
+import { addEmailInvite, afterEmailInvite, MAIL_PREFIX, pendingMemberId, resolveOpenRecipient, revokeEmailInvite } from './invites';
 import { openSignup } from './signup';
 
 /**
@@ -208,7 +208,8 @@ export async function listSharing(db: D1Database, userId: string, open = false):
       });
     }
     if (r.role === 'owner' || (r.status === 'pending' && !share.mine)) continue;
-    share.members.push({ user_id: r.user_id, name: r.user_name, status: r.status });
+    const uid = open && r.status === 'pending' ? await pendingMemberId(r.list_id, r.user_id) : r.user_id;
+    share.members.push({ user_id: uid, name: r.user_name, status: r.status });
   }
   if (open) {
     const { results: invites } = await db.prepare('SELECT id, email, list_id FROM email_invites WHERE from_user = ? AND list_id IS NOT NULL ' +
@@ -380,8 +381,14 @@ sharedListsApi.delete('/:id/members/:userId', async (c) => {
   if (!mine) throw new HttpError(404, 'err.not_found');
   let theirs = mine;
   if (target.startsWith(MAIL_PREFIX)) {
-    // Een uitnodiging aan een e-mailadres (openbare Tick) intrekken: alleen de eigenaar.
-    if (mine.role !== 'owner' || !(await revokeEmailInvite(db, me, target.slice(MAIL_PREFIX.length), { kind: 'list', listId }))) throw new HttpError(404, 'err.not_found');
+    // Openbare Tick: een uitnodiging aan een adres, of een openstaand lid onder zijn ondoorzichtige id. Alleen de eigenaar.
+    if (mine.role !== 'owner') throw new HttpError(404, 'err.not_found');
+    if (await revokeEmailInvite(db, me, target.slice(MAIL_PREFIX.length), { kind: 'list', listId })) return c.json({ ok: true });
+    const { results: pending } = await db.prepare("SELECT user_id FROM list_members WHERE list_id = ? AND status = 'pending'").bind(listId).all<{ user_id: string }>();
+    let real: string | null = null;
+    for (const p of pending) if ((await pendingMemberId(listId, p.user_id)) === target) real = p.user_id;
+    if (!real) throw new HttpError(404, 'err.not_found');
+    await db.batch(leaveListStmts(db, listId, real));
     return c.json({ ok: true });
   }
   if (target === me) {

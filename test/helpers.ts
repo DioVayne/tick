@@ -46,8 +46,10 @@ export async function createUser(o: { name?: string; email?: string; password?: 
   const email = o.email ?? `u-${crypto.randomUUID()}@example.test`;
   const password = o.password ?? 'lid-wachtwoord';
   const ts = o.createdAt ?? new Date().toISOString();
-  await env.DB.prepare("INSERT INTO users (id, name, email, password_hash, role, created_at, email_verified_at) VALUES (?, ?, ?, ?, 'member', ?, ?)")
-    .bind(id, o.name ?? 'Lid', email, await hashPassword(password), ts, o.verified === false ? null : ts).run();
+  // Onbevestigd: zoals na zelf aanmelden, met een opruimtermijn van 30 dagen na aanmaken.
+  const deadline = o.verified === false ? new Date(Date.parse(ts) + 30 * 86_400_000).toISOString() : null;
+  await env.DB.prepare("INSERT INTO users (id, name, email, password_hash, role, created_at, email_verified_at, verify_deadline) VALUES (?, ?, ?, ?, 'member', ?, ?, ?)")
+    .bind(id, o.name ?? 'Lid', email, await hashPassword(password), ts, o.verified === false ? null : ts, deadline).run();
   const res = await login(password, randomIp(), email);
   if (res.status !== 200) throw new Error(`inloggen als lid mislukt: ${res.status} ${await res.text()}`);
   return { id, email, password, cookie: res.headers.get('set-cookie')!.split(';')[0] };

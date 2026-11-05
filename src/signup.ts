@@ -65,8 +65,10 @@ signupPages.post('/signup', async (c) => {
   if (await db.prepare('SELECT 1 FROM users WHERE email = ?').bind(email).first()) throw new HttpError(409, 'err.email_taken');
   const id = crypto.randomUUID();
   try {
-    await db.prepare("INSERT INTO users (id, name, email, password_hash, role, session_version, created_at) VALUES (?, ?, ?, ?, 'member', 1, ?)")
-      .bind(id, name, email, await hashPassword(password), new Date(now).toISOString()).run();
+    // De termijn van 30 dagen loopt alleen als er een bevestigingsmail kan komen.
+    const deadline = mailEnabled(c.env) ? new Date(now + UNVERIFIED_TTL_MS).toISOString() : null;
+    await db.prepare("INSERT INTO users (id, name, email, password_hash, role, session_version, created_at, verify_deadline) VALUES (?, ?, ?, ?, 'member', 1, ?, ?)")
+      .bind(id, name, email, await hashPassword(password), new Date(now).toISOString(), deadline).run();
   } catch (e) {
     if (/UNIQUE constraint failed/.test((e as Error).message)) throw new HttpError(409, 'err.email_taken');
     throw e;
@@ -86,10 +88,10 @@ async function notifySignupCap(env: Env, now: number): Promise<void> {
 
 export const UNVERIFIED_TTL_MS = 30 * 86_400_000;
 
-/** Tot wanneer een onbevestigd account blijft bestaan; null als er niets opgeruimd wordt (bevestigd, of geen mail). */
-export function verifyBy(env: Env, user: Pick<User, 'email_verified_at' | 'created_at' | 'role'>): string | null {
+/** Tot wanneer een onbevestigd account blijft bestaan; null als het niet opgeruimd wordt. */
+export function verifyBy(env: Env, user: Pick<User, 'email_verified_at' | 'verify_deadline' | 'role'>): string | null {
   if (!openSignup(env) || !mailEnabled(env) || user.email_verified_at || user.role !== 'member') return null;
-  return new Date(Date.parse(user.created_at) + UNVERIFIED_TTL_MS).toISOString();
+  return user.verify_deadline;
 }
 
 /** Mailt een bevestigingslink naar een onbevestigd account, binnen de grenzen van `reserveMail`. */
@@ -112,7 +114,7 @@ export async function sendVerifyMail(env: Env, userId: string, origin: string, l
 
 /** Zet het e-mailadres op bevestigd (als dat nog niet zo was) en zet uitnodigingen aan dat adres om. */
 export async function markVerified(env: Env, userId: string): Promise<void> {
-  await env.DB.prepare('UPDATE users SET email_verified_at = ? WHERE id = ? AND email_verified_at IS NULL')
+  await env.DB.prepare('UPDATE users SET email_verified_at = ?, verify_deadline = NULL WHERE id = ? AND email_verified_at IS NULL')
     .bind(new Date().toISOString(), userId).run();
   await claimEmailInvites(env, userId);
 }
@@ -140,8 +142,9 @@ export async function purgeUnverified(env: Env, now: number): Promise<number> {
   const db = env.DB;
   await db.prepare('DELETE FROM email_invites WHERE expires_at < ?').bind(new Date(now).toISOString()).run();
   if (!openSignup(env) || !mailEnabled(env)) return 0;
-  const { results } = await db.prepare("SELECT id FROM users WHERE role = 'member' AND email_verified_at IS NULL AND created_at < ? LIMIT 50")
-    .bind(new Date(now - UNVERIFIED_TTL_MS).toISOString()).all<{ id: string }>();
+  // Alleen zelf aangemaakte accounts die nooit bevestigd werden (verify_deadline); een gewijzigd adres telt niet.
+  const { results } = await db.prepare("SELECT id FROM users WHERE role = 'member' AND email_verified_at IS NULL AND verify_deadline < ? LIMIT 50")
+    .bind(new Date(now).toISOString()).all<{ id: string }>();
   for (const { id } of results) await deleteAccount(env, id);
   return results.length;
 }
