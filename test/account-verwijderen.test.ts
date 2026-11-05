@@ -116,6 +116,16 @@ describe('openbare pagina en bevestiging', () => {
     expect(html).not.toContain(translate('nl', 'del.no_login_admin'));
   });
 
+  it('met mail aan verwijst de pagina naar /forgot, zonder niet; het contact blijft staan', () => {
+    const met = deleteAccountPage('nl', 'dio@ticktodo.nl', true);
+    expect(met).toContain('href="/forgot"');
+    expect(met).toContain(translate('nl', 'del.no_login_forgot', { link: '' }).slice(0, 20));
+    expect(met).toContain('href="mailto:dio@ticktodo.nl"');
+    const zonder = deleteAccountPage('nl', null);
+    expect(zonder).not.toContain('/forgot');
+    expect(zonder).toContain(translate('nl', 'del.no_login_admin'));
+  });
+
   it('/login?deleted=1 toont de bevestiging, /login zonder niet', async () => {
     expect(await (await page('nl', '/login?deleted=1')).text()).toContain(translate('nl', 'login.deleted'));
     expect(await (await page('nl', '/login')).text()).not.toContain(translate('nl', 'login.deleted'));

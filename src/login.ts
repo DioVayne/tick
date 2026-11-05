@@ -58,7 +58,8 @@ export function contactEmail(adminContact: string | undefined): string | null {
 const escapeHtml = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
 /** Openbare pagina (zonder inlog) die uitlegt hoe je je account verwijdert: de link die Google Play vraagt. */
-export function deleteAccountPage(locale: string | undefined, contact: string | null): string {
+// forgot: mailen staat aan, dan wijst "Kun je niet inloggen?" eerst naar /forgot.
+export function deleteAccountPage(locale: string | undefined, contact: string | null, forgot = false): string {
   const lang = normLocale(locale);
   const t = (key: string, vars?: Record<string, string>) => translate(lang, key, vars);
   const mail = contact ? escapeHtml(contact) : '';
@@ -79,7 +80,8 @@ export function deleteAccountPage(locale: string | undefined, contact: string | 
 <p>${t('del.retention')}</p>
 <p>${t('del.backup')}</p>
 <h2>${t('del.no_login_title')}</h2>
-<p>${noLogin}</p>
+${forgot ? `<p>${t('del.no_login_forgot', { link: `<a href="/forgot">${t('del.forgot_link')}</a>` })}</p>
+` : ''}<p>${noLogin}</p>
 <p><a href="/privacy">${t('priv.title')}</a> · <a href="/login">${t('del.to_login')}</a></p>
 </main></body></html>`;
 }

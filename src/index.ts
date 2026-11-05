@@ -154,7 +154,7 @@ app.get('/login', async (c) => {
   return c.html(loginPage(c.get('lang'), hint, c.req.query('deleted') === '1', mailEnabled(c.env)));
 });
 // Zonder inlog: uitleg over je account verwijderen, voor de link die Google Play vraagt.
-app.get('/delete-account', (c) => c.html(deleteAccountPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT))));
+app.get('/delete-account', (c) => c.html(deleteAccountPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), mailEnabled(c.env))));
 app.get('/privacy', (c) => c.html(privacyPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), c.env.OPERATOR_NAME)));
 app.route('/', linkPages);
 app.route('/', forgotPages);
