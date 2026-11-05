@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { OFFICIAL_APP, assetLinks } from '../src/assetlinks';
+import { OFFICIAL_APP, PLAY_APP, assetLinks } from '../src/assetlinks';
 import { call } from './helpers';
 
 const FP = 'AB:'.repeat(31) + 'CD';
-// Zonder officiële app, om alleen de eigen build te testen.
-const NONE = { pkg: '', certs: '' };
+// Zonder ingebouwde apps, om alleen de eigen build te testen.
+const NONE: { pkg: string; certs: string }[] = [];
 
 describe('assetlinks', () => {
   it('geeft de verklaring voor package en vingerafdrukken', () => {
@@ -19,7 +19,7 @@ describe('assetlinks', () => {
     expect(assetLinks('com.example.tick', 'geen-vingerafdruk', NONE)).toEqual([]);
   });
   it('de officiële app staat erbij, ook zonder eigen build', () => {
-    const official = { pkg: 'nl.example.official', certs: FP };
+    const official = [{ pkg: 'nl.example.official', certs: FP }];
     const statement = (name: string) => ({
       relation: ['delegate_permission/common.handle_all_urls'],
       target: { namespace: 'android_app', package_name: name, sha256_cert_fingerprints: [FP] },
@@ -33,13 +33,20 @@ describe('assetlinks', () => {
       target: { ...statement('nl.example.official').target, sha256_cert_fingerprints: [FP, other] },
     }]);
     // Zonder vingerafdruk van de officiële app (nog geen release-sleutel): alleen de eigen build.
-    expect(assetLinks('com.example.tick', FP, { pkg: 'nl.example.official', certs: '' })).toEqual([statement('com.example.tick')]);
+    expect(assetLinks('com.example.tick', FP, [{ pkg: 'nl.example.official', certs: '' }])).toEqual([statement('com.example.tick')]);
   });
-  it('standaard staat de officiële app met de release-vingerafdruk erin', () => {
-    expect(assetLinks(undefined, undefined)).toEqual([{
+  it('meerdere ingebouwde apps: elk een eigen verklaring', () => {
+    const other = 'EF:'.repeat(31) + '01';
+    const out = assetLinks(undefined, undefined, [{ pkg: 'nl.example.github', certs: FP }, { pkg: 'nl.example.play', certs: other }]);
+    expect(out.map((s) => (s as { target: { package_name: string } }).target.package_name)).toEqual(['nl.example.github', 'nl.example.play']);
+  });
+  it('standaard staan de officiële app en (met vingerafdruk) de Play-app erin', () => {
+    const statement = (app: { pkg: string; certs: string }) => ({
       relation: ['delegate_permission/common.handle_all_urls'],
-      target: { namespace: 'android_app', package_name: OFFICIAL_APP.pkg, sha256_cert_fingerprints: [OFFICIAL_APP.certs] },
-    }]);
+      target: { namespace: 'android_app', package_name: app.pkg, sha256_cert_fingerprints: app.certs.split(',').map((c) => c.trim()) },
+    });
+    expect(PLAY_APP.pkg).toBe('nl.ticktodo.app');
+    expect(assetLinks(undefined, undefined)).toEqual([OFFICIAL_APP, PLAY_APP].filter((a) => a.certs).map(statement));
   });
   it('/api/hello werkt zonder inlog en zegt dat dit een Tick is', async () => {
     const res = await call('/api/hello', { auth: null });

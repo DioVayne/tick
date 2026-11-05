@@ -157,6 +157,29 @@ The official APK is built by [.github/workflows/android-release.yml](.github/wor
 3. Once: put the key's SHA-256 fingerprint (`keytool -list -v -keystore tick-official.jks -alias tick`) in `OFFICIAL_APP.certs` in `src/assetlinks.ts`. The workflow refuses to publish an APK whose signature isn't there.
 4. Each release: raise `versionCode` and `versionName` in `android/app/build.gradle`, merge, then `git tag android-v1.5.0 && git push origin android-v1.5.0`. The workflow runs the JUnit tests, builds, checks the signature and attaches `Tick-1.5.0.apk` and `Tick.apk` to a new release. Installed apps notice the new version within a day.
 
+### Google Play app (maintainers)
+The Play app is a fixed build of the same code: package `nl.ticktodo.app` (can never change; never `nl.detussenpartij.tick`, that is the GitHub app), it starts on `https://app.ticktodo.nl`, and the address stays changeable under **Phone settings → Change address**. It does not look for updates on GitHub; Play updates it. Both apps can be installed side by side.
+
+Play App Signing: Google keeps the **app signing key** and signs what phones install; you keep an **upload key** and sign what you upload with it. Lose the upload key and Google can reset it; the app signing key can't be lost by you.
+
+1. Once: make the upload key (from `android/`), with passwords of your own in a password manager plus an offline backup of the file:
+   ```bash
+   keytool -genkeypair -v -keystore ticktodo-upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000
+   ```
+2. Once: create `android/play.properties` (not in git; only the four signing lines, package and address are fixed):
+   ```properties
+   tickKeystore=ticktodo-upload.jks
+   tickKeystorePassword=your-keystore-password
+   tickKeyAlias=upload
+   tickKeyPassword=your-key-password
+   ```
+3. Each release: raise `versionCode` (and `versionName`) in `android/app/build.gradle`, then build the bundle (from `android/`; on Windows `gradlew.bat`):
+   ```bash
+   ./gradlew -PtickPreset=play testDebugUnitTest bundleRelease
+   ```
+   The `.aab` is in `tick-android-build/app/outputs/bundle/release/` under your local app data (or the temp folder). Upload it in Play Console under **Test and release** (internal testing first). A `versionCode` can be used only once per app on Play.
+4. Once, after the first upload: copy the SHA-256 of the **app signing key** from Play Console (**Test and release → App integrity → App signing**) into `PLAY_APP.certs` in `src/assetlinks.ts`, so every Tick vouches for the Play app (it can be pointed at any Tick). On app.ticktodo.nl also set `"ANDROID_PACKAGE": "nl.ticktodo.app"` and `"ANDROID_CERT_SHA256"` (the app signing key, plus the upload key after a comma for testing your own uploaded builds) in its `wrangler.jsonc`, deploy, and check `https://app.ticktodo.nl/.well-known/assetlinks.json`.
+
 ## 11. Optional: attachments
 Photos and files on a task. They are stored in Cloudflare R2, and R2 only switches on once your account has a payment method on file, even though Tick stays within the free tier (10 GB storage) for a long time. Without this step Tick works the same, just without attachments; you can add it any time later.
 1. In the dashboard, open **R2 Object Storage**, add a payment method and switch R2 on.

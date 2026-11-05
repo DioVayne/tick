@@ -6,15 +6,26 @@ plugins {
 // git). Beide zijn optioneel. Zonder tickBase is het de algemene app: die vraagt het adres van je Tick bij de eerste
 // start (of krijgt het uit de koppellink). Met tickBase begint de app met dat adres. tickPackage is het unieke
 // applicationId; de officiële app (GitHub Releases) is nl.detussenpartij.tick, met de release-sleutel van het project.
+//
+// -PtickPreset=play is de Google Play-app (bundleRelease): vast applicationId nl.ticktodo.app, begint op
+// https://app.ticktodo.nl maar het adres blijft te wijzigen, en de upload-sleutel staat in android/play.properties
+// (niet in git) in plaats van tick.properties. Package en adres liggen vast; zie SETUP.md › "Google Play".
+def tickPreset = (project.findProperty('tickPreset') ?: '').toString().trim()
+def presets = [
+    play: [file: 'play.properties', tickPackage: 'nl.ticktodo.app', tickBase: 'https://app.ticktodo.nl', anyHost: true],
+]
+if (tickPreset && !presets.containsKey(tickPreset)) throw new GradleException("Unknown tickPreset '${tickPreset}' (known: ${presets.keySet().join(', ')})")
+def preset = tickPreset ? presets[tickPreset] : [:]
 def tickProps = new Properties()
-def tickFile = rootProject.file('tick.properties')
+def tickFile = rootProject.file(preset.file ?: 'tick.properties')
 if (tickFile.exists()) tickFile.withInputStream { tickProps.load(it) }
-def tickSetting = { String key -> project.findProperty(key) ?: tickProps.getProperty(key) }
+def tickSetting = { String key -> preset[key] ?: project.findProperty(key) ?: tickProps.getProperty(key) }
 def tickBase = (tickSetting('tickBase') ?: '').trim().replaceAll('/+$', '')
 if (tickBase && !(tickBase ==~ /^https?:\/\/[^\/?#]+$/)) throw new GradleException('tickBase must look like https://your-tick.example (no path)')
-// Een eigen build opent alleen links naar zijn eigen host; de algemene app kent die nog niet (zie het manifest).
-def tickHost = tickBase ? new URI(tickBase).host : '*'
-def tickScheme = tickBase ? new URI(tickBase).scheme : 'https'
+// Een eigen build opent alleen links naar zijn eigen host; de algemene app kent die nog niet (zie het manifest). De
+// Play-app begint op een vast adres, maar je kunt een ander kiezen, dus hij houdt host "*" zoals de algemene app.
+def tickHost = (tickBase && !preset.anyHost) ? new URI(tickBase).host : '*'
+def tickScheme = (tickBase && !preset.anyHost) ? new URI(tickBase).scheme : 'https'
 
 // Release-ondertekening, ook uit tick.properties (de keystore zelf hoort niet in git). Zonder deze vier werkt
 // assembleDebug gewoon en weigert assembleRelease met de melding hieronder.
@@ -68,7 +79,7 @@ android {
 // Zonder sleutels geen (ongetekende) release: die kun je niet installeren en past niet bij ANDROID_CERT_SHA256.
 tasks.matching { it.name == 'preReleaseBuild' }.configureEach {
     doFirst {
-        if (!hasSigning) throw new GradleException('Set tickKeystore, tickKeystorePassword, tickKeyAlias and tickKeyPassword in android/tick.properties to build a release')
+        if (!hasSigning) throw new GradleException("Set tickKeystore, tickKeystorePassword, tickKeyAlias and tickKeyPassword in android/${tickFile.name} to build a release")
     }
 }
 
