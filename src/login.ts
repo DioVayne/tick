@@ -5,7 +5,8 @@ import { MIN_PASSWORD } from './account';
 // emptyEmailHint: de beheerder heeft nog geen e-mailadres, dan zegt de pagina dat het veld leeg mag (de overgang).
 // deleted: na het verwijderen van je account (/login?deleted=1) staat er een bevestiging boven het formulier.
 // forgot: mailen staat aan, dan staat er een link naar /forgot onder het formulier.
-export function loginPage(locale: string | undefined, emptyEmailHint = false, deleted = false, forgot = false): string {
+// signup: een openbare Tick (OPEN_SIGNUP): het welkomstscherm, met logo en een link naar /signup.
+export function loginPage(locale: string | undefined, emptyEmailHint = false, deleted = false, forgot = false, signup = false): string {
   const lang = normLocale(locale);
   const t = (key: string) => translate(lang, key);
   return `<!doctype html>
@@ -14,11 +15,32 @@ export function loginPage(locale: string | undefined, emptyEmailHint = false, de
 <title>${t('login.title')}</title><meta name="theme-color" content="#ffffff">
 <script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
 </head><body>
-<form id="f"><h1>Tick</h1>${deleted ? `<p class="ok" role="status">${t('login.deleted')}</p>` : ''}
+<form id="f">${signup ? '<img class="logo" src="/icon.svg" alt="" width="64" height="64">' : ''}<h1>Tick</h1>${signup ? `<p class="intro">${t('login.welcome')}</p>` : ''}${deleted ? `<p class="ok" role="status">${t('login.deleted')}</p>` : ''}
 <input type="email" id="email" placeholder="${t('login.email')}" autocomplete="username" autofocus>
 <input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="current-password" required>
-<button>${t('login.submit')}</button><p id="err" role="alert"></p>${emptyEmailHint ? `<p class="hint">${t('login.empty_email_hint')}</p>` : ''}${forgot ? `<p class="link"><a href="/forgot">${t('login.forgot')}</a></p>` : ''}</form>
+<button>${t('login.submit')}</button><p id="err" role="alert"></p>${emptyEmailHint ? `<p class="hint">${t('login.empty_email_hint')}</p>` : ''}${forgot ? `<p class="link"><a href="/forgot">${t('login.forgot')}</a></p>` : ''}${signup ? `<p class="link">${t('login.no_account')} <a href="/signup">${t('login.signup')}</a></p>` : ''}</form>
 <script type="module" src="/login.js"></script></body></html>`;
+}
+
+/** Aanmeldpagina (/signup) op een openbare Tick: naam, e-mail, wachtwoord; public/signup.js verstuurt. */
+export function signupPage(locale: string | undefined, forgot: boolean): string {
+  const lang = normLocale(locale);
+  const t = (key: string) => translate(lang, key);
+  return `<!doctype html>
+<html lang="${lang}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${t('signup.title')}</title><meta name="theme-color" content="#ffffff">
+<script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
+</head><body data-short="${escapeHtml(translate(lang, 'err.password_short', { min: MIN_PASSWORD }))}" data-offline="${escapeHtml(t('app.you_are_offline'))}">
+<form id="f"><img class="logo" src="/icon.svg" alt="" width="64" height="64"><h1>${t('signup.title')}</h1>
+<input type="text" id="name" placeholder="${t('link.name')}" autocomplete="name" maxlength="60" required autofocus>
+<input type="email" id="email" placeholder="${t('login.email')}" autocomplete="username" maxlength="254" required>
+<input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="new-password" minlength="${MIN_PASSWORD}" required>
+<button>${t('signup.submit')}</button><p id="err" role="alert"></p>
+${forgot ? `<p class="link" id="taken" hidden><a href="/forgot">${t('login.forgot')}</a></p>` : ''}
+<p class="hint">${t('signup.privacy').replace('{link}', `<a href="/privacy">${t('priv.title')}</a>`)}</p>
+<p class="link">${t('signup.have_account')} <a href="/login">${t('login.submit')}</a></p></form>
+<script type="module" src="/signup.js"></script></body></html>`;
 }
 
 /** Pagina achter een uitnodigings- of resetlink; een ongeldige link toont alleen de melding. */
@@ -151,4 +173,4 @@ export function forgotPage(locale: string | undefined): string {
 }
 
 /** Bestanden die de loginpagina zonder inlog nodig heeft. */
-export const loginAssets = ['/login.css', '/login.js', '/accountlink.js', '/forgot.js', '/next.js', '/theme.js'];
+export const loginAssets = ['/login.css', '/login.js', '/accountlink.js', '/forgot.js', '/signup.js', '/icon.svg', '/next.js', '/theme.js'];
