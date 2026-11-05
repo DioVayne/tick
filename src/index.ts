@@ -19,7 +19,7 @@ import { markReviewed, reviewApi } from './review';
 import { accountApi } from './account';
 import { usersApi } from './users-api';
 import { linkPages } from './links';
-import { openSignup, signupPages, verifyBy } from './signup';
+import { openSignup, purgeUnverified, signupPages, verifyBy } from './signup';
 import { forgotPages } from './forgot';
 import { mailEnabled } from './mail';
 import { deviceApi, devicesApi } from './devices';
@@ -1337,6 +1337,8 @@ export function cronSteps(env: Env, install: InstallPrefs, at: number): [string,
   if (new Date(at).getUTCMinutes() === 0) {
     steps.push(
       ['prullenbak', () => purgeTrash(env.DB, Date.now())],
+      // Openbare Tick: onbevestigde accounts na 30 dagen weg, en verlopen uitnodigingen aan adressen.
+      ['onbevestigd', () => purgeUnverified(env, Date.now())],
       // Na het wissen: de bijlagen van taken die nu weg zijn, ook in R2.
       ['bijlagen', () => sweepAttachments(env, Date.now())],
     );
