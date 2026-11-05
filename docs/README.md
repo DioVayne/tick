@@ -13,6 +13,7 @@ How to use Tick, one page per topic. Installing Tick is in [SETUP.md](../SETUP.m
 | [Android app](android.md) | Download, linking, the home-screen widget, quick add, on time on the road, updates |
 | [iPhone and iPad](iphone.md) | Putting Tick on the home screen, notifications, what an iPhone cannot do |
 | [Settings](settings.md) | Display, language and time, devices, keys, backup and import, managing accounts |
+| [Privacy](privacy.md) | What Tick keeps about you, your location, the services it uses, and how to see, download or delete your data |
 | [Integrations](integrations.md) | Claude (MCP), the inbox API for automations, Home Assistant, the fallback webhook |
 
 The app itself has a short **ⓘ Help** page in the sidebar with one sentence per button.

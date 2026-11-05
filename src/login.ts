@@ -79,6 +79,48 @@ export function deleteAccountPage(locale: string | undefined, contact: string | 
 <p>${t('del.backup')}</p>
 <h2>${t('del.no_login_title')}</h2>
 <p>${noLogin}</p>
+<p><a href="/privacy">${t('priv.title')}</a> · <a href="/login">${t('del.to_login')}</a></p>
+</main></body></html>`;
+}
+
+/**
+ * Openbare privacypagina (zonder inlog), voor de link die Google Play vraagt. `operator` komt uit `OPERATOR_NAME`
+ * (wie deze Tick draait), `contact` uit `ADMIN_CONTACT` via contactEmail; zonder een van beide een algemene zin.
+ */
+export function privacyPage(locale: string | undefined, contact: string | null, operator?: string): string {
+  const lang = normLocale(locale);
+  const t = (key: string, vars?: Record<string, string>) => translate(lang, key, vars);
+  const name = (operator ?? '').trim();
+  const who = name ? t('priv.who_named', { name: escapeHtml(name) }) : t('priv.who_unnamed');
+  const mail = contact ? escapeHtml(contact) : '';
+  const ask = contact ? t('priv.contact', { email: `<a href="mailto:${mail}">${mail}</a>` }) : t('priv.contact_admin');
+  const items = (keys: string[]) => `<ul>${keys.map((k) => `<li>${t(k)}</li>`).join('')}</ul>`;
+  return `<!doctype html>
+<html lang="${lang}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${t('priv.title')}</title><meta name="theme-color" content="#ffffff">
+<script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
+</head><body><main class="page">
+<h1>${t('priv.title')}</h1>
+<p>${t('priv.intro')}</p>
+<h2>${t('priv.who_title')}</h2>
+<p>${who} ${ask}</p>
+<h2>${t('priv.what_title')}</h2>
+${items(['priv.what_account', 'priv.what_content', 'priv.what_devices', 'priv.what_push'])}
+<h2>${t('priv.location_title')}</h2>
+<p>${t('priv.location')}</p>
+<h2>${t('priv.not_title')}</h2>
+<p>${t('priv.not')}</p>
+<p>${t('priv.cookie')}</p>
+<h2>${t('priv.others_title')}</h2>
+${items(['priv.others_cloudflare', 'priv.others_push', 'priv.others_osm'])}
+<h2>${t('priv.why_title')}</h2>
+<p>${t('priv.why')}</p>
+<h2>${t('priv.keep_title')}</h2>
+<p>${t('priv.keep')}</p>
+<h2>${t('priv.rights_title')}</h2>
+<p>${t('priv.rights', { link: `<a href="/delete-account">${t('del.title')}</a>` })}</p>
+<p>${t('priv.complaint')}</p>
 <p><a href="/login">${t('del.to_login')}</a></p>
 </main></body></html>`;
 }
