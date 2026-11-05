@@ -14,7 +14,7 @@ import { closeDrawer } from './sidebar.js';
 import { SETTINGS_CACHE as CACHE_KEY, load } from './store.js';
 import { clearAll } from './db.js';
 import { forgetCachedConfig } from './next.js';
-import { prepare } from './attachments.js';
+import { fmtSize, prepare } from './attachments.js';
 import { formatRadius, loadPlaces } from './places.js';
 import { editPlace } from './map.js';
 import { timeButton } from './timepicker.js';
@@ -914,7 +914,17 @@ function paintData() {
   paint('data',
     row(t('set.backup'), btn(t('set.download'), downloadBackup, { disabled: off }), homeNote(t('set.backup_note') + (CONFIG.attachments ? ' · ' + t('set.backup_no_files') : ''))),
     row(t('set.restore'), btn(t('set.choose_file'), restoreBackup, { disabled: off }), homeNote(t('set.restore_note'))),
-    row(t('set.ticktick'), btn(t('set.import_csv'), importTickTick, { disabled: off }), homeNote(t('set.ticktick_note'))));
+    row(t('set.ticktick'), btn(t('set.import_csv'), importTickTick, { disabled: off }), homeNote(t('set.ticktick_note'))),
+    CONFIG.attachments ? storageRow() : null);
+}
+
+/** Hoeveel ruimte je bijlagen innemen, en van hoeveel (als er een grens is); offline blijft het een streepje. */
+function storageRow() {
+  const value = el('span', { class: 'set-note' }, '–');
+  request('GET', '/api/storage').then((r) => {
+    value.textContent = r.max ? t('set.storage_of', { used: fmtSize(r.used), max: fmtSize(r.max) }) : fmtSize(r.used);
+  }).catch(() => {});
+  return row(t('set.storage'), value, homeNote(t('set.storage_note')));
 }
 
 // ---------- 🛠 Geavanceerd ----------

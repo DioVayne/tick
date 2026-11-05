@@ -30,6 +30,23 @@ export function maxUpload(env: Pick<Env, 'MAX_UPLOAD_MB'>): number {
   return (Number.isFinite(mb) && mb > 0 ? Math.min(mb, 100) : 10) * 1024 * 1024;
 }
 
+/** Opslag per account in bytes: MAX_ACCOUNT_MB (een positief geheel getal), anders null (geen grens). */
+export function maxAccount(env: Pick<Env, 'MAX_ACCOUNT_MB'>): number | null {
+  const mb = Math.trunc(Number(env.MAX_ACCOUNT_MB));
+  return Number.isFinite(mb) && mb > 0 ? mb * 1024 * 1024 : null;
+}
+
+/**
+ * Bytes aan bijlagen van een account: wat hij zelf uploadde, ook bij gedeelde taken en uploads die nog bezig zijn.
+ * Een kopie gebruikt hetzelfde R2-object, dus elk object telt één keer.
+ */
+export async function usedBytes(db: D1Database, userId: string): Promise<number> {
+  const r = await db.prepare(
+    'SELECT COALESCE(SUM(size), 0) AS n FROM (SELECT MAX(size) AS size FROM attachments WHERE user_id = ? GROUP BY r2_key)',
+  ).bind(userId).first<{ n: number }>();
+  return r?.n ?? 0;
+}
+
 /** Bestandsnaam zonder pad en stuurtekens, hoogstens MAX_NAME tekens; leeg wordt `file`. */
 export function cleanName(v: string | undefined): string {
   const base = String(v ?? '').split(/[\\/]/).pop()!;
@@ -106,7 +123,7 @@ export async function sweepAttachments(env: Env, nowMs: number): Promise<number>
 }
 
 // Alleen op de eigen paden: dit Hono-deel hangt aan /api, en '*' zou elke andere API-route ook raken.
-for (const path of ['/tasks/:id/attachments', '/attachments/:id']) {
+for (const path of ['/tasks/:id/attachments', '/attachments/:id', '/storage']) {
   attachmentsApi.use(path, async (c, next) => {
     if (!c.env.FILES) throw new HttpError(404, 'err.not_found');
     await next();
@@ -128,6 +145,10 @@ async function attachmentFor(c: Context<AppEnv>, id: string): Promise<Row> {
   return row;
 }
 
+// Hoeveel je opslaat en hoeveel je mag (bytes; max null is geen grens), voor Instellingen › Data.
+attachmentsApi.get('/storage', async (c) =>
+  c.json({ used: await usedBytes(c.env.DB, c.get('auth').userId), max: maxAccount(c.env) }));
+
 attachmentsApi.get('/tasks/:id/attachments', async (c) => {
   const t = await taskFor(c, c.req.param('id'));
   return c.json((await attachmentsFor(c.env, [t.id])).get(t.id) ?? []);
@@ -143,6 +164,10 @@ attachmentsApi.post('/tasks/:id/attachments', async (c) => {
   const db = c.env.DB;
   const count = await db.prepare('SELECT count(*) AS n FROM attachments WHERE task_id = ?').bind(t.id).first<{ n: number }>();
   if ((count?.n ?? 0) >= MAX_FILES) throw new HttpError(400, 'err.too_many_files', { max: MAX_FILES });
+  const quota = maxAccount(c.env);
+  if (quota !== null && await usedBytes(db, c.get('auth').userId) + length > quota) {
+    throw new HttpError(413, 'err.storage_full', { max: quota / 1024 / 1024 });
+  }
   const mime = cleanMime(c.req.header('content-type'));
   const image = mime.startsWith('image/');
   const row: Row = {

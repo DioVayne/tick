@@ -163,7 +163,7 @@ Photos and files on a task. They are stored in Cloudflare R2, and R2 only switch
    ```bash
    npx wrangler r2 bucket create tick-files
    ```
-3. In `wrangler.jsonc`, remove the `//` in front of `"r2_buckets"`. Optionally set `MAX_UPLOAD_MB` in `vars` (default 10, at most 100).
+3. In `wrangler.jsonc`, remove the `//` in front of `"r2_buckets"`. Optionally set `MAX_UPLOAD_MB` in `vars` (default 10, at most 100), and `MAX_ACCOUNT_MB` for the most storage per account (no limit by default).
 4. Deploy again with `npm run deploy`. Open a task: it now has **📎 Add photo or file**.
 
 Photos are scaled down in the browser before upload, which also strips their EXIF data (such as where the photo was taken). Attachments only work online. Against surprises: set up a billable-usage notification under **Billing** in the dashboard.

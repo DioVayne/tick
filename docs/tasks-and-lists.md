@@ -49,6 +49,7 @@ The notes of a task are markdown: headings, **bold**, *italics*, lists, links, q
 When attachments are set up ([SETUP.md, step 11](../SETUP.md#11-optional-attachments)), a task gets **📎 Add photo or file**. You can also paste or drop files on the task. Photos are scaled down and lose their EXIF data (such as where they were taken) before they are uploaded. Tap a photo for a large view with previous/next, Download and Delete.
 
 - At most 20 files per task, each up to 10 MB unless your Tick sets another limit.
+- Your Tick may also limit the total per account (for example 100 MB). Settings › Data › **Storage** shows how much you use. What you upload to a task someone shared with you counts for you.
 - Deleting an attachment cannot be undone.
 - Attachments need a connection; photos you have already seen stay visible offline.
 - A backup file lists attachments but does not contain them.
