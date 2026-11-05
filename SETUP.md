@@ -67,6 +67,7 @@ The deploy prints your URL. Logging in does not work yet: that needs the secrets
 | `VAPID_PRIVATE_KEY` | required | The JSON from step 4 |
 | `API_TOKEN` | optional | Random; an old-style key for the Android app. Easier: connect the phone in the app (step 10) |
 | `INBOX_TOKEN` | optional | Random; an old-style key for automations. Easier: make an inbox key in the app (step 9) |
+| `RESEND_API_KEY` | optional | An API key from [Resend](https://resend.com) with sending access; turns on "Forgot password?" by email (see "Good to know") |
 | `FALLBACK_WEBHOOK` | optional | Starting value for the administrator's webhook that receives a reminder as JSON when push did not arrive; in the app you can replace it, switch it off, or reset to this value. It does not apply to other accounts |
 
 A random value:
@@ -194,6 +195,12 @@ Open the app once online afterwards, so the service worker caches the new versio
 
 ## Good to know
 - **More people on one Tick:** as administrator, add your email address first (**Settings → Account**). Then **Settings → Accounts → + Invite someone** shows a link; share it, for example through WhatsApp. It works once and is valid for 7 days. The other person chooses a name, email address and password there and has their own tasks, devices and settings. Lost password of another account: **Reset link** next to that account (once, valid for 1 hour). **Delete** erases all data of that account.
+- **Forgot password? by email (optional):** with email set up, the login page shows **Forgot password?**. Someone enters their email address and gets a one-time link (valid for 1 hour) to choose a new password. It works for members only; the administrator keeps the emergency route below. Setting it up:
+  1. Make an account at [Resend](https://resend.com) and add and verify your domain there (a few DNS records).
+  2. Make an API key with sending access and set it: `npx wrangler secret put RESEND_API_KEY`.
+  3. In `wrangler.jsonc`, under `vars`, set `"MAIL_FROM": "Tick <noreply@your-domain>"` (an address on the verified domain) and deploy.
+
+  Tick sends at most `MAIL_DAILY_LIMIT` emails a day (UTC, default 50; Resend's free plan allows 100). When the limit is reached, the administrator gets one push notification that day, and further requests get no email until the next day. Per account it is at most one email per 5 minutes and 5 a day. The answer on the page is always the same, so nobody can find out which addresses have an account.
 - **Log out on other devices** (for example after losing a phone): **Settings → Account → Log out on other devices**. This device stays logged in. Keys for phones and automations keep working; revoke those under **Advanced → Keys**.
 - **Forgot your password?** A password you set in the app is stored as a hash in the database and overrides `LOGIN_PASSWORD`. For the administrator, go back to `LOGIN_PASSWORD` by deleting it:
   ```bash

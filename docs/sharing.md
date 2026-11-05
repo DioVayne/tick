@@ -5,7 +5,7 @@ One Tick can have several accounts, for example everyone in your household. Each
 
 The administrator (whoever installed Tick) invites people under **⚙ Settings → Accounts → + Invite someone**. That gives a one-time link, valid for 7 days, to send by any app you like. The other person opens it and picks a name, email address and password.
 
-Forgot a password? The administrator makes a **Reset link** (valid for 1 hour) at that account. The administrator's own lost password is covered under "Good to know" in [SETUP.md](../SETUP.md#good-to-know).
+Forgot a password? If the administrator has set up email, tap **Forgot password?** on the login page and enter your email address: you get an email with a link (valid for 1 hour) to choose a new password. Otherwise the administrator makes a **Reset link** (valid for 1 hour) at that account and sends it to you. Email links are only for members, not for the administrator. The administrator's own lost password is covered under "Good to know" in [SETUP.md](../SETUP.md#good-to-know).
 
 ## Sharing a list
 Working on one list together, such as a packing list for a holiday or a weekend away with friends? Share the whole list, and every task in it is shared with everyone in the list. Nobody has to accept tasks one by one.
