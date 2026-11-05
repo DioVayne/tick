@@ -27,6 +27,13 @@ describe('openbare privacypagina', () => {
     expect(privacyPage('nl', null)).not.toContain('Resend');
   });
 
+  it('op een openbare Tick: uitnodigingen per mail en het opruimen van onbevestigde accounts', () => {
+    const open = privacyPage('nl', null, undefined, true, true);
+    expect(open).toContain(translate('nl', 'priv.open_invites'));
+    expect(open).toContain(translate('nl', 'priv.open_unverified'));
+    expect(privacyPage('nl', null, undefined, true)).not.toContain(translate('nl', 'priv.open_invites'));
+  });
+
   it('met naam en adres: beide op de pagina, en de naam wordt ge-escaped', () => {
     const html = privacyPage('nl', 'dio@ticktodo.nl', 'Dio <Communicatieadvies>');
     expect(html).toContain('Dio &#60;Communicatieadvies&#62;');

@@ -9,6 +9,7 @@ Every Tick has a public privacy page at `/privacy` on its address (for example `
 - **Your location:** Tick only keeps places you save. Your phone checks arriving and leaving itself; your position is not sent to Tick.
 - **What Tick doesn't do:** no ads, tracking or analytics. One cookie keeps you logged in.
 - **Services Tick uses:** Cloudflare (hosting), the push service of your browser or phone, and OpenStreetMap (address search and map images). With email set up (`RESEND_API_KEY` and `MAIL_FROM`, see [SETUP.md](../SETUP.md#good-to-know)) the page also names Resend, which delivers the "Forgot password?" emails, and that Tick keeps a note of sent emails for two days.
+- **On an open Tick** (`OPEN_SIGNUP`, see [Creating your own account](signup.md)): the page also says that sharing with an address without an account sends that address an invitation email (the address is kept for at most 30 days), and that unconfirmed accounts are deleted after 30 days.
 - **How long and your rights:** data stays while you have an account; the trash empties after 30 days; deleting your account removes everything at once and backups are gone within 30 days. You can download your tasks under Settings › Data and [delete your account](settings.md) yourself.
 
 The page is written for a Tick that runs as Tick does out of the box. If you add other services to your own Tick, your privacy page should say so.
