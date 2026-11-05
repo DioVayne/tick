@@ -5,6 +5,7 @@ local.properties
 .idea
 
 tick.properties
+play.properties
 
 *.jks
 *.keystore

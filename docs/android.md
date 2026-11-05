@@ -7,6 +7,8 @@ On your phone, [download Tick.apk](https://github.com/DioVayne/tick/releases/lat
 
 The app checks GitHub once a day for a new version and notifies you; **Search for updates** in *Tick on this phone* checks right away.
 
+There is also a Google Play version (package `nl.ticktodo.app`, in testing). It starts on app.ticktodo.nl, the hosted Tick; to use your own Tick in it, open **Phone settings → Change address**. Play keeps it up to date, so it has no GitHub update check. The two versions are separate apps and can be installed side by side; use one of them.
+
 ## Linking
 After you log in, the app links itself to your account with a one-time code and asks for permission for notifications and location. If that does not happen, tap **Link** in the bar in the app. Logging in as someone else in the app links it to that account and clears the previous person's data from the phone.
 
