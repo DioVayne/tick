@@ -39,7 +39,8 @@ Then fill in `vars` in `wrangler.jsonc`:
 |---|---|---|
 | `LOCALE` | `en` or `nl` | Starting value for the default language. Every device picks its own language in the app; change the default there too |
 | `TIMEZONE` | `Europe/London` | Starting value for your time zone ([list](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)). Reminders without a time zone and repeating tasks use it. You can change it later in the app |
-| `ADMIN_CONTACT` | `mailto:you@example.com` | Contact for push services and OpenStreetMap's address search. Also shown on the public page `/delete-account` for people who can't log in (not while it is still the `example.com` placeholder) |
+| `ADMIN_CONTACT` | `mailto:you@example.com` | Contact for push services and OpenStreetMap's address search. Also shown on the public pages `/delete-account` and `/privacy` for people who can't log in (not while it is still the `example.com` placeholder) |
+| `OPERATOR_NAME` | empty | Optional: who runs this Tick (a person or organization), named on the public privacy page `/privacy`. Empty: the page says "the person or organization that gave you your account" |
 
 `LOCALE`, `TIMEZONE` and `FALLBACK_WEBHOOK` are only starting values: once you choose something in the app, that choice wins over the config (and you can leave them out). `FALLBACK_WEBHOOK` from the config only applies to the administrator; other accounts set their own webhook in the app.
 

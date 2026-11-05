@@ -14,5 +14,5 @@ p.ok{color:inherit;font-weight:600;min-height:0}
 /* Openbare uitlegpagina (/delete-account). */
 .page{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;width:100%;max-width:560px;box-sizing:border-box;line-height:1.5}
 .page h1{margin:0 0 12px}.page h2{font-size:16px;margin:20px 0 6px}
-.page p{color:inherit;min-height:0;font-size:16px;margin:0 0 10px}.page ol{margin:0 0 10px;padding-left:22px}
+.page p{color:inherit;min-height:0;font-size:16px;margin:0 0 10px}.page ol,.page ul{margin:0 0 10px;padding-left:22px}.page li{margin-bottom:4px}
 .page a{color:var(--accent)}

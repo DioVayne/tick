@@ -3,7 +3,7 @@ import { keysApi } from './keys';
 import { pairApi, redeem } from './pair';
 import { authorize, type Auth, clearCookie, COOKIE, dummyVerify, passwordOk, sessionCookie } from './auth';
 import { assetLinks } from './assetlinks';
-import { contactEmail, deleteAccountPage, loginAssets, loginPage } from './login';
+import { contactEmail, deleteAccountPage, loginAssets, loginPage, privacyPage } from './login';
 import { badRequest, HttpError } from './errors';
 import { normLocale, translate } from '../public/i18n.js';
 import { cleanLocation, cleanPlace, locColumns, locFromRow, type Place } from './location';
@@ -38,6 +38,8 @@ export type Env = {
   VAPID_PUBLIC_KEY: string;
   VAPID_PRIVATE_KEY: string;
   ADMIN_CONTACT: string;
+  /** Wie deze Tick draait (persoon of organisatie), voor de privacypagina /privacy. Optioneel. */
+  OPERATOR_NAME?: string;
   LOGIN_PASSWORD: string;
   SESSION_SECRET: string;
   API_TOKEN?: string;
@@ -143,6 +145,7 @@ app.get('/login', async (c) => {
 });
 // Zonder inlog: uitleg over je account verwijderen, voor de link die Google Play vraagt.
 app.get('/delete-account', (c) => c.html(deleteAccountPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT))));
+app.get('/privacy', (c) => c.html(privacyPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), c.env.OPERATOR_NAME)));
 app.route('/', linkPages);
 for (const path of loginAssets) app.get(path, asset);
 

@@ -41,8 +41,10 @@
     // Public key from `node scripts/gen-vapid.mjs`; the private key is the secret VAPID_PRIVATE_KEY.
     "VAPID_PUBLIC_KEY": "",
     // Contact for push services and for OpenStreetMap's address search (their usage policy asks for one).
-    // Also shown on the public page /delete-account for people who can't log in (not while it is this placeholder).
+    // Also shown on the public pages /delete-account and /privacy for people who can't log in (not while it is this placeholder).
     "ADMIN_CONTACT": "mailto:you@example.com",
+    // Optional: who runs this Tick (a person or organization), shown on the public page /privacy. Leave empty for a general sentence.
+    "OPERATOR_NAME": "",
     // Starting value for the default language: "en" or "nl". Change it in the app (Settings); what you choose there wins.
     "LOCALE": "en",
     // Starting value for the time zone of reminders and repeating tasks, e.g. "Europe/London" or "America/New_York".
