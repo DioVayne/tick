@@ -6,6 +6,7 @@ import { HttpError } from './errors';
 import { checkPassword, consumeLink, createLink } from './links';
 import { signupPage, verifyPage } from './login';
 import { claimCapNotice, mailEnabled, mailLayout, releaseMail, reserveMail, sendMail, SIGNUP_CAP } from './mail';
+import { claimEmailInvites } from './invites';
 import { hashPassword } from './password';
 import { loadInstallPrefs } from './prefs';
 import { inBackground, type Locale, notifyUser } from './push';
@@ -108,10 +109,11 @@ export async function sendVerifyMail(env: Env, userId: string, origin: string, l
   if (!(await sendMail(env, { to: user.email, subject: t('mail.verify_subject'), ...body }))) await releaseMail(db, slot.id);
 }
 
-/** Zet het e-mailadres op bevestigd (als dat nog niet zo was). */
+/** Zet het e-mailadres op bevestigd (als dat nog niet zo was) en zet uitnodigingen aan dat adres om. */
 export async function markVerified(env: Env, userId: string): Promise<void> {
   await env.DB.prepare('UPDATE users SET email_verified_at = ? WHERE id = ? AND email_verified_at IS NULL')
     .bind(new Date().toISOString(), userId).run();
+  await claimEmailInvites(env, userId);
 }
 
 signupPages.use('/verify/*', async (c, next) => {
