@@ -21,3 +21,7 @@ wrangler.jsonc
 notes/
 
 .claude/launch.json
+
+# ondertekeningssleutels, ook als keytool ze per ongeluk hier neerzet
+*.jks
+*.keystore
