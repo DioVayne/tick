@@ -63,6 +63,12 @@ export type Env = {
   MAX_UPLOAD_MB?: string;
   /** Opslag aan bijlagen per account in MB (optioneel); leeg of 0 is geen grens. */
   MAX_ACCOUNT_MB?: string;
+  /** Resend-sleutel (secret) voor e-mail, zoals de herstellink bij "wachtwoord vergeten"; zonder deze geen mail. */
+  RESEND_API_KEY?: string;
+  /** Afzender van mail, bijv. `Tick <noreply@ticktodo.nl>` (een domein dat in Resend geverifieerd is). */
+  MAIL_FROM?: string;
+  /** Hoeveel mails Tick per UTC-dag hooguit verstuurt (standaard 50). */
+  MAIL_DAILY_LIMIT?: string;
 };
 
 export type TaskRow = {

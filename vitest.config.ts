@@ -35,6 +35,10 @@ export default defineConfig({
           VAPID_PUBLIC_KEY: 'BODSvJ4nOeqW2EzlIrbRLEzxO227EYmlsX3hYfV5EC7-1QzMyXWS8RaBNnBArOM6FurdGPVpUOEu3IngsAsMSFY',
           ADMIN_CONTACT: 'mailto:test@example.com',
           OPERATOR_NAME: '',
+          // Mail staat in de tests uit; test/mail.test.ts en test/forgot.test.ts zetten hem zelf aan.
+          RESEND_API_KEY: '',
+          MAIL_FROM: '',
+          MAIL_DAILY_LIMIT: '',
           TEST_MIGRATIONS: migrations,
         },
       },

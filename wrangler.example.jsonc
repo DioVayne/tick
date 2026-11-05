@@ -58,6 +58,12 @@
     // "ANDROID_PACKAGE": "com.example.tick"
     // SHA-256 fingerprint(s) of your own signing key, comma-separated; needed to open your build without an address bar
     // "ANDROID_CERT_SHA256": "AA:BB:…"
+    // Optional: "Forgot password?" by email, sent through Resend (resend.com). Set the key as a secret with
+    // `npx wrangler secret put RESEND_API_KEY` (never here) and fill in a sender on a domain verified in Resend.
+    // Without both, Tick sends no email and the login page has no "Forgot password?" link.
+    // "MAIL_FROM": "Tick <noreply@example.com>",
+    // Most emails Tick sends per day (UTC), all kinds together (default 50; Resend's free plan allows 100 a day).
+    // "MAIL_DAILY_LIMIT": "50"
   },
   "observability": { "enabled": true }
 }
