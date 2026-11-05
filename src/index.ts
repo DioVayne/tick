@@ -29,7 +29,7 @@ import {
 } from './sharedlists';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 import { backgroundApi } from './background';
-import { type Attachment, attachmentsApi, attachmentsFor, maxUpload, sweepAttachments } from './attachments';
+import { type Attachment, attachmentsApi, attachmentsFor, maxAccount, maxUpload, sweepAttachments } from './attachments';
 import { mcpApi } from './mcp';
 
 export type Env = {
@@ -61,6 +61,8 @@ export type Env = {
   FILES?: R2Bucket;
   /** Grootste bijlage in MB (standaard 10, hoogstens 100). */
   MAX_UPLOAD_MB?: string;
+  /** Opslag aan bijlagen per account in MB (optioneel); leeg of 0 is geen grens. */
+  MAX_ACCOUNT_MB?: string;
 };
 
 export type TaskRow = {
@@ -584,6 +586,7 @@ app.get('/config.js', (c) => {
     locale: c.get('lang'), defaultLocale, timeZone, reminderTime, weekStart, driveMode, tickmanager, reviewNewDays, reviewSeenDays, androidPackage: c.env.ANDROID_PACKAGE || null,
     userId: user.id, userName: user.name, isAdmin: user.role === 'admin',
     attachments: !!c.env.FILES, maxUploadMb: maxUpload(c.env) / 1024 / 1024,
+    maxAccountMb: c.env.FILES && maxAccount(c.env) !== null ? maxAccount(c.env)! / 1024 / 1024 : null,
   };
   return c.body(`export default ${JSON.stringify(config)};
 `, 200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' });

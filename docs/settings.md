@@ -43,6 +43,7 @@ Everyone on this Tick with when they were last seen. **+ Invite someone** and **
 - **Download backup:** a file with your own tasks and places (completed tasks included). Not included: settings, keys, tasks others shared with you, and the files of attachments.
 - **Restore backup:** shows what is in the file first, then merges by task: tasks in the file overwrite the same task here and deleted ones come back. Nothing is deleted.
 - **Import from TickTick:** upload the CSV of a TickTick backup. Importing the same file again skips what is already there and keeps your changes.
+- **Storage** (only when attachments are set up): how much room your photos and files take, and the limit if your Tick sets one (`MAX_ACCOUNT_MB`). When it is full, delete some attachments to make room.
 
 ## Advanced
 - **Keys:** for the Android app (*full*) and automations (*inbox*). A key is shown once; revoke it here and it stops working at once. A phone or automation key can never change your password, settings or keys.
