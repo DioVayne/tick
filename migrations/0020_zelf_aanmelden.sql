@@ -37,6 +37,8 @@ CREATE TABLE email_invites (
 );
 CREATE INDEX email_invites_email ON email_invites (email);
 CREATE INDEX email_invites_from ON email_invites (from_user);
+CREATE INDEX email_invites_task ON email_invites (task_id);
+CREATE INDEX email_invites_list ON email_invites (list_id);
 
 -- Voor "hooguit één uitnodigingsmail per adres per dag": SHA-256 van het adres, nooit het adres zelf.
 ALTER TABLE mail_log ADD COLUMN recipient_hash TEXT;

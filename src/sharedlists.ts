@@ -5,6 +5,8 @@ import { STEP, topMin } from './access';
 import { inBackground, notifyUser, sendToAll, type Sender } from './push';
 import { recipientOf } from './shares';
 import { translate } from '../public/i18n.js';
+import { addEmailInvite, afterEmailInvite, MAIL_PREFIX, resolveOpenRecipient, revokeEmailInvite } from './invites';
+import { openSignup } from './signup';
 
 /**
  * Gedeelde lijsten: een lijst delen, de uitnodiging accepteren of weigeren, vertrekken en iemand eruit halen.
@@ -184,10 +186,13 @@ export function transferListsStmts(db: D1Database, userId: string): D1PreparedSt
 }
 
 /** Deelstatus per lijst waar je geaccepteerd lid van bent, met als sleutel jouw naam van de lijst. */
-export async function listSharing(db: D1Database, userId: string): Promise<Map<string, ListShare>> {
+export async function listSharing(db: D1Database, userId: string, open = false): Promise<Map<string, ListShare>> {
+  // Op een openbare Tick ziet de eigenaar openstaande uitnodigingen als e-mailadres, plus die aan adressen zonder
+  // account (user_id `mail:<id>`); zo ziet hij niet welke adressen een account hebben (zie shareInfo).
+  const userName = open ? "CASE WHEN m.status = 'pending' THEN u.email ELSE u.name END" : 'u.name';
   const { results } = await db.prepare(
     'SELECT me.list_id, me.name AS list_name, me.role AS my_role, me.notify_done, l.owner_id, o.name AS owner_name, ' +
-    'm.user_id, m.role, m.status, u.name AS user_name FROM list_members me JOIN shared_lists l ON l.id = me.list_id ' +
+    `m.user_id, m.role, m.status, ${userName} AS user_name FROM list_members me JOIN shared_lists l ON l.id = me.list_id ` +
     'JOIN users o ON o.id = l.owner_id JOIN list_members m ON m.list_id = me.list_id JOIN users u ON u.id = m.user_id ' +
     "WHERE me.user_id = ? AND me.status = 'accepted' ORDER BY m.created_at, m.user_id",
   ).bind(userId).all<{
@@ -204,6 +209,14 @@ export async function listSharing(db: D1Database, userId: string): Promise<Map<s
     }
     if (r.role === 'owner' || (r.status === 'pending' && !share.mine)) continue;
     share.members.push({ user_id: r.user_id, name: r.user_name, status: r.status });
+  }
+  if (open) {
+    const { results: invites } = await db.prepare('SELECT id, email, list_id FROM email_invites WHERE from_user = ? AND list_id IS NOT NULL ' +
+      'AND expires_at > ? ORDER BY created_at, id').bind(userId, new Date().toISOString()).all<{ id: string; email: string; list_id: string }>();
+    for (const i of invites) {
+      const share = [...out.values()].find((s) => s.id === i.list_id && s.mine);
+      share?.members.push({ user_id: MAIL_PREFIX + i.id, name: i.email, status: 'pending' });
+    }
   }
   return out;
 }
@@ -258,8 +271,10 @@ sharedListsApi.post('/', async (c) => {
   const list = await listOf(db, userId, name);
   if (list && list.role !== 'owner') throw new HttpError(403, 'err.shared_list_owner_only');
   if (!list && !(await listNames(db, userId)).has(name)) throw new HttpError(404, 'err.list_unknown');
-  const toUser = await recipientOf(db, b);
-  if (toUser === userId) throw new HttpError(400, 'err.share_self');
+  let to: { userId: string } | { email: string };
+  if (openSignup(c.env)) to = await resolveOpenRecipient(c.env, c.get('user'), b);
+  else to = { userId: await recipientOf(db, b) };
+  if ('userId' in to && to.userId === userId) throw new HttpError(400, 'err.share_self');
   const ts = now();
   const listId = list?.id ?? crypto.randomUUID();
   const stmts: D1PreparedStatement[] = [];
@@ -273,6 +288,14 @@ sharedListsApi.post('/', async (c) => {
         .bind(listId, ts, userId, name),
     );
   }
+  if ('email' in to) {
+    // Openbare Tick, adres zonder bevestigd account: de lijst wordt toch gedeeld (anders ziet de deler het verschil).
+    if (stmts.length) await db.batch(stmts);
+    await addEmailInvite(db, userId, to.email, { kind: 'list', listId });
+    await afterEmailInvite(c, to.email, { kind: 'list', title: name });
+    return c.json({ id: listId, list_id: listId, status: 'pending' }, 201);
+  }
+  const toUser = to.userId;
   stmts.push(db.prepare("INSERT INTO list_members (list_id, user_id, role, status, name, created_at) VALUES (?, ?, 'member', 'pending', ?, ?) " +
     'ON CONFLICT (list_id, user_id) DO NOTHING').bind(listId, toUser, name, ts));
   const res = await db.batch(stmts);
@@ -356,6 +379,11 @@ sharedListsApi.delete('/:id/members/:userId', async (c) => {
   const mine = await member(me);
   if (!mine) throw new HttpError(404, 'err.not_found');
   let theirs = mine;
+  if (target.startsWith(MAIL_PREFIX)) {
+    // Een uitnodiging aan een e-mailadres (openbare Tick) intrekken: alleen de eigenaar.
+    if (mine.role !== 'owner' || !(await revokeEmailInvite(db, me, target.slice(MAIL_PREFIX.length), { kind: 'list', listId }))) throw new HttpError(404, 'err.not_found');
+    return c.json({ ok: true });
+  }
   if (target === me) {
     if (mine.role === 'owner') throw new HttpError(400, 'err.shared_list_owner_leave');
   } else {

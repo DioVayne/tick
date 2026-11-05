@@ -5,6 +5,8 @@ import { getAccess, STEP, topMin } from './access';
 import { inBackground, notifyUser, sendToAll, type Payload, type Sender } from './push';
 import { translate } from '../public/i18n.js';
 import { copyAttachmentStmt } from './attachments';
+import { addEmailInvite, afterEmailInvite, knownPeople, resolveOpenRecipient, revokeEmailInvite } from './invites';
+import { openSignup } from './signup';
 
 /** Taken delen: uitnodigen, uitnodigingen bekijken, accepteren, weigeren en stoppen. */
 export const sharesApi = new Hono<AppEnv>();
@@ -99,7 +101,18 @@ sharesApi.post('/', async (c) => {
   if (b.mode === 'shared' && task.shared_list) throw new HttpError(400, 'err.share_in_shared_list');
   if (task.user_id !== userId) throw new HttpError(403, 'err.share_owner_only');
   if (task.parent_id) throw new HttpError(400, 'err.share_subtask');
-  const toUser = await recipientOf(db, b);
+  const open = openSignup(c.env);
+  let toUser: string;
+  if (open) {
+    // Openbare Tick: alleen e-mailadres (of een bekende), en hetzelfde antwoord met of zonder account erachter.
+    const to = await resolveOpenRecipient(c.env, c.get('user'), b);
+    if ('email' in to) {
+      await addEmailInvite(db, userId, to.email, { kind: 'task', taskId: task.id, mode: b.mode });
+      await afterEmailInvite(c, to.email, { kind: 'task', title: task.title });
+      return c.json({ ok: true, status: 'pending', mode: b.mode }, 201);
+    }
+    toUser = to.userId;
+  } else toUser = await recipientOf(db, b);
   if (toUser === userId) throw new HttpError(400, 'err.share_self');
   if (await hasCopyInGroup(db, task.id, toUser)) throw new HttpError(409, 'err.copy_exists');
   const row: ShareRow = {
@@ -111,7 +124,7 @@ sharesApi.post('/', async (c) => {
   if (!res.meta.changes) throw new HttpError(409, 'err.share_exists');
   // Een mislukte melding laat de uitnodiging staan; die is altijd in de app te zien.
   await inBackground(c, notifyInvite(c.env, row.id, toUser, c.get('user').name, task.title, row.mode, c.get('install').defaultLocale), 'uitnodiging');
-  return c.json(row, 201);
+  return open ? c.json({ ok: true, status: 'pending', mode: row.mode }, 201) : c.json(row, 201);
 });
 
 /**
@@ -119,6 +132,7 @@ sharesApi.post('/', async (c) => {
  * huishouden of klein team; wie een account heeft, mag de namen van de anderen zien om met hen te delen.
  */
 sharesApi.get('/people', async (c) => {
+  if (openSignup(c.env)) return c.json(await knownPeople(c.env.DB, c.get('auth').userId));
   const { results } = await c.env.DB.prepare('SELECT id, name FROM users WHERE id != ? ORDER BY lower(name), id')
     .bind(c.get('auth').userId).all<{ id: string; name: string }>();
   return c.json(results);
@@ -206,7 +220,11 @@ sharesApi.delete('/:id', async (c) => {
     'SELECT s.id, s.task_id, s.to_user, EXISTS (SELECT 1 FROM list_members m WHERE m.list_id = t.shared_list AND m.user_id = s.to_user ' +
     "AND m.status = 'accepted') AS in_list FROM task_shares s JOIN tasks t ON t.id = s.task_id WHERE s.id = ?1 AND (s.to_user = ?2 OR t.user_id = ?2)",
   ).bind(c.req.param('id'), userId).first<{ id: string; task_id: string; to_user: string; in_list: number }>();
-  if (!s) throw new HttpError(404, 'err.not_found');
+  if (!s) {
+    // Een uitnodiging aan een e-mailadres (openbare Tick) trekt alleen de deler in.
+    if (await revokeEmailInvite(db, userId, c.req.param('id'))) return c.json({ ok: true });
+    throw new HttpError(404, 'err.not_found');
+  }
   // De deelrij van een lid van de gedeelde lijst hoort bij de lijst: daar vertrek je, of haalt de eigenaar je eruit.
   if (s.in_list) throw new HttpError(400, 'err.share_is_list');
   await db.batch(leaveShareStmts(db, s.id, s.task_id, s.to_user));

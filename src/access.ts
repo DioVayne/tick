@@ -17,8 +17,10 @@ export const STEP = 1_000_000;
 // has_copy_invite: er staat een kopie-uitnodiging open (dan is copiesFor nodig, ook zonder groep).
 // sub_done: het aantal afgeronde subtaken (voor de teller bij een hoofdtaak; de open subtaken telt de client zelf).
 const COLS = "t.*, s.id AS share_id, s.list AS share_list, s.position AS share_position, s.pinned AS share_pinned, s.loc_notified AS share_loc_notified, " +
-  "(SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'shared' LIMIT 1) AS has_share, " +
-  "(SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'copy' AND x.status = 'pending' LIMIT 1) AS has_copy_invite, " +
+  "COALESCE((SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'shared' LIMIT 1), " +
+  "(SELECT 1 FROM email_invites e WHERE e.task_id = t.id AND e.mode = 'shared' LIMIT 1)) AS has_share, " +
+  "COALESCE((SELECT 1 FROM task_shares x WHERE x.task_id = t.id AND x.mode = 'copy' AND x.status = 'pending' LIMIT 1), " +
+  "(SELECT 1 FROM email_invites e WHERE e.task_id = t.id AND e.mode = 'copy' LIMIT 1)) AS has_copy_invite, " +
   "(SELECT COUNT(*) FROM tasks k WHERE k.parent_id = t.id AND k.done = 1 AND k.deleted_at IS NULL) AS sub_done";
 const JOIN = "LEFT JOIN task_shares s ON s.task_id = COALESCE(t.parent_id, t.id) AND s.to_user = ?1 AND s.status = 'accepted'";
 // Drie takken die elk een index gebruiken (eigen taken, deelrijen, subtaken van een gedeelde taak). Een OR met
@@ -78,21 +80,35 @@ export type ShareInfo = {
 
 /**
  * Deelinformatie per hoofdtaak waar je bij hoort (als eigenaar of als ontvanger), met `taskId` voor één taak.
- * Alleen `shared`-rijen; een openstaande kopie telt niet als deelnemer.
+ * Alleen `shared`-rijen; een openstaande kopie telt niet als deelnemer. Op een openbare Tick (`open`) ziet alleen de
+ * eigenaar openstaande uitnodigingen, als e-mailadres (ook als er een account achter zit), plus zijn uitnodigingen aan
+ * adressen zonder account (`user_id` = `mail:<id>`); zo ziet hij niet welke adressen een account hebben.
  */
-export async function shareInfo(db: D1Database, userId: string, taskId?: string): Promise<Map<string, ShareInfo>> {
+export async function shareInfo(db: D1Database, userId: string, taskId?: string, open = false): Promise<Map<string, ShareInfo>> {
   // Vanaf de (weinige) deelrijen werken, niet vanaf alle taken van de eigenaar: shares zijn altijd op een hoofdtaak.
   const scope = taskId ? 's.task_id = ?2' : `(t.user_id = ?1 OR s.task_id IN ${SHARED_TO_ME})`;
-  const { results } = await db.prepare(
-    'SELECT s.id, s.task_id, s.to_user, s.status, u.name, o.id AS owner_id, o.name AS owner_name FROM task_shares s ' +
+  type Row = { id: string; task_id: string; to_user: string; status: 'pending' | 'accepted'; name: string; email: string | null; owner_id: string; owner_name: string };
+  const stmts = [db.prepare(
+    'SELECT s.id, s.task_id, s.to_user, s.status, u.name, u.email, o.id AS owner_id, o.name AS owner_name FROM task_shares s ' +
     "JOIN users u ON u.id = s.to_user JOIN tasks t ON t.id = s.task_id JOIN users o ON o.id = t.user_id WHERE s.mode = 'shared' AND " + scope +
     ' ORDER BY s.created_at, s.id',
-  ).bind(userId, ...(taskId ? [taskId] : [])).all<{ id: string; task_id: string; to_user: string; status: 'pending' | 'accepted'; name: string; owner_id: string; owner_name: string }>();
+  ).bind(userId, ...(taskId ? [taskId] : []))];
+  if (open) {
+    stmts.push(db.prepare(
+      "SELECT e.id, e.task_id, 'mail:' || e.id AS to_user, 'pending' AS status, e.email AS name, e.email, o.id AS owner_id, o.name AS owner_name " +
+      "FROM email_invites e JOIN users o ON o.id = e.from_user WHERE e.from_user = ?1 AND e.mode = 'shared' AND e.task_id IS NOT NULL AND e.expires_at > ?2" +
+      (taskId ? ' AND e.task_id = ?3' : '') + ' ORDER BY e.created_at, e.id',
+    ).bind(userId, new Date().toISOString(), ...(taskId ? [taskId] : [])));
+  }
+  const res = await db.batch<Row>(stmts);
   const out = new Map<string, ShareInfo>();
-  for (const r of results) {
+  for (const r of res.flatMap((x) => x.results)) {
+    const mine = r.owner_id === userId;
+    if (open && r.status === 'pending' && !mine) continue;
     let info = out.get(r.task_id);
     if (!info) out.set(r.task_id, info = { owner: { id: r.owner_id, name: r.owner_name }, members: [] });
-    info.members.push({ share_id: r.id, user_id: r.to_user, name: r.name, status: r.status });
+    const name = open && r.status === 'pending' ? r.email ?? r.name : r.name;
+    info.members.push({ share_id: r.id, user_id: r.to_user, name, status: r.status });
   }
   // Voor een taak waar je alleen ontvanger bent zonder toegang (scope met taskId) hoort er niets in.
   if (taskId) {

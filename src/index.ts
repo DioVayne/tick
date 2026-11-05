@@ -323,8 +323,8 @@ async function watchedBy(db: D1Database, userId: string, rows: TaskRow[]): Promi
 /** Deelinformatie, kopiegroepen, bijlagen, namen en meldingen voor deze rijen; alleen opgezocht als er iets te vinden is. */
 async function extras(env: Env, userId: string, rows: Access[]) {
   return Promise.all([
-    anyShared(rows) ? shareInfo(env.DB, userId) : new Map<string, ShareInfo>(),
-    anyCopies(rows, userId) ? copiesFor(env.DB, userId, rows) : new Map<string, Copies>(),
+    anyShared(rows) ? shareInfo(env.DB, userId, undefined, openSignup(env)) : new Map<string, ShareInfo>(),
+    anyCopies(rows, userId) ? copiesFor(env.DB, userId, rows, openSignup(env)) : new Map<string, Copies>(),
     attachmentsFor(env, rows.map((r) => r.id)),
     personNames(env.DB, rows),
     watchedBy(env.DB, userId, rows),
@@ -338,8 +338,8 @@ async function presentOne(env: Env, userId: string, id: string, row?: Access | n
   if (!t) throw new HttpError(404, 'err.not_found');
   // Een subtaak krijgt share: null, en zonder deelrijen is er niets op te zoeken.
   const [info, copies, files, names, watched] = await Promise.all([
-    !t.parent_id && anyShared([t]) ? shareInfo(db, userId, t.id) : new Map<string, ShareInfo>(),
-    anyCopies([t], userId) ? copiesFor(db, userId, [t]) : new Map<string, Copies>(),
+    !t.parent_id && anyShared([t]) ? shareInfo(db, userId, t.id, openSignup(env)) : new Map<string, ShareInfo>(),
+    anyCopies([t], userId) ? copiesFor(db, userId, [t], openSignup(env)) : new Map<string, Copies>(),
     attachmentsFor(env, [t.id]),
     personNames(db, [t]),
     watchedBy(db, userId, [t]),
@@ -681,7 +681,7 @@ app.get('/api/tasks', async (c) => {
     const rows = await visibleTasks(db, userId, 't.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM tasks p WHERE p.id = t.parent_id AND p.deleted_at = t.deleted_at)',
       [limit, offset], 'ORDER BY t.deleted_at DESC LIMIT ? OFFSET ?');
     // In de prullenbak telt een exemplaar niet als lid, dus ook copies: null.
-    const [info, names] = await Promise.all([anyShared(rows) ? shareInfo(db, userId) : new Map<string, ShareInfo>(), personNames(db, rows)]);
+    const [info, names] = await Promise.all([anyShared(rows) ? shareInfo(db, userId, undefined, openSignup(c.env)) : new Map<string, ShareInfo>(), personNames(db, rows)]);
     return c.json(present(rows, userId, info, new Map(), undefined, names));
   }
   if (c.req.query('shared_done')) {
@@ -1033,7 +1033,7 @@ app.get('/api/lists', async (c) => {
   // Een aangemaakte lijst met taken staat er al: dan niet nog eens.
   for (const r of made.results) if (!lists.some((l) => l.name === r.name)) lists.push({ name: r.name, open: 0 });
   // Een gedeelde lijst waar je lid van bent, staat er ook zonder taken.
-  const sharing = await listSharing(db, userId);
+  const sharing = await listSharing(db, userId, openSignup(c.env));
   for (const name of sharing.keys()) if (!lists.some((l) => l.name === name)) lists.push({ name, open: 0 });
   // Inbox is vast en moet er ook zijn zonder taken.
   if (!lists.some((l) => l.name === 'Inbox')) lists.push({ name: 'Inbox', open: 0 });
