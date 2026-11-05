@@ -109,7 +109,8 @@ describe('wachtwoord vergeten', () => {
     const today = await env.DB.prepare("SELECT COUNT(*) AS n FROM mail_log WHERE kind <> 'cap_notice' AND sent_at >= ?")
       .bind(start.toISOString()).first<{ n: number }>();
     const e: Env = { ...mailEnv, MAIL_DAILY_LIMIT: String(today!.n + 1) };
-    const sent = resend();
+    await env.DB.prepare("INSERT OR REPLACE INTO user_settings (user_id, key, value) VALUES (?, 'fallback_webhook', 'https://hook.invalid/beheer')").bind(ADMIN_ID).run();
+    const sent = resend(); const spy = vi.mocked(globalThis.fetch);
     const [a, b, c] = [await createUser(), await createUser(), await createUser()];
     await forgot(a.email, { e });
     await forgot(b.email, { e });
@@ -118,6 +119,11 @@ describe('wachtwoord vergeten', () => {
     const notices = await env.DB.prepare("SELECT COUNT(*) AS n FROM mail_log WHERE kind = 'cap_notice' AND sent_at >= ?")
       .bind(start.toISOString()).first<{ n: number }>();
     expect(notices!.n).toBe(1);
+    // De beheerder kreeg de melding (zonder pushabonnement via zijn fallback-webhook), precies één keer.
+    const hooks = spy.mock.calls.filter(([url]) => String(url) === 'https://hook.invalid/beheer');
+    expect(hooks).toHaveLength(1);
+    expect(JSON.parse(String((hooks[0][1] as RequestInit).body))).toMatchObject({ title: translate('en', 'mail.cap_title') });
+    await env.DB.prepare("DELETE FROM user_settings WHERE user_id = ? AND key = 'fallback_webhook'").bind(ADMIN_ID).run();
   });
 
   it('rem per IP', async () => {

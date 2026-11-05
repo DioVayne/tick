@@ -22,6 +22,11 @@ describe('openbare privacypagina', () => {
     expect(html).not.toContain('mailto:');
   });
 
+  it('met mail aan noemt de pagina Resend, zonder niet', () => {
+    expect(privacyPage('nl', null, undefined, true)).toContain(translate('nl', 'priv.others_mail'));
+    expect(privacyPage('nl', null)).not.toContain('Resend');
+  });
+
   it('met naam en adres: beide op de pagina, en de naam wordt ge-escaped', () => {
     const html = privacyPage('nl', 'dio@ticktodo.nl', 'Dio <Communicatieadvies>');
     expect(html).toContain('Dio &#60;Communicatieadvies&#62;');
