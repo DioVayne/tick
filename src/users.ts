@@ -12,6 +12,8 @@ export type User = {
   session_version: number;
   created_at: string;
   last_seen: string | null;
+  /** NULL = e-mailadres niet bevestigd (telt alleen op een openbare Tick, zie src/signup.ts). */
+  email_verified_at: string | null;
 };
 
 export async function getUser(db: D1Database, id: string): Promise<User | null> {

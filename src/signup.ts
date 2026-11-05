@@ -3,13 +3,13 @@ import type { AppEnv, Env } from './index';
 import { cleanEmail, cleanName } from './account';
 import { sessionCookie } from './auth';
 import { HttpError } from './errors';
-import { checkPassword } from './links';
-import { signupPage } from './login';
-import { claimCapNotice, mailEnabled, SIGNUP_CAP } from './mail';
+import { checkPassword, consumeLink, createLink } from './links';
+import { signupPage, verifyPage } from './login';
+import { claimCapNotice, mailEnabled, mailLayout, releaseMail, reserveMail, sendMail, SIGNUP_CAP } from './mail';
 import { hashPassword } from './password';
 import { loadInstallPrefs } from './prefs';
 import { inBackground, type Locale, notifyUser } from './push';
-import { ADMIN_ID, getUser } from './users';
+import { ADMIN_ID, getUser, type User } from './users';
 import { translate } from '../public/i18n.js';
 
 /**
@@ -82,5 +82,48 @@ async function notifySignupCap(env: Env, now: number): Promise<void> {
     (await loadInstallPrefs(env)).defaultLocale);
 }
 
-/** Bevestigingsmail (Task 4). */
-export async function sendVerifyMail(_env: Env, _userId: string, _origin: string, _lang: Locale): Promise<void> {}
+export const UNVERIFIED_TTL_MS = 30 * 86_400_000;
+
+/** Tot wanneer een onbevestigd account blijft bestaan; null als er niets opgeruimd wordt (bevestigd, of geen mail). */
+export function verifyBy(env: Env, user: Pick<User, 'email_verified_at' | 'created_at' | 'role'>): string | null {
+  if (!openSignup(env) || !mailEnabled(env) || user.email_verified_at || user.role !== 'member') return null;
+  return new Date(Date.parse(user.created_at) + UNVERIFIED_TTL_MS).toISOString();
+}
+
+/** Mailt een bevestigingslink naar een onbevestigd account, binnen de grenzen van `reserveMail`. */
+export async function sendVerifyMail(env: Env, userId: string, origin: string, lang: Locale): Promise<void> {
+  if (!mailEnabled(env)) return;
+  const db = env.DB;
+  const user = await db.prepare('SELECT email FROM users WHERE id = ? AND email IS NOT NULL AND email_verified_at IS NULL')
+    .bind(userId).first<{ email: string }>();
+  if (!user) return;
+  const slot = await reserveMail(db, env, 'verify', userId);
+  if (typeof slot !== 'object') return;
+  const { code } = await createLink(db, 'verify', userId, userId);
+  const t = (key: string) => translate(lang, key);
+  const body = mailLayout(lang, {
+    heading: t('mail.verify_heading'), intro: t('mail.verify_intro'),
+    button: { label: t('mail.verify_button'), url: `${origin}/verify/${code}` }, outro: t('mail.verify_outro'),
+  });
+  if (!(await sendMail(env, { to: user.email, subject: t('mail.verify_subject'), ...body }))) await releaseMail(db, slot.id);
+}
+
+/** Zet het e-mailadres op bevestigd (als dat nog niet zo was). */
+export async function markVerified(env: Env, userId: string): Promise<void> {
+  await env.DB.prepare('UPDATE users SET email_verified_at = ? WHERE id = ? AND email_verified_at IS NULL')
+    .bind(new Date().toISOString(), userId).run();
+}
+
+signupPages.use('/verify/*', async (c, next) => {
+  if (!openSignup(c.env)) return c.notFound();
+  await next();
+});
+
+/** De link uit de bevestigingsmail; werkt zonder inlog. Een gebruikte of onbekende link geeft een nette melding. */
+signupPages.get('/verify/:code', async (c) => {
+  const { success } = await c.env.LOGIN_LIMITER.limit({ key: 'link:' + (c.req.header('cf-connecting-ip') ?? 'onbekend') });
+  if (!success) throw new HttpError(429, 'err.too_many_attempts');
+  const link = await consumeLink(c.env.DB, 'verify', c.req.param('code'));
+  if (link?.user_id) await markVerified(c.env, link.user_id);
+  return c.html(verifyPage(c.get('lang'), !!link?.user_id));
+});

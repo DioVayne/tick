@@ -34,10 +34,10 @@ export async function linkValid(db: D1Database, kind: LinkKind, code: string): P
 }
 
 /** Verbruikt de link in één statement; null als hij onbekend, verlopen of al gebruikt is. */
-export async function consumeLink(db: D1Database, kind: LinkKind, code: string): Promise<{ user_id: string | null } | null> {
+export async function consumeLink(db: D1Database, kind: LinkKind, code: string): Promise<{ user_id: string | null; created_by: string } | null> {
   const now = new Date().toISOString();
-  return db.prepare('UPDATE account_links SET used_at = ? WHERE hash = ? AND kind = ? AND used_at IS NULL AND expires_at > ? RETURNING user_id')
-    .bind(now, await hashKey(code), kind, now).first<{ user_id: string | null }>();
+  return db.prepare('UPDATE account_links SET used_at = ? WHERE hash = ? AND kind = ? AND used_at IS NULL AND expires_at > ? RETURNING user_id, created_by')
+    .bind(now, await hashKey(code), kind, now).first<{ user_id: string | null; created_by: string }>();
 }
 
 /** De publieke pagina's /invite/:code en /reset/:code (vóór de auth-middleware gemonteerd). */
@@ -96,8 +96,11 @@ linkPages.post('/reset/:code', async (c) => {
   const db = c.env.DB;
   const link = await consumeLink(db, 'reset', c.req.param('code'));
   if (!link?.user_id) throw new HttpError(400, 'err.link_invalid');
-  await db.prepare('UPDATE users SET password_hash = ?, session_version = session_version + 1 WHERE id = ?')
-    .bind(await hashPassword(password), link.user_id).run();
+  // Een link uit "Wachtwoord vergeten?" (/forgot, door het account zelf aangevraagd) is per mail gekomen: wie hem
+  // opent, heeft het adres in handen. Dat bevestigt het adres; een resetlink van de beheerder doet dat niet.
+  const verified = link.created_by === link.user_id ? ', email_verified_at = COALESCE(email_verified_at, ?3)' : '';
+  await db.prepare(`UPDATE users SET password_hash = ?1, session_version = session_version + 1${verified} WHERE id = ?2`)
+    .bind(await hashPassword(password), link.user_id, ...(verified ? [new Date().toISOString()] : [])).run();
   const user = await getUser(db, link.user_id);
   if (!user) throw new HttpError(400, 'err.link_invalid'); // account intussen verwijderd
   c.header('Set-Cookie', await sessionCookie(c.env, user));
