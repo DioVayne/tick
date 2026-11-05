@@ -224,6 +224,12 @@ Open the app once online afterwards, so the service worker caches the new versio
   3. In `wrangler.jsonc`, under `vars`, set `"MAIL_FROM": "Tick <noreply@your-domain>"` (an address on the verified domain) and deploy.
 
   Tick sends at most `MAIL_DAILY_LIMIT` emails a day (UTC, default 50; Resend's free plan allows 100). When the limit is reached, the administrator gets one push notification that day, and further requests get no email until the next day. Per account it is at most one email per 5 minutes and 5 a day. The answer on the page is always the same, so nobody can find out which addresses have an account.
+- **Open sign-up (optional, for a Tick open to strangers):** only if you host Tick for people you don't know, like a public app. Set email up first (above): without it, nobody can confirm their address, so nobody can share. Then, under `vars` in `wrangler.jsonc`:
+  - `"OPEN_SIGNUP": "true"`: the login page gets **Create account** (`/signup`). New accounts must confirm their email address before they can share; unconfirmed accounts are deleted after 30 days. Accounts can no longer see each other: sharing goes by typing a full email address, and an address without an account gets an invitation email. Invitation emails use at most half of `MAIL_DAILY_LIMIT`, so password and confirmation emails keep working.
+  - `"PLAY_STORE_URL"` (optional): a Google Play link the invitation email mentions.
+  - `"SIGNUP_DAILY_LIMIT"` (optional, default 100): most new accounts per day (UTC). When it is reached, the administrator gets one push notification that day.
+
+  Leave `OPEN_SIGNUP` out for a household or small team: then you invite people yourself (**Settings → Accounts**) and everyone can pick each other when sharing.
 - **Log out on other devices** (for example after losing a phone): **Settings → Account → Log out on other devices**. This device stays logged in. Keys for phones and automations keep working; revoke those under **Advanced → Keys**.
 - **Forgot your password?** A password you set in the app is stored as a hash in the database and overrides `LOGIN_PASSWORD`. For the administrator, go back to `LOGIN_PASSWORD` by deleting it:
   ```bash
