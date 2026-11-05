@@ -45,8 +45,9 @@ export async function sendMail(env: Env, m: Mail): Promise<boolean> {
 const esc = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
 /** Eenvoudige mail met één knop: tekst- en HTML-versie (alleen inline-opmaak, geen plaatjes). */
-export function mailLayout(lang: Locale, p: { heading: string; intro: string; button: { label: string; url: string }; outro: string }): { text: string; html: string } {
-  const text = `${p.heading}\n\n${p.intro}\n\n${p.button.label}: ${p.button.url}\n\n${p.outro}\n`;
+export function mailLayout(lang: Locale, p: { heading: string; intro: string; button: { label: string; url: string }; extra?: { label: string; url: string }; outro: string }): { text: string; html: string } {
+  const extraText = p.extra ? `${p.extra.label}: ${p.extra.url}\n\n` : '';
+  const text = `${p.heading}\n\n${p.intro}\n\n${p.button.label}: ${p.button.url}\n\n${extraText}${p.outro}\n`;
   const font = 'font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2328';
   const html = `<!doctype html><html lang="${lang}"><body style="margin:0;padding:24px;background:#f6f7f9">
 <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px;${font}">
@@ -55,7 +56,7 @@ export function mailLayout(lang: Locale, p: { heading: string; intro: string; bu
 <p style="margin:0 0 20px;font-size:15px;line-height:1.5">${esc(p.intro)}</p>
 <p style="margin:0 0 20px"><a href="${esc(p.button.url)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:15px;font-weight:600">${esc(p.button.label)}</a></p>
 <p style="margin:0 0 20px;font-size:13px;line-height:1.5;color:#57606a;word-break:break-all">${esc(p.button.url)}</p>
-<p style="margin:0;font-size:13px;line-height:1.5;color:#57606a">${esc(p.outro)}</p>
+${p.extra ? `<p style="margin:0 0 20px;font-size:15px;line-height:1.5"><a href="${esc(p.extra.url)}" style="color:#2563eb">${esc(p.extra.label)}</a></p>\n` : ''}<p style="margin:0;font-size:13px;line-height:1.5;color:#57606a">${esc(p.outro)}</p>
 </div></body></html>`;
   return { text, html };
 }

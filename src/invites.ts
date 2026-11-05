@@ -2,7 +2,9 @@ import type { Context } from 'hono';
 import type { AppEnv, Env } from './index';
 import { cleanEmail } from './account';
 import { HttpError } from './errors';
-import { mailEnabled } from './mail';
+import { mailEnabled, mailLayout, releaseMail, reserveMail, sendMail } from './mail';
+import { inBackground, type Locale } from './push';
+import { translate } from '../public/i18n.js';
 import type { User } from './users';
 
 /**
@@ -80,5 +82,53 @@ export async function emailInviteRows(db: D1Database, ownerId: string): Promise<
   return results;
 }
 
-/** Na een nieuwe uitnodiging aan een adres: de uitnodigingsmail (Task 6). */
-export async function afterEmailInvite(_c: Context<AppEnv>, _email: string, _what: { kind: 'task' | 'list'; title: string }): Promise<void> {}
+/** Na een nieuwe uitnodiging aan een adres: de uitnodigingsmail, op de achtergrond. */
+export async function afterEmailInvite(c: Context<AppEnv>, email: string, what: { kind: 'task' | 'list'; title: string }): Promise<void> {
+  const me = c.get('user');
+  await inBackground(c, sendInviteMail(c.env, { id: me.id, name: me.name }, email, what, new URL(c.req.url).origin, c.get('lang')), 'uitnodigingsmail');
+}
+
+/**
+ * Uitnodigingsmail aan een adres zonder (bevestigd) account: wie deelt, wat Tick is, en waar je een account maakt.
+ * Grenzen: per deler 5 per dag (zonder wachttijd), per adres 1 per dag, en samen hooguit de helft van de daggrens.
+ * Geen e-mailadres in een link.
+ */
+export async function sendInviteMail(env: Env, from: { id: string; name: string }, email: string, what: { kind: 'task' | 'list'; title: string },
+  origin: string, lang: Locale): Promise<void> {
+  if (!mailEnabled(env)) return;
+  const slot = await reserveMail(env.DB, env, 'invite_mail', from.id, Date.now(), { gapMs: 0, perDay: 5, dailyShare: 0.5, recipient: email });
+  if (typeof slot !== 'object') return;
+  const t = (key: string, vars: Record<string, string> = {}) => translate(lang, key, vars);
+  const play = env.PLAY_STORE_URL?.trim();
+  const body = mailLayout(lang, {
+    heading: t(what.kind === 'task' ? 'mail.invite_heading_task' : 'mail.invite_heading_list', { name: from.name, title: what.title }),
+    intro: t('mail.invite_intro'),
+    button: { label: t('mail.invite_button'), url: `${origin}/signup` },
+    extra: play ? { label: t('mail.invite_play'), url: play } : undefined,
+    outro: t('mail.invite_outro'),
+  });
+  if (!(await sendMail(env, { to: email, subject: t('mail.invite_subject', { name: from.name }), ...body }))) await releaseMail(env.DB, slot.id);
+}
+
+/**
+ * Na het bevestigen van een adres: elke niet-verlopen uitnodiging aan dat adres wordt een gewone uitnodiging (taak of
+ * lijst, status `pending`). Verwijderde taken, eigen taken en eigen lijsten worden overgeslagen; daarna zijn alle
+ * uitnodigingen aan dat adres weg.
+ */
+export async function claimEmailInvites(env: Env, userId: string): Promise<void> {
+  const db = env.DB;
+  const user = await db.prepare('SELECT email FROM users WHERE id = ?').bind(userId).first<{ email: string | null }>();
+  if (!user?.email) return;
+  const now = new Date().toISOString();
+  await db.batch([
+    db.prepare('INSERT INTO task_shares (id, task_id, from_user, to_user, mode, status, created_at) ' +
+      "SELECT lower(hex(randomblob(16))), e.task_id, e.from_user, ?1, e.mode, 'pending', e.created_at FROM email_invites e " +
+      'JOIN tasks t ON t.id = e.task_id WHERE e.email = ?2 AND e.expires_at > ?3 AND t.deleted_at IS NULL AND t.parent_id IS NULL ' +
+      'AND t.user_id != ?1 ON CONFLICT (task_id, to_user) DO NOTHING').bind(userId, user.email, now),
+    db.prepare('INSERT INTO list_members (list_id, user_id, role, status, name, created_at) ' +
+      "SELECT e.list_id, ?1, 'member', 'pending', o.name, e.created_at FROM email_invites e JOIN shared_lists l ON l.id = e.list_id " +
+      'JOIN list_members o ON o.list_id = e.list_id AND o.user_id = l.owner_id WHERE e.email = ?2 AND e.expires_at > ?3 AND l.owner_id != ?1 ' +
+      'ON CONFLICT (list_id, user_id) DO NOTHING').bind(userId, user.email, now),
+    db.prepare('DELETE FROM email_invites WHERE email = ?').bind(user.email),
+  ]);
+}
