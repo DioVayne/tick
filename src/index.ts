@@ -19,6 +19,8 @@ import { markReviewed, reviewApi } from './review';
 import { accountApi } from './account';
 import { usersApi } from './users-api';
 import { linkPages } from './links';
+import { forgotPages } from './forgot';
+import { mailEnabled } from './mail';
 import { deviceApi, devicesApi } from './devices';
 import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
@@ -149,12 +151,13 @@ app.get('/.well-known/assetlinks.json', (c) => c.json(assetLinks(c.env.ANDROID_P
 app.get('/login', async (c) => {
   // De overgang: zolang de beheerder geen e-mailadres heeft, zegt de pagina dat het veld leeg mag (verraadt één bit).
   const hint = !!(await c.env.DB.prepare("SELECT 1 FROM users WHERE role = 'admin' AND email IS NULL").first());
-  return c.html(loginPage(c.get('lang'), hint, c.req.query('deleted') === '1'));
+  return c.html(loginPage(c.get('lang'), hint, c.req.query('deleted') === '1', mailEnabled(c.env)));
 });
 // Zonder inlog: uitleg over je account verwijderen, voor de link die Google Play vraagt.
 app.get('/delete-account', (c) => c.html(deleteAccountPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT))));
 app.get('/privacy', (c) => c.html(privacyPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), c.env.OPERATOR_NAME)));
 app.route('/', linkPages);
+app.route('/', forgotPages);
 for (const path of loginAssets) app.get(path, asset);
 
 app.post('/login', async (c) => {

@@ -4,7 +4,8 @@ import { MIN_PASSWORD } from './account';
 // Stijl en script staan in public/login.css en login.js: de CSP staat geen inline code toe.
 // emptyEmailHint: de beheerder heeft nog geen e-mailadres, dan zegt de pagina dat het veld leeg mag (de overgang).
 // deleted: na het verwijderen van je account (/login?deleted=1) staat er een bevestiging boven het formulier.
-export function loginPage(locale: string | undefined, emptyEmailHint = false, deleted = false): string {
+// forgot: mailen staat aan, dan staat er een link naar /forgot onder het formulier.
+export function loginPage(locale: string | undefined, emptyEmailHint = false, deleted = false, forgot = false): string {
   const lang = normLocale(locale);
   const t = (key: string) => translate(lang, key);
   return `<!doctype html>
@@ -16,7 +17,7 @@ export function loginPage(locale: string | undefined, emptyEmailHint = false, de
 <form id="f"><h1>Tick</h1>${deleted ? `<p class="ok" role="status">${t('login.deleted')}</p>` : ''}
 <input type="email" id="email" placeholder="${t('login.email')}" autocomplete="username" autofocus>
 <input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="current-password" required>
-<button>${t('login.submit')}</button><p id="err" role="alert"></p>${emptyEmailHint ? `<p class="hint">${t('login.empty_email_hint')}</p>` : ''}</form>
+<button>${t('login.submit')}</button><p id="err" role="alert"></p>${emptyEmailHint ? `<p class="hint">${t('login.empty_email_hint')}</p>` : ''}${forgot ? `<p class="link"><a href="/forgot">${t('login.forgot')}</a></p>` : ''}</form>
 <script type="module" src="/login.js"></script></body></html>`;
 }
 
@@ -125,5 +126,23 @@ ${items(['priv.others_cloudflare', 'priv.others_push', 'priv.others_osm'])}
 </main></body></html>`;
 }
 
+/** Pagina "Wachtwoord vergeten?" (/forgot): één e-mailveld; public/forgot.js verstuurt en toont daarna `data-sent`. */
+export function forgotPage(locale: string | undefined): string {
+  const lang = normLocale(locale);
+  const t = (key: string) => translate(lang, key);
+  return `<!doctype html>
+<html lang="${lang}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>${t('forgot.title')}</title><meta name="theme-color" content="#ffffff">
+<script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
+</head><body data-sent="${escapeHtml(t('forgot.sent'))}" data-offline="${escapeHtml(t('app.you_are_offline'))}">
+<form id="f"><h1>${t('forgot.title')}</h1><p class="intro">${t('forgot.intro')}</p>
+<input type="email" id="email" placeholder="${t('login.email')}" autocomplete="username" maxlength="254" required autofocus>
+<button>${t('forgot.submit')}</button><p id="err" role="alert"></p>
+<p class="link"><a href="/login">${t('forgot.back')}</a></p></form>
+<script type="module" src="/forgot.js"></script></body></html>`;
+}
+
 /** Bestanden die de loginpagina zonder inlog nodig heeft. */
-export const loginAssets = ['/login.css', '/login.js', '/accountlink.js', '/next.js', '/theme.js'];
+export const loginAssets = ['/login.css', '/login.js', '/accountlink.js', '/forgot.js', '/next.js', '/theme.js'];
