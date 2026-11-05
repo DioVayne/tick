@@ -121,8 +121,9 @@ export async function claimEmailInvites(env: Env, userId: string): Promise<void>
   if (!user?.email) return;
   const now = new Date().toISOString();
   await db.batch([
+    // Met de id van de uitnodiging: de deler ziet dan niets veranderen tot de ontvanger accepteert.
     db.prepare('INSERT INTO task_shares (id, task_id, from_user, to_user, mode, status, created_at) ' +
-      "SELECT lower(hex(randomblob(16))), e.task_id, e.from_user, ?1, e.mode, 'pending', e.created_at FROM email_invites e " +
+      "SELECT e.id, e.task_id, e.from_user, ?1, e.mode, 'pending', e.created_at FROM email_invites e " +
       'JOIN tasks t ON t.id = e.task_id WHERE e.email = ?2 AND e.expires_at > ?3 AND t.deleted_at IS NULL AND t.parent_id IS NULL ' +
       'AND t.user_id != ?1 ON CONFLICT (task_id, to_user) DO NOTHING').bind(userId, user.email, now),
     db.prepare('INSERT INTO list_members (list_id, user_id, role, status, name, created_at) ' +
@@ -131,4 +132,15 @@ export async function claimEmailInvites(env: Env, userId: string): Promise<void>
       'ON CONFLICT (list_id, user_id) DO NOTHING').bind(userId, user.email, now),
     db.prepare('DELETE FROM email_invites WHERE email = ?').bind(user.email),
   ]);
+}
+
+/**
+ * Op een openbare Tick ziet de eigenaar van een gedeelde lijst een openstaand lid niet onder zijn account-id (een
+ * uitnodiging aan een adres heeft er geen): beide krijgen `mail:<uuid>`. Voor een lid is die uuid afgeleid van lijst en
+ * account, voor een uitnodiging aan een adres is het de id van de uitnodiging.
+ */
+export async function pendingMemberId(listId: string, userId: string): Promise<string> {
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`member:${listId}:${userId}`)));
+  const h = [...d.slice(0, 16)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${MAIL_PREFIX}${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }

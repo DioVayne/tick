@@ -114,7 +114,11 @@ accountApi.patch('/', async (c) => {
       throw e;
     }
   }
-  if (reverify) await inBackground(c, sendVerifyMail(c.env, id, new URL(c.req.url).origin, c.get('lang')), 'bevestigingsmail');
+  if (reverify) {
+    // Een bevestigings- of herstellink van vóór de wijziging mag het nieuwe adres niet bevestigen.
+    await c.env.DB.prepare("DELETE FROM account_links WHERE user_id = ? AND kind IN ('verify', 'reset') AND used_at IS NULL").bind(id).run();
+    await inBackground(c, sendVerifyMail(c.env, id, new URL(c.req.url).origin, c.get('lang')), 'bevestigingsmail');
+  }
   const { name, email, role } = (await getUser(c.env.DB, id))!;
   return c.json({ id, name, email, role });
 });

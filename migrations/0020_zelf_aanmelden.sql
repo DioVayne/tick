@@ -3,6 +3,8 @@
 -- NULL = niet bevestigd. Bestaande accounts (gemaakt door of via de beheerder) gelden als bevestigd.
 ALTER TABLE users ADD COLUMN email_verified_at TEXT;
 UPDATE users SET email_verified_at = created_at;
+-- Alleen een zelf aangemaakt account dat nooit bevestigd werd, wordt na deze tijd opgeruimd (NULL = nooit opruimen).
+ALTER TABLE users ADD COLUMN verify_deadline TEXT;
 
 -- account_links krijgt de soort 'verify'; een CHECK kan in SQLite alleen via een nieuwe tabel veranderen.
 PRAGMA defer_foreign_keys = true;

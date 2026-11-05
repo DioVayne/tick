@@ -114,7 +114,11 @@ sharesApi.post('/', async (c) => {
     toUser = to.userId;
   } else toUser = await recipientOf(db, b);
   if (toUser === userId) throw new HttpError(400, 'err.share_self');
-  if (await hasCopyInGroup(db, task.id, toUser)) throw new HttpError(409, 'err.copy_exists');
+  if (await hasCopyInGroup(db, task.id, toUser)) {
+    // Openbare Tick: niet verraden dat dit adres een account in de groep heeft; er gebeurt gewoon niets.
+    if (open) return c.json({ ok: true, status: 'pending', mode: b.mode }, 201);
+    throw new HttpError(409, 'err.copy_exists');
+  }
   const row: ShareRow = {
     id: crypto.randomUUID(), task_id: task.id, from_user: userId, to_user: toUser, mode: b.mode, status: 'pending',
     list: null, position: null, created_at: now(), responded_at: null,
