@@ -76,7 +76,8 @@ export type MailLimits = {
 };
 
 /** Soorten rijen in `mail_log` die vlaggen zijn en niet als verstuurde mail tellen. */
-const FLAG_KINDS = [CAP_NOTICE, 'signup_cap'];
+export const SIGNUP_CAP = 'signup_cap';
+const FLAG_KINDS = [CAP_NOTICE, SIGNUP_CAP];
 
 /** SHA-256 (hex) van het getrimde, kleingeschreven adres; het adres zelf komt niet in `mail_log`. */
 export async function recipientHash(email: string): Promise<string> {
@@ -123,10 +124,10 @@ export async function releaseMail(db: D1Database, id: string): Promise<void> {
 }
 
 /** true bij de eerste aanroep op een UTC-dag: dan krijgt de beheerder een melding dat de daggrens bereikt is. */
-export async function claimCapNotice(db: D1Database, now = Date.now()): Promise<boolean> {
+export async function claimCapNotice(db: D1Database, now = Date.now(), kind = CAP_NOTICE): Promise<boolean> {
   const start = dayStart(now);
   const r = await db.prepare(`INSERT INTO mail_log (id, kind, user_id, sent_at) SELECT ?1, ?2, NULL, ?3
     WHERE NOT EXISTS (SELECT 1 FROM mail_log WHERE kind = ?2 AND sent_at >= ?4 AND sent_at < ?5)`)
-    .bind(crypto.randomUUID(), CAP_NOTICE, iso(now), iso(start), iso(start + DAY)).run();
+    .bind(crypto.randomUUID(), kind, iso(now), iso(start), iso(start + DAY)).run();
   return r.meta.changes === 1;
 }

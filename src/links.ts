@@ -55,7 +55,7 @@ for (const kind of ['invite', 'reset'] as const) {
   });
 }
 
-function checkPassword(v: unknown): string {
+export function checkPassword(v: unknown): string {
   if (typeof v !== 'string' || v.length < MIN_PASSWORD) throw new HttpError(400, 'err.password_short', { min: MIN_PASSWORD });
   return v;
 }
