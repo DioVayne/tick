@@ -11,6 +11,7 @@ import { hashPassword } from './password';
 import { loadInstallPrefs } from './prefs';
 import { inBackground, type Locale, notifyUser } from './push';
 import { ADMIN_ID, getUser, type User } from './users';
+import { deleteAccount } from './users-api';
 import { translate } from '../public/i18n.js';
 
 /**
@@ -129,3 +130,18 @@ signupPages.get('/verify/:code', async (c) => {
   if (link?.user_id) await markVerified(c.env, link.user_id);
   return c.html(verifyPage(c.get('lang'), !!link?.user_id));
 });
+
+/**
+ * Elk uur (cron): op een openbare Tick met mail verdwijnen gewone accounts die 30 dagen na aanmelden hun adres nog niet
+ * bevestigden, via dezelfde code als "account verwijderen". Zonder mail kan niemand bevestigen, dan gebeurt dat niet.
+ * Verlopen uitnodigingen aan adressen gaan altijd weg. Geeft het aantal verwijderde accounts.
+ */
+export async function purgeUnverified(env: Env, now: number): Promise<number> {
+  const db = env.DB;
+  await db.prepare('DELETE FROM email_invites WHERE expires_at < ?').bind(new Date(now).toISOString()).run();
+  if (!openSignup(env) || !mailEnabled(env)) return 0;
+  const { results } = await db.prepare("SELECT id FROM users WHERE role = 'member' AND email_verified_at IS NULL AND created_at < ? LIMIT 50")
+    .bind(new Date(now - UNVERIFIED_TTL_MS).toISOString()).all<{ id: string }>();
+  for (const { id } of results) await deleteAccount(env, id);
+  return results.length;
+}
