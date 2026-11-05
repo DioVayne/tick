@@ -26,8 +26,8 @@ Dat blijft zo.
 ## Niet-doelen
 
 - Niets veranderen voor een Tick zonder Resend-sleutel: geen link, geen nieuwe pagina, alles werkt zoals nu.
-- Geen andere mails (welkomstmail, uitnodiging per mail, meldingen per mail). Wel zo bouwen dat een tweede soort mail
-  later makkelijk kan (één mailfunctie), maar die nu niet maken.
+- Geen andere mails (welkomstmail, e-mailadres bevestigen, meldingen per mail) in dit project. Die komen wel (zie
+  "Aanvullingen van Dio"), dus het versturen is algemeen opgezet, maar we bouwen ze nu niet.
 - Geen "ik ben geen robot"-controle (Turnstile). Komt alleen als er later echt misbruik is.
 - Geen andere mailproviders dan Resend.
 
@@ -50,6 +50,28 @@ Dat blijft zo.
   een gemaild wachtwoord zou die route ook voorgoed uitzetten (`passwordOk` in `src/auth.ts` valt alleen terug op
   `LOGIN_PASSWORD` zolang er geen hash is). Vult iemand een beheerdersadres in, dan volgt hetzelfde antwoord en gaat
   er geen mail uit. De docs zeggen dat dit alleen voor gewone accounts werkt.
+
+## Aanvullingen van Dio (bij goedkeuring, 2026-11-05)
+
+1. **Twee Ticks.** Er komt een tweede Tick op `app.ticktodo.nl` (Worker `ticktodo-app`, de Play-versie), waar mensen
+   straks zelf een account aanmaken. Dio's eigen Tick (`tick.detussenpartij.nl`) blijft bestaan. Beide draaien
+   dezelfde code. Het versturen van mail moet daarom **algemeen bruikbaar** zijn voor latere mails, zoals "bevestig je
+   e-mailadres" bij aanmelden. Afzender op `app.ticktodo.nl`: een adres op `ticktodo.nl`.
+2. **De Resend-sleutel komt op beide Ticks** (`RESEND_API_KEY` als secret op Worker `tick` én op `ticktodo-app`),
+   elk met een eigen `MAIL_FROM` op `ticktodo.nl`. De stappen voor Dio dekken dus beide Workers.
+3. **Werken buiten de K:-map.** Bouwen gebeurt in een eigen worktree (`C:\dev\tick-wachtwoord`, branch
+   `wachtwoord-kwijt`). HEAD in `K:\Google Drive\Git\tick` blijft op afgemaakt werk staan, want een Stop-hook zet die
+   HEAD na elke beurt live.
+
+Gevolg voor het ontwerp van `src/mail.ts` (mijn invulling van punt 1):
+
+- `sendMail(env, { to, subject, text, html })` is het enige wat met Resend praat; het weet niets van wachtwoorden.
+- Een kleine opmaakhulp, bijv. `mailLayout(lang, { heading, intro, button: { label, url }, outro })`, die de tekst- en
+  HTML-versie maakt. De herstelmail gebruikt die; een bevestigingsmail later ook.
+- `mail_log.kind` is vrij tekst ('reset', later bijv. 'verify'). De daggrens geldt voor **alle** soorten mail samen
+  (behalve `cap_notice`), want het Resend-tegoed is gedeeld. De grens per account geldt per soort.
+- `mailEnabled(env)` en de daggrens zitten in `src/mail.ts`, zodat elke latere mail ze ook gebruikt.
+- De pushmelding bij de daggrens zegt dus "mails", niet "herstelmails".
 
 ## Hoe het werkt
 
@@ -118,7 +140,7 @@ account meegewist (`deleteUserStmts`).
 ### Melding aan de beheerder
 
 Via de bestaande `notifyUser(env, ADMIN_ID, …)` (push, met de webhook als terugval). Tekst (en + nl), bijv.: "Tick
-heeft vandaag de grens van 50 herstelmails bereikt. Nieuwe aanvragen worden tot morgen niet gemaild." Hooguit één keer
+heeft vandaag de grens van 50 mails bereikt. Tot morgen gaan er geen mails meer uit." Hooguit één keer
 per UTC-dag.
 
 ### Inlogpagina en `/delete-account`
@@ -161,14 +183,18 @@ In de stijl van de bestaande tests (vitest met de Workers-pool):
 - `SETUP.md`: het optionele stuk over Resend en de drie instellingen.
 - `ARCHITECTURE.md`: `src/mail.ts`, de tabel `mail_log` en het achtergrondwerk.
 
-## Live zetten op app.ticktodo.nl
+## Live zetten (beide Ticks)
 
-1. Dio maakt in Resend een API-sleutel met alleen verzendrecht ("Sending access") voor `ticktodo.nl`.
-2. Dio zet die zelf als secret (`npx wrangler secret put RESEND_API_KEY` in C:\dev, de sleutel plakken). Claude typt
-   of ziet de sleutel niet.
-3. Claude zet `MAIL_FROM` in de lokale `wrangler.jsonc`, draait `npm run db:migrate` en `npm run deploy`, en
-   controleert met `npx wrangler deployments list`.
-4. Eén echte test: een herstellink aanvragen voor Dio's eigen adres.
+1. De code gaat naar `main` en live op Dio's eigen Tick (`tick`). Zonder sleutel staat mailen daar nog uit, dus er
+   verandert dan niets zichtbaars.
+2. Dio maakt in Resend een API-sleutel met alleen verzendrecht ("Sending access") voor `ticktodo.nl`.
+3. Dio zet die zelf als secret op beide Workers (`npx wrangler secret put RESEND_API_KEY --name tick` en
+   `--name ticktodo-app`, de sleutel plakken). Claude typt of ziet de sleutel niet.
+4. Claude zet `MAIL_FROM` in de lokale `wrangler.jsonc` van beide Ticks (bijv. `Tick <noreply@ticktodo.nl>`), draait
+   per Tick `npm run db:migrate` en `npm run deploy`, en controleert met `npx wrangler deployments list`. De
+   `ticktodo-app`-Tick krijgt de code via `main`, net als de privacypagina; als die Tick nog niet live staat, gebeurt
+   dit daar zodra hij live gaat.
+5. Eén echte test op Dio's eigen Tick: een herstellink aanvragen voor een gewoon (niet-beheerder) testaccount.
 
 ## Keuzes na de ontwerpcontrole (mijn keuzes)
 
