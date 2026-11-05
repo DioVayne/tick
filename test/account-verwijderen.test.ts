@@ -105,6 +105,8 @@ describe('openbare pagina en bevestiging', () => {
     const html = await nl.text();
     expect(html).toContain(translate('nl', 'del.title'));
     expect(html).toContain(translate('nl', 'del.retention'));
+    expect(html).toContain(translate('nl', 'del.some_title'));
+    expect(html).toContain(translate('nl', 'del.some_tasks'));
     expect(html).toContain(translate('nl', 'del.no_login_admin'));
     expect(html).not.toContain('mailto:');
     expect(await (await page('en')).text()).toContain(translate('en', 'del.title'));

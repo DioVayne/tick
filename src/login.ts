@@ -79,6 +79,9 @@ export function deleteAccountPage(locale: string | undefined, contact: string | 
 <p>${t('del.shared')}</p>
 <p>${t('del.retention')}</p>
 <p>${t('del.backup')}</p>
+<h2>${t('del.some_title')}</h2>
+<p>${t('del.some_intro')}</p>
+<ul><li>${t('del.some_tasks')}</li><li>${t('del.some_lists')}</li><li>${t('del.some_files')}</li><li>${t('del.some_places')}</li><li>${t('del.some_keys')}</li></ul>
 <h2>${t('del.no_login_title')}</h2>
 ${forgot ? `<p>${t('del.no_login_forgot', { link: `<a href="/forgot">${t('del.forgot_link')}</a>` })}</p>
 ` : ''}<p>${noLogin}</p>
