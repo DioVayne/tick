@@ -45,6 +45,9 @@ describe('wachtwoord vergeten', () => {
     const html = await page.text();
     expect(html).toContain(translate('nl', 'forgot.title'));
     expect(html).toContain('src="/forgot.js"');
+    // De melding na verzenden zegt (voor ieder adres gelijk) dat een nieuwe link pas na 5 minuten kan.
+    expect(translate('nl', 'forgot.sent')).toContain('5 minuten');
+    expect(translate('en', 'forgot.sent')).toContain('5 minutes');
   });
 
   it('een lid krijgt een werkende herstellink, ook met hoofdletters en spaties in het adres', async () => {
@@ -59,6 +62,12 @@ describe('wachtwoord vergeten', () => {
     expect(path).toBeTruthy();
     vi.restoreAllMocks();
     expect((await req(path!, { method: 'POST', json: { password: 'nieuw12345' } })).status).toBe(200);
+  });
+
+  it('een adres met een plusteken werkt ook', async () => {
+    const sent = resend(); const u = await createUser({ email: `ik+${crypto.randomUUID().slice(0, 8)}@example.test` });
+    expect((await forgot(u.email)).status).toBe(200);
+    expect(sent().map((m) => m.to[0])).toEqual([u.email]);
   });
 
   it('onbekend adres en het adres van een beheerder: zelfde antwoord, geen mail', async () => {
