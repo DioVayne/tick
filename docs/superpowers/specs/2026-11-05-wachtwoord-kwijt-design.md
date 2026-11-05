@@ -202,7 +202,7 @@ In de stijl van de bestaande tests (vitest met de Workers-pool):
   `CACHE`-bump nodig.
 - Gelijktijdige aanvragen: vóór het versturen een `mail_log`-rij reserveren en die weer wissen als Resend faalt. Zo
   glippen parallelle aanvragen niet langs de grens per account, en telt een mislukte mail toch niet mee.
-- De daggrens telt alleen `kind = 'reset'`.
+- De daggrens telt alle soorten mail samen behalve `cap_notice` (zie "Aanvullingen van Dio": het Resend-tegoed is gedeeld).
 - Eerdere ongebruikte resetlinks blijven geldig tot ze verlopen (zoals `createLink` nu werkt).
 
 ## Aan de builder overgelaten
