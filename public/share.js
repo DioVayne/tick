@@ -5,6 +5,7 @@ import { el, toast } from './render.js';
 import CONFIG from './settings.js';
 import { load, sharedOf, state } from './store.js';
 import { renderListInvites } from './sharedlist.js';
+import { recipientField, verifyHint } from './verifybar.js';
 
 // Delen gaat alleen online: uitnodigen, accepteren, weigeren en stoppen zijn directe verzoeken, daarna een load().
 
@@ -42,10 +43,7 @@ export async function openShareDialog(task) {
   const others = await people();
   /** @type {{ id: string, name: string } | null} */
   let chosen = others.length === 1 ? others[0] : null; // met maar één ander account staat die al klaar
-  const input = el('input', {
-    id: 'share-to', type: 'text', autocomplete: 'off', maxlength: '254', enterkeyhint: 'send',
-    placeholder: t(others.length ? 'share.to_placeholder_other' : 'share.to_placeholder'),
-  });
+  const input = recipientField('share-to', others.length > 0);
   const chips = others.map((p) => el('button', {
     type: 'button', class: 'ghost person', 'aria-pressed': String(chosen?.id === p.id),
     onclick: () => { chosen = chosen?.id === p.id ? null : p; input.value = ''; mark(); },
@@ -75,6 +73,7 @@ export async function openShareDialog(task) {
     },
   },
   el('h2', { id: 'share-title' }, t('share.title', { title: task.title })),
+  verifyHint(),
   el('label', { for: 'share-to' }, t('share.to_label')),
   chips.length ? el('div', { class: 'people', role: 'group', 'aria-label': t('share.to_label') }, ...chips) : null,
   input,

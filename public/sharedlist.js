@@ -8,6 +8,7 @@ import CONFIG from './settings.js';
 import {
   answerListInvite, claim, claimedByOther, clearDone, doneInList, removeListMember, sharedOf, shareList, state, toggleDone,
 } from './store.js';
+import { recipientField, recipientPlaceholder, verifyHint } from './verifybar.js';
 
 // Gedeelde lijsten in de app: de deeldialoog van een lijst, de uitnodigingsbalk, "ik pak het op" en het blok Afgevinkt.
 // Delen, accepteren, eruit halen en opruimen gaan alleen online (zoals delen per taak); op naam zetten en afvinken via de outbox.
@@ -51,7 +52,7 @@ export async function openListShareDialog(name) {
   const close = () => { if (dialog.open) dialog.close(); dialog.remove(); };
   const members = el('ul', { class: 'share-list' });
   const chipBox = el('div', { class: 'people', role: 'group', 'aria-label': t('share.to_label') });
-  const input = el('input', { id: 'slist-to', type: 'text', autocomplete: 'off', maxlength: '254', enterkeyhint: 'send' });
+  const input = recipientField('slist-to', false);
   /** @type {{ id: string, name: string } | null} */
   let chosen = null;
   let chips = [];
@@ -83,7 +84,7 @@ export async function openListShareDialog(name) {
     }, p.name));
     chipBox.replaceChildren(...chips);
     chipBox.hidden = !chips.length;
-    input.placeholder = t(chips.length ? 'share.to_placeholder_other' : 'share.to_placeholder');
+    input.placeholder = recipientPlaceholder(chips.length > 0);
     invite.hidden = !owner;
   };
   const mark = () => chips.forEach((b, i) => b.setAttribute('aria-pressed', String(chosen?.id === others[i].id)));
@@ -123,6 +124,7 @@ export async function openListShareDialog(name) {
       (chips[0] ?? input).focus();
     },
   },
+  verifyHint(),
   el('label', { for: 'slist-to' }, t('slist.invite_label')),
   chipBox,
   input,

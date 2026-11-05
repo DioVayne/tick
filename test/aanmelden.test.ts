@@ -31,6 +31,12 @@ describe('met OPEN_SIGNUP', () => {
     expect((await callWith(openEnv, '/icon.svg')).status).toBe(200);
   });
 
+  it('geen beheerdershint op het welkomstscherm (wel op een gewone Tick zonder beheerdersadres)', async () => {
+    const hint = translate('en', 'login.empty_email_hint');
+    expect(await (await callWith(env, '/login', html)).text()).toContain(hint);
+    expect(await (await callWith(openEnv, '/login', html)).text()).not.toContain(hint);
+  });
+
   it('de aanmeldpagina met script en link naar de privacypagina', async () => {
     const res = await callWith(openEnv, '/signup', { ...html, lang: 'nl' });
     expect(res.status).toBe(200);
