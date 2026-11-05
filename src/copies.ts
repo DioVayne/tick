@@ -37,7 +37,7 @@ type MemberRow = {
  * beide, dan is een lid klaar als het een ronde verder is (`repeat_at` meer dan 2 uur later), zonder tijdstip. Openstaande
  * kopie-uitnodigingen (`pending`) ziet alleen de eigenaar van de taak. Zonder leden en uitnodigingen staat de taak er niet in.
  */
-export async function copiesFor(db: D1Database, userId: string, rows: Access[]): Promise<Map<string, Copies>> {
+export async function copiesFor(db: D1Database, userId: string, rows: Access[], open = false): Promise<Map<string, Copies>> {
   const main = rows.filter((r) => !r.parent_id);
   const groups = [...new Set(main.flatMap((r) => (r.copy_group ? [r.copy_group] : [])))];
   const invited = main.filter((r) => r.has_copy_invite && r.user_id === userId).map((r) => r.id);
@@ -56,9 +56,13 @@ export async function copiesFor(db: D1Database, userId: string, rows: Access[]):
   }
   if (invited.length) {
     stmts.push(db.prepare(
-      "SELECT s.task_id, u.name FROM task_shares s JOIN users u ON u.id = s.to_user WHERE s.mode = 'copy' AND s.status = 'pending' " +
-      'AND s.task_id IN (SELECT value FROM json_each(?)) ORDER BY s.created_at, s.id',
-    ).bind(JSON.stringify(invited)));
+      // Op een openbare Tick als e-mailadres, met de uitnodigingen aan adressen zonder account erbij (zie shareInfo).
+      `SELECT task_id, name FROM (SELECT s.task_id, ${open ? 'u.email' : 'u.name'} AS name, s.created_at, s.id FROM task_shares s ` +
+      "JOIN users u ON u.id = s.to_user WHERE s.mode = 'copy' AND s.status = 'pending' AND s.task_id IN (SELECT value FROM json_each(?1)) " +
+      (open ? "UNION ALL SELECT e.task_id, e.email, e.created_at, e.id FROM email_invites e WHERE e.mode = 'copy' " +
+        'AND e.task_id IN (SELECT value FROM json_each(?1)) AND e.expires_at > ?2 ' : '') +
+      ') ORDER BY created_at, id',
+    ).bind(JSON.stringify(invited), ...(open ? [new Date().toISOString()] : [])));
   }
   const out = new Map<string, Copies>();
   if (!stmts.length) return out;
