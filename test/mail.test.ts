@@ -89,6 +89,32 @@ describe('reserveMail', () => {
     expect(r.filter((x) => typeof x === 'object')).toHaveLength(1);
   });
 
+  it('eigen grenzen per soort: zonder wachttijd, 5 per 24 uur', async () => {
+    const id = await user(); const t = freshDay();
+    const o = { gapMs: 0, perDay: 5 };
+    for (let i = 0; i < 5; i++) expect(await reserveMail(env.DB, env, 'invite_mail', id, t + i, o)).toHaveProperty('id');
+    expect(await reserveMail(env.DB, env, 'invite_mail', id, t + 10, o)).toBe('account_limit');
+  });
+
+  it('dailyShare: deze soort mag maar een deel van de daggrens gebruiken; andere soorten daarna nog wel', async () => {
+    const lim = { ...env, MAIL_DAILY_LIMIT: '4' }; const t = freshDay();
+    const o = { gapMs: 0, dailyShare: 0.5 };
+    expect(await reserveMail(env.DB, lim, 'invite_mail', await user(), t, o)).toHaveProperty('id');
+    expect(await reserveMail(env.DB, lim, 'invite_mail', await user(), t, o)).toHaveProperty('id');
+    expect(await reserveMail(env.DB, lim, 'invite_mail', await user(), t, o)).toBe('daily_limit');
+    expect(await reserveMail(env.DB, lim, 'reset', await user(), t)).toHaveProperty('id');
+  });
+
+  it('recipient: hooguit één mail per adres per 24 uur, ook van verschillende afzenders en in andere schrijfwijze', async () => {
+    const t = freshDay(); const email = `ontvanger-${t}@ex.test`;
+    const o = { gapMs: 0, recipient: email.toUpperCase() };
+    expect(await reserveMail(env.DB, env, 'invite_mail', await user(), t, o)).toHaveProperty('id');
+    expect(await reserveMail(env.DB, env, 'invite_mail', await user(), t + MIN, { gapMs: 0, recipient: ` ${email} ` })).toBe('account_limit');
+    expect(await reserveMail(env.DB, env, 'invite_mail', await user(), t + 86_400_001, o)).toHaveProperty('id');
+    const row = await env.DB.prepare("SELECT recipient_hash FROM mail_log WHERE kind = 'invite_mail' AND recipient_hash IS NOT NULL LIMIT 1").first<{ recipient_hash: string }>();
+    expect(row!.recipient_hash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
   it('releaseMail maakt de plek weer vrij', async () => {
     const id = await user(); const t = freshDay();
     const r = await reserveMail(env.DB, env, 'reset', id, t);
