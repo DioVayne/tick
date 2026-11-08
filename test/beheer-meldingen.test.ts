@@ -157,6 +157,46 @@ describe('beheerpagina meldingen', () => {
     expect((await callWith(e, '/login', { method: 'POST', json: { email: a.email, password: a.password } })).status).toBe(200);
   });
 
+  it('namen en bestandsnamen staan ge-escaped op de pagina', async () => {
+    const { a, att, id } = await reported({ attachment: true });
+    await env.DB.prepare("UPDATE users SET name = '<b>Kwaad</b>' WHERE id = ?").bind(a.id).run();
+    await env.DB.prepare("UPDATE reports SET attachment_name = '<i>raar</i>' WHERE id = ?").bind(id).run();
+    await env.DB.prepare('DELETE FROM attachments WHERE id = ?').bind(att.id).run();
+    const html = await (await raw(`/admin/reports/${id}`, { cookie: admin })).text();
+    expect(html).not.toContain('<b>Kwaad</b>');
+    expect(html).not.toContain('<i>raar</i>');
+    expect(html).toContain('&#60;b&#62;Kwaad');
+  });
+
+  it('schorsen werkt ook met veel gedeelde lijsten, met een vast aantal statements', async () => {
+    const { suspendStmts } = await import('../src/admin');
+    const [a, b] = [await createUser(), await createUser()];
+    const ids: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      const name = `Lijst ${uniq()}`;
+      await as(a, '/api/lists', { method: 'POST', json: { name } });
+      const { list_id } = (await (await as(a, '/api/shared-lists', { method: 'POST', json: { name, to: b.email } })).json()) as { list_id: string };
+      await as(b, `/api/shared-lists/${list_id}/accept`, { method: 'POST', json: {} });
+      await as(a, '/api/tasks', { method: 'POST', json: { title: `T ${i}`, list: name } });
+      ids.push(list_id);
+    }
+    const other = `Van B ${uniq()}`;
+    await as(b, '/api/lists', { method: 'POST', json: { name: other } });
+    const { list_id: bList } = (await (await as(b, '/api/shared-lists', { method: 'POST', json: { name: other, to: a.email } })).json()) as { list_id: string };
+    await as(a, `/api/shared-lists/${bList}/accept`, { method: 'POST', json: {} });
+    const fresh = await createUser();
+    expect(suspendStmts(env.DB, a.id).length).toBe(suspendStmts(env.DB, fresh.id).length);
+    await env.DB.batch(suspendStmts(env.DB, a.id));
+    const n = async (sql: string, ...v: string[]) => (await env.DB.prepare(sql).bind(...v).first<{ n: number }>())!.n;
+    expect(await n('SELECT COUNT(*) AS n FROM shared_lists WHERE owner_id = ?', a.id)).toBe(0);
+    expect(await n('SELECT COUNT(*) AS n FROM list_members WHERE user_id = ?', a.id)).toBe(0);
+    expect(await n('SELECT COUNT(*) AS n FROM list_members WHERE user_id = ? AND list_id != ?', b.id, bList)).toBe(0);
+    expect(await n('SELECT COUNT(*) AS n FROM tasks WHERE user_id = ? AND shared_list IS NOT NULL', a.id)).toBe(0);
+    expect(await n('SELECT COUNT(*) AS n FROM tasks WHERE user_id = ?', a.id)).toBeGreaterThanOrEqual(12);
+    expect(await n('SELECT COUNT(*) AS n FROM task_shares WHERE to_user = ?', b.id)).toBe(0);
+    expect(ids).toHaveLength(12);
+  });
+
   it('een beheerder schorsen kan niet', async () => {
     const b = await createUser();
     const rid = crypto.randomUUID();

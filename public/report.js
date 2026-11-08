@@ -26,6 +26,8 @@ export function reportableTask(top) {
     const by = top.added_by ?? list.owner.id;
     if (by === me) return null;
     const person = by === list.owner.id ? list.owner : list.members.find((m) => m.user_id === by);
+    // Als eigenaar: wie de taak erin zette en niet meer in de lijst zit, kun je niet meer melden.
+    if (!person && list.mine) return null;
     return { name: person?.name ?? null };
   }
   if (top.share && !top.share.mine) return { name: top.share.owner.name };

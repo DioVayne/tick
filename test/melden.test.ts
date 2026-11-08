@@ -122,6 +122,15 @@ describe('melden', () => {
     expect((await report(b, { task_id: byB.id })).status).toBe(404); // b zit er niet meer in
   });
 
+  it('dezelfde lijsttaak twee keer melden als eigenaar: de tweede keer 404', async () => {
+    const [a, b] = [await createUser(), await createUser()];
+    const list = await sharedList(a, [b]);
+    const byB = await (await as(b, '/api/tasks', { method: 'POST', json: { title: 'van B', list: list.name } })).json() as Task;
+    expect((await report(a, { task_id: byB.id })).status).toBe(201);
+    expect((await report(a, { task_id: byB.id })).status).toBe(404);
+    expect(await reportsBy(a)).toHaveLength(1);
+  });
+
   it('een bijlage van een deelnemer: gemeld is de uploader, de eigenaar haalt hem eraf, de bijlage blijft', async () => {
     const [a, b] = [await createUser(), await createUser()];
     const t = await acceptedShare(a, b);

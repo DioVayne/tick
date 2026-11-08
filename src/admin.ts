@@ -3,7 +3,6 @@ import type { AppEnv, Env, TaskRow } from './index';
 import { HttpError } from './errors';
 import { serveAttachment } from './attachments';
 import { bumpSessionVersionStmt } from './auth';
-import { dissolveStmts, leaveListStmts } from './sharedlists';
 import { openSignup } from './signup';
 import type { ReportRow } from './reports';
 import { wipeStmts } from './trash';
@@ -83,7 +82,7 @@ adminPages.get('/reports/:id', async (c) => {
   const who = (id: string) => db.prepare('SELECT id, name, email, created_at, suspended_at, role FROM users WHERE id = ?').bind(id).first<Person>();
   const [reporter, reported] = await Promise.all([who(r.reporter_id), who(r.reported_id)]);
   const person = (p: Person | null) => (p
-    ? `${esc(p.name)} &lt;${esc(p.email ?? '')}&gt; · ${t('admin.since', { date: when(p.created_at, lang) })}${p.suspended_at ? ` · <strong>${t('admin.suspended')}</strong>` : ''}`
+    ? `${esc(p.name)} &lt;${esc(p.email ?? '')}&gt; · ${t('admin.since', { date: esc(when(p.created_at, lang)) })}${p.suspended_at ? ` · <strong>${t('admin.suspended')}</strong>` : ''}`
     : t('admin.account_gone'));
 
   // De inhoud zoals hij nu is.
@@ -102,18 +101,19 @@ adminPages.get('/reports/:id', async (c) => {
     };
     content = `<ul class="tasks">${tasks.map((x) => `<li${x.parent_id ? ' class="sub"' : ''}><strong>${esc(x.title)}</strong>${x.deleted_at ? ` <em>(${t('admin.in_trash')})</em>` : ''}` +
       `${x.description ? `<p class="desc">${esc(x.description)}</p>` : ''}</li>`).join('')}</ul>` +
-      (r.attachment_id && !shown.length ? `<p class="gone">${t('admin.file_gone', { name: r.attachment_name ?? '' })}</p>` : '') +
+      (r.attachment_id && !shown.length ? `<p class="gone">${t('admin.file_gone', { name: esc(r.attachment_name ?? '') })}</p>` : '') +
       (shown.length ? `<h2>${t('admin.files')}</h2><ul class="files">${shown.map(fileHtml).join('')}</ul>` : '');
   }
 
+  // label en confirm zijn al veilige HTML: namen gaan ge-escaped in t(...); confirm is tekst in een attribuut.
   const button = (action: string, label: string, kind = '', confirm?: string) =>
     `<form method="post" action="/admin/reports/${r.id}/${action}"${confirm ? ` data-confirm="${esc(confirm)}"` : ''}><button class="${kind}">${label}</button></form>`;
   const canSuspend = reported && reported.role !== 'admin';
   const actions = [
     r.status === 'open' ? button('dismiss', t('admin.dismiss'), 'ghost') : '',
     r.status !== 'removed' && !r.list_id && ids.length ? button('remove', t('admin.remove'), 'danger', t('admin.remove_confirm')) : '',
-    canSuspend && !reported.suspended_at ? button('suspend', t('admin.suspend', { name: reported.name }), 'danger', t('admin.suspend_confirm', { name: reported.name })) : '',
-    canSuspend && reported.suspended_at ? button('unsuspend', t('admin.unsuspend', { name: reported.name })) : '',
+    canSuspend && !reported.suspended_at ? button('suspend', t('admin.suspend', { name: esc(reported.name) }), 'danger', t('admin.suspend_confirm', { name: reported.name })) : '',
+    canSuspend && reported.suspended_at ? button('unsuspend', t('admin.unsuspend', { name: esc(reported.name) })) : '',
   ].join('');
 
   return c.html(page(lang, r.title, `<p><a href="/admin/reports">← ${t('admin.reports_title')}</a></p>
@@ -149,20 +149,26 @@ function sameOrigin(c: Context<AppEnv>): void {
 
 /**
  * Schorsen: uitgelogd (sessieversie), en al het delen met anderen stopt: zijn deelrijen in beide richtingen, zijn
- * lidmaatschap van lijsten van anderen, de leden van zijn eigen gedeelde lijsten, en zijn uitnodigingen aan adressen.
- * Zijn eigen taken blijven bewaard.
+ * lidmaatschap van lijsten van anderen, zijn eigen gedeelde lijsten (weer gewoon zijn eigen lijsten, zoals
+ * `dissolveStmts`), en zijn uitnodigingen aan adressen. Zijn eigen taken blijven bewaard. Een vast aantal statements,
+ * hoeveel lijsten het ook zijn, want D1 telt elk statement van een batch als query.
  */
-export async function suspendStmts(db: D1Database, userId: string): Promise<D1PreparedStatement[]> {
-  const { results: lists } = await db.prepare('SELECT m.list_id, l.owner_id FROM list_members m JOIN shared_lists l ON l.id = m.list_id WHERE m.user_id = ?')
-    .bind(userId).all<{ list_id: string; owner_id: string }>();
-  const owned = (id: string) => `SELECT id FROM tasks WHERE user_id = ${id} OR parent_id IN (SELECT id FROM tasks WHERE user_id = ${id})`;
+export function suspendStmts(db: D1Database, userId: string): D1PreparedStatement[] {
+  const owned = 'SELECT id FROM tasks WHERE user_id = ?1 OR parent_id IN (SELECT id FROM tasks WHERE user_id = ?1)';
+  const ts = new Date().toISOString();
   return [
-    db.prepare('UPDATE users SET suspended_at = ? WHERE id = ?').bind(new Date().toISOString(), userId),
+    db.prepare('UPDATE users SET suspended_at = ?2 WHERE id = ?1').bind(userId, ts),
     bumpSessionVersionStmt(db, userId),
-    ...lists.flatMap((l) => (l.owner_id === userId ? dissolveStmts(db, l.list_id, userId) : leaveListStmts(db, l.list_id, userId))),
-    db.prepare(`DELETE FROM reminder_sent WHERE (user_id = ?1 AND task_id NOT IN (${owned('?1')})) OR (user_id != ?1 AND task_id IN (${owned('?1')}))`).bind(userId),
+    // Meldrijen, bezorgrijen en claims tussen hem en anderen, in beide richtingen.
+    db.prepare(`DELETE FROM task_watch WHERE (user_id = ?1 AND task_id NOT IN (${owned})) OR (user_id != ?1 AND task_id IN (${owned}))`).bind(userId),
+    db.prepare(`DELETE FROM reminder_sent WHERE (user_id = ?1 AND task_id NOT IN (${owned})) OR (user_id != ?1 AND task_id IN (${owned}))`).bind(userId),
+    db.prepare('UPDATE tasks SET claimed_by = NULL WHERE (claimed_by = ?1 AND user_id != ?1) OR (user_id = ?1 AND claimed_by IS NOT NULL AND claimed_by != ?1)').bind(userId),
     db.prepare('DELETE FROM task_shares WHERE to_user = ?1 OR from_user = ?1 OR task_id IN (SELECT id FROM tasks WHERE user_id = ?1)').bind(userId),
-    db.prepare('DELETE FROM email_invites WHERE from_user = ?').bind(userId),
+    // Lijsten van anderen: hij vertrekt. Zijn eigen gedeelde lijsten: opgeheven (leden en uitnodigingen via de cascade).
+    db.prepare('DELETE FROM list_members WHERE user_id = ?1 AND list_id IN (SELECT id FROM shared_lists WHERE owner_id != ?1)').bind(userId),
+    db.prepare('UPDATE tasks SET shared_list = NULL, claimed_by = NULL, updated_at = ?2 WHERE shared_list IN (SELECT id FROM shared_lists WHERE owner_id = ?1)').bind(userId, ts),
+    db.prepare('DELETE FROM shared_lists WHERE owner_id = ?1').bind(userId),
+    db.prepare('DELETE FROM email_invites WHERE from_user = ?1').bind(userId),
   ];
 }
 
@@ -199,7 +205,7 @@ adminPages.post('/reports/:id/:action', async (c) => {
     const target = await db.prepare('SELECT role FROM users WHERE id = ?').bind(r.reported_id).first<{ role: string }>();
     if (!target) throw new HttpError(404, 'err.not_found');
     if (target.role === 'admin') throw new HttpError(400, 'err.suspend_admin');
-    if (action === 'suspend') await db.batch([...await suspendStmts(db, r.reported_id), mark('suspended')]);
+    if (action === 'suspend') await db.batch([...suspendStmts(db, r.reported_id), mark('suspended')]);
     else await db.prepare('UPDATE users SET suspended_at = NULL WHERE id = ?').bind(r.reported_id).run();
   } else throw new HttpError(404, 'err.not_found');
   return c.redirect(`/admin/reports/${r.id}`, 303);
