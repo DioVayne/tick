@@ -10,6 +10,7 @@ How to use Tick, one page per topic. Installing Tick is in [SETUP.md](../SETUP.m
 | [Places](places.md) | Reminders on arrival or on leaving, favorite places, the radius, notifying again, on time on the road |
 | [Driving mode](driving-mode.md) | The bigger, simpler view while you drive, Not now and Never, adding and editing on the road |
 | [Creating your own account](signup.md) | On an open Tick: making an account, confirming your email address, the 30 days, sharing by email |
+| [Reporting and blocking](reporting.md) | On an open Tick: reporting a shared task, list, file or invitation, blocking someone, what the administrator can do |
 | [Sharing](sharing.md) | Accounts for your household and a forgotten password, sharing a list, sharing a task or a copy, sharing on an open Tick, seeing how far others are |
 | [Android app](android.md) | Download, linking, the home-screen widget, quick add, on time on the road, updates |
 | [iPhone and iPad](iphone.md) | Putting Tick on the home screen, notifications, what an iPhone cannot do |

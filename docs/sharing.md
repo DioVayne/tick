@@ -48,6 +48,8 @@ On a Tick where everyone makes their own account (such as the one behind the And
 
 - **Free version: one person.** You can share with one other person: as many tasks and lists as you like, but all with that same person (the administrator can change the number). Tasks, lists and invitations by email all count; what others share with you does not, so you can always accept an invitation. Trying to share with a second person gives a message saying so.
 
+Something shared with you that shouldn't be? You can report it and block the person: see [Reporting and blocking](reporting.md).
+
 You always see the same thing, whether or not the address has an account: *Together with* or the list dialog shows the address with "waiting for an answer" until they accept, and then their name. You can withdraw an invitation there with **Remove**.
 
 ## Seeing how far the others are

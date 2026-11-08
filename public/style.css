@@ -988,7 +988,7 @@ html[data-drive] #add .add-fold, html[data-drive] #add .add-peek { display: none
 html[data-drive] body.task-open .dback { min-height: 52px; }
 
 /* Meldvenster (report.js) en meldknop bij een bijlage. */
-.report-dialog textarea { width: 100%; resize: vertical; font: inherit; }
+.report-dialog textarea { width: 100%; min-height: 4.5em; resize: vertical; font: inherit; }
 .report-dialog .report-block { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: .9375rem; }
 .report-dialog .report-block input { width: auto; margin: 0; accent-color: var(--accent); }
 .att-grid li { position: relative; }
