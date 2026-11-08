@@ -44,7 +44,7 @@ On a Tick where everyone makes their own account (such as the one behind the And
 
 - **By email address:** there is no list of accounts to pick from. Type the full email address of the person you want to share with. People you already share an accepted task or list with appear as a button.
 - **Confirm first:** you can share once your own email address is confirmed (see [Creating your own account](signup.md)).
-- **An address without an account:** Tick emails that address an invitation with your name, the name of the task or list, and how to get Tick. Once they make an account with that address and confirm it, the invitation is waiting for them in Tick. An invitation stays open for 30 days.
+- **An address without an account:** Tick emails that address an invitation with your name, the name of the task or list, and how to get Tick. The button in that email is a personal link: it opens the sign-up screen with their address filled in. Whoever signs up through that link gets the invitation, even with another email address; someone who already has an account can sign in through the link and gets it in that account. An invitation stays open for 30 days.
 
 You always see the same thing, whether or not the address has an account: *Together with* or the list dialog shows the address with "waiting for an answer" until they accept, and then their name. You can withdraw an invitation there with **Remove**.
 

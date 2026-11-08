@@ -292,8 +292,8 @@ sharedListsApi.post('/', async (c) => {
   if ('email' in to) {
     // Openbare Tick, adres zonder bevestigd account: de lijst wordt toch gedeeld (anders ziet de deler het verschil).
     if (stmts.length) await db.batch(stmts);
-    await addEmailInvite(db, userId, to.email, { kind: 'list', listId });
-    await afterEmailInvite(c, to.email, { kind: 'list', title: name });
+    const inv = await addEmailInvite(db, userId, to.email, { kind: 'list', listId });
+    await afterEmailInvite(c, inv.id, to.email, { kind: 'list', title: name });
     return c.json({ id: listId, list_id: listId, status: 'pending' }, 201);
   }
   const toUser = to.userId;
