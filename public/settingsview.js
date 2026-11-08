@@ -854,7 +854,11 @@ async function paintUsers() {
     rows = [note(offlineText(e))];
   }
   if (!S.open) return;
-  paint('accounts', ...rows, row('', add));
+  // Openbare Tick: de meldingen van gebruikers (src/admin.ts), een pagina van de server.
+  const reports = CONFIG.openSignup
+    ? row(t('set.reports'), btn(t('set.reports_open'), () => { location.href = '/admin/reports'; }), t('set.reports_note'))
+    : null;
+  paint('accounts', reports, ...rows, row('', add));
 }
 
 // ---------- 💾 Gegevens ----------

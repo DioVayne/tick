@@ -29,7 +29,7 @@ Block someone from the report window (**Also block**, or **Only block** to block
 Your blocked people are under **⚙ Settings → Account → Blocked people**. **Unblock** lifts the block; what was shared before does not come back, but you can share again.
 
 ## What the administrator can do
-The administrator opens the report on a page only they can see, signed in. There they see the reported content as it is now, with its files, and who reported it and who it is about. They can:
+The administrator opens the report from the link in the email, or from **⚙ Settings → Accounts → Reports**: a page only they can see, signed in. There they see the reported content as it is now, with its files, and who reported it and who it is about. They can:
 
 - mark it as **Nothing wrong**;
 - **Remove content**: the task or file is deleted for good. A file also disappears from copies other people accepted;
