@@ -228,6 +228,7 @@ Open the app once online afterwards, so the service worker caches the new versio
   - `"OPEN_SIGNUP": "true"`: the login page gets **Create account** (`/signup`). New accounts must confirm their email address before they can share; unconfirmed accounts are deleted after 30 days. Accounts can no longer see each other: sharing goes by typing a full email address, and an address without an account gets an invitation email. Invitation emails use at most half of `MAIL_DAILY_LIMIT`, so password and confirmation emails keep working.
   - `"PLAY_STORE_URL"` (optional): a Google Play link the invitation email mentions.
   - `"SIGNUP_DAILY_LIMIT"` (optional, default 100): most new accounts per day (UTC). When it is reached, the administrator gets one push notification that day.
+  - `"FREE_SHARE_PEOPLE"` (optional, default 1): with how many different people one account can share (tasks, lists and invitations by email together; what others share with them does not count). The administrator has no limit.
 
   Leave `OPEN_SIGNUP` out for a household or small team: then you invite people yourself (**Settings → Accounts**) and everyone can pick each other when sharing.
 - **Log out on other devices** (for example after losing a phone): **Settings → Account → Log out on other devices**. This device stays logged in. Keys for phones and automations keep working; revoke those under **Advanced → Keys**.

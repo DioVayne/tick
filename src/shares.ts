@@ -5,7 +5,7 @@ import { getAccess, STEP, topMin } from './access';
 import { inBackground, notifyUser, sendToAll, type Payload, type Sender } from './push';
 import { translate } from '../public/i18n.js';
 import { copyAttachmentStmt } from './attachments';
-import { addEmailInvite, afterEmailInvite, knownPeople, resolveOpenRecipient, revokeEmailInvite } from './invites';
+import { addEmailInvite, afterEmailInvite, assertMayShareWith, knownPeople, resolveOpenRecipient, revokeEmailInvite } from './invites';
 import { openSignup } from './signup';
 
 /** Taken delen: uitnodigen, uitnodigingen bekijken, accepteren, weigeren en stoppen. */
@@ -106,6 +106,7 @@ sharesApi.post('/', async (c) => {
   if (open) {
     // Openbare Tick: alleen e-mailadres (of een bekende), en hetzelfde antwoord met of zonder account erachter.
     const to = await resolveOpenRecipient(c.env, c.get('user'), b);
+    await assertMayShareWith(c.env, c.get('user'), to);
     if ('email' in to) {
       const inv = await addEmailInvite(db, userId, to.email, { kind: 'task', taskId: task.id, mode: b.mode });
       await afterEmailInvite(c, inv.id, to.email, { kind: 'task', title: task.title });

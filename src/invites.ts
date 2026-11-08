@@ -3,6 +3,7 @@ import type { AppEnv, Env } from './index';
 import { cleanEmail } from './account';
 import { HttpError } from './errors';
 import { mailEnabled, mailLayout, releaseMail, reserveMail, sendMail } from './mail';
+import { openSignup } from './signup';
 import { inBackground, type Locale } from './push';
 import { hashKey, newKey } from './keys';
 import { translate } from '../public/i18n.js';
@@ -170,4 +171,46 @@ export async function pendingMemberId(listId: string, userId: string): Promise<s
   const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`member:${listId}:${userId}`)));
   const h = [...d.slice(0, 16)].map((b) => b.toString(16).padStart(2, '0')).join('');
   return `${MAIL_PREFIX}${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
+
+export const DEFAULT_FREE_SHARE_PEOPLE = 1;
+
+/**
+ * Met hoeveel verschillende mensen je hoogstens deelt: alleen op een openbare Tick, en niet voor de beheerder (dan
+ * null, geen grens). Nu heeft iedereen de gratis versie (`FREE_SHARE_PEOPLE`, standaard 1); een betaalde versie komt
+ * later hier bij.
+ */
+export function sharePeopleLimit(env: Env, user: Pick<User, 'role'>): number | null {
+  if (!openSignup(env) || user.role === 'admin') return null;
+  const n = Number(env.FREE_SHARE_PEOPLE);
+  return Number.isInteger(n) && n >= 1 ? n : DEFAULT_FREE_SHARE_PEOPLE;
+}
+
+/**
+ * Met wie je deelt als eigenaar: ontvangers van je taken (ook openstaand, ook kopieën), leden van je gedeelde lijsten,
+ * de anderen in je kopiegroepen en de adressen van je openstaande uitnodigingen. Wat anderen met jou delen, telt niet
+ * (behalve een kopiegroep: die houdt geen richting bij).
+ */
+export async function sharePeople(db: D1Database, userId: string): Promise<{ ids: Set<string>; emails: Set<string> }> {
+  const [ids, emails] = await db.batch<{ v: string }>([
+    db.prepare('SELECT s.to_user AS v FROM task_shares s JOIN tasks t ON t.id = s.task_id WHERE t.user_id = ?1 ' +
+      "UNION SELECT m.user_id FROM list_members m JOIN shared_lists l ON l.id = m.list_id WHERE l.owner_id = ?1 AND m.role = 'member' " +
+      'UNION SELECT o.user_id FROM tasks mine JOIN tasks o ON o.copy_group = mine.copy_group WHERE mine.user_id = ?1 AND mine.copy_group IS NOT NULL ' +
+      'AND mine.deleted_at IS NULL AND o.deleted_at IS NULL AND o.user_id != ?1').bind(userId),
+    db.prepare('SELECT DISTINCT lower(email) AS v FROM email_invites WHERE from_user = ? AND expires_at > ?').bind(userId, new Date().toISOString()),
+  ]);
+  return { ids: new Set(ids.results.map((r) => r.v)), emails: new Set(emails.results.map((r) => r.v)) };
+}
+
+/** 403 `err.share_limit` als `to` een nieuwe persoon is en je grens al bereikt is; met wie je al deelt, mag altijd. */
+export async function assertMayShareWith(env: Env, me: User, to: { userId: string } | { email: string }): Promise<void> {
+  const max = sharePeopleLimit(env, me);
+  if (max === null) return;
+  const { ids, emails } = await sharePeople(env.DB, me.id);
+  if ('userId' in to) {
+    if (ids.has(to.userId)) return;
+    const u = await env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(to.userId).first<{ email: string | null }>();
+    if (u?.email && emails.has(u.email.toLowerCase())) return;
+  } else if (emails.has(to.email.toLowerCase())) return;
+  if (ids.size + emails.size >= max) throw new HttpError(403, 'err.share_limit', { max });
 }
