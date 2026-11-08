@@ -125,7 +125,11 @@ export async function claimEmailInvites(env: Env, userId: string): Promise<void>
     db.prepare('INSERT INTO task_shares (id, task_id, from_user, to_user, mode, status, created_at) ' +
       "SELECT e.id, e.task_id, e.from_user, ?1, e.mode, 'pending', e.created_at FROM email_invites e " +
       'JOIN tasks t ON t.id = e.task_id WHERE e.email = ?2 AND e.expires_at > ?3 AND t.deleted_at IS NULL AND t.parent_id IS NULL ' +
-      'AND t.user_id != ?1 ON CONFLICT (task_id, to_user) DO NOTHING').bind(userId, user.email, now),
+      // Dezelfde controles als bij gewoon delen: een taak in een gedeelde lijst deel je via de lijst (alleen een kopie
+      // kan los), en een kopie niet aan iemand die al een exemplaar in de groep heeft.
+      "AND t.user_id != ?1 AND (e.mode = 'copy' OR t.shared_list IS NULL) " +
+      "AND NOT (e.mode = 'copy' AND t.copy_group IS NOT NULL AND EXISTS (SELECT 1 FROM tasks m WHERE m.user_id = ?1 AND m.copy_group = t.copy_group " +
+      'AND m.parent_id IS NULL AND m.deleted_at IS NULL)) ON CONFLICT (task_id, to_user) DO NOTHING').bind(userId, user.email, now),
     db.prepare('INSERT INTO list_members (list_id, user_id, role, status, name, created_at) ' +
       "SELECT e.list_id, ?1, 'member', 'pending', o.name, e.created_at FROM email_invites e JOIN shared_lists l ON l.id = e.list_id " +
       'JOIN list_members o ON o.list_id = e.list_id AND o.user_id = l.owner_id WHERE e.email = ?2 AND e.expires_at > ?3 AND l.owner_id != ?1 ' +

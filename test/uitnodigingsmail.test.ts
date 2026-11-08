@@ -63,8 +63,8 @@ describe('uitnodigingsmail', () => {
     const email = `nieuw-${uniq()}@ex.test`;
     const t = await newTask(a);
     await share(a, t.id, email);
-    await newTask(a, `Lijsttaak ${uniq()}`);
-    expect((await as(a, '/api/shared-lists', { method: 'POST', json: { name: 'Thuis', to: email } })).status).toBe(201);
+    await as(a, '/api/tasks', { method: 'POST', json: { title: `Lijsttaak ${uniq()}`, list: 'Werk' } });
+    expect((await as(a, '/api/shared-lists', { method: 'POST', json: { name: 'Werk', to: email } })).status).toBe(201);
 
     const res = await callWith(openEnv, '/signup', { method: 'POST', json: { name: 'Nieuw', email: email.toUpperCase(), password: 'lang-genoeg-1' } });
     const cookie = res.headers.get('set-cookie')!.split(';')[0];
@@ -75,9 +75,23 @@ describe('uitnodigingsmail', () => {
     const incoming = (await (await callWith(openEnv, '/api/shares/incoming', { cookie })).json()) as { task: { title: string } }[];
     expect(incoming.map((i) => i.task.title)).toContain(t.title);
     const lists = (await (await callWith(openEnv, '/api/shared-lists/incoming', { cookie })).json()) as { name: string }[];
-    expect(lists.map((l) => l.name)).toEqual(['Thuis']);
+    expect(lists.map((l) => l.name)).toEqual(['Werk']);
     const left = await env.DB.prepare('SELECT COUNT(*) AS n FROM email_invites WHERE email = ?').bind(email).first<{ n: number }>();
     expect(left!.n).toBe(0);
+  });
+
+  it('een gedeelde taak die intussen in een gedeelde lijst staat, wordt niet los omgezet (zoals bij gewoon delen)', async () => {
+    const [a, b] = [await createUser(), await createUser()];
+    const email = `lijst-${uniq()}@ex.test`;
+    const t = await newTask(a);
+    await share(a, t.id, email);
+    // Daarna deelt a de lijst Thuis (met de taak erin) met b: de taak hoort nu bij de gedeelde lijst.
+    expect((await as(a, '/api/shared-lists', { method: 'POST', json: { name: 'Thuis', to: b.email } })).status).toBe(201);
+    const res = await callWith(openEnv, '/signup', { method: 'POST', json: { name: 'Nieuw', email, password: 'lang-genoeg-1' } });
+    const cookie = res.headers.get('set-cookie')!.split(';')[0];
+    const verify = /https:\/\/tick\.test(\/verify\/[A-Za-z0-9_-]+)/.exec(sent().at(-1)!.text)![1];
+    await callWith(openEnv, verify, { accept: 'text/html' });
+    expect(await (await callWith(openEnv, '/api/shares/incoming', { cookie })).json()).toEqual([]);
   });
 
   it('een uitnodiging voor een intussen verwijderde taak wordt overgeslagen', async () => {
