@@ -4,7 +4,7 @@ Some Ticks are open to everyone, like the Tick behind the Android app in Google 
 
 ## Creating an account
 1. Open Tick. The welcome screen shows the Tick logo, **Sign in** and **Create account**.
-2. Tap **Create account** and fill in your name, email address and a password (at least 8 characters).
+2. Tap **Create account** and fill in your name, email address and a password (at least 8 characters). By creating an account you agree to the [terms of service](terms.md); the screen links to them and to the privacy page.
 3. You are in Tick straight away, with an empty list.
 
 Already have an account with that email address? Tick says so, with links to sign in and to **Forgot password?**.
