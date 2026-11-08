@@ -1,3 +1,4 @@
+import { adminPages } from './admin';
 import { blocksApi } from './blocks';
 import { reportsApi } from './reports';
 import { Hono, type Context } from 'hono';
@@ -190,6 +191,11 @@ app.post('/login', async (c) => {
     await new Promise((r) => setTimeout(r, 1500)); // rem op gokken
     throw new HttpError(401, 'err.login_failed');
   }
+  // Geschorst (na een melding): dat hoort alleen wie het juiste wachtwoord heeft.
+  if (user.suspended_at) {
+    const contact = contactEmail(c.env.ADMIN_CONTACT);
+    throw contact ? new HttpError(403, 'err.account_suspended', { email: contact }) : new HttpError(403, 'err.account_suspended_plain');
+  }
   await touchLastSeen(c.env.DB, user);
   c.header('Set-Cookie', await sessionCookie(c.env, user));
   return c.json({ ok: true });
@@ -220,7 +226,8 @@ app.use('*', async (c, next) => {
     const { user: known, ...auth } = found;
     // Een sleutel van een verwijderd account (of een cookie van een verdwenen gebruiker) geeft geen toegang.
     const user = known ?? await getUser(c.env.DB, auth.userId);
-    if (!user) throw new HttpError(401, 'err.unauthorized');
+    // Een geschorst account (src/admin.ts) kan niets meer, ook niet met een sleutel.
+    if (!user || user.suspended_at) throw new HttpError(401, 'err.unauthorized');
     const isInbox = c.req.path === '/api/inbox';
     // Het inbox-token mag alleen taken in de inbox zetten, en de inbox is alleen voor het inbox-token.
     if (auth.kind === 'inbox' && !(isInbox && c.req.method === 'POST')) throw new HttpError(403, 'err.forbidden');
@@ -265,6 +272,7 @@ app.route('/api/shares', sharesApi);
 app.route('/api/shared-lists', sharedListsApi);
 app.route('/api/blocks', blocksApi);
 app.route('/api/reports', reportsApi);
+app.route('/admin', adminPages);
 app.route('/api', attachmentsApi);
 app.route('/api/background', backgroundApi);
 // De MCP-tools roepen deze app zelf aan (met dezelfde sleutel); pas bij een request, dus alle routes staan er dan.
