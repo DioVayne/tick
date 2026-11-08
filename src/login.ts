@@ -41,7 +41,7 @@ export function signupPage(locale: string | undefined, forgot: boolean, join?: {
 <input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="new-password" minlength="${MIN_PASSWORD}" required>
 <button>${t('signup.submit')}</button><p id="err" role="alert"></p>
 ${forgot ? `<p class="link" id="taken" hidden><a href="/forgot">${t('login.forgot')}</a></p>` : ''}
-<p class="hint">${t('signup.privacy').replace('{link}', `<a href="/privacy">${t('priv.title')}</a>`)}</p>
+<p class="hint">${t('signup.privacy').replace('{terms}', `<a href="${termsPath(lang)}">${t('terms.link')}</a>`).replace('{link}', `<a href="/privacy">${t('priv.title')}</a>`)}</p>
 <p class="link">${t('signup.have_account')} <a href="/login${join ? `?next=${encodeURIComponent('/join/' + join.code)}` : ''}">${t('login.submit')}</a></p></form>
 <script type="module" src="/signup.js"></script></body></html>`;
 }
@@ -171,7 +171,87 @@ ${items(['priv.others_cloudflare', 'priv.others_push', 'priv.others_osm', ...(ma
 <h2>${t('priv.rights_title')}</h2>
 <p>${t('priv.rights', { link: `<a href="/delete-account">${t('del.title')}</a>` })}</p>
 <p>${t('priv.complaint')}</p>
-<p><a href="/login">${t('del.to_login')}</a></p>
+<p>${open ? `<a href="${termsPath(lang)}">${t('terms.title')}</a> · ` : ''}<a href="/login">${t('del.to_login')}</a></p>
+</main></body></html>`;
+}
+
+/** Waar de voorwaarden staan: /voorwaarden in het Nederlands, /terms in het Engels. */
+export function termsPath(locale: string | undefined): string {
+  return normLocale(locale) === 'nl' ? '/voorwaarden' : '/terms';
+}
+
+/** Wie de dienst levert, voor de voorwaarden: naam (OPERATOR_NAME), adres (OPERATOR_ADDRESS) en KvK-nummer (OPERATOR_KVK). */
+export type Operator = { name?: string; address?: string; kvk?: string };
+
+/**
+ * Algemene voorwaarden (/terms in het Engels, /voorwaarden in het Nederlands), alleen op een openbare Tick. `host` is
+ * het adres van deze Tick (zoals app.ticktodo.nl), `contact` komt uit ADMIN_CONTACT via contactEmail.
+ */
+export function termsPage(locale: string, host: string, contact: string | null, op: Operator = {}): string {
+  const lang = normLocale(locale);
+  const h = escapeHtml(host);
+  const t = (key: string, vars?: Record<string, string>) => translate(lang, key, { host: h, ...vars });
+  const name = (op.name ?? '').trim();
+  const kvk = (op.kvk ?? '').trim();
+  const details = [(op.address ?? '').trim(), kvk ? translate(lang, 'terms.kvk', { kvk }) : ''].filter(Boolean).map(escapeHtml).join(' · ');
+  const mail = contact ? escapeHtml(contact) : '';
+  const items = (keys: string[]) => `<ul>${keys.map((k) => `<li>${t(k)}</li>`).join('')}</ul>`;
+  const lead = (key: string, vars?: Record<string, string>) => `<p><strong>${t(`${key}_lead`)}</strong> ${t(key, vars)}</p>`;
+  const page = (path: string) => `<a href="${path}">${h}${path}</a>`;
+  const other = lang === 'nl' ? '/terms' : '/voorwaarden';
+  return `<!doctype html>
+<html lang="${lang}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${t('terms.title')}</title><meta name="theme-color" content="#ffffff">
+<script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
+</head><body><main class="page">
+<h1>${t('terms.title')}</h1>
+<p class="hint">${t('terms.updated')}</p>
+<p>${t('terms.intro')}</p>
+<h2>${t('terms.who_title')}</h2>
+<p>${name ? t('terms.who_named', { name: escapeHtml(name) }) : t('terms.who_unnamed')}</p>${details ? `
+<p>${details}</p>` : ''}
+<p>${contact ? t('terms.contact', { email: `<a href="mailto:${mail}">${mail}</a>` }) : t('terms.contact_none')}</p>
+<h2>${t('terms.what_title')}</h2>
+<p>${t('terms.what')}</p>
+<p>${t('terms.age')}</p>
+<p>${t('terms.open_source')}</p>
+<h2>${t('terms.account_title')}</h2>
+${items(['terms.account_email', 'terms.account_password', 'terms.account_misuse', 'terms.account_one'])}
+<h2>${t('terms.content_title')}</h2>
+<p>${t('terms.content_own')}</p>
+<p>${t('terms.content_shared')}</p>
+<h2>${t('terms.use_title')}</h2>
+<p>${t('terms.use_intro')}</p>
+${items(['terms.use_law', 'terms.use_harass', 'terms.use_rights', 'terms.use_hack', 'terms.use_overload', 'terms.use_malware'])}
+<p>${t('terms.use_report')}</p>
+<h2>${t('terms.paid_title')}</h2>
+<p>${t('terms.paid_now')}</p>
+<p>${t('terms.paid_future')}</p>
+${items(['terms.paid_price', 'terms.paid_store', 'terms.paid_cancel', 'terms.paid_free_stays'])}
+<p><strong>${t('terms.withdraw_lead')}</strong> ${t('terms.withdraw')}</p>
+${items(['terms.withdraw_now', 'terms.withdraw_sub'])}
+<p>${t('terms.withdraw_how')}</p>
+<h2>${t('terms.ending_title')}</h2>
+${lead('terms.avail')}
+${lead('terms.remind')}
+${lead('terms.change')}
+${lead('terms.you', { link: page('/delete-account') })}
+${lead('terms.we')}
+<h2>${t('terms.liability_title')}</h2>
+<p>${t('terms.liab_intro')}</p>
+${items(['terms.liab_free', 'terms.liab_paid'])}
+<p>${t('terms.liab_except')}</p>
+<p>${t('terms.liab_you')}</p>
+<h2>${t('terms.privacy_title')}</h2>
+<p>${t('terms.privacy', { link: page('/privacy') })}</p>
+<h2>${t('terms.changes_title')}</h2>
+<p>${t('terms.changes')}</p>
+<h2>${t('terms.law_title')}</h2>
+<p>${t('terms.law')}</p>
+<p>${t('terms.law_court')}</p>
+<p>${t('terms.law_rest')}</p>
+<p><a href="${other}">${t('terms.other_lang')}</a> · <a href="/privacy">${t('priv.title')}</a> · <a href="/login">${t('del.to_login')}</a></p>
 </main></body></html>`;
 }
 
