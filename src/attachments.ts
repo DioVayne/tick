@@ -213,8 +213,13 @@ function byteRange(r: R2Range, size: number): { from: number; to: number } | nul
   return from < size && to >= from ? { from, to } : null;
 }
 
-attachmentsApi.get('/attachments/:id', async (c) => {
-  const row = await attachmentFor(c, c.req.param('id'));
+attachmentsApi.get('/attachments/:id', async (c) => serveAttachment(c, await attachmentFor(c, c.req.param('id'))));
+
+/**
+ * Het bestand van een bijlage-rij als antwoord, met Range, ETag en veilige headers (sandbox, download voor alles wat
+ * geen afbeelding is). Ook voor de beheerpagina (src/admin.ts), na zijn eigen toegangscontrole.
+ */
+export async function serveAttachment(c: Context<AppEnv>, row: Pick<Row, 'r2_key' | 'size' | 'mime' | 'name'>): Promise<Response> {
   const headers = c.req.raw.headers;
   const want = parseRange(c.req.header('range'));
   // De grootte staat al in de rij: valt het bereik buiten het bestand, dan meteen het hele bestand, in één keer uit R2.
@@ -238,7 +243,7 @@ attachmentsApi.get('/attachments/:id', async (c) => {
     return new Response(obj.body, { status: 206, headers: out });
   }
   return new Response(obj.body, { status: 200, headers: out });
-});
+}
 
 attachmentsApi.delete('/attachments/:id', async (c) => {
   const row = await attachmentFor(c, c.req.param('id'));
