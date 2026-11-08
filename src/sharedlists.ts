@@ -5,7 +5,7 @@ import { STEP, topMin } from './access';
 import { inBackground, notifyUser, sendToAll, type Sender } from './push';
 import { recipientOf } from './shares';
 import { translate } from '../public/i18n.js';
-import { addEmailInvite, afterEmailInvite, assertMayShareWith, MAIL_PREFIX, pendingMemberId, resolveOpenRecipient, revokeEmailInvite } from './invites';
+import { addEmailInvite, afterEmailInvite, assertMayShareWith, MAIL_PREFIX, type OpenRecipient, pendingMemberId, resolveOpenRecipient, revokeEmailInvite } from './invites';
 import { openSignup } from './signup';
 
 /**
@@ -273,7 +273,7 @@ sharedListsApi.post('/', async (c) => {
   const list = await listOf(db, userId, name);
   if (list && list.role !== 'owner') throw new HttpError(403, 'err.shared_list_owner_only');
   if (!list && !(await listNames(db, userId)).has(name)) throw new HttpError(404, 'err.list_unknown');
-  let to: { userId: string } | { email: string };
+  let to: OpenRecipient;
   if (openSignup(c.env)) {
     to = await resolveOpenRecipient(c.env, c.get('user'), b);
     if (!('userId' in to && to.userId === userId)) await assertMayShareWith(c.env, c.get('user'), to);
@@ -297,7 +297,7 @@ sharedListsApi.post('/', async (c) => {
     // Openbare Tick, adres zonder bevestigd account: de lijst wordt toch gedeeld (anders ziet de deler het verschil).
     if (stmts.length) await db.batch(stmts);
     const inv = await addEmailInvite(db, userId, to.email, { kind: 'list', listId });
-    await afterEmailInvite(c, inv.id, to.email, { kind: 'list', title: name });
+    await afterEmailInvite(c, inv.id, to.email, { kind: 'list', title: name }, to.silent);
     return c.json({ id: listId, list_id: listId, status: 'pending' }, 201);
   }
   const toUser = to.userId;

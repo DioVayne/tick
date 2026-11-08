@@ -1,3 +1,4 @@
+import { blocksApi } from './blocks';
 import { Hono, type Context } from 'hono';
 import { keysApi } from './keys';
 import { pairApi, redeem } from './pair';
@@ -261,6 +262,7 @@ app.route('/api/export', exportApi);
 app.route('/api/import', importApi);
 app.route('/api/shares', sharesApi);
 app.route('/api/shared-lists', sharedListsApi);
+app.route('/api/blocks', blocksApi);
 app.route('/api', attachmentsApi);
 app.route('/api/background', backgroundApi);
 // De MCP-tools roepen deze app zelf aan (met dezelfde sleutel); pas bij een request, dus alle routes staan er dan.

@@ -29,16 +29,23 @@ export async function knownPeople(db: D1Database, userId: string): Promise<{ id:
     "SELECT s.to_user FROM task_shares s JOIN tasks t ON t.id = s.task_id WHERE t.user_id = ?1 AND s.mode = 'shared' AND s.status = 'accepted' " +
     "UNION SELECT t.user_id FROM task_shares s JOIN tasks t ON t.id = s.task_id WHERE s.to_user = ?1 AND s.mode = 'shared' AND s.status = 'accepted' " +
     "UNION SELECT o.user_id FROM list_members me JOIN list_members o ON o.list_id = me.list_id WHERE me.user_id = ?1 AND me.status = 'accepted' AND o.status = 'accepted'" +
-    ') ORDER BY lower(name), id',
+    // Niet wie je blokkeerde of wie jou blokkeerde, en geen geschorst account.
+    ') AND suspended_at IS NULL AND id NOT IN (SELECT blocked_id FROM blocks WHERE user_id = ?1 UNION SELECT user_id FROM blocks WHERE blocked_id = ?1) ' +
+    'ORDER BY lower(name), id',
   ).bind(userId).all<{ id: string; name: string }>();
   return results;
 }
 
+/** De ontvanger op een openbare Tick; `silent`: een uitnodiging aan het adres die nooit aankomt (geen mail, geen omzetten). */
+export type OpenRecipient = { userId: string } | { email: string; silent?: boolean };
+
 /**
  * De ontvanger op een openbare Tick. Afzender onbevestigd → 403. `to_user` alleen uit `knownPeople`; anders een geldig
- * e-mailadres. Een bevestigd account → `{ userId }`, anders (geen of onbevestigd account) → `{ email }`.
+ * e-mailadres. Een bevestigd account → `{ userId }`, anders (geen of onbevestigd account) → `{ email }`. Een account
+ * dat geblokkeerd is (in welke richting ook) of geschorst → `{ email, silent: true }`: voor de deler precies hetzelfde
+ * als een adres zonder account, maar er komt nooit iets aan.
  */
-export async function resolveOpenRecipient(env: Env, me: User, b: Record<string, unknown>): Promise<{ userId: string } | { email: string }> {
+export async function resolveOpenRecipient(env: Env, me: User, b: Record<string, unknown>): Promise<OpenRecipient> {
   if (!me.email_verified_at) throw new HttpError(403, mailEnabled(env) ? 'err.verify_first' : 'err.share_unavailable');
   const db = env.DB;
   if (typeof b.to_user === 'string' && b.to_user) {
@@ -52,7 +59,10 @@ export async function resolveOpenRecipient(env: Env, me: User, b: Record<string,
     throw new HttpError(400, 'err.share_email_needed');
   }
   if (email.toLowerCase() === (me.email ?? '').toLowerCase()) throw new HttpError(400, 'err.share_self');
-  const u = await db.prepare('SELECT id FROM users WHERE email = ? AND email_verified_at IS NOT NULL').bind(email).first<{ id: string }>();
+  const u = await db.prepare('SELECT id, suspended_at, EXISTS (SELECT 1 FROM blocks WHERE (user_id = ?2 AND blocked_id = users.id) ' +
+    'OR (user_id = users.id AND blocked_id = ?2)) AS blocked FROM users WHERE email = ?1 AND email_verified_at IS NOT NULL')
+    .bind(email, me.id).first<{ id: string; suspended_at: string | null; blocked: number }>();
+  if (u && (u.blocked || u.suspended_at)) return { email, silent: true };
   return u ? { userId: u.id } : { email };
 }
 
@@ -85,7 +95,8 @@ export async function emailInviteRows(db: D1Database, ownerId: string): Promise<
 }
 
 /** Na een nieuwe uitnodiging aan een adres: de uitnodigingsmail, op de achtergrond. */
-export async function afterEmailInvite(c: Context<AppEnv>, inviteId: string, email: string, what: { kind: 'task' | 'list'; title: string }): Promise<void> {
+export async function afterEmailInvite(c: Context<AppEnv>, inviteId: string, email: string, what: { kind: 'task' | 'list'; title: string }, silent = false): Promise<void> {
+  if (silent) return; // geblokkeerd of geschorst: geen mail
   const me = c.get('user');
   await inBackground(c, sendInviteMail(c.env, { id: me.id, name: me.name }, inviteId, email, what, new URL(c.req.url).origin, c.get('lang')), 'uitnodigingsmail');
 }
@@ -125,6 +136,10 @@ export async function claimEmailInvites(env: Env, userId: string): Promise<void>
   if (user?.email) await claimInvites(env, userId, { email: user.email });
 }
 
+/** Voor claimInvites: de deler (`e.from_user`) en ?1 blokkeerden elkaar niet, en de deler is niet geschorst. */
+const NOT_BLOCKED = 'NOT EXISTS (SELECT 1 FROM blocks k WHERE (k.user_id = e.from_user AND k.blocked_id = ?1) OR (k.user_id = ?1 AND k.blocked_id = e.from_user)) ' +
+  'AND NOT EXISTS (SELECT 1 FROM users s WHERE s.id = e.from_user AND s.suspended_at IS NOT NULL) ';
+
 /**
  * Zet uitnodigingen aan adressen om in gewone uitnodigingen voor `userId`: alle aan een adres (na bevestigen), of één
  * via de link uit de mail (`/join/<code>`: wie de link heeft, kreeg de mail). Daarna zijn die uitnodigingen weg.
@@ -141,12 +156,12 @@ export async function claimInvites(env: Env, userId: string, by: { email: string
       `JOIN tasks t ON t.id = e.task_id WHERE ${where} AND e.expires_at > ?3 AND t.deleted_at IS NULL AND t.parent_id IS NULL ` +
       // Dezelfde controles als bij gewoon delen: een taak in een gedeelde lijst deel je via de lijst (alleen een kopie
       // kan los), en een kopie niet aan iemand die al een exemplaar in de groep heeft.
-      "AND t.user_id != ?1 AND (e.mode = 'copy' OR t.shared_list IS NULL) " +
+      "AND t.user_id != ?1 AND (e.mode = 'copy' OR t.shared_list IS NULL) AND " + NOT_BLOCKED +
       "AND NOT (e.mode = 'copy' AND t.copy_group IS NOT NULL AND EXISTS (SELECT 1 FROM tasks m WHERE m.user_id = ?1 AND m.copy_group = t.copy_group " +
       'AND m.parent_id IS NULL AND m.deleted_at IS NULL)) ON CONFLICT (task_id, to_user) DO NOTHING').bind(userId, key, now),
     db.prepare('INSERT INTO list_members (list_id, user_id, role, status, name, created_at) ' +
       "SELECT e.list_id, ?1, 'member', 'pending', o.name, e.created_at FROM email_invites e JOIN shared_lists l ON l.id = e.list_id " +
-      `JOIN list_members o ON o.list_id = e.list_id AND o.user_id = l.owner_id WHERE ${where} AND e.expires_at > ?3 AND l.owner_id != ?1 ` +
+      `JOIN list_members o ON o.list_id = e.list_id AND o.user_id = l.owner_id WHERE ${where} AND e.expires_at > ?3 AND l.owner_id != ?1 AND ` + NOT_BLOCKED +
       'ON CONFLICT (list_id, user_id) DO NOTHING').bind(userId, key, now),
     db.prepare(`DELETE FROM email_invites WHERE ${where.replace('?2', '?1').replace('e.', '')}`).bind(key),
   ]);
