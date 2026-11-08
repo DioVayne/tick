@@ -6,7 +6,7 @@ import { openListMenu } from './listmenu.js';
 import { initComposer, refreshComposer } from './composer.js';
 import { $, el, render, status, toast } from './render.js';
 import { closeCalendar, hideCalendar, isCalendarOpen, openCalendar, refreshCalendar } from './calendarview.js';
-import { closeSettings, hideSettings, isSettingsOpen, openSettings } from './settingsview.js';
+import { closeSettings, hideSettings, isSettingsOpen, openSettings, paintMe } from './settingsview.js';
 import { closeHelp, hideHelp, isHelpOpen, openHelp } from './help.js';
 import { closeManager, hideManager, isManagerOpen, openManager, refreshManager } from './manager.js';
 import { closeDrawer, onListContext, selectDone, selectList, selectTrash, setupSidebar } from './sidebar.js';
@@ -36,6 +36,9 @@ $('#fab').addEventListener('click', () => {
 
 // Instellingen: een eigen pagina in de middenkolom (meldingen, thema en uitloggen staan daar).
 $('#btn-settings').addEventListener('click', () => { hideCalendar(); hideHelp(); hideManager(); openSettings({ push: true }); });
+// Je naam bovenaan de zijbalk: opent Instellingen met het blok Account open.
+paintMe(CONFIG.userName);
+$('#btn-account').addEventListener('click', () => { hideCalendar(); hideHelp(); hideManager(); openSettings({ push: true, section: 'account' }); });
 // Kalender: maandraster en agenda van taken met een datum.
 $('#btn-calendar').addEventListener('click', () => {
   if (isCalendarOpen()) { closeDrawer(); return; }

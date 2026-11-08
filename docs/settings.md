@@ -1,6 +1,6 @@
 # Settings
 
-Everything is under **⚙ Settings** in the sidebar. Some settings belong to **this device** only, some to **you** (all your devices), and a few to the **whole Tick** (administrator only). Offline, the settings page opens but shows the last known values for what can only change online.
+Everything is under **⚙ Settings** in the sidebar. Your name at the top of the sidebar is a shortcut to **Account**: tap it and Settings opens with that part already open. Some settings belong to **this device** only, some to **you** (all your devices), and a few to the **whole Tick** (administrator only). Offline, the settings page opens but shows the last known values for what can only change online.
 
 ## Display (this device)
 - **Theme:** automatic, light or dark.
