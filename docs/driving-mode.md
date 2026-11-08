@@ -25,5 +25,5 @@ Tick uses your location only on this device, only while Tick is open, and only t
 
 ## It does not switch on
 - If Tick has been open for a minute without getting your location, it says so once.
-- Android app 1.11 and older do not pass your location to Tick, so driving mode never switches on there. Update the app to 1.12 or later.
+- Android app 1.12.0 and older do not pass your location to Tick, so driving mode never switches on there (and **my location** on the map does nothing). Update the app to 1.12.1 or later.
 - Otherwise check that location is on, on the phone and for Tick (or for your browser).
