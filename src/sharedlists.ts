@@ -78,7 +78,8 @@ export async function attachStmts(db: D1Database, task: Pick<TaskRow, 'id'>, lis
   return [
     db.prepare('UPDATE tasks SET user_id = ?1, list = COALESCE((SELECT name FROM list_members WHERE list_id = ?2 AND user_id = ?1), ?3), updated_at = ?4 ' +
       'WHERE id = ?5 OR parent_id = ?5').bind(list.owner_id, list.id, list.name, ts, task.id),
-    db.prepare('UPDATE tasks SET shared_list = ?, position = ? WHERE id = ?').bind(list.id, ownerPosition, task.id),
+    // added_by: wie hem in de lijst zette (voor melden; de taak zelf staat op naam van de eigenaar).
+    db.prepare('UPDATE tasks SET shared_list = ?, position = ?, added_by = ? WHERE id = ?').bind(list.id, ownerPosition, actorId, task.id),
     // De eigenaar heeft de taak nu zelf; een deelrij voor hem zou hem dubbel geven.
     db.prepare('DELETE FROM task_shares WHERE task_id = ? AND to_user = ?').bind(task.id, list.owner_id),
     db.prepare(
