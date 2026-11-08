@@ -5,6 +5,7 @@ import { el, toast } from './render.js';
 import CONFIG from './settings.js';
 import { load, sharedOf, state } from './store.js';
 import { renderListInvites } from './sharedlist.js';
+import { openReportDialog, reportsOn } from './report.js';
 import { recipientField, verifyHint } from './verifybar.js';
 
 // Delen gaat alleen online: uitnodigen, accepteren, weigeren en stoppen zijn directe verzoeken, daarna een load().
@@ -150,6 +151,7 @@ export function renderInvites(root) {
   root.append(el('div', { class: 'invites' }, ...state.invites.map((inv) => el('div', { class: 'invite', 'data-id': inv.id, role: 'group' },
     el('p', {}, t(inv.mode === 'copy' ? 'share.invite_copy' : 'share.invite_shared', { name: inv.from.name, title: inv.task.title })),
     el('div', { class: 'invite-buttons' },
+      reportsOn() ? el('button', { type: 'button', class: 'ghost', onclick: () => openReportDialog({ share_id: inv.id }, inv.task.title, inv.from.name) }, t('report.button')) : null,
       el('button', { type: 'button', class: 'ghost', onclick: () => call('POST', `/api/shares/${inv.id}/decline`) }, t('share.decline')),
       el('button', { type: 'button', onclick: async () => { if (await call('POST', `/api/shares/${inv.id}/accept`)) toast(t('share.accepted_toast'), 'ok'); } }, t('share.accept')))))));
 }

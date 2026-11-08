@@ -4,6 +4,7 @@ import { t } from './i18n.js';
 import { el, toast } from './render.js';
 import CONFIG from './settings.js';
 import { load, state } from './store.js';
+import { openReportDialog, reportableAttachment } from './report.js';
 
 // Bijlagen: foto's en bestanden bij een taak, alleen online (net als delen). De server bewaart ze in R2; de lijst per
 // taak komt mee in GET /api/tasks (`task.attachments`). Foto's worden hier eerst verkleind en opnieuw gecodeerd,
@@ -237,11 +238,18 @@ export function fillAttachmentsBox(box, task, readOnly) {
 
   function draw() {
     const cur = uploads.get(task.id) ?? [];
-    const key = JSON.stringify([readOnly, state.offline, list.map((a) => a.id), cur.map((u) => [u.key, Math.round(u.progress * 20)])]);
+    const key = JSON.stringify([readOnly, state.offline, !!task.share, list.map((a) => a.id), cur.map((u) => [u.key, Math.round(u.progress * 20)])]);
     if (box.dataset.key === key) return;
     box.dataset.key = key;
     const images = list.filter(isImage);
     const files = list.filter((a) => !isImage(a));
+    // Melden (openbare Tick): een bijlage van een ander in een gedeelde taak.
+    const topId = task.parent_id ?? task.id;
+    const top = state.open.find((x) => x.id === topId) ?? state.done.find((x) => x.id === topId) ?? (task.parent_id ? null : task);
+    const flag = (a) => (reportableAttachment(task, top, a) ? el('button', {
+      type: 'button', class: 'pill mini att-report', title: t('report.button'), 'aria-label': t('report.attachment_named', { name: a.name }),
+      onclick: () => openReportDialog({ attachment_id: a.id }, a.name, null),
+    }, '⚑') : null);
     const input = /** @type {HTMLInputElement} */ (el('input', {
       type: 'file', multiple: true, hidden: true,
       onchange: () => { const chosen = [...(input.files ?? [])]; input.value = ''; addFiles(task.id, chosen); },
@@ -254,6 +262,7 @@ export function fillAttachmentsBox(box, task, readOnly) {
         if (a.width && a.height) thumb.style.aspectRatio = `${a.width} / ${a.height}`;
         return el('li', {},
           el('button', { type: 'button', class: 'att-thumb', title: a.name, onclick: () => openViewer(images.slice(), n, readOnly) }, thumb),
+          flag(a),
           readOnly ? null : el('button', {
             type: 'button', class: 'att-del', title: t('att.delete_title'), 'aria-label': t('att.delete_named', { name: a.name }),
             onclick: () => removeAttachment(a),
@@ -262,6 +271,7 @@ export function fillAttachmentsBox(box, task, readOnly) {
       files.length ? el('ul', { class: 'att-files' }, ...files.map((a) => el('li', {},
         el('a', { href: src(a, true), download: a.name, class: 'att-name' }, icon('file'), a.name),
         el('span', { class: 'att-size' }, fmtSize(a.size)),
+        flag(a),
         readOnly ? null : el('button', {
           type: 'button', class: 'pill mini', title: t('att.delete_title'), 'aria-label': t('att.delete_named', { name: a.name }),
           onclick: () => removeAttachment(a),

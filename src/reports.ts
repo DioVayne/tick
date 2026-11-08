@@ -84,7 +84,8 @@ async function taskTarget(db: D1Database, me: string, head: TaskRow, uploader?: 
   return { reported: uploader, title: head.title, task_id: head.id, action: leaveShareStmts(db, s.id, head.id, uploader) };
 }
 
-async function findTarget(db: D1Database, me: string, b: Record<string, unknown>): Promise<Found> {
+/** Ook voor blokkeren via wat er gedeeld is (src/blocks.ts). */
+export async function findTarget(db: D1Database, me: string, b: Record<string, unknown>): Promise<Found> {
   const str = (k: string) => (typeof b[k] === 'string' && b[k] ? b[k] as string : null);
   const shareId = str('share_id');
   if (shareId) {

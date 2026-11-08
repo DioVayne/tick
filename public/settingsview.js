@@ -12,6 +12,7 @@ import { $, el, render, toast } from './render.js';
 import CONFIG, { setLanguage } from './settings.js';
 import { closeDrawer } from './sidebar.js';
 import { SETTINGS_CACHE as CACHE_KEY, load } from './store.js';
+import { blockedPeople, reportsOn, unblock } from './report.js';
 import { clearAll } from './db.js';
 import { forgetCachedConfig } from './next.js';
 import { fmtSize, prepare } from './attachments.js';
@@ -38,6 +39,7 @@ const S = {
   /** @type {ServiceWorkerRegistration | null} */ reg: null,
   /** @type {Record<string, HTMLElement>} */ parts: {},
   /** @type {{ name: string, email: string | null } | null} */ account: null, // null: nog niet van de server
+  /** @type {{ id: string, name: string }[]} */ blocked: [], // openbare Tick: wie je blokkeerde
 };
 
 // ---------- kleine hulpjes ----------
@@ -280,6 +282,7 @@ function paintHome() {
   paintLangTime();
   paintPlaces();
   paintAccount();
+  loadBlocked();
   paintUsers();
   paintData();
   paintAdvanced();
@@ -775,7 +778,22 @@ function paintAccount() {
       } catch (e) { toast(offlineText(e)); }
     }, { disabled: off }), t('set.logout_others_note')),
     row(t('set.logout_here'), btn(t('ui.logout'), logout)),
-    row(t('set.delete_account'), btn(t('set.delete_account_button'), deleteAccount, { kind: 'danger', disabled: off }), t('set.delete_account_note')));
+    row(t('set.delete_account'), btn(t('set.delete_account_button'), deleteAccount, { kind: 'danger', disabled: off }), t('set.delete_account_note')),
+    S.blocked.length ? row(t('set.blocked'), null, t('set.blocked_note')) : null,
+    ...S.blocked.map((p) => row(p.name, btn(t('set.unblock'), async () => {
+      if (await unblock(p.id)) {
+        S.blocked = S.blocked.filter((x) => x.id !== p.id);
+        toast(t('set.unblocked', { name: p.name }), 'ok');
+        paintAccount();
+      }
+    }, { disabled: off }))));
+}
+
+/** Openbare Tick: wie je blokkeerde, voor Instellingen › Account (alleen online). */
+async function loadBlocked() {
+  if (!reportsOn() || !S.online) return;
+  S.blocked = await blockedPeople();
+  paintAccount();
 }
 
 // ---------- 👥 Accounts (alleen de beheerder) ----------

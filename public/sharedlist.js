@@ -4,6 +4,7 @@ import { ask } from './dialog.js';
 import { icon } from './icons.js';
 import { dateLocale, t } from './i18n.js';
 import { el, fmt, toast } from './render.js';
+import { openReportDialog, reportsOn } from './report.js';
 import CONFIG from './settings.js';
 import {
   answerListInvite, claim, claimedByOther, clearDone, doneInList, removeListMember, sharedOf, shareList, state, toggleDone,
@@ -155,6 +156,7 @@ export function renderListInvites(root) {
   root.append(el('div', { class: 'invites' }, ...state.listInvites.map((inv) => el('div', { class: 'invite', 'data-list-invite': inv.id, role: 'group' },
     el('p', {}, t('slist.invite', { name: inv.from.name, list: inv.name, n: inv.open })),
     el('div', { class: 'invite-buttons' },
+      reportsOn() ? el('button', { type: 'button', class: 'ghost', onclick: () => { if (online()) openReportDialog({ list_id: inv.id }, inv.name, inv.from.name); } }, t('report.button')) : null,
       el('button', { type: 'button', class: 'ghost', onclick: () => { if (online()) answerListInvite(inv.id, false); } }, t('share.decline')),
       el('button', {
         type: 'button',
