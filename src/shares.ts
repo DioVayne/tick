@@ -109,7 +109,7 @@ sharesApi.post('/', async (c) => {
     await assertMayShareWith(c.env, c.get('user'), to);
     if ('email' in to) {
       const inv = await addEmailInvite(db, userId, to.email, { kind: 'task', taskId: task.id, mode: b.mode });
-      await afterEmailInvite(c, inv.id, to.email, { kind: 'task', title: task.title });
+      await afterEmailInvite(c, inv.id, to.email, { kind: 'task', title: task.title }, to.silent);
       return c.json({ ok: true, status: 'pending', mode: b.mode }, 201);
     }
     toUser = to.userId;
