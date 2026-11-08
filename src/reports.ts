@@ -69,6 +69,8 @@ async function taskTarget(db: D1Database, me: string, head: TaskRow, uploader?: 
     if (!list || list.status !== 'accepted') throw notFound();
     const reported = uploader ?? head.added_by ?? list.owner_id;
     if (reported === me) throw own();
+    // Als eigenaar haal je de gemelde uit de lijst; zit die er al niet meer in, dan is er niets (meer) te melden.
+    if (list.owner_id === me && !(await db.prepare('SELECT 1 AS x FROM list_members WHERE list_id = ? AND user_id = ?').bind(head.shared_list, reported).first())) throw notFound();
     return { reported, title: head.title, task_id: head.id, action: listAction(db, head.shared_list, me, list.owner_id, reported) };
   }
   if (head.user_id !== me) {
