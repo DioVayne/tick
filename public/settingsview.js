@@ -751,6 +751,7 @@ function profileForm(off) {
     try {
       const r = await request('PATCH', '/api/account', patch);
       S.account = { name: r.name, email: r.email ?? null };
+      paintMe(r.name);
       toast(t('set.saved'), 'ok');
       paintAccount();
       paintUsers();
@@ -1089,13 +1090,32 @@ function build() {
 
 export const isSettingsOpen = () => S.open;
 
+/** Je naam en eerste letter bovenaan de zijbalk (#btn-account); zonder naam verborgen. */
+export function paintMe(name) {
+  const btn = document.querySelector('#btn-account');
+  if (!btn) return;
+  const n = String(name ?? '').trim();
+  btn.hidden = !n;
+  btn.querySelector('.name').textContent = n;
+  btn.querySelector('.avatar').textContent = ([...n][0] ?? '').toUpperCase();
+}
+
+/** Klapt een blok open (bv. 'account') en scrolt ernaartoe. */
+function reveal(section) {
+  const d = S.parts[section]?.closest('details');
+  if (!d) return;
+  d.open = true;
+  d.scrollIntoView({ block: 'start' });
+}
+
 /**
  * Opent de instellingen in de middenkolom.
- * @param {{ push?: boolean }} [opts] push: een eigen stap in de geschiedenis (niet bij terug/vooruit)
+ * @param {{ push?: boolean, section?: string }} [opts] push: een eigen stap in de geschiedenis (niet bij terug/vooruit);
+ *   section: dit blok staat meteen open (bv. 'account', vanaf je naam in de zijbalk)
  */
-export function openSettings({ push = true } = {}) {
+export function openSettings({ push = true, section } = {}) {
   closeDrawer();
-  if (S.open) return;
+  if (S.open) { if (section) reveal(section); return; }
   S.open = true;
   if (push) history.pushState({ settings: true }, '');
   S.settings = cachedSettings();
@@ -1108,6 +1128,7 @@ export function openSettings({ push = true } = {}) {
   $('#main').scrollTop = 0;
   window.scrollTo(0, 0);
   paintHome(); // eerst met de laatst bekende waarden, uitgeschakeld
+  if (section) reveal(section);
   paint('devices', note(t('set.loading')));
   const reg = getReg().then((r) => { S.reg = r; if (S.open) paintPush(); });
   Promise.all([reg, fetchSettings(), fetchAccount()]).then(() => { if (S.open) { paintHome(); paintDevices(); } });

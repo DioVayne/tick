@@ -402,7 +402,10 @@ body.settings-open #btn-search, body.settings-open #search, body.calendar-open #
 #resizer, #detail { display: none; }
 #side { background: var(--side); border-right: 1px solid var(--line); padding: max(12px, env(safe-area-inset-top)) 8px 12px; display: flex; flex-direction: column; overflow-y: auto; }
 .brand { margin: 4px 8px 8px; font-size: 1.25rem; }
-/* Zijbalk in blokken: Alle en Inbox, de eigen lijsten (met Nieuwe lijst), en Kalender/Afgerond/Prullenbak. */
+/* Je account bovenaan: een rondje met je eerste letter en je naam; opent Instellingen › Account */
+#side .side-me { margin-bottom: 8px; min-height: 40px; }
+#side .side-me .avatar { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 18%, var(--side)); color: var(--accent); font-size: .8125rem; font-weight: 600; }/* Zijbalk in blokken: Alle en Inbox, de eigen lijsten (met Nieuwe lijst), en Kalender/Afgerond/Prullenbak. */
 #side { --side-blk: color-mix(in srgb, var(--side), var(--text) 5%); }
 #side-lists { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
 /* minmax(0, …): anders groeit de kolom mee met een lange lijstnaam en krijgt de zijbalk een horizontale scrollbalk. */
@@ -704,7 +707,7 @@ body.calendar-open #main > :not(#calendar):not(#net) { display: none; }
 .set-group-h { justify-self: start; margin: 14px 4px 6px; color: var(--muted); font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 html[data-bg] .set-group-h { padding: 2px 10px; border-radius: 999px; background-color: color-mix(in srgb, var(--bg) 93%, transparent); }
 .set-list { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
-.set-block { min-width: 0; }
+.set-block { min-width: 0; scroll-margin-top: 72px; } /* openen vanaf je naam: het kopje niet onder de vaste kopbalk */
 .set-block + .set-block { border-top: 1px solid var(--line); }
 .set-block[open] { background: var(--open); }
 .set-block > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 48px; padding: 8px 14px; cursor: pointer; list-style: none; font-size: 1rem; font-weight: 600; }
