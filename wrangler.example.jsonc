@@ -70,7 +70,9 @@
     // With OPEN_SIGNUP: a Google Play link for the invitation email (optional).
     // "PLAY_STORE_URL": "https://play.google.com/store/apps/details?id=com.example.tick",
     // With OPEN_SIGNUP: most new accounts per day (UTC, default 100).
-    // "SIGNUP_DAILY_LIMIT": "100"
+    // "SIGNUP_DAILY_LIMIT": "100",
+    // With OPEN_SIGNUP: with how many different people one account can share (default 1; the administrator has no limit).
+    // "FREE_SHARE_PEOPLE": "1"
   },
   "observability": { "enabled": true }
 }

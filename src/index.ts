@@ -78,6 +78,8 @@ export type Env = {
   PLAY_STORE_URL?: string;
   /** Hoeveel accounts er per UTC-dag hooguit zelf aangemaakt worden op een openbare Tick (standaard 100). */
   SIGNUP_DAILY_LIMIT?: string;
+  /** Openbare Tick, gratis versie: met hoeveel verschillende mensen je hoogstens deelt (standaard 1; de beheerder onbeperkt). */
+  FREE_SHARE_PEOPLE?: string;
 };
 
 export type TaskRow = {

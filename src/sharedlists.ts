@@ -5,7 +5,7 @@ import { STEP, topMin } from './access';
 import { inBackground, notifyUser, sendToAll, type Sender } from './push';
 import { recipientOf } from './shares';
 import { translate } from '../public/i18n.js';
-import { addEmailInvite, afterEmailInvite, MAIL_PREFIX, pendingMemberId, resolveOpenRecipient, revokeEmailInvite } from './invites';
+import { addEmailInvite, afterEmailInvite, assertMayShareWith, MAIL_PREFIX, pendingMemberId, resolveOpenRecipient, revokeEmailInvite } from './invites';
 import { openSignup } from './signup';
 
 /**
@@ -273,7 +273,10 @@ sharedListsApi.post('/', async (c) => {
   if (list && list.role !== 'owner') throw new HttpError(403, 'err.shared_list_owner_only');
   if (!list && !(await listNames(db, userId)).has(name)) throw new HttpError(404, 'err.list_unknown');
   let to: { userId: string } | { email: string };
-  if (openSignup(c.env)) to = await resolveOpenRecipient(c.env, c.get('user'), b);
+  if (openSignup(c.env)) {
+    to = await resolveOpenRecipient(c.env, c.get('user'), b);
+    if (!('userId' in to && to.userId === userId)) await assertMayShareWith(c.env, c.get('user'), to);
+  }
   else to = { userId: await recipientOf(db, b) };
   if ('userId' in to && to.userId === userId) throw new HttpError(400, 'err.share_self');
   const ts = now();
