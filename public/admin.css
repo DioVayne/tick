@@ -12,7 +12,7 @@ main.admin { max-width: 860px; }
 .admin ul.files img { max-width: 100%; max-height: 360px; border-radius: 8px; }
 .admin .gone { font-style: italic; }
 .admin .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0; }
-.admin .actions form { margin: 0; }
+.admin .actions form { margin: 0; padding: 0; border: 0; background: none; width: auto; max-width: none; display: block; }
 .admin .actions button { width: auto; padding: 10px 16px; }
 .admin .actions button.danger { background: #c62828; color: #fff; }
 .admin .actions button.ghost { background: transparent; color: inherit; border: 1px solid currentColor; }

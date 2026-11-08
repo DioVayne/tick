@@ -31,6 +31,8 @@ describe('openbare privacypagina', () => {
     const open = privacyPage('nl', null, undefined, true, true);
     expect(open).toContain(translate('nl', 'priv.open_invites'));
     expect(open).toContain(translate('nl', 'priv.open_unverified'));
+    expect(open).toContain(translate('nl', 'priv.open_reports'));
+    expect(privacyPage('nl', null, undefined, true)).not.toContain(translate('nl', 'priv.open_reports'));
     expect(privacyPage('nl', null, undefined, true)).not.toContain(translate('nl', 'priv.open_invites'));
   });
 

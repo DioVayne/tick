@@ -166,7 +166,8 @@ ${items(['priv.others_cloudflare', 'priv.others_push', 'priv.others_osm', ...(ma
 <p>${t('priv.why')}</p>
 <h2>${t('priv.keep_title')}</h2>
 <p>${t('priv.keep')}</p>${open ? `
-<p>${t('priv.open_unverified')}</p>` : ''}
+<p>${t('priv.open_unverified')}</p>
+<p>${t('priv.open_reports')}</p>` : ''}
 <h2>${t('priv.rights_title')}</h2>
 <p>${t('priv.rights', { link: `<a href="/delete-account">${t('del.title')}</a>` })}</p>
 <p>${t('priv.complaint')}</p>
