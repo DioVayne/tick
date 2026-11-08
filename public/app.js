@@ -10,7 +10,7 @@ import { closeSettings, hideSettings, isSettingsOpen, openSettings } from './set
 import { closeHelp, hideHelp, isHelpOpen, openHelp } from './help.js';
 import { closeManager, hideManager, isManagerOpen, openManager, refreshManager } from './manager.js';
 import { closeDrawer, onListContext, selectDone, selectList, selectTrash, setupSidebar } from './sidebar.js';
-import { init, lists, load, on, state } from './store.js';
+import { init, lists, load, on, refreshInvites, state } from './store.js';
 import { parseHash } from './route.js';
 import { normName } from './lists.js';
 import { startBadge, updateBadge } from './badge.js';
@@ -315,7 +315,20 @@ navigator.serviceWorker?.addEventListener('message', (e) => {
 
 // Wachtende wijzigingen versturen zodra het weer kan.
 // Verborgen: getypte tekst meteen opslaan, de app kan zo worden afgesloten.
-document.addEventListener('visibilitychange', () => { if (document.hidden) flushPending(); else load(); });
+// Terug in Tick: opnieuw laden. Ook bij focus, want een venster dat naast een ander al zichtbaar was, krijgt geen
+// visibilitychange. Komen beide kort na elkaar (tabblad terug), dan één ronde.
+let lastWake = 0;
+const wake = () => {
+  if (document.hidden || Date.now() - lastWake < 3000) return;
+  lastWake = Date.now();
+  load();
+};
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushPending(); else wake(); });
+window.addEventListener('focus', wake);
+// Zolang Tick zichtbaar open staat: elke twee minuten alleen de uitnodigingen ophalen (twee lichte verzoeken), zodat
+// een nieuwe deeluitnodiging ook zonder pushmelding verschijnt.
+const INVITE_POLL_MS = 2 * 60 * 1000;
+setInterval(() => { if (!document.hidden && navigator.onLine) refreshInvites(); }, INVITE_POLL_MS);
 window.addEventListener('pagehide', flushPending);
 window.addEventListener('online', () => load());
 

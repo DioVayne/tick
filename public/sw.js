@@ -2,7 +2,7 @@
 
 // App-shell voor offline gebruik. Network-first: online krijg je altijd de nieuwste versie (geen mix van oude en
 // nieuwe modules na een deploy), offline de laatst bewaarde. Verhoog de versie als de lijst hieronder verandert.
-const CACHE = 'tick-shell-v74';
+const CACHE = 'tick-shell-v75';
 const SHELL = [
   '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/review.js', '/planner.js', '/manager.js', '/push.js', '/style.css', '/sortable.min.js',
   '/markdown.js', '/lists.js', '/editor.js', '/sidebar.js', '/detail.js', '/listpicker.js', '/listmenu.js', '/dialog.js',
@@ -58,7 +58,12 @@ async function networkFirst(req, key) {
 self.addEventListener('push', (event) => {
   let data = { title: 'Tick', body: '' };
   try { data = event.data.json(); } catch { /* gewone tekst */ }
-  event.waitUntil(
+  // Een open Tick laat de melding meteen zien (bijvoorbeeld een nieuwe deeluitnodiging), zonder te verversen.
+  const refresh = self.clients.matchAll({ type: 'window' })
+    .then((wins) => wins.forEach((w) => w.postMessage({ type: 'refresh' })))
+    .catch(() => {});
+  event.waitUntil(Promise.all([
+    refresh,
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: '/icon-192.png',
@@ -69,7 +74,7 @@ self.addEventListener('push', (event) => {
       // De server stuurt de knoppen vertaald mee; zonder taak geen knoppen.
       actions: data.taskId || data.shareId || data.listInviteId ? (data.actions ?? (data.taskId ? [{ action: 'done', title: '✓' }, { action: 'snooze', title: '+1h' }] : [])) : [],
     }),
-  );
+  ]));
 });
 
 self.addEventListener('notificationclick', (event) => {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // De Workers-runtime heeft geen IndexedDB: db.js valt dan terug op geheugen, en dat lezen we hier uit.
 import { nextOccurrence } from '../public/repeat.js';
 import * as db from '../public/db.js';
-import { claim, createList, deleteList, doneInList, ensureOwner, init, load, markReviewed, on, renameList, sharedOf, skippedLists, staleNow, state, toHttp, sync, toggleDone, update } from '../public/store.js';
+import { claim, createList, deleteList, doneInList, ensureOwner, init, load, markReviewed, on, refreshInvites, renameList, sharedOf, skippedLists, staleNow, state, toHttp, sync, toggleDone, update } from '../public/store.js';
 
 describe('store: lijst-ops', () => {
   it('een nieuwe lege lijst gaat via de outbox naar de server, en hernoemen en verwijderen gaan mee', async () => {
@@ -219,6 +219,45 @@ describe('store: verversen', () => {
     await new Promise((r) => setTimeout(r, 10));
     expect(calls).toEqual(expect.arrayContaining(['GET /api/tasks', 'GET /api/lists', 'GET /api/shares/incoming']));
     await done;
+  });
+});
+
+describe('store: uitnodigingen pollen', () => {
+  afterEach(() => vi.restoreAllMocks());
+  const serve = (invites: unknown, listInvites: unknown) => {
+    const calls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any) => {
+      const url = String(input);
+      calls.push(url);
+      const body = url.includes('/api/shares/incoming') ? invites : url.includes('/api/shared-lists/incoming') ? listInvites : [];
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    return calls;
+  };
+
+  it('haalt alleen de twee uitnodigingslijsten op en tekent opnieuw bij een nieuwe uitnodiging', async () => {
+    state.invites = [];
+    state.listInvites = [];
+    const invite = { id: 's1', task_id: 't1', title: 'Samen boodschappen', from_name: 'Een' };
+    const calls = serve([invite], []);
+    let changes = 0;
+    on('change', () => { changes++; });
+    await refreshInvites();
+    expect(calls).toHaveLength(2);
+    expect(calls.every((u) => u.includes('/incoming'))).toBe(true);
+    expect(state.invites).toEqual([invite]);
+    expect(changes).toBe(1);
+    await refreshInvites(); // niets nieuws: niet opnieuw tekenen
+    expect(changes).toBe(1);
+  });
+
+  it('offline blijft de oude stand staan', async () => {
+    const invite = { id: 's2' };
+    state.invites = [invite] as any;
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+    await refreshInvites();
+    expect(state.invites).toEqual([invite]);
+    state.invites = [];
   });
 });
 

@@ -295,6 +295,24 @@ export function load() {
   return again;
 }
 
+/**
+ * Alleen de uitnodigingen (taken en lijsten) ophalen: de lichte poll zolang Tick open staat, zodat een nieuwe
+ * uitnodiging ook zonder pushmelding of verversen verschijnt. Twee kleine verzoeken in plaats van een hele ronde;
+ * loopt er al een ronde, dan haalt die ze toch. Mislukt het (offline), dan blijft de oude stand staan.
+ */
+export async function refreshInvites() {
+  if (loading) return;
+  const [invites, listInvites] = await Promise.all([
+    request('GET', '/api/shares/incoming'),
+    request('GET', '/api/shared-lists/incoming'),
+  ]).catch(() => [null, null]);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  let diff = false;
+  if (invites && !same(invites, state.invites)) { state.invites = invites; diff = true; }
+  if (listInvites && !same(listInvites, state.listInvites)) { state.listInvites = listInvites; diff = true; }
+  if (diff) changed();
+}
+
 /** Een fout bij lijsten of uitnodigingen houdt de taken niet tegen (dan null: de oude stand blijft); offline wel. */
 const soft = (p) => p.catch((e) => { if (e instanceof Offline) throw e; return null; });
 

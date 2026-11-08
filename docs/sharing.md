@@ -37,7 +37,7 @@ Open a top-level task and tap **Do it together with…**. Pick someone and choos
 - **Shared:** one task for everyone. Done is done for everyone, and everyone can change it and add subtasks. Each person keeps it in their own list and order. A reminder (time or place) reaches everyone on it, so whoever passes the supermarket first does the shopping. When someone ticks it off or gives it a place, the others get a notification.
 - **Copy:** the other person gets their own copy, with all subtasks open. You each tick off your own.
 
-The other person gets a notification with **Accept** and **Decline**, and a bar in the app; an accepted task lands in their Inbox. Only the owner can invite others. Anyone on a shared task can leave it; the owner can remove people or withdraw an invitation. Who is on it is listed in the task under *Together with*. Deleting a shared task deletes it for everyone.
+The other person gets a notification with **Accept** and **Decline**, and a bar in the app; an accepted task lands in their Inbox. If they have Tick open, the bar appears by itself: straight away with notifications on, otherwise when they click into Tick or within two minutes. Only the owner can invite others. Anyone on a shared task can leave it; the owner can remove people or withdraw an invitation. Who is on it is listed in the task under *Together with*. Deleting a shared task deletes it for everyone.
 
 ## On an open Tick
 On a Tick where everyone makes their own account (such as the one behind the Android app in Google Play), sharing works the same, with three differences, so that nobody can find out who else uses it:
