@@ -107,8 +107,8 @@ sharesApi.post('/', async (c) => {
     // Openbare Tick: alleen e-mailadres (of een bekende), en hetzelfde antwoord met of zonder account erachter.
     const to = await resolveOpenRecipient(c.env, c.get('user'), b);
     if ('email' in to) {
-      await addEmailInvite(db, userId, to.email, { kind: 'task', taskId: task.id, mode: b.mode });
-      await afterEmailInvite(c, to.email, { kind: 'task', title: task.title });
+      const inv = await addEmailInvite(db, userId, to.email, { kind: 'task', taskId: task.id, mode: b.mode });
+      await afterEmailInvite(c, inv.id, to.email, { kind: 'task', title: task.title });
       return c.json({ ok: true, status: 'pending', mode: b.mode }, 201);
     }
     toUser = to.userId;

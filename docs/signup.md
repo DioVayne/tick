@@ -9,6 +9,13 @@ Some Ticks are open to everyone, like the Tick behind the Android app in Google 
 
 Already have an account with that email address? Tick says so, with links to sign in and to **Forgot password?**.
 
+### Invited by someone?
+The button in an invitation email opens the sign-up screen with your address already filled in, and says who wants to share what with you.
+- Sign up with that address and it counts as confirmed straight away (the email reached you), so the invitation is waiting for you at once.
+- Prefer another address? Change it: the invitation still comes with you, and you confirm the new address as usual.
+- Already have an account? Tap **Sign in** on that screen; after signing in, the invitation is in your account.
+- Each link works once and for 30 days.
+
 ## Confirming your email address
 Right after you sign up, Tick sends you an email with a link. Tap it to confirm that the address is yours.
 

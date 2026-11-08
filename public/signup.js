@@ -15,6 +15,8 @@ document.getElementById('f').addEventListener('submit', async (e) => {
     return;
   }
   const body = { name: document.getElementById('name').value.trim(), email: document.getElementById('email').value.trim(), password };
+  // Via de link uit een uitnodigingsmail: de code gaat mee, zodat de uitnodiging de link volgt.
+  if (document.body.dataset.join) body.join = document.body.dataset.join;
   const r = await fetch('/signup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
     .catch(() => null);
   if (!r) { err.textContent = document.body.dataset.offline; return; }

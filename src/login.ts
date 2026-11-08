@@ -22,8 +22,11 @@ export function loginPage(locale: string | undefined, emptyEmailHint = false, de
 <script type="module" src="/login.js"></script></body></html>`;
 }
 
-/** Aanmeldpagina (/signup) op een openbare Tick: naam, e-mail, wachtwoord; public/signup.js verstuurt. */
-export function signupPage(locale: string | undefined, forgot: boolean): string {
+/**
+ * Aanmeldpagina (/signup) op een openbare Tick: naam, e-mail, wachtwoord; public/signup.js verstuurt. Met `join` (de
+ * link uit een uitnodigingsmail) staat het adres al ingevuld, met wie wat deelt, en gaat inloggen terug naar de link.
+ */
+export function signupPage(locale: string | undefined, forgot: boolean, join?: { code: string; email: string; name: string; title: string }): string {
   const lang = normLocale(locale);
   const t = (key: string) => translate(lang, key);
   return `<!doctype html>
@@ -31,16 +34,31 @@ export function signupPage(locale: string | undefined, forgot: boolean): string 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${t('signup.title')}</title><meta name="theme-color" content="#ffffff">
 <script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
-</head><body data-short="${escapeHtml(translate(lang, 'err.password_short', { min: MIN_PASSWORD }))}" data-offline="${escapeHtml(t('app.you_are_offline'))}">
-<form id="f"><img class="logo" src="/icon.svg" alt="" width="64" height="64"><h1>${t('signup.title')}</h1>
+</head><body data-short="${escapeHtml(translate(lang, 'err.password_short', { min: MIN_PASSWORD }))}" data-offline="${escapeHtml(t('app.you_are_offline'))}"${join ? ` data-join="${escapeHtml(join.code)}"` : ''}>
+<form id="f"><img class="logo" src="/icon.svg" alt="" width="64" height="64"><h1>${t('signup.title')}</h1>${join ? `<p class="intro">${escapeHtml(translate(lang, 'join.intro', { name: join.name, title: join.title }))}</p>` : ''}
 <input type="text" id="name" placeholder="${t('link.name')}" autocomplete="name" maxlength="60" required autofocus>
-<input type="email" id="email" placeholder="${t('login.email')}" autocomplete="username" maxlength="254" required>
+<input type="email" id="email" placeholder="${t('login.email')}" autocomplete="username" maxlength="254" required${join ? ` value="${escapeHtml(join.email)}"` : ''}>
 <input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="new-password" minlength="${MIN_PASSWORD}" required>
 <button>${t('signup.submit')}</button><p id="err" role="alert"></p>
 ${forgot ? `<p class="link" id="taken" hidden><a href="/forgot">${t('login.forgot')}</a></p>` : ''}
 <p class="hint">${t('signup.privacy').replace('{link}', `<a href="/privacy">${t('priv.title')}</a>`)}</p>
-<p class="link">${t('signup.have_account')} <a href="/login">${t('login.submit')}</a></p></form>
+<p class="link">${t('signup.have_account')} <a href="/login${join ? `?next=${encodeURIComponent('/join/' + join.code)}` : ''}">${t('login.submit')}</a></p></form>
 <script type="module" src="/signup.js"></script></body></html>`;
+}
+
+/** /join/<code> met een code die niet (meer) werkt. */
+export function joinInvalidPage(locale: string | undefined): string {
+  const lang = normLocale(locale);
+  const t = (key: string) => translate(lang, key);
+  return `<!doctype html>
+<html lang="${lang}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>${t('join.invalid_title')}</title><meta name="theme-color" content="#ffffff">
+<script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
+</head><body><div id="f"><img class="logo" src="/icon.svg" alt="" width="64" height="64"><h1>${t('join.invalid_title')}</h1>
+<p class="intro">${t('join.invalid')}</p>
+<p class="link"><a href="/signup">${t('login.signup')}</a> · <a href="/login">${t('login.submit')}</a></p></div></body></html>`;
 }
 
 /** Pagina achter een uitnodigings- of resetlink; een ongeldige link toont alleen de melding. */

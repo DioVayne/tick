@@ -25,14 +25,14 @@ const share = (u: User, taskId: string, to: string, e: Env = openEnv) =>
 const invitesTo = (email: string) => sent().filter((m) => m.to[0].toLowerCase() === email.toLowerCase() && m.subject.includes('Tick'));
 
 describe('uitnodigingsmail', () => {
-  it('een onbekend adres krijgt één mail met de naam van de deler en een /signup-link; Play-link alleen als ingesteld', async () => {
+  it('een onbekend adres krijgt één mail met de naam van de deler en een /join/-link; Play-link alleen als ingesteld', async () => {
     const a = await createUser({ name: 'Annemiek' });
     const nobody = `mail-${uniq()}@ex.test`;
     expect((await share(a, (await newTask(a)).id, nobody)).status).toBe(201);
     const mails = invitesTo(nobody);
     expect(mails).toHaveLength(1);
     expect(mails[0].subject).toBe(translate('en', 'mail.invite_subject', { name: 'Annemiek' }));
-    expect(mails[0].text).toContain('https://tick.test/signup');
+    expect(mails[0].text).toMatch(/https:\/\/tick\.test\/join\/[A-Za-z0-9_-]+/);
     expect(mails[0].text).not.toContain('play.google.com');
     expect(mails[0].text).not.toContain(nobody); // geen adres in een link of tekst
 

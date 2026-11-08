@@ -4,9 +4,10 @@ import { cleanEmail, cleanName } from './account';
 import { sessionCookie } from './auth';
 import { HttpError } from './errors';
 import { checkPassword, consumeLink, createLink } from './links';
-import { signupPage, verifyPage } from './login';
+import { joinInvalidPage, signupPage, verifyPage } from './login';
 import { claimCapNotice, mailEnabled, mailLayout, releaseMail, reserveMail, sendMail, SIGNUP_CAP } from './mail';
-import { claimEmailInvites } from './invites';
+import { claimEmailInvites, claimInvites, inviteByCode } from './invites';
+import { authorize } from './auth';
 import { hashPassword } from './password';
 import { loadInstallPrefs } from './prefs';
 import { inBackground, type Locale, notifyUser } from './push';
@@ -46,6 +47,29 @@ signupPages.use('/signup', async (c, next) => {
 
 signupPages.get('/signup', (c) => c.html(signupPage(c.get('lang'), mailEnabled(c.env))));
 
+signupPages.use('/join/*', async (c, next) => {
+  if (!openSignup(c.env)) return c.notFound();
+  await next();
+});
+
+/**
+ * De knop in de uitnodigingsmail. Ingelogd: de uitnodiging gaat naar je eigen account en je gaat naar de app. Anders
+ * het aanmeldscherm met het adres ingevuld (en een link om eerst in te loggen). Een onbekende code: een nette melding.
+ */
+signupPages.get('/join/:code', async (c) => {
+  const { success } = await c.env.LOGIN_LIMITER.limit({ key: 'link:' + (c.req.header('cf-connecting-ip') ?? 'onbekend') });
+  if (!success) throw new HttpError(429, 'err.too_many_attempts');
+  const code = c.req.param('code');
+  const join = await inviteByCode(c.env.DB, code);
+  if (!join) return c.html(joinInvalidPage(c.get('lang')));
+  const auth = await authorize(c.req.raw, c.env, await loadInstallPrefs(c.env));
+  if (auth && auth.kind === 'session') {
+    await claimInvites(c.env, auth.userId, { inviteId: join.id });
+    return c.redirect('/', 302);
+  }
+  return c.html(signupPage(c.get('lang'), mailEnabled(c.env), { code, email: join.email, name: join.from_name, title: join.title }));
+});
+
 signupPages.post('/signup', async (c) => {
   const { success } = await c.env.LOGIN_LIMITER.limit({ key: 'signup:' + (c.req.header('cf-connecting-ip') ?? 'onbekend') });
   if (!success) throw new HttpError(429, 'err.too_many_attempts');
@@ -55,6 +79,11 @@ signupPages.post('/signup', async (c) => {
   const email = cleanEmail(body.email);
   const password = checkPassword(body.password);
   const db = c.env.DB;
+  // Via de link uit een uitnodigingsmail (/join/<code>): de uitnodiging volgt de link.
+  const join = typeof body.join === 'string' && body.join ? await inviteByCode(db, body.join) : null;
+  if (body.join && !join) throw new HttpError(400, 'err.link_invalid');
+  // Hetzelfde adres als in de uitnodiging: de mail kwam aan, dus het adres is bevestigd.
+  const confirmed = !!join && join.email.toLowerCase() === email.toLowerCase();
   const now = Date.now();
   const today = await db.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'member' AND created_at >= ?")
     .bind(dayStartIso(now)).first<{ n: number }>();
@@ -66,15 +95,18 @@ signupPages.post('/signup', async (c) => {
   const id = crypto.randomUUID();
   try {
     // De termijn van 30 dagen loopt alleen als er een bevestigingsmail kan komen.
-    const deadline = mailEnabled(c.env) ? new Date(now + UNVERIFIED_TTL_MS).toISOString() : null;
-    await db.prepare("INSERT INTO users (id, name, email, password_hash, role, session_version, created_at, verify_deadline) VALUES (?, ?, ?, ?, 'member', 1, ?, ?)")
-      .bind(id, name, email, await hashPassword(password), new Date(now).toISOString(), deadline).run();
+    const deadline = !confirmed && mailEnabled(c.env) ? new Date(now + UNVERIFIED_TTL_MS).toISOString() : null;
+    const ts = new Date(now).toISOString();
+    await db.prepare("INSERT INTO users (id, name, email, password_hash, role, session_version, created_at, verify_deadline, email_verified_at) VALUES (?, ?, ?, ?, 'member', 1, ?, ?, ?)")
+      .bind(id, name, email, await hashPassword(password), ts, deadline, confirmed ? ts : null).run();
   } catch (e) {
     if (/UNIQUE constraint failed/.test((e as Error).message)) throw new HttpError(409, 'err.email_taken');
     throw e;
   }
+  if (join) await claimInvites(c.env, id, { inviteId: join.id });
+  if (confirmed) await claimEmailInvites(c.env, id); // ook uitnodigingen van anderen aan dit adres
   c.header('Set-Cookie', await sessionCookie(c.env, (await getUser(db, id))!));
-  await inBackground(c, sendVerifyMail(c.env, id, new URL(c.req.url).origin, c.get('lang')), 'bevestigingsmail');
+  if (!confirmed) await inBackground(c, sendVerifyMail(c.env, id, new URL(c.req.url).origin, c.get('lang')), 'bevestigingsmail');
   return c.json({ ok: true }, 201);
 });
 
