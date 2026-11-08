@@ -72,7 +72,11 @@
     // With OPEN_SIGNUP: most new accounts per day (UTC, default 100).
     // "SIGNUP_DAILY_LIMIT": "100",
     // With OPEN_SIGNUP: with how many different people one account can share (default 1; the administrator has no limit).
-    // "FREE_SHARE_PEOPLE": "1"
+    // "FREE_SHARE_PEOPLE": "1",
+    // With OPEN_SIGNUP: your address and Chamber of Commerce (KvK) number, shown with OPERATOR_NAME on the terms of
+    // service (/terms and /voorwaarden). Optional; the terms are written for a Tick run from the Netherlands.
+    // "OPERATOR_ADDRESS": "Street 1, 1234 AB Town",
+    // "OPERATOR_KVK": "12345678"
   },
   "observability": { "enabled": true }
 }
