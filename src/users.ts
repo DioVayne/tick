@@ -16,6 +16,8 @@ export type User = {
   email_verified_at: string | null;
   /** Openbare Tick: wanneer een nooit bevestigd, zelf aangemaakt account verdwijnt; NULL = nooit. */
   verify_deadline: string | null;
+  /** Geschorst door de beheerder (na een melding); NULL = niet geschorst. */
+  suspended_at: string | null;
 };
 
 export async function getUser(db: D1Database, id: string): Promise<User | null> {
@@ -58,6 +60,9 @@ export function deleteUserStmts(db: D1Database, id: string): D1PreparedStatement
     db.prepare('DELETE FROM reminder_sent WHERE user_id = ?1 OR task_id IN (SELECT id FROM tasks WHERE user_id = ?1)').bind(id),
     // Uitnodigingen aan e-mailadressen (openbare Tick) van deze gebruiker.
     db.prepare('DELETE FROM email_invites WHERE from_user = ?').bind(id),
+    // Blokkades en meldingen (openbare Tick) van en over deze gebruiker.
+    db.prepare('DELETE FROM blocks WHERE user_id = ?1 OR blocked_id = ?1').bind(id),
+    db.prepare('DELETE FROM reports WHERE reporter_id = ?1 OR reported_id = ?1').bind(id),
     ...['api_keys', 'pair_codes', 'push_subscriptions', 'tasks', 'places', 'user_settings', 'lists', 'review_skip_lists', 'list_ids']
       .map((t) => db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(id)),
     // Ook links die deze gebruiker zelf aanmaakte (created_by verwijst naar users).

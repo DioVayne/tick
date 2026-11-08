@@ -94,6 +94,8 @@ export type TaskRow = {
   reviewed_at: string | null;
   /** De gedeelde lijst van een hoofdtaak; wie hem afvinkte; op wiens naam hij staat (alleen in een gedeelde lijst). */
   shared_list: string | null; done_by: string | null; claimed_by: string | null;
+  /** Wie de hoofdtaak in de gedeelde lijst zette (voor melden); null = onbekend of geen gedeelde lijst. */
+  added_by: string | null;
 };
 
 export type AppEnv = {
