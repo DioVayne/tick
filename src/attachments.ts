@@ -10,8 +10,9 @@ import { getAccess } from './access';
  */
 export const attachmentsApi = new Hono<AppEnv>();
 
-export type Attachment = { id: string; name: string; mime: string; size: number; width: number | null; height: number | null; created_at: string };
-type Row = Attachment & { task_id: string; user_id: string; r2_key: string; status: string };
+/** `user_id`: wie hem uploadde (de app toont een meldknop bij een bijlage van een ander). */
+export type Attachment = { id: string; name: string; mime: string; size: number; width: number | null; height: number | null; created_at: string; user_id: string };
+type Row = Attachment & { task_id: string; r2_key: string; status: string };
 
 /** Zoveel bijlagen mag één taak hebben (ook die nog uploaden). */
 export const MAX_FILES = 20;
@@ -20,7 +21,7 @@ const MAX_NAME = 200;
 const PENDING_MS = 60 * 60_000;
 /** Beeldtypes die de browser inline mag tonen; al het andere gaat als download, zonder eigen type. */
 const INLINE = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
-const COLS = 'id, name, mime, size, width, height, created_at';
+const COLS = 'id, name, mime, size, width, height, created_at, user_id';
 
 const now = () => new Date().toISOString();
 
@@ -68,7 +69,7 @@ function dimension(v: string | undefined): number | null {
 }
 
 const meta = (r: Row | Attachment): Attachment =>
-  ({ id: r.id, name: r.name, mime: r.mime, size: r.size, width: r.width, height: r.height, created_at: r.created_at });
+  ({ id: r.id, name: r.name, mime: r.mime, size: r.size, width: r.width, height: r.height, created_at: r.created_at, user_id: r.user_id });
 
 /** De bijlagen (klaar met uploaden) per taak-id, in volgorde van toevoegen. Zonder `FILES` altijd leeg. */
 export async function attachmentsFor(env: Env, ids: string[]): Promise<Map<string, Attachment[]>> {
