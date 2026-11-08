@@ -133,6 +133,17 @@ describe('blokkeren', () => {
     expect((await block(b, x.id)).status).toBe(404);
   });
 
+  it('blokkeren via wat er gedeeld is (een uitnodiging of taak), zonder id', async () => {
+    const [a, b] = [await createUser(), await createUser()];
+    const t = await newTask(a);
+    await share(a, t.id, b.email);
+    const inv = (await incoming(b))[0];
+    expect((await as(b, '/api/blocks', { method: 'POST', json: { share_id: inv.id } })).status).toBe(200);
+    expect(await env.DB.prepare('SELECT 1 AS x FROM blocks WHERE user_id = ? AND blocked_id = ?').bind(b.id, a.id).first()).toBeTruthy();
+    expect(await incoming(b)).toEqual([]);
+    expect((await as(b, '/api/blocks', { method: 'POST', json: { task_id: t.id } })).status).toBe(404);
+  });
+
   it('zonder OPEN_SIGNUP: 404', async () => {
     const [a, b] = [await createUser(), await createUser()];
     expect((await as(a, '/api/blocks', {}, env)).status).toBe(404);

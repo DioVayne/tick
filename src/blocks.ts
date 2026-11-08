@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { AppEnv } from './index';
 import { HttpError } from './errors';
+import { findTarget } from './reports';
 import { leaveListStmts } from './sharedlists';
 import { openSignup } from './signup';
 
@@ -65,8 +66,10 @@ blocksApi.get('/', async (c) => {
 blocksApi.post('/', async (c) => {
   const b = await c.req.json<Record<string, unknown>>().catch(() => { throw new HttpError(400, 'err.invalid_json'); });
   const me = c.get('auth').userId;
-  const other = typeof b.user_id === 'string' ? b.user_id : '';
-  if (!other || other === me || !(await related(c.env.DB, me, other))) throw new HttpError(404, 'err.not_found');
+  // Met een id (de lijst geblokkeerden, Instellingen), of via wat er gedeeld is: de app kent dan alleen een naam.
+  let other = typeof b.user_id === 'string' ? b.user_id : '';
+  if (!other) other = (await findTarget(c.env.DB, me, b)).reported;
+  else if (other === me || !(await related(c.env.DB, me, other))) throw new HttpError(404, 'err.not_found');
   await c.env.DB.batch(await blockStmts(c.env.DB, me, other));
   return c.json({ ok: true });
 });

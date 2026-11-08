@@ -2,6 +2,7 @@ import { ask } from './dialog.js';
 import { t } from './i18n.js';
 import { sameName } from './lists.js';
 import { el, render, toast } from './render.js';
+import { openReportDialog, reportsOn } from './report.js';
 import { joinNames, openListShareDialog } from './sharedlist.js';
 import { deleteList, leaveList, listNames, lists, renameList, setListNotify, sharedOf, state } from './store.js';
 
@@ -38,6 +39,7 @@ export function openListMenu(name, anchor) {
       item(t('lists.rename'), () => { close(); startRename(name, anchor); }),
       // Samenvoegen kan niet met een gedeelde lijst (de server weigert het).
       shared ? null : item(t('lists.move_tasks'), showTargets),
+      shared && !shared.mine && reportsOn() ? item(t('report.list_menu'), () => { close(); openReportDialog({ list_id: shared.id }, name, shared.owner.name); }) : null,
       !shared ? item(t('lists.delete'), () => { close(); confirmDelete(name); }, ' menu-danger')
         : shared.mine ? item(t('slist.delete'), () => { close(); confirmDelete(name); }, ' menu-danger')
         : item(t('slist.leave'), () => { close(); confirmLeave(name, shared); }, ' menu-danger'),

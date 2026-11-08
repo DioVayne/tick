@@ -16,6 +16,7 @@ import { $, checkOff, el, fmt, fromLocalInput, render, toLocalInput } from './re
 import { reviewPrefsOf } from './review.js';
 import { staleCount } from './sidebar.js';
 import { addSubtask, claimedByOther, findDone, remove, sharedOf, snooze, state, toggleDone, update, updateQueued, watchTask } from './store.js';
+import { openReportDialog, reportableTask } from './report.js';
 import { fillShareBox, openShareDialog, shareNames } from './share.js';
 import { openWhenMenu, step } from './steps.js';
 
@@ -462,6 +463,17 @@ function build(t, readOnly) {
     },
   }, tr('detail.delete'));
 
+  // Melden (openbare Tick): een taak van een ander; zichtbaar gemaakt in fill().
+  const report = el('button', {
+    class: 'ghost', type: 'button', hidden: true,
+    onclick: () => {
+      const task = current(id);
+      const top = task?.parent_id ? current(task.parent_id) : task;
+      const who = reportableTask(top);
+      if (top && who) openReportDialog({ task_id: top.id }, top.title, who.name);
+    },
+  }, tr('report.button'));
+
   const rail = el('div', { class: 'rail' });
   // Onder de stappen Samen met en Kopieën: wie er op zitten (share.js, copies.js).
   const shareBox = el('div', { class: 'step-body dshare', hidden: true });
@@ -479,10 +491,10 @@ function build(t, readOnly) {
     noteSect,
     subs,
     filesBox,
-    el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, reopen, del)),
+    el('div', { class: 'dfoot' }, status, el('div', { class: 'actions' }, report, reopen, del)),
   ].filter(Boolean));
   view = {
-    id, readOnly, rail, railKey: '', lastKind: null, reopen, filesBox, shareBox, copiesBox, noteSect, pin, title, titleSize,
+    id, readOnly, rail, railKey: '', lastKind: null, reopen, report, filesBox, shareBox, copiesBox, noteSect, pin, title, titleSize,
     locSub, locSubIdle, rearmLoc, rearmDone, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status,
     pickWhen, snoozeRemind, clearRemind, pickRepeat, clearRepeat, pickPlace, clearLoc, pickList, toggleWatch, pickShare,
   };
@@ -511,6 +523,7 @@ function fill(t) {
   if (document.activeElement !== v.title && !hasPending(t.id, 'title') && v.title.value !== t.title) v.title.value = t.title;
   autoGrow(v.title);
   fillShareBox(v.shareBox, t, done);
+  v.report.hidden = !reportableTask(t.parent_id ? current(t.parent_id) : t);
   fillCopiesBox(v.copiesBox, t);
   drawRail(t);
   // Al gemeld: de plek doet niets meer tot hij opnieuw gekozen wordt of "Opnieuw melden" eronder getikt.
