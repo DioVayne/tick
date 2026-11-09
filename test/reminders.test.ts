@@ -40,8 +40,8 @@ describe('reminderPayload', () => {
 
   it('geeft de actieknoppen mee in de taal van de installatie', () => {
     const t = { id: 'c', title: 'x', description: '' };
-    expect(reminderPayload(t, 'nl').actions).toEqual([{ action: 'done', title: 'Klaar' }, { action: 'snooze', title: '+1 uur' }]);
-    expect(reminderPayload(t, undefined).actions).toEqual([{ action: 'done', title: 'Done' }, { action: 'snooze', title: '+1 hour' }]);
+    expect(reminderPayload(t, 'nl').actions).toEqual([{ action: 'done', title: 'Klaar' }, { action: 'snooze', title: 'Over 1 uur' }]);
+    expect(reminderPayload(t, undefined).actions).toEqual([{ action: 'done', title: 'Done' }, { action: 'snooze', title: 'In 1 hour' }]);
   });
 });
 
