@@ -16,8 +16,12 @@ import { normName } from './lists.js';
 import { startBadge, updateBadge } from './badge.js';
 import { startDriveMode } from './driveview.js';
 import { startVerifyBar } from './verifybar.js';
+import { onAgenda, startAgenda } from './agenda.js';
 
 on('change', () => { render(); refreshCalendar(); updateBadge(); });
+// Gekoppelde agenda's: ophalen bij het openen (en na een kwartier weg), en de kalender toont de afspraken.
+onAgenda(refreshCalendar);
+startAgenda();
 startBadge(() => state.open, render);
 on('error', toast);
 setupSidebar();

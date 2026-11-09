@@ -107,7 +107,7 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 .step { position: relative; --c: var(--muted); }
 /* De tijdlijn (steps.js), in de invoerkaart en in het detailpaneel. Rand en lijn halen 3:1 op de achtergrond. */
 .step:not(:last-child)::after { content: ""; position: absolute; left: 13px; top: 36px; bottom: -8px; width: 2px; border-radius: 1px; background: color-mix(in srgb, var(--muted) 55%, transparent); }
-.step-when { --c: var(--bell); }
+.step-when, .step-addcal { --c: var(--bell); }
 .step-repeat { --c: #7f77dd; }
 .step-place { --c: #1d9e75; }
 .step-share, .step-watch, .step-copies { --c: #378add; }
@@ -533,11 +533,14 @@ body.resizing { cursor: col-resize; user-select: none; }
 .menu-item { min-height: 34px; padding: 6px 10px; border-radius: 6px; background: transparent; color: var(--text); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .menu-item:hover, .menu-item:focus-visible { background: var(--hover); outline: none; }
 .menu-item.on { font-weight: 600; background: var(--sel); }
+a.menu-item { display: block; text-decoration: none; }
 .menu-item.muted { color: var(--muted); }
 .menu-item.menu-danger { color: var(--danger); } /* niet .danger: button.danger geeft een rand */
 .menu-sep { border-top: 1px solid var(--line); margin: 4px 2px; }
 .menu-when { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
 .menu-when small { color: var(--muted); font-size: .8125rem; }
+.menu-when.busy small { color: var(--bell); }
+.menu-head { padding: 6px 10px 2px; color: var(--muted); font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
 .menu-cancel { justify-content: center; text-align: center; color: var(--muted); }
 .menu-input { margin: 2px 0; padding: 6px 8px; font-size: .875rem; }
 /* Lijst- en ritmekiezer op een smal scherm (popover.js): van onderen, net als de datumkiezer (.dpick.sheet), alles minstens 44px hoog */
@@ -663,6 +666,7 @@ body.manager-open #main > :not(#manager):not(#net) { display: none; }
 .mgr-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; color: var(--muted); font-size: .875rem; }
 .mgr-desc { margin: 10px 0 0; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
 .mgr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mgr-slot small { display: block; color: var(--bell); font-size: .75rem; font-weight: 400; }
 .mgr-summary p { margin: 0 0 16px; line-height: 1.45; }
 /* De kaart in het lege detailpaneel (detail.js): uitleg, aantal en Opruimen starten; Kies een taak klein eronder. */
 .mgr-empty { margin: 24px 0 0; text-align: center; }
@@ -696,11 +700,14 @@ body.calendar-open #main > :not(#calendar):not(#net) { display: none; }
 .cal-day.overdue { color: var(--danger); }
 .cal-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); }
 .cal-item { flex: 1; min-width: 0; min-height: 40px; padding: 6px 4px; overflow: hidden; background: transparent; color: var(--text); text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.cal-busy { color: var(--muted); font-style: italic; cursor: default; }
+.cal-chip.cal-busy { background: transparent; border: 1px dashed var(--line); }
+.cal-item.cal-busy { display: block; }
 .cal-item .cal-time, .cal-when { color: var(--muted); font-size: .8125rem; font-variant-numeric: tabular-nums; }
 .cal-empty { color: var(--muted); }
 .cal-morebtn { justify-self: start; min-height: 36px; margin-top: 8px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); }
 .cal-nav:focus-visible, .cal-mode:focus-visible, .cal-chip:focus-visible, .cal-num:focus-visible, .cal-item:focus-visible, .cal-more:focus-visible, .cal-morebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-@media (max-width: 600px) { .cal-cell { min-height: 4rem; } .cal-chip .cal-name { display: none; } .cal-chip { height: 6px; min-height: 0; padding: 0; background: var(--accent); } .cal-chip .cal-time { display: none; } }
+@media (max-width: 600px) { .cal-cell { min-height: 4rem; } .cal-chip .cal-name { display: none; } .cal-chip { height: 6px; min-height: 0; padding: 0; background: var(--accent); } .cal-chip .cal-time { display: none; } .cal-chip.cal-busy { border: 0; background: var(--muted); opacity: .45; } }
 /* Groepen (klein kopje) met daaronder één lijst van uitklapbare blokken; een open blok krijgt een lichte tint. */
 .settings { --tint: color-mix(in srgb, var(--accent) 14%, var(--card)); --open: color-mix(in srgb, var(--accent) 4%, var(--card));
   display: grid; gap: 4px; padding: 2px 0 24px; }
@@ -1000,3 +1007,11 @@ html[data-drive] body.task-open .dback { min-height: 52px; }
 .report-dialog .report-block input { width: auto; margin: 0; accent-color: var(--accent); }
 .att-grid li { position: relative; }
 .att-grid .att-report { position: absolute; left: 4px; top: 4px; }
+
+/* Instellingen › Agenda's: adres, naam en de knop; smal onder elkaar. */
+.set-cal-form { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
+.set-cal-form .set-url { flex: 2 1 16rem; min-width: 0; padding: 7px 10px; font-size: .875rem; }
+.set-cal-form .set-cal-name { flex: 1 1 10rem; }
+.set-cal-help { margin-top: 6px; }
+.set-cal-help summary { cursor: pointer; color: var(--link); font-size: .875rem; }
+.set-cal-help p { margin: 6px 0; color: var(--muted); font-size: .8125rem; }

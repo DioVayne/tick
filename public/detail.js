@@ -18,7 +18,8 @@ import { staleCount } from './sidebar.js';
 import { addSubtask, claimedByOther, findDone, remove, sharedOf, snooze, state, toggleDone, update, updateQueued, watchTask } from './store.js';
 import { openReportDialog, reportableTask } from './report.js';
 import { fillShareBox, openShareDialog, shareNames } from './share.js';
-import { openWhenMenu, step } from './steps.js';
+import { openMenu, openWhenMenu, step } from './steps.js';
+import { googleCalendarUrl } from './ics.js';
 
 // Detailpaneel (desktop) en taakscherm (mobiel): één opbouw per gekozen taak, daarna alleen bijwerken.
 // Zo overschrijft een verversing nooit het veld waarin je typt.
@@ -338,6 +339,20 @@ function build(t, readOnly) {
       render(); // de stap en Herhalen meteen bijwerken, niet pas na het opslaan
     }, { note: task.repeat ? tr('dp.only_this_time') : undefined }); // het ritme (repeat_at) blijft staan
   };
+  // Zet in je agenda: Google Agenda (een link) of een .ics-bestand voor Outlook, Apple en de rest; 30 minuten vanaf de herinnering.
+  const addToCalendar = (anchor) => {
+    const task = current(id);
+    const at = task ? remindOf(task) : null;
+    if (!task || !at) return;
+    const ev = { id, title: task.title, remind_at: at };
+    openMenu(anchor, tr('detail.add_cal'), (choose) => [
+      el('a', { class: 'menu-item', role: 'menuitem', href: googleCalendarUrl(ev), target: '_blank', rel: 'noopener', onclick: () => choose(null) },
+        tr('detail.add_cal_google')),
+      // Een nog niet opgeslagen tijd gaat eerst naar de server, want het bestand komt van daar.
+      el('a', { class: 'menu-item', role: 'menuitem', href: `/api/tasks/${encodeURIComponent(id)}/calendar.ics`, download: `tick-${id.slice(0, 8)}.ics`,
+        onclick: () => { flushField(id, 'remind_at'); choose(null); } }, tr('detail.add_cal_ics')),
+    ]);
+  };
   // Verzetten en wissen winnen van een gekozen, nog niet opgeslagen tijd (die anders na de klik alsnog zou gaan).
   const snoozeRemind = () => { dropField(id, 'remind_at'); save(snooze(id, 60)); };
   const clearRemind = () => { dropField(id, 'remind_at'); save(update(id, { remind_at: null })); };
@@ -496,7 +511,7 @@ function build(t, readOnly) {
   view = {
     id, readOnly, rail, railKey: '', lastKind: null, reopen, report, filesBox, shareBox, copiesBox, noteSect, pin, title, titleSize,
     locSub, locSubIdle, rearmLoc, rearmDone, desc, editor, descValue: undefined, check, subs, subList, crumb, back, status,
-    pickWhen, snoozeRemind, clearRemind, pickRepeat, clearRepeat, pickPlace, clearLoc, pickList, toggleWatch, pickShare,
+    pickWhen, snoozeRemind, clearRemind, addToCalendar, pickRepeat, clearRepeat, pickPlace, clearLoc, pickList, toggleWatch, pickShare,
   };
 }
 
@@ -613,6 +628,7 @@ function drawRail(t) {
       open: opener('when', v.pickWhen),
       actions: done || !remindAt ? [] : [{ label: tr('push.snooze'), run: v.snoozeRemind }, clear(v.clearRemind, tr('detail.remove_reminder'))],
     }),
+    done || !remindAt ? null : step({ kind: 'addcal', icon: 'calendar', on: false, lead: tr('detail.add_cal'), open: opener('addcal', v.addToCalendar) }),
     // Een subtaak herhaalt niet; afgerond alleen als er een ritme was.
     t.parent_id || done && !t.repeat ? null : step({
       kind: 'repeat', icon: 'repeat', on: !!t.repeat, lead: t.repeat ? '' : tr('add.repeat'), value: t.repeat ? describeRule(t.repeat.rule, t.repeat.start) : null,
