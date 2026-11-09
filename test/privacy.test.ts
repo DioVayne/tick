@@ -22,6 +22,15 @@ describe('openbare privacypagina', () => {
     expect(html).not.toContain('mailto:');
   });
 
+  it("gekoppelde agenda's: wat, hoe vaak en wissen, alleen als de functie aan staat", async () => {
+    const html = await (await page('nl')).text();
+    expect(html).toContain(translate('nl', 'priv.calendar_title'));
+    expect(html).toContain(translate('nl', 'priv.calendar'));
+    expect(translate('en', 'priv.calendar')).toMatch(/title and the start and end time.*14 days.*encrypted.*Unlinking/s);
+    expect(privacyPage('nl', null)).not.toContain(translate('nl', 'priv.calendar_title'));
+    expect(privacyPage('nl', null, undefined, false, false, true)).toContain(translate('nl', 'priv.calendar'));
+  });
+
   it('met mail aan noemt de pagina Resend, zonder niet', () => {
     expect(privacyPage('nl', null, undefined, true)).toContain(translate('nl', 'priv.others_mail'));
     expect(privacyPage('nl', null)).not.toContain('Resend');

@@ -135,7 +135,7 @@ ${forgot ? `<p>${t('del.no_login_forgot', { link: `<a href="/forgot">${t('del.fo
  */
 // mailOn: mailen staat aan, dan noemt de pagina Resend bij de diensten.
 // open: een openbare Tick (OPEN_SIGNUP): ook uitnodigingen per mail en het opruimen van onbevestigde accounts.
-export function privacyPage(locale: string | undefined, contact: string | null, operator?: string, mailOn = false, open = false): string {
+export function privacyPage(locale: string | undefined, contact: string | null, operator?: string, mailOn = false, open = false, calendar = false): string {
   const lang = normLocale(locale);
   const t = (key: string, vars?: Record<string, string>) => translate(lang, key, vars);
   const name = (operator ?? '').trim();
@@ -156,7 +156,10 @@ export function privacyPage(locale: string | undefined, contact: string | null, 
 <h2>${t('priv.what_title')}</h2>
 ${items(['priv.what_account', 'priv.what_content', 'priv.what_devices', 'priv.what_push'])}
 <h2>${t('priv.location_title')}</h2>
-<p>${t('priv.location')}</p>
+<p>${t('priv.location')}</p>${calendar ? `
+<h2>${t('priv.calendar_title')}</h2>
+<p>${t('priv.calendar')}</p>` : ''}
+<p>${t('priv.calendar_add')}</p>
 <h2>${t('priv.not_title')}</h2>
 <p>${t('priv.not')}</p>
 <p>${t('priv.cookie')}</p>

@@ -37,6 +37,7 @@ import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxAccount, maxUpload, sweepAttachments } from './attachments';
 import { mcpApi } from './mcp';
+import { calendarApi, calendarOn, refreshStaleFeeds } from './calendar';
 
 export type Env = {
   DB: D1Database;
@@ -87,6 +88,8 @@ export type Env = {
   SIGNUP_DAILY_LIMIT?: string;
   /** Openbare Tick, gratis versie: met hoeveel verschillende mensen je hoogstens deelt (standaard 1; de beheerder onbeperkt). */
   FREE_SHARE_PEOPLE?: string;
+  /** Agenda's koppelen via geheime iCal-adressen (src/calendar.ts). Alles behalve "false" is aan. */
+  CALENDAR_FEEDS?: string;
 };
 
 export type TaskRow = {
@@ -176,7 +179,7 @@ app.get('/login', async (c) => {
 });
 // Zonder inlog: uitleg over je account verwijderen, voor de link die Google Play vraagt.
 app.get('/delete-account', (c) => c.html(deleteAccountPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), mailEnabled(c.env))));
-app.get('/privacy', (c) => c.html(privacyPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), c.env.OPERATOR_NAME, mailEnabled(c.env), openSignup(c.env))));
+app.get('/privacy', (c) => c.html(privacyPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), c.env.OPERATOR_NAME, mailEnabled(c.env), openSignup(c.env), calendarOn(c.env))));
 // Zonder inlog, alleen op een openbare Tick: de algemene voorwaarden, met een vaste taal per adres.
 for (const [path, lang] of [['/terms', 'en'], ['/voorwaarden', 'nl']] as const) {
   app.get(path, (c) => {
@@ -289,6 +292,7 @@ app.route('/api/reports', reportsApi);
 app.route('/admin', adminPages);
 app.route('/api', attachmentsApi);
 app.route('/api/background', backgroundApi);
+app.route('/api/calendar', calendarApi);
 // De MCP-tools roepen deze app zelf aan (met dezelfde sleutel); pas bij een request, dus alle routes staan er dan.
 app.route('/mcp', mcpApi((req, env, ctx) => Promise.resolve(app.fetch(req, env, ctx))));
 
@@ -635,6 +639,7 @@ app.get('/config.js', (c) => {
     userId: user.id, userName: user.name, isAdmin: user.role === 'admin',
     attachments: !!c.env.FILES, maxUploadMb: maxUpload(c.env) / 1024 / 1024,
     maxAccountMb: c.env.FILES && maxAccount(c.env) !== null ? maxAccount(c.env)! / 1024 / 1024 : null,
+    calendarFeeds: calendarOn(c.env),
     openSignup: openSignup(c.env), emailVerified: !!user.email_verified_at, verifyBy: verifyBy(c.env, user),
   };
   return c.body(`export default ${JSON.stringify(config)};
@@ -1365,6 +1370,8 @@ export function cronSteps(env: Env, install: InstallPrefs, at: number): [string,
     ['reminders', () => runReminders(env, install)],
     ['verlopen', () => runOverdue(env, install)],
   ];
+  // Gekoppelde agenda's: elke 5 minuten een paar feeds die langer dan een uur niet opgehaald zijn.
+  if (calendarOn(env) && new Date(at).getUTCMinutes() % 5 === 0) steps.push(['agenda', () => refreshStaleFeeds(env, Date.now())]);
   if (new Date(at).getUTCMinutes() === 0) {
     steps.push(
       ['prullenbak', () => purgeTrash(env.DB, Date.now())],
