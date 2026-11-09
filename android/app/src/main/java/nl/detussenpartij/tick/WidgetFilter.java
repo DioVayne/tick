@@ -64,6 +64,16 @@ final class WidgetFilter {
         return out;
     }
 
+    /** Gedeeld (als eigenaar of ontvanger): één taak samen; de server zet dan share, net als het icoontje in de webapp. */
+    static boolean isShared(JSONObject t) {
+        return t.optJSONObject("share") != null;
+    }
+
+    /** Kopie: ieder een eigen exemplaar (geaccepteerd of nog uitgenodigd); de server zet dan copies op de hoofdtaak. */
+    static boolean isCopy(JSONObject t) {
+        return t.isNull("parent_id") && t.optJSONObject("copies") != null;
+    }
+
     /** Aantal open subtaken per hoofdtaak (afgeronde subtaken geeft de API niet mee). */
     static Map<String, Integer> openSubtasks(JSONArray tasks) {
         Map<String, Integer> n = new HashMap<>();

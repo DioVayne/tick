@@ -157,7 +157,10 @@ public class TaskListService extends RemoteViewsService {
             show(rv, R.id.due, meta);
             meta |= show(rv, R.id.repeat, !done && !t.isNull("repeat") && t.optJSONObject("repeat") != null);
             meta |= show(rv, R.id.place, !done && !t.isNull("location") && t.optJSONObject("location") != null);
-            meta |= show(rv, R.id.people, !done && isShared(t));
+            // Gedeeld (één taak samen) in de accentkleur, kopie (ieder een eigen exemplaar) grijs, net als in de webapp.
+            meta |= show(rv, R.id.people, !done && WidgetFilter.isShared(t));
+            rv.setInt(R.id.people, "setColorFilter", ctx.getColor(R.color.accent));
+            meta |= show(rv, R.id.copy, !done && WidgetFilter.isCopy(t));
             Integer subs = subtasks.get(t.optString("id"));
             boolean hasSubs = !done && subs != null && subs > 0;
             if (hasSubs) rv.setTextViewText(R.id.subtask_count, String.valueOf(subs));
@@ -205,7 +208,7 @@ public class TaskListService extends RemoteViewsService {
         private static final float TILE_GAP_DP = 3;
         private static final float GROUP_GAP_DP = 10;
 
-        private static final int[] META_ICONS = {R.id.bell, R.id.repeat, R.id.place, R.id.people, R.id.subtasks};
+        private static final int[] META_ICONS = {R.id.bell, R.id.repeat, R.id.place, R.id.people, R.id.copy, R.id.subtasks};
 
         private boolean isDark() {
             return (ctx.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
@@ -220,11 +223,6 @@ public class TaskListService extends RemoteViewsService {
         private static boolean show(RemoteViews rv, int id, boolean visible) {
             rv.setViewVisibility(id, visible ? View.VISIBLE : View.GONE);
             return visible;
-        }
-
-        /** Gedeeld (als eigenaar of ontvanger): de server zet dan share, net als het icoontje in de webapp. */
-        private static boolean isShared(JSONObject t) {
-            return t.optJSONObject("share") != null;
         }
 
         @Override

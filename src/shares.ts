@@ -161,17 +161,18 @@ sharesApi.get('/incoming', async (c) => {
  * De hoofdtaak komt in de kopiegroep van het origineel; die groep wordt eerst aangemaakt als ze er nog niet is. De
  * insert leest de groep met een subquery, zodat gelijktijdige accepts dezelfde groep krijgen.
  */
-function copyStmts(db: D1Database, src: TaskRow, kids: TaskRow[], userId: string, position: number): D1PreparedStatement[] {
+function copyStmts(db: D1Database, src: TaskRow, kids: TaskRow[], userId: string, fromUser: string, position: number): D1PreparedStatement[] {
   const ts = now();
   const past = (iso: string | null) => (iso && Date.parse(iso) <= Date.now() ? 1 : 0);
   const insert = db.prepare(
     'INSERT INTO tasks (id, user_id, title, description, list, parent_id, position, remind_at, notified, done, source, created_at, updated_at, ' +
-    'loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_notified, repeat_rule, repeat_start, repeat_at, copy_group) ' +
-    "VALUES (?, ?, ?, ?, 'Inbox', ?, ?, ?, ?, 0, 'share', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, (SELECT copy_group FROM tasks WHERE id = ?))");
+    'loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_notified, repeat_rule, repeat_start, repeat_at, copy_group, copied_from) ' +
+    "VALUES (?, ?, ?, ?, 'Inbox', ?, ?, ?, ?, 0, 'share', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, (SELECT copy_group FROM tasks WHERE id = ?), ?)");
   const row = (t: TaskRow, id: string, parent: string | null, pos: number) => insert.bind(
     id, userId, t.title, t.description, parent, pos, t.remind_at, past(t.remind_at), ts, ts,
     t.loc_name, t.loc_lat, t.loc_lng, t.loc_radius, t.loc_trigger, t.repeat_rule, t.repeat_start, t.repeat_at,
-    parent ? null : src.id); // alleen de hoofdtaak krijgt de groep, gelezen op het moment van invoegen
+    parent ? null : src.id, // alleen de hoofdtaak krijgt de groep, gelezen op het moment van invoegen
+    parent ? null : fromUser); // en wie hem stuurde ("Kopie van …")
   const id = crypto.randomUUID();
   const kidIds = kids.map(() => crypto.randomUUID());
   return [
@@ -206,7 +207,7 @@ sharesApi.post('/:id/accept', async (c) => {
   if (!claim.meta.changes) throw new HttpError(404, 'err.not_found');
   // Intussen kan een andere uitnodiging uit dezelfde groep al zijn geaccepteerd: één exemplaar per persoon. De rij is al weg.
   if (await hasCopyInGroup(db, task.id, userId)) throw new HttpError(409, 'err.copy_exists');
-  await db.batch(copyStmts(db, task, kids, userId, position));
+  await db.batch(copyStmts(db, task, kids, userId, s.from_user, position));
   return c.json({ ok: true });
 });
 

@@ -19,7 +19,7 @@ Add the Tick widget to your home screen. In its settings you choose:
 - what it shows: all tasks, *Today and overdue*, or one list;
 - text size and line spacing.
 
-Tick tasks off right there (you get 3 seconds to undo), tap a task to open it in the app, tap the header to open the app on that list, and add a task with **➕** (it goes into the widget's list). Each row shows the reminder, list, pin, repeat, place, sharing and open subtasks. The widget can be resized.
+Tick tasks off right there (you get 3 seconds to undo), tap a task to open it in the app, tap the header to open the app on that list, and add a task with **➕** (it goes into the widget's list). Each row shows the reminder, list, pin, repeat, place, sharing (blue people: one shared task; grey sheets: a copy, everyone has their own) and open subtasks. The widget can be resized.
 
 ## On time on the road
 Android notices a place a few minutes late, so by car or bike you would be past it. Turn on **On time on the road** in *Tick on this phone* and Tick makes arrival circles bigger while you drive or cycle. How it works: [Places, On the road](places.md#on-the-road). Not in the Google Play version.

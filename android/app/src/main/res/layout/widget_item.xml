@@ -71,7 +71,7 @@
                     android:visibility="gone" />
             </LinearLayout>
 
-            <!-- Metaregel, links onder de titel: alleen als er een herinnering, herhaling, locatie, delen of subtaken is. -->
+            <!-- Metaregel, links onder de titel: alleen als er een herinnering, herhaling, locatie, delen, een kopie of subtaken is. -->
             <LinearLayout
                 android:id="@+id/meta"
                 android:layout_width="match_parent"
@@ -125,6 +125,16 @@
                     android:layout_marginEnd="6dp"
                     android:contentDescription="@string/meta_shared"
                     android:src="@drawable/ic_people"
+                    android:visibility="gone" />
+
+                <!-- Kopie: een eigen exemplaar (grijs); gedeeld (people) kleurt in de accentkleur, zoals in de webapp. -->
+                <ImageView
+                    android:id="@+id/copy"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="6dp"
+                    android:contentDescription="@string/meta_copy"
+                    android:src="@drawable/ic_copy"
                     android:visibility="gone" />
 
                 <ImageView

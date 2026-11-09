@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { translate } from '../public/i18n.js';
 import { progressOf } from '../src/copies';
+import { deleteUserStmts } from '../src/users';
 import { ADMIN_ID, call, callAs, createTask, createUser, json, type Task } from './helpers';
 
 type User = Awaited<ReturnType<typeof createUser>>;
@@ -249,6 +250,36 @@ describe('copies in GET /api/tasks', () => {
     expect((await patch(e, ta, { title: 'x' })).status).toBe(404);
   });
 
+  it('from: wie jou de kopie stuurde, alleen op je eigen kopie', async () => {
+    const { ta, tb, tc } = await trio();
+    expect((await copiesOf(a, ta))!.from).toBeNull();
+    expect((await copiesOf(b, tb))!.from).toBe(a.name);
+    expect((await copiesOf(c, tc))!.from).toBe(a.name);
+    // Een kopie van een kopie komt van wie hem stuurde, niet van het origineel.
+    const title = (await list(a)).find((t) => t.id === ta)!.title;
+    const td = await copyTo(tb, title, d, b);
+    expect((await copiesOf(d, td))!.from).toBe(b.name);
+    // Wie meedoet aan een gedeeld exemplaar, ziet geen afzender (het is niet zijn kopie), en de app krijgt nooit het id.
+    const s = await json<Share>(await share(tb, e.id, 'shared', b.cookie));
+    expect((await accept(e, s.id)).status).toBe(200);
+    expect((await copiesOf(e, tb))!.from).toBeNull();
+    const body = await (await callAs(b.cookie, '/api/tasks')).text();
+    expect(body).not.toContain('copied_from');
+    expect(body).not.toContain(a.id);
+  });
+
+  it('from: zonder afzender na het verwijderen van zijn account', async () => {
+    const f = await mk(`Fien ${uniq()}`);
+    const title = `Weg ${uniq()}`;
+    const tf = (await post(f, { title })).id;
+    const tb = await copyTo(tf, title, b, f);
+    await copyTo(tf, title, c, f);
+    expect((await copiesOf(b, tb))!.from).toBe(f.name);
+    await env.DB.batch(deleteUserStmts(env.DB, f.id));
+    expect(await env.DB.prepare('SELECT copied_from FROM tasks WHERE id = ?').bind(tb).first()).toEqual({ copied_from: null });
+    expect((await copiesOf(b, tb))!.from).toBeNull();
+  });
+
   it('pending alleen voor de eigenaar', async () => {
     const title = `Wacht ${uniq()}`;
     const ta = (await post(a, { title })).id;
@@ -264,7 +295,7 @@ describe('copies in GET /api/tasks', () => {
     const ta = (await post(a, { title: `Alleen ${uniq()}` })).id;
     expect(await copiesOf(a, ta)).toBeNull();
     expect((await share(ta, c.id, 'copy', a.cookie)).status).toBe(201);
-    expect(await copiesOf(a, ta)).toEqual({ members: [], pending: [{ name: c.name }], self: { done: 0, total: 0 } });
+    expect(await copiesOf(a, ta)).toEqual({ members: [], pending: [{ name: c.name }], self: { done: 0, total: 0 }, from: null });
   });
 
   it('prullenbak', async () => {

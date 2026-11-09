@@ -1,3 +1,4 @@
+import { icon } from './icons.js';
 import { t } from './i18n.js';
 import { countTasks } from './markdown.js';
 import { el, fmt } from './render.js';
@@ -22,6 +23,25 @@ function bar(progress, label) {
   const fill = el('i');
   fill.style.setProperty('--p', String(Math.max(0, Math.min(1, progress))));
   return el('span', label ? { class: 'copy-bar', role: 'img', 'aria-label': label } : { class: 'copy-bar', 'aria-hidden': 'true' }, fill);
+}
+
+/** Uitleg bij het kopie-icoontje in de lijst: "Kopie, ook bij …", "Kopie, wacht op …" of allebei. */
+export function copyLabel(task) {
+  const c = task.copies;
+  const names = (c?.members ?? []).map((m) => m.name).join(', ');
+  const waiting = (c?.pending ?? []).map((p) => p.name).join(', ');
+  if (names && waiting) return t('copy.row_both', { names, waiting });
+  return names ? t('copy.row_with', { names }) : t('copy.row_waiting', { names: waiting || '…' });
+}
+
+/**
+ * Metaregel in de lijst: het kopie-icoontje (grijs; gedeeld is het mensen-icoontje in de accentkleur) met een labeltje
+ * per ander lid. Zolang nog niemand accepteerde, staat er "Kopie, wacht op …" naast het icoontje.
+ */
+export function copyMeta(task) {
+  const label = copyLabel(task);
+  const pills = copyPills(task);
+  return [el('span', { class: 'copied', title: label, 'aria-label': label }, icon('copy', 'sm'), pills.length ? null : label), ...pills];
 }
 
 /** Labeltjes per ander lid voor de meta-regel in de lijst. */
@@ -58,6 +78,19 @@ function row(name, done, doneAt, progress) {
 }
 
 /**
+ * De zin van de stap in het detailpaneel: "Kopie van <naam>" op een kopie die je kreeg, "Kopie gestuurd aan <namen>" op
+ * een eigen taak waar je kopieën van stuurde, anders "Kopieën" (een deelnemer van een gedeelde taak met kopieën).
+ * @returns {{ lead: string, value: string | null }}
+ */
+export function copyHeading(task) {
+  const c = task.copies;
+  if (c?.from) return { lead: t('copy.from'), value: c.from };
+  const names = [...(c?.members ?? []), ...(c?.pending ?? [])].map((m) => m.name).join(', ');
+  if (c && (!task.share || task.share.mine) && names) return { lead: t('copy.sent_to'), value: names };
+  return { lead: t('copy.heading'), value: null };
+}
+
+/**
  * De regels onder de stap "Kopieën" in het detailpaneel: per lid klaar of hoe ver; leeg en hidden zonder copies. Bouwt alleen opnieuw op als er iets veranderde.
  * @param {HTMLElement} box
  */
@@ -71,6 +104,7 @@ export function fillCopiesBox(box, task) {
   if (!c) { box.replaceChildren(); return; }
   const [myDone, myDoneAt, myProgress] = me;
   box.replaceChildren(
+    el('p', { class: 'step-hint' }, t('copy.hint')),
     el('ul', { class: 'copy-list' },
       ...c.members.map((m) => row(m.name, m.done, m.done_at, m.progress)),
       row(t('share.you'), myDone, myDoneAt, myProgress),

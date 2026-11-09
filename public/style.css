@@ -588,6 +588,10 @@ button.small { min-height: 30px; padding: 2px 10px; font-size: .8125rem; }
 .invite p { margin: 0; flex: 1 1 200px; word-break: break-word; }
 .invite-buttons { display: flex; gap: 8px; }
 .meta .shared { color: var(--accent); }
+/* Kopie: grijs icoontje (gedeeld heeft de accentkleur), met "Kopie, wacht op …" zolang niemand accepteerde. */
+.meta .copied { display: inline-flex; align-items: center; gap: 4px; }
+/* Grijze uitlegregel boven de namen bij Samen met en Kopieën: wat afvinken betekent. */
+.step-hint { margin: 0; color: var(--muted); font-size: .8125rem; }
 
 /* Kopiegroep: een labeltje per ander exemplaar in de lijst, en het blok Kopieën in het detailpaneel. Geen getallen,
    alleen een balkje (breedte via --p, 0–1, gezet vanuit JS) of een vinkje. */

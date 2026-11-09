@@ -37,6 +37,11 @@ Open a top-level task and tap **Do it together with…**. Pick someone and choos
 - **Shared:** one task for everyone. Done is done for everyone, and everyone can change it and add subtasks. Each person keeps it in their own list and order. A reminder (time or place) reaches everyone on it, so whoever passes the supermarket first does the shopping. When someone ticks it off or gives it a place, the others get a notification.
 - **Copy:** the other person gets their own copy, with all subtasks open. You each tick off your own.
 
+### Shared or copy: how to tell
+- **Shared** has the people icon in blue, with the names: "Shared with Sanne", or "Waiting for Sanne" until she accepts. In the task, *Together with* says **Ticking it off counts for everyone.**
+- **Copy** has a grey icon of two sheets, followed by a pill per person (see below), or "Copy, waiting for Sanne" until she accepts. In the task, the line says **Copy sent to Sanne** on yours and **Copy from Dio** on the one you received, with **Everyone ticks off their own copy.**
+- The Android widget shows the same two icons: blue people for shared, grey sheets for a copy (from app version 1.12.3).
+
 The other person gets a notification with **Accept** and **Decline**, and a bar in the app; an accepted task lands in their Inbox. If they have Tick open, the bar appears by itself: straight away with notifications on, otherwise when they click into Tick or within two minutes. Only the owner can invite others. Anyone on a shared task can leave it; the owner can remove people or withdraw an invitation. Who is on it is listed in the task under *Together with*. Deleting a shared task deletes it for everyone.
 
 ## On an open Tick
@@ -53,7 +58,7 @@ Something shared with you that shouldn't be? You can report it and block the per
 You always see the same thing, whether or not the address has an account: *Together with* or the list dialog shows the address with "waiting for an answer" until they accept, and then their name. You can withdraw an invitation there with **Remove**.
 
 ## Seeing how far the others are
-Copies stay linked. On your copy you see a pill per person: their name with a small progress bar, or their name with ✓ when they are done. Progress counts their subtasks and the checklist lines in their notes. You never see their title, notes or subtasks.
+Copies stay linked. On your copy you see the copy icon and a pill per person: their name with a small progress bar, or their name with ✓ when they are done. Progress counts their subtasks and the checklist lines in their notes. You never see their title, notes or subtasks.
 
 When someone ticks off their copy, the others get a notification "*Name* is done ✓".
 
