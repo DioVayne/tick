@@ -539,7 +539,8 @@ a.menu-item { display: block; text-decoration: none; }
 .menu-sep { border-top: 1px solid var(--line); margin: 4px 2px; }
 .menu-when { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
 .menu-when small { color: var(--muted); font-size: .8125rem; }
-.menu-when.busy small { color: var(--bell); }
+.menu-when.busy { white-space: normal; }
+.menu-when.busy small { color: var(--bell); text-align: right; }
 .menu-head { padding: 6px 10px 2px; color: var(--muted); font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
 .menu-cancel { justify-content: center; text-align: center; color: var(--muted); }
 .menu-input { margin: 2px 0; padding: 6px 8px; font-size: .875rem; }

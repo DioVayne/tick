@@ -72,7 +72,8 @@ function busyByDay(from, to) {
 const busyTitle = (ev) => ev.title || t('cal.busy');
 /** Een afspraak als regel of blokje: geen knop, want Tick kan hem niet openen. */
 const busyItem = (b, cls) => el('div', { class: `${cls} cal-busy`, title: t('cal.from_calendar') },
-  b.ev.allDay ? null : el('span', { class: 'cal-time' }, timeText(b.ms)), b.ev.allDay ? null : ' ', el('span', { class: 'cal-name' }, busyTitle(b.ev)));
+  b.ev.allDay ? null : el('span', { class: 'cal-time' }, `${timeText(b.ev.start)}–${timeText(b.ev.end)}`), b.ev.allDay ? null : ' ',
+  el('span', { class: 'cal-name' }, busyTitle(b.ev)));
 
 function monthTitle() {
   return new Date(Date.UTC(S.y, S.m - 1, 1)).toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric', timeZone: 'UTC' });
