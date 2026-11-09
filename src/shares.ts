@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import type { AppEnv, Env, TaskRow } from './index';
 import { HttpError } from './errors';
 import { getAccess, STEP, topMin } from './access';
@@ -14,6 +14,7 @@ export const sharesApi = new Hono<AppEnv>();
 type ShareRow = {
   id: string; task_id: string; from_user: string; to_user: string; mode: 'shared' | 'copy'; status: 'pending' | 'accepted';
   list: string | null; position: number | null; created_at: string; responded_at: string | null;
+  pinned?: number; loc_notified?: number;
 };
 
 const now = () => new Date().toISOString();
@@ -108,6 +109,10 @@ sharesApi.post('/', async (c) => {
     const to = await resolveOpenRecipient(c.env, c.get('user'), b);
     await assertMayShareWith(c.env, c.get('user'), to);
     if ('email' in to) {
+      // Staat er al een uitnodiging aan dit adres in de andere vorm, dan krijgt die de nieuwe vorm.
+      const sw = await db.prepare('UPDATE email_invites SET mode = ?1 WHERE email = ?2 AND task_id = ?3 AND from_user = ?4 AND mode != ?1 AND expires_at > ?5')
+        .bind(b.mode, to.email, task.id, userId, now()).run();
+      if (sw.meta.changes) return c.json({ ok: true, status: 'pending', mode: b.mode, changed: 'mode' });
       const inv = await addEmailInvite(db, userId, to.email, { kind: 'task', taskId: task.id, mode: b.mode });
       await afterEmailInvite(c, inv.id, to.email, { kind: 'task', title: task.title }, to.silent);
       return c.json({ ok: true, status: 'pending', mode: b.mode }, 201);
@@ -115,10 +120,15 @@ sharesApi.post('/', async (c) => {
     toUser = to.userId;
   } else toUser = await recipientOf(db, b);
   if (toUser === userId) throw new HttpError(400, 'err.share_self');
+  const existing = await db.prepare(
+    "SELECT s.*, EXISTS (SELECT 1 FROM list_members m WHERE m.list_id = ?3 AND m.user_id = s.to_user AND m.status = 'accepted') AS in_list " +
+    'FROM task_shares s WHERE s.task_id = ?1 AND s.to_user = ?2').bind(task.id, toUser, task.shared_list ?? null).first<ShareRow & { in_list: number }>();
+  if (existing) return switchMode(c, task, existing, b.mode, b.convert === true, open);
   if (await hasCopyInGroup(db, task.id, toUser)) {
     // Openbare Tick: niet verraden dat dit adres een account in de groep heeft; er gebeurt gewoon niets.
     if (open) return c.json({ ok: true, status: 'pending', mode: b.mode }, 201);
-    throw new HttpError(409, 'err.copy_exists');
+    // Een eigen kopie wordt niet vanzelf weer gedeeld: die kan veranderd of afgevinkt zijn. Eerst moet hij weg.
+    throw new HttpError(409, b.mode === 'shared' ? 'err.copy_exists_shared' : 'err.copy_exists');
   }
   const row: ShareRow = {
     id: crypto.randomUUID(), task_id: task.id, from_user: userId, to_user: toUser, mode: b.mode, status: 'pending',
@@ -156,31 +166,80 @@ sharesApi.get('/incoming', async (c) => {
   })));
 });
 
+/** Waar een kopie komt: lijst, plek, pin en locatiemelding van de hoofdtaak; `keepDone` houdt afgevinkt zoals het is. */
+type CopyPlace = { list: string; position: number; pinned: number; locNotified: number; keepDone: boolean };
+
 /**
  * Kopie accepteren: nieuwe taken van de ontvanger met nieuwe ids, zoals het origineel nu is, subtaken allemaal open.
  * De hoofdtaak komt in de kopiegroep van het origineel; die groep wordt eerst aangemaakt als ze er nog niet is. De
  * insert leest de groep met een subquery, zodat gelijktijdige accepts dezelfde groep krijgen.
  */
-function copyStmts(db: D1Database, src: TaskRow, kids: TaskRow[], userId: string, fromUser: string, position: number): D1PreparedStatement[] {
+function copyStmts(db: D1Database, src: TaskRow, kids: TaskRow[], userId: string, fromUser: string, position: number,
+  place: CopyPlace = { list: 'Inbox', position, pinned: 0, locNotified: 0, keepDone: false }): D1PreparedStatement[] {
   const ts = now();
   const past = (iso: string | null) => (iso && Date.parse(iso) <= Date.now() ? 1 : 0);
   const insert = db.prepare(
-    'INSERT INTO tasks (id, user_id, title, description, list, parent_id, position, remind_at, notified, done, source, created_at, updated_at, ' +
+    'INSERT INTO tasks (id, user_id, title, description, list, parent_id, position, remind_at, notified, done, done_at, pinned, source, created_at, updated_at, ' +
     'loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_notified, repeat_rule, repeat_start, repeat_at, copy_group, copied_from) ' +
-    "VALUES (?, ?, ?, ?, 'Inbox', ?, ?, ?, ?, 0, 'share', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, (SELECT copy_group FROM tasks WHERE id = ?), ?)");
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'share', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT copy_group FROM tasks WHERE id = ?), ?)");
   const row = (t: TaskRow, id: string, parent: string | null, pos: number) => insert.bind(
-    id, userId, t.title, t.description, parent, pos, t.remind_at, past(t.remind_at), ts, ts,
-    t.loc_name, t.loc_lat, t.loc_lng, t.loc_radius, t.loc_trigger, t.repeat_rule, t.repeat_start, t.repeat_at,
+    id, userId, t.title, t.description, place.list, parent, pos, t.remind_at, past(t.remind_at),
+    place.keepDone ? t.done : 0, place.keepDone ? t.done_at : null, parent ? 0 : place.pinned, ts, ts,
+    t.loc_name, t.loc_lat, t.loc_lng, t.loc_radius, t.loc_trigger, parent ? 0 : place.locNotified, t.repeat_rule, t.repeat_start, t.repeat_at,
     parent ? null : src.id, // alleen de hoofdtaak krijgt de groep, gelezen op het moment van invoegen
     parent ? null : fromUser); // en wie hem stuurde ("Kopie van …")
   const id = crypto.randomUUID();
   const kidIds = kids.map(() => crypto.randomUUID());
   return [
     db.prepare('UPDATE tasks SET copy_group = ? WHERE id = ? AND copy_group IS NULL').bind(crypto.randomUUID(), src.id),
-    row(src, id, null, position), ...kids.map((k, i) => row(k, kidIds[i], id, k.position)),
+    row(src, id, null, place.position), ...kids.map((k, i) => row(k, kidIds[i], id, k.position)),
     // De bijlagen gaan mee als verwijzing naar hetzelfde R2-object.
     copyAttachmentStmt(db, src.id, id), ...kids.map((k, i) => copyAttachmentStmt(db, k.id, kidIds[i])),
   ];
+}
+
+/**
+ * Iemand zit al op de taak (`s`) en de eigenaar kiest een vorm. Dezelfde vorm, of iemand die via de gedeelde lijst
+ * meedoet: 409. Een openstaande uitnodiging krijgt de nieuwe vorm (de ontvanger ziet dan de nieuwe tekst). Een
+ * geaccepteerde gedeelde taak wordt na bevestiging (`convert`, anders 428) een eigen kopie van de ontvanger, zoals de
+ * taak nu is, op zijn plek in zijn lijst; de deelrij gaat weg, het origineel blijft. Een geaccepteerde kopie heeft geen
+ * deelrij meer en komt hier dus niet.
+ */
+async function switchMode(c: Context<AppEnv>, task: TaskRow, s: ShareRow & { in_list: number }, mode: 'shared' | 'copy', convert: boolean, open: boolean) {
+  const db = c.env.DB;
+  if (s.mode === mode || s.in_list) throw new HttpError(409, 'err.share_exists');
+  if (s.status === 'pending') {
+    if (mode === 'copy' && await hasCopyInGroup(db, task.id, s.to_user)) {
+      // Openbare Tick: zoals bij een nieuwe uitnodiging niets verraden; er gebeurt gewoon niets.
+      if (open) return c.json({ ok: true, status: 'pending', mode, changed: 'mode' });
+      throw new HttpError(409, 'err.copy_exists');
+    }
+    const res = await db.prepare("UPDATE task_shares SET mode = ? WHERE id = ? AND status = 'pending' AND mode = ?").bind(mode, s.id, s.mode).run();
+    if (!res.meta.changes) throw new HttpError(409, 'err.share_exists'); // intussen geaccepteerd, geweigerd of al omgezet
+    if (open) return c.json({ ok: true, status: 'pending', mode, changed: 'mode' });
+    const { in_list: _, ...row } = s;
+    return c.json({ ...row, mode, changed: 'mode' });
+  }
+  if (!convert) throw new HttpError(428, 'err.share_to_copy_confirm');
+  const { results: kids } = await db.prepare('SELECT * FROM tasks WHERE parent_id = ? AND deleted_at IS NULL ORDER BY position').bind(task.id).all<TaskRow>();
+  // Zoals bij accepteren: eerst de deelrij weghalen, zodat er maar één kopie komt. Mislukt de kopie, dan komt de rij terug.
+  const claim = await db.prepare("DELETE FROM task_shares WHERE id = ? AND status = 'accepted' AND mode = 'shared'").bind(s.id).run();
+  if (!claim.meta.changes) throw new HttpError(409, 'err.share_exists');
+  const position = s.position ?? (((await topMin(db, s.to_user)) ?? 0) - STEP);
+  try {
+    await db.batch([
+      ...copyStmts(db, task, kids, s.to_user, task.user_id, position,
+        { list: s.list ?? 'Inbox', position, pinned: s.pinned ?? 0, locNotified: s.loc_notified ?? 0, keepDone: true }),
+      // De bezorgrijen van de ontvanger voor het origineel (de deelrij zelf is al weg).
+      ...leaveShareStmts(db, s.id, task.id, s.to_user).slice(1),
+    ]);
+  } catch (e) {
+    await db.prepare('INSERT OR IGNORE INTO task_shares (id, task_id, from_user, to_user, mode, status, list, position, pinned, loc_notified, created_at, responded_at) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(s.id, s.task_id, s.from_user, s.to_user, s.mode, s.status, s.list, s.position,
+      s.pinned ?? 0, s.loc_notified ?? 0, s.created_at, s.responded_at).run();
+    throw e;
+  }
+  return c.json({ ok: true, changed: 'copy' });
 }
 
 sharesApi.post('/:id/accept', async (c) => {

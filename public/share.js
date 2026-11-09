@@ -38,6 +38,37 @@ export async function people() {
   }
 }
 
+/**
+ * Hoe `who` nu al op de taak zit, voor de deeldialoog: { mode, status } of null. Gedeeld en openstaand staan in
+ * `task.share` (met id), kopieën in `task.copies` (alleen de naam, of het e-mailadres op een openbare Tick).
+ * @param {{ id?: string, name: string }} who
+ */
+export function currentShare(task, who) {
+  const same = (n) => typeof n === 'string' && n.trim().toLowerCase() === who.name.trim().toLowerCase();
+  const m = task.share?.mine ? task.share.members.find((x) => (who.id && x.user_id === who.id) || same(x.name)) : null;
+  if (m) return { mode: 'shared', status: m.status };
+  if (task.copies?.pending?.some((x) => same(x.name))) return { mode: 'copy', status: 'pending' };
+  if (task.copies?.members?.some((x) => same(x.name))) return { mode: 'copy', status: 'accepted' };
+  return null;
+}
+
+/** POST naar /api/shares; { data } als het lukte, anders { status } (de fout is dan al gemeld, behalve een 428). */
+async function postShare(body) {
+  try {
+    return { data: await request('POST', '/api/shares', body) };
+  } catch (e) {
+    if (e.status !== 428) toast(e instanceof Offline ? t('share.online_only') : e.message);
+    return { status: e.status ?? 0 };
+  }
+}
+
+/** Bevestiging voor een geaccepteerde gedeelde taak die een kopie wordt. */
+const confirmToCopy = (task, name) => ask({
+  title: t('share.to_copy_title'),
+  text: t('share.to_copy_confirm', { name, title: task.title }),
+  buttons: [{ label: t('dialog.cancel'), value: null, kind: 'ghost' }, { label: t('share.to_copy_button'), value: 'ok' }],
+}).then((v) => v === 'ok');
+
 /** De deeldialoog: iemand kiezen (of een naam of e-mailadres typen), en per keer gedeeld of kopie. */
 export async function openShareDialog(task) {
   if (state.offline) { toast(t('share.online_only')); return; }
@@ -49,9 +80,37 @@ export async function openShareDialog(task) {
     type: 'button', class: 'ghost person', 'aria-pressed': String(chosen?.id === p.id),
     onclick: () => { chosen = chosen?.id === p.id ? null : p; input.value = ''; mark(); },
   }, p.name));
-  const mark = () => chips.forEach((b, i) => b.setAttribute('aria-pressed', String(chosen?.id === others[i].id)));
+  // Zit de gekozen persoon al op de taak, dan zegt een regel hoe, en staat de andere vorm klaar.
+  const now = el('p', { class: 'share-now', 'aria-live': 'polite', hidden: true });
+  /** @type {{ mode: string, status: string } | null} */
+  let current = null;
+  const who = () => {
+    const typed = input.value.trim();
+    return typed ? { name: typed } : chosen ? { id: chosen.id, name: chosen.name } : null;
+  };
+  const radios = () => /** @type {HTMLInputElement[]} */ ([...form.querySelectorAll('input[name="share-mode"]')]);
+  const modeOf = () => radios().find((r) => r.checked)?.value ?? 'shared';
+  const label = () => {
+    const send = /** @type {HTMLButtonElement} */ (form.querySelector('button[type="submit"]'));
+    send.textContent = current && current.mode !== modeOf() ? t('share.change') : t('share.send');
+  };
+  const showCurrent = () => {
+    const w = who();
+    current = w ? currentShare(task, w) : null;
+    const key = !current ? null : current.mode === 'shared'
+      ? (current.status === 'accepted' ? 'share.now_shared' : 'share.now_shared_pending')
+      : (current.status === 'accepted' ? 'share.now_copy' : 'share.now_copy_pending');
+    now.hidden = !key;
+    now.textContent = key ? t(key, { name: w.name }) : '';
+    // Een eigen kopie wordt niet gedeeld; anders staat de andere vorm klaar (als die er is).
+    const other = !current || (current.mode === 'copy' && current.status === 'accepted') ? null : current.mode === 'shared' ? 'copy' : 'shared';
+    const r = other && radios().find((x) => x.value === other);
+    if (r) r.checked = true;
+    label();
+  };
+  const mark = () => { chips.forEach((b, i) => b.setAttribute('aria-pressed', String(chosen?.id === others[i].id))); showCurrent(); };
   // Typen gaat boven een keuze uit de lijst.
-  input.addEventListener('input', () => { if (input.value.trim()) { chosen = null; mark(); } });
+  input.addEventListener('input', () => { if (input.value.trim()) { chosen = null; mark(); } else showCurrent(); });
   const option = (value, label, hint, checked) => el('label', { class: 'share-mode' },
     el('input', { type: 'radio', name: 'share-mode', value, checked }),
     el('span', {}, el('strong', {}, label), el('small', {}, hint)));
@@ -66,10 +125,18 @@ export async function openShareDialog(task) {
       const mode = /** @type {HTMLInputElement} */ (form.querySelector('input[name="share-mode"]:checked')).value;
       const send = /** @type {HTMLButtonElement} */ (form.querySelector('button[type="submit"]'));
       send.disabled = true;
-      const who = typed ? { to: typed } : { to_user: chosen.id };
-      if (await call('POST', '/api/shares', { task_id: task.id, mode, ...who })) {
+      const to = typed ? { to: typed } : { to_user: chosen.id };
+      const name = typed || chosen.name;
+      // Een geaccepteerde gedeelde taak die een kopie wordt: eerst bevestigen. Weet de app het niet (getypt), dan vraagt de server erom (428).
+      const convert = current?.mode === 'shared' && current.status === 'accepted' && mode === 'copy';
+      if (convert && !(await confirmToCopy(task, name))) { send.disabled = false; return; }
+      let res = await postShare({ task_id: task.id, mode, ...to, convert });
+      if (res.status === 428 && await confirmToCopy(task, name)) res = await postShare({ task_id: task.id, mode, ...to, convert: true });
+      load();
+      if (res.data) {
         close();
-        toast(t('share.sent', { name: typed || chosen.name }), 'ok');
+        const done = res.data.changed === 'copy' ? 'share.converted' : res.data.changed === 'mode' ? 'share.changed' : 'share.sent';
+        toast(t(done, { name }), 'ok');
       } else send.disabled = false;
     },
   },
@@ -78,6 +145,7 @@ export async function openShareDialog(task) {
   el('label', { for: 'share-to' }, t('share.to_label')),
   chips.length ? el('div', { class: 'people', role: 'group', 'aria-label': t('share.to_label') }, ...chips) : null,
   input,
+  now,
   // In een gedeelde lijst is de taak al van alle leden: alleen een kopie sturen kan.
   el('fieldset', { class: 'share-modes' },
     el('legend', {}, t('share.mode_label')),
@@ -87,6 +155,8 @@ export async function openShareDialog(task) {
     el('button', { type: 'button', class: 'ghost', onclick: close }, t('dialog.cancel')),
     el('button', { type: 'submit' }, t('share.send'))));
   dialog.append(form);
+  form.addEventListener('change', (e) => { if (/** @type {HTMLInputElement} */ (e.target).name === 'share-mode') label(); });
+  showCurrent();
   dialog.addEventListener('click', (e) => { if (e.target === dialog) close(); });
   dialog.addEventListener('keydown', (e) => { if (e.key === 'Escape') e.stopPropagation(); });
   dialog.addEventListener('close', close);
