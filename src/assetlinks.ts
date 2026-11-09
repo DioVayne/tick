@@ -11,7 +11,7 @@ export const OFFICIAL_APP = { pkg: 'nl.detussenpartij.tick', certs: '23:DE:94:99
  * ander adres in kiezen. Play ondertekent de app zelf: dit is de SHA-256 van de app-ondertekeningssleutel uit Play
  * Console (Test en release › App-integriteit), niet die van de upload-sleutel. Leeg = nog niet bekend, dan valt hij weg.
  */
-export const PLAY_APP = { pkg: 'nl.ticktodo.app', certs: '' };
+export const PLAY_APP = { pkg: 'nl.ticktodo.app', certs: 'B2:B4:80:CC:C3:CB:F7:33:07:DD:C0:5F:08:C2:03:C7:FA:F3:C8:82:D4:F5:EB:77:1A:2C:AD:8D:33:11:8D:C8' };
 
 type App = { pkg: string; certs: string };
 
