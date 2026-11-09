@@ -5,7 +5,7 @@ import type { Env } from '../src/index';
 import { translate } from '../public/i18n.js';
 import { MIN_PASSWORD } from '../src/account';
 
-const err = (key: string, vars: Record<string, string | number> = {}) => ({ error: translate('en', key, vars) });
+const err = (key: string, vars: Record<string, string | number> = {}) => ({ error: translate('en', key, vars), key, vars });
 
 const html = { accept: 'text/html' };
 const signup = (body: unknown, e: Env = openEnv, ip = randomIp()) => callWith(e, '/signup', { method: 'POST', json: body, ip });

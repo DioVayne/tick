@@ -61,7 +61,7 @@ describe('bevestigen', () => {
     const u = await createUser();
     const done = await callWith(openEnv, '/api/account/verify', { method: 'POST', cookie: u.cookie });
     expect(done.status).toBe(400);
-    expect(await done.json()).toEqual({ error: translate('en', 'err.already_verified') });
+    expect(await done.json()).toMatchObject({ error: translate('en', 'err.already_verified') });
   });
 
   it('/config.js: verifyBy alleen voor een onbevestigd lid op een openbare Tick', async () => {

@@ -11,7 +11,7 @@ Everything is under **⚙ Settings** in the sidebar. Your name at the top of the
 - **Show Tickmanager** (you, on all your devices): on by default. Off hides the orange button, the sidebar item and the card next to your list. See [Tickmanager](tickmanager.md).
 
 ## Language and time
-- **Language** (this device): automatic, English or Nederlands. Notifications come in the language of the device they go to.
+- **Language** (this device): automatic, English or Nederlands. Error messages and the login page on this device follow it too. Notifications come in the language of the device they go to.
 - **Time zone** (you), with a button to take the zone of this device. Changing it keeps your reminders at the same clock time in the new zone.
 - **Reminder without a time** (you): used when you only pick a date. 09:00 by default.
 - **Daily reminder for overdue tasks** (you): its time, or off. See [Reminders](reminders.md#overdue-tasks).

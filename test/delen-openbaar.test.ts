@@ -8,7 +8,7 @@ type User = Awaited<ReturnType<typeof createUser>>;
 type Member = { share_id: string; user_id: string; name: string; status: string };
 type Task = { id: string; title: string; share: { mine: boolean; members: Member[] } | null };
 
-const err = (key: string) => ({ error: translate('en', key) });
+const err = (key: string) => ({ error: translate('en', key), key, vars: {} });
 const uniq = () => crypto.randomUUID().slice(0, 8);
 const as = (u: User, path: string, o: { method?: string; json?: unknown } = {}, e: Env = openEnv) => callWith(e, path, { ...o, cookie: u.cookie });
 const newTask = async (u: User, title = `Taak ${uniq()}`) =>

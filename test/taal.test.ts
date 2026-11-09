@@ -21,6 +21,11 @@ describe('taal per apparaat', () => {
     expect((await json<{ error: string }>(res)).error).toBe(STRINGS.nl['err.required'].replace('{field}', 'title'));
   });
 
+  it('een fout geeft ook de sleutel en de variabelen, zodat de app hem in zijn eigen taal toont', async () => {
+    const res = await call('/api/tasks', { method: 'POST', json: {}, headers: { cookie: 'tick_lang=nl' } });
+    expect(await json(res)).toEqual({ error: STRINGS.nl['err.required'].replace('{field}', 'title'), key: 'err.required', vars: { field: 'title' } });
+  });
+
   it('/config.js geeft de taal van de request en de standaardtaal', async () => {
     const text = await (await call('/config.js', { headers: { cookie: 'tick_lang=nl' } })).text();
     expect(text).toContain('"locale":"nl"');

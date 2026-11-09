@@ -42,7 +42,7 @@ describe('GET /api/geocode', () => {
     const spy = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('netwerk'));
     const res = await call('/api/geocode?q=Utrecht');
     expect(res.status).toBe(502);
-    expect(await json(res)).toEqual({ error: 'search is unavailable right now' });
+    expect(await json(res)).toMatchObject({ error: 'search is unavailable right now' });
     spy.mockImplementationOnce(async () => new Response('nee', { status: 503 }));
     expect((await call('/api/geocode?q=Utrecht')).status).toBe(502);
   });

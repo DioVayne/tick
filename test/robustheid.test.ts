@@ -108,7 +108,7 @@ describe('foutafhandeling', () => {
     try {
       const res = await patch(t.id, { title: 'x' });
       expect(res.status).toBe(500);
-      expect(await json(res)).toEqual({ error: 'server error' });
+      expect(await json(res)).toMatchObject({ error: 'server error' });
     } finally {
       await env.DB.exec('ALTER TABLE tasks_weg RENAME TO tasks');
     }

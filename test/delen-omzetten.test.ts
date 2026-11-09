@@ -11,7 +11,7 @@ import { call, callAs, callWith, createTask, createUser, json, openEnv } from '.
 type User = Awaited<ReturnType<typeof createUser>>;
 type Row = { id: string; mode: string; status: string };
 
-const err = (key: string) => ({ error: translate('en', key) });
+const err = (key: string) => ({ error: translate('en', key), key, vars: {} });
 const uniq = () => crypto.randomUUID().slice(0, 8);
 const share = (task_id: string, to_user: string, mode: string, extra: Record<string, unknown> = {}) =>
   call('/api/shares', { method: 'POST', json: { task_id, to_user, mode, ...extra } });

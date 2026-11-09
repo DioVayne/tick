@@ -157,13 +157,13 @@ describe('melden', () => {
     const mine = await attach(t.id, b);
     const own = await report(a, { task_id: t.id });
     expect(own.status).toBe(400);
-    expect(await own.json()).toEqual({ error: translate('en', 'err.report_own') });
+    expect(await own.json()).toMatchObject({ error: translate('en', 'err.report_own') });
     expect((await report(b, { attachment_id: mine.id })).status).toBe(400);
     expect((await report(x, { task_id: t.id })).status).toBe(404);
     expect((await report(x, {})).status).toBe(404);
     const bad = await report(b, { task_id: t.id, reason: 'boos' });
     expect(bad.status).toBe(400);
-    expect(await bad.json()).toEqual({ error: translate('en', 'err.report_reason') });
+    expect(await bad.json()).toMatchObject({ error: translate('en', 'err.report_reason') });
     expect(await reportsBy(b)).toEqual([]);
   });
 
