@@ -1,7 +1,7 @@
 # Reminders
 
 ## A reminder at a time
-**Remind me…** on a task (the line with the bell) offers *Today*, *Tomorrow* and *Next week*; *Other day and time…* opens the date and time picker. At that moment Tick sends a notification to each device where you turned notifications on. A new reminder starts at the next whole hour; a date without a time uses your *reminder without a time* setting (09:00 unless you changed it).
+**Remind me…** on a task (the line with the bell) offers *Today*, *Tomorrow* and *Next week*; *Other day and time…* opens the date and time picker. At that moment Tick sends a notification to each device where you turned notifications on. A new reminder starts at the next whole hour; a date without a time uses your *reminder without a time* setting (09:00 unless you changed it). With a [linked calendar](calendar.md) the menu also lists free moments from your calendar and says **Busy: …** when you already have an appointment at a suggested time. **Add to calendar** (below the reminder) puts the task in Google Calendar or downloads an .ics file for Outlook and Apple.
 
 The reminder is also the task's deadline: there is no separate due date.
 
@@ -24,7 +24,7 @@ Under **Repeat** at a reminder you choose how often: daily, weekly, monthly or y
 Once a day (09:00 by default) Tick sends a notification for each task whose reminder was before today and that is still open, at most 10, oldest first. Each has **Done** and **Tomorrow**. Change the time or switch it off under **⚙ Settings → Language and time**.
 
 ## The calendar
-**📅 Calendar** in the sidebar shows your open tasks with a date, as a month grid and as an agenda. Repeating tasks show their coming times too. The week starts on Monday or Sunday, as set in Settings.
+**📅 Calendar** in the sidebar shows your open tasks with a date, as a month grid and as an agenda. Repeating tasks show their coming times too. The week starts on Monday or Sunday, as set in Settings. Appointments from a [linked calendar](calendar.md) show as grey blocks with their titles.
 
 ## The counter on the icon
 The app icon, the browser tab and the favicon show how many tasks are due today, overdue ones included. The favicon gets a red dot when something is overdue. Switch it off per device in Settings.

@@ -49,7 +49,11 @@
     "LOCALE": "en",
     // Starting value for the time zone of reminders and repeating tasks, e.g. "Europe/London" or "America/New_York".
     // Change it in the app (Settings); what you choose there wins.
-    "TIMEZONE": "UTC"
+    "TIMEZONE": "UTC",
+    // Linking calendars (Settings › Calendars): people paste the secret iCal address of their Google, Outlook or iCloud
+    // calendar, and Tick suggests free moments around their appointments. "false" turns it off (no Calendars block and no
+    // API; "Add to calendar" on a task stays). The address is stored encrypted with a key derived from SESSION_SECRET.
+    "CALENDAR_FEEDS": "true"
     // Largest attachment in MB (optional, default 10, at most 100).
     // "MAX_UPLOAD_MB": "10"
     // Most storage for attachments per account, in MB (optional; empty means no limit).

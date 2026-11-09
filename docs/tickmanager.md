@@ -38,7 +38,7 @@ Each task has four choices:
 
 | Choice | What happens |
 |---|---|
-| **Schedule** | Shows suggestions as buttons (*Today*, only when the default reminder time has not passed yet, *Tomorrow* and *Next week*, all at your default reminder time) and **Pick a date…** for the full picker. Choosing sets the reminder. *Cancel* (or clearing the date) leaves the card as it is. |
+| **Schedule** | Shows suggestions as buttons (*Today*, only when the default reminder time has not passed yet, *Tomorrow* and *Next week*, all at your default reminder time) and **Pick a date…** for the full picker. With a [linked calendar](calendar.md), free moments from your calendar come first (*Free today 17:00*, a free evening and a free moment in the weekend), and *Tomorrow* or *Next week* says **Busy: …** when you already have an appointment then. Choosing sets the reminder. *Cancel* (or clearing the date) leaves the card as it is. |
 | **Move to top** | Puts the task at the top of its list, under the pinned tasks. |
 | **Leave it** | Changes nothing except that the task counts as looked at. |
 | **Delete** | Moves the task to the trash, with the usual *Undo*. |
