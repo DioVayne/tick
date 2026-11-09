@@ -39,6 +39,7 @@ export default defineConfig({
           RESEND_API_KEY: '',
           MAIL_FROM: '',
           MAIL_DAILY_LIMIT: '',
+          CALENDAR_FEEDS: 'true',
           TEST_MIGRATIONS: migrations,
         },
       },

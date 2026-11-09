@@ -65,6 +65,9 @@ export function deleteUserStmts(db: D1Database, id: string): D1PreparedStatement
     // Blokkades en meldingen (openbare Tick) van en over deze gebruiker.
     db.prepare('DELETE FROM blocks WHERE user_id = ?1 OR blocked_id = ?1').bind(id),
     db.prepare('DELETE FROM reports WHERE reporter_id = ?1 OR reported_id = ?1').bind(id),
+    // Gekoppelde agenda's: eerst de afspraken, dan de feeds.
+    db.prepare('DELETE FROM calendar_events WHERE user_id = ?').bind(id),
+    db.prepare('DELETE FROM calendar_feeds WHERE user_id = ?').bind(id),
     ...['api_keys', 'pair_codes', 'push_subscriptions', 'tasks', 'places', 'user_settings', 'lists', 'review_skip_lists', 'list_ids']
       .map((t) => db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(id)),
     // Ook links die deze gebruiker zelf aanmaakte (created_by verwijst naar users).
