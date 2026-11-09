@@ -38,6 +38,7 @@ import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxAccount, maxUpload, sweepAttachments } from './attachments';
 import { mcpApi } from './mcp';
 import { calendarApi, calendarOn, refreshStaleFeeds } from './calendar';
+import { taskIcs } from '../public/ics.js';
 
 export type Env = {
   DB: D1Database;
@@ -1234,6 +1235,17 @@ app.post('/api/tasks/:id/tomorrow', async (c) => {
   const at = localToUtcIso(localNow(z, Date.now()).tomorrow, z);
   await c.env.DB.prepare('UPDATE tasks SET remind_at = ?, notified = 0, repeat_prev = NULL, updated_at = ? WHERE id = ?').bind(at, now(), t.id).run();
   return c.json({ ok: true, remind_at: at });
+});
+
+// "Zet in je agenda": de taak als .ics-bestand van 30 minuten op de herinnering (Outlook, Apple; Google gaat via een link).
+app.get('/api/tasks/:id/calendar.ics', async (c) => {
+  const t = await getTask(c.env.DB, c.get('auth').userId, c.req.param('id'));
+  if (!t || !t.remind_at) throw new HttpError(404, 'err.not_found');
+  return c.body(taskIcs(t as { id: string; title: string; remind_at: string }), 200, {
+    'content-type': 'text/calendar; charset=utf-8',
+    'content-disposition': `attachment; filename="tick-${t.id.slice(0, 8)}.ics"`,
+    'cache-control': 'no-store',
+  });
 });
 
 // Endpoint voor automations (INBOX_TOKEN): title, notes, due, list en repeat. De Nederlandse velden

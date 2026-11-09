@@ -1,10 +1,12 @@
 import { dateLocale, t } from './i18n.js';
 import { icon } from './icons.js';
-import { el } from './render.js';
+import { el, toLocalInput } from './render.js';
 import { openDatePicker } from './datepicker.js';
 import { showMenu } from './popover.js';
 import { chipDays, getDefaultTime } from './repeat.js';
 import { quickDays } from './calendar.js';
+import { busyAt, calendarSlots, whenText } from './planner.js';
+import { busyNow } from './agenda.js';
 
 // De tijdlijn van de invoerkaart (composer.js) en het detailpaneel (detail.js): per eigenschap een zin met een gekleurde
 // stip ("Herinner me morgen 09:00", "In Inbox"). Hier staan de stap zelf, het keuzemenu en het korte herinneringsmenu,
@@ -97,11 +99,27 @@ export function openWhenMenu(anchor, current, set, { note, onDismiss } = {}) {
     [t('dp.tomorrow'), def, `${quick.tomorrow}T${def}`],
     [t('dp.next_week'), `${weekday.format(new Date(y, m - 1, d))} · ${def}`, `${quick.nextWeek}T${def}`],
   ].filter(Boolean);
-  openMenu(anchor, t('add.when'), (choose) => [
-    ...options.map(([label, hint, value]) => el('button', {
-      class: 'menu-item menu-when' + (current === value ? ' on' : ''), type: 'button', role: 'menuitem',
+  // Met een gekoppelde agenda: wat er op een voorstel al staat, en daaronder de eerstvolgende vrije momenten.
+  const busy = busyNow();
+  const busyOn = (value) => {
+    const hit = busy ? busyAt(new Date(value).getTime(), busy) : null;
+    return hit ? t('planner.busy', { title: hit.title || t('cal.busy') }) : null;
+  };
+  const free = busy ? calendarSlots(busy, Date.now()).map((s) => {
+    const when = whenText(Date.parse(s.at), Date.now());
+    return [when.charAt(0).toUpperCase() + when.slice(1), '', toLocalInput(s.at)];
+  }) : [];
+  const item = (choose) => ([label, hint, value]) => {
+    const taken = busyOn(value);
+    return el('button', {
+      class: 'menu-item menu-when' + (current === value ? ' on' : '') + (taken ? ' busy' : ''), type: 'button', role: 'menuitem',
       onclick: () => choose(() => set(value)),
-    }, el('span', {}, label), el('small', {}, hint))),
+    }, el('span', {}, label), el('small', {}, taken ? (hint ? `${hint} · ${taken}` : taken) : hint));
+  };
+  openMenu(anchor, t('add.when'), (choose) => [
+    ...options.map(item(choose)),
+    free.length ? el('div', { class: 'menu-head', role: 'presentation' }, t('dp.free_title')) : null,
+    ...free.map(item(choose)),
     el('div', { class: 'menu-sep' }),
     el('button', {
       class: 'menu-item', type: 'button', role: 'menuitem',

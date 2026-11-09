@@ -6,6 +6,7 @@ import { chipDays, getTimeZone, zonedParts } from './repeat.js';
 import { $, el, render } from './render.js';
 import { closeDrawer } from './sidebar.js';
 import { state } from './store.js';
+import { busyNow } from './agenda.js';
 
 const MODE_KEY = 'tick.calMode';
 const MAX_CHIPS = 3;
@@ -54,6 +55,25 @@ const taskButton = (task, ms, cls) =>
   el('button', { class: cls, type: 'button', onclick: () => selectTask(task.id) },
     el('span', { class: 'cal-time' }, timeText(ms)), ' ', el('span', { class: 'cal-name' }, task.title));
 
+/** Afspraken uit gekoppelde agenda's in [from, to), per dag (alleen-lezen, grijs). */
+function busyByDay(from, to) {
+  /** @type {Map<string, { ms: number, ev: import('./agenda.js').CalBusy }[]>} */
+  const map = new Map();
+  for (const ev of busyNow() ?? []) {
+    if (ev.end <= from || ev.start >= to) continue;
+    const ms = Math.max(ev.start, from);
+    const key = dayKey(ms);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)?.push({ ms, ev });
+  }
+  return map;
+}
+
+const busyTitle = (ev) => ev.title || t('cal.busy');
+/** Een afspraak als regel of blokje: geen knop, want Tick kan hem niet openen. */
+const busyItem = (b, cls) => el('div', { class: `${cls} cal-busy`, title: t('cal.from_calendar') },
+  b.ev.allDay ? null : el('span', { class: 'cal-time' }, timeText(b.ms)), b.ev.allDay ? null : ' ', el('span', { class: 'cal-name' }, busyTitle(b.ev)));
+
 function monthTitle() {
   return new Date(Date.UTC(S.y, S.m - 1, 1)).toLocaleDateString(dateLocale(), { month: 'long', year: 'numeric', timeZone: 'UTC' });
 }
@@ -62,12 +82,15 @@ function monthView() {
   const weeks = monthGrid(S.y, S.m, weekStart());
   const first = weeks[0][0];
   const last = weeks[weeks.length - 1][6];
-  const byDay = tasksByDay(tasks(), startOfDay(first.y, first.m, first.d), startOfDay(last.y, last.m, last.d + 1));
+  const from = startOfDay(first.y, first.m, first.d);
+  const to = startOfDay(last.y, last.m, last.d + 1);
+  const byDay = tasksByDay(tasks(), from, to);
+  const busy = busyByDay(from, to);
   const now = today();
   const head = weeks[0].map((c) => el('div', { class: 'cal-wd' }, t(`wd.short.${c.wd}`)));
   const cells = weeks.flat().map((c) => {
-    const items = byDay.get(c.key) ?? [];
-    const shown = items.slice(0, MAX_CHIPS).map((i) => taskButton(i.task, i.ms, 'cal-chip'));
+    const items = [...(byDay.get(c.key) ?? []), ...(busy.get(c.key) ?? [])].sort((a, b) => a.ms - b.ms);
+    const shown = items.slice(0, MAX_CHIPS).map((i) => ('task' in i ? taskButton(i.task, i.ms, 'cal-chip') : busyItem(i, 'cal-chip')));
     const date = new Date(Date.UTC(c.y, c.m - 1, c.d)).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
     return el('div', { class: 'cal-cell' + (c.inMonth ? '' : ' out') + (c.key === now.key ? ' today' : '') },
       el('button', { class: 'cal-num', type: 'button', 'aria-label': t('cal.day', { date }),
@@ -90,11 +113,20 @@ function agendaView() {
       ...a.overdue.map((i) => el('div', { class: 'cal-row' }, taskButton(i.task, i.ms, 'cal-item'),
         el('span', { class: 'cal-when' }, new Date(i.ms).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', timeZone: tz() })))));
   }
-  for (const day of a.days) {
-    root.append(el('h3', { class: 'cal-day' + (day.key === now.key ? ' today' : '') }, dayText(day.ms)),
-      ...day.items.map((i) => el('div', { class: 'cal-row' }, taskButton(i.task, i.ms, 'cal-item'))));
+  // Taken en afspraken uit de agenda door elkaar, op tijd; ook een dag met alleen afspraken.
+  const end = startOfDay(zonedParts(S.from).y, zonedParts(S.from).m, zonedParts(S.from).d + S.days);
+  const busy = busyByDay(S.from, end);
+  const days = new Map(a.days.map((d) => [d.key, { ms: d.ms, items: /** @type {any[]} */ ([...d.items]) }]));
+  for (const [key, list] of busy) {
+    if (!days.has(key)) days.set(key, { ms: list[0].ms, items: [] });
+    days.get(key)?.items.push(...list);
   }
-  if (!a.days.length && !(S.from === now.ms && a.overdue.length)) root.append(el('p', { class: 'cal-empty' }, t('cal.empty')));
+  for (const [key, day] of [...days.entries()].sort(([x], [y]) => (x < y ? -1 : 1))) {
+    day.items.sort((x, y) => x.ms - y.ms);
+    root.append(el('h3', { class: 'cal-day' + (key === now.key ? ' today' : '') }, dayText(day.ms)),
+      ...day.items.map((i) => el('div', { class: 'cal-row' }, 'task' in i ? taskButton(i.task, i.ms, 'cal-item') : busyItem(i, 'cal-item'))));
+  }
+  if (!days.size && !(S.from === now.ms && a.overdue.length)) root.append(el('p', { class: 'cal-empty' }, t('cal.empty')));
   root.append(el('button', { class: 'cal-morebtn', type: 'button', onclick: () => { S.days += AGENDA_STEP; paint(); } }, t('cal.more_days')));
   return root;
 }

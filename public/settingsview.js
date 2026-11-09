@@ -21,6 +21,7 @@ import { editPlace } from './map.js';
 import { timeButton } from './timepicker.js';
 import { badgeOff, setBadgeOff } from './badge.js';
 import { setDriveMode } from './driveview.js';
+import { reloadBusy } from './agenda.js';
 
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
@@ -286,6 +287,7 @@ function paintHome() {
   paintUsers();
   paintData();
   paintAdvanced();
+  paintCalendar();
   if (S.reg) paintPush(); // de rij voor verlopen taken hangt aan de instellingen
 }
 
@@ -423,6 +425,79 @@ async function paintPlaces() {
       : note(t('set.no_places')),
     el('div', { class: 'set-foot' }, btn(t('set.place_add'), () => edit(null), { kind: 'tint', disabled: off })),
     off && S.loaded ? note(t('set.online_only')) : null);
+}
+
+// ---------- 📅 Agenda's (gekoppeld met een geheim iCal-adres) ----------
+
+/** De fout van een feed als tekst; de server geeft alleen een code (nooit de URL). */
+function feedError(code) {
+  const http = /^http:(\d+)$/.exec(code ?? '');
+  if (http) return t('set.cal_err_http', { status: http[1] });
+  const key = `set.cal_err_${code}`;
+  const text = t(key);
+  return text === key ? t('set.cal_err_parse') : text;
+}
+
+function feedStatus(f) {
+  if (f.status === 'ok') return t('set.cal_ok', { n: fmtNum(f.events), when: ago(f.fetched_at) });
+  if (f.status === 'error') return t('set.cal_error', { reason: feedError(f.error), when: ago(f.fetched_at) });
+  return t('set.cal_waiting');
+}
+
+async function removeFeed(f) {
+  const yes = await ask({ title: t('set.cal_remove'), text: t('set.cal_remove_q', { name: f.name || f.host }), buttons: [
+    { label: t('set.cal_remove'), value: 'yes', kind: 'danger' }, { label: t('set.cancel'), value: null, kind: 'ghost' }] });
+  if (!yes) return;
+  try {
+    await request('DELETE', `/api/calendar/feeds/${encodeURIComponent(f.id)}`);
+    toast(t('set.cal_unlinked'), 'ok');
+    reloadBusy();
+  } catch (e) { toast(offlineText(e)); }
+  paintCalendar();
+}
+
+async function paintCalendar() {
+  if (!S.parts.calendar) return;
+  let feeds;
+  try {
+    if (!S.loaded) return; // de instellingen tekenen dit opnieuw zodra ze er zijn
+    if (!S.online) throw new Offline(t('set.online_only'));
+    feeds = await request('GET', '/api/calendar/feeds');
+  } catch (e) {
+    if (S.open) paint('calendar', note(t('set.cal_intro')), note(offlineText(e)));
+    return;
+  }
+  if (!S.open) return;
+  if (S.parts['calendar-sub']) S.parts['calendar-sub'].textContent = feeds.length ? t('set.cal_sub', { n: fmtNum(feeds.length) }) : '';
+  const url = /** @type {HTMLInputElement} */ (el('input', {
+    type: 'url', class: 'set-url', inputmode: 'url', autocomplete: 'off', spellcheck: 'false', 'aria-label': t('set.cal_url'),
+    placeholder: t('set.cal_url'),
+  }));
+  const name = /** @type {HTMLInputElement} */ (el('input', {
+    type: 'text', class: 'set-url set-cal-name', maxlength: '60', autocomplete: 'off', 'aria-label': t('set.cal_name'), placeholder: t('set.cal_name'),
+  }));
+  const add = btn(t('set.cal_add'), async () => {
+    if (!url.value.trim()) { url.focus(); return; }
+    add.disabled = true;
+    try {
+      const f = await request('POST', '/api/calendar/feeds', { url: url.value.trim(), name: name.value.trim() });
+      url.value = '';
+      toast(f.status === 'error' ? feedStatus(f) : t('set.cal_linked'), f.status === 'error' ? undefined : 'ok');
+      reloadBusy();
+      paintCalendar();
+    } catch (e) {
+      toast(offlineText(e));
+      add.disabled = false;
+    }
+  }, { kind: 'primary' });
+  paint('calendar',
+    note(t('set.cal_intro')),
+    feeds.length ? feeds.map((f) => row(f.name || f.host, btn(t('set.cal_remove'), () => removeFeed(f), { kind: 'danger' }),
+      [f.name ? f.host : null, feedStatus(f)].filter(Boolean).join(' · '))) : note(t('set.cal_none')),
+    el('div', { class: 'set-cal-form' }, url, name, add),
+    note(t('set.cal_secret_note')),
+    el('details', { class: 'set-cal-help' }, el('summary', {}, t('set.cal_help')),
+      el('p', {}, t('set.cal_google')), el('p', {}, t('set.cal_outlook')), el('p', {}, t('set.cal_icloud'))));
 }
 
 // ---------- 🌍 Taal en tijd ----------
@@ -1075,7 +1150,8 @@ function build() {
   S.parts = {};
   const root = el('div', { id: 'settings', class: 'settings' },
     el('button', { type: 'button', class: 'set-back', onclick: () => closeSettings() }, t('set.back')),
-    group(t('set.group_use'), displayBlock(), block('place', t('set.places'), 'places')),
+    group(t('set.group_use'), displayBlock(), block('place', t('set.places'), 'places'),
+      CONFIG.calendarFeeds ? block('calendar', t('set.calendar'), 'calendar') : null),
     group(t('set.group_you'),
       block('bell', t('set.notifications'), 'push'),
       block('globe', t('set.langtime'), 'langtime'),

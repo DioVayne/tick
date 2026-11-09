@@ -220,8 +220,10 @@ describe('cron-schema', () => {
     const { cronSteps } = await import('../src/index');
     const { installPrefsFrom } = await import('../src/prefs');
     const names = (iso: string) => cronSteps(env, installPrefsFrom(env), Date.parse(iso)).map(([n]) => n);
-    expect(names('2030-01-01T10:00:30Z')).toEqual(['reminders', 'verlopen', 'prullenbak', 'onbevestigd', 'bijlagen']);
-    expect(names('2030-01-01T10:05:00Z')).toEqual(['reminders', 'verlopen']);
+    expect(names('2030-01-01T10:00:30Z')).toEqual(['reminders', 'verlopen', 'agenda', 'prullenbak', 'onbevestigd', 'bijlagen']);
+    // Gekoppelde agenda's elke 5 minuten (een paar feeds per keer).
+    expect(names('2030-01-01T10:05:00Z')).toEqual(['reminders', 'verlopen', 'agenda']);
+    expect(names('2030-01-01T10:03:00Z')).toEqual(['reminders', 'verlopen']);
   });
 });
 

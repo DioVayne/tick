@@ -141,7 +141,9 @@ function showCard() {
       if (value) pick(fromLocalInput(value)); // Wissen: niets ingepland, de kaart blijft
     }) }, t('mgr.pick_date'));
     actions.replaceChildren(
-      ...slots.map((s) => el('button', { type: 'button', class: 'ghost mgr-slot', onclick: () => pick(s.at) }, s.label)),
+      // Uit de agenda: vrije momenten; een vast voorstel op een afspraak zegt wat er dan staat.
+      ...slots.map((s) => el('button', { type: 'button', class: 'ghost mgr-slot' + (s.busy ? ' busy' : ''), onclick: () => pick(s.at) },
+        s.label, s.busy ? el('small', {}, t('planner.busy', { title: s.busy })) : null)),
       dateBtn,
       el('button', { type: 'button', class: 'ghost', onclick: drawActions }, t('dialog.cancel')));
     /** @type {HTMLElement | null} */ (actions.firstElementChild)?.focus();

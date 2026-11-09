@@ -13,12 +13,14 @@
   <script src="/theme.js"></script>
   <link rel="stylesheet" href="/style.css">
   <!-- Alle modules van app.js tegelijk ophalen, niet laag voor laag zoals de imports ze ontdekken (scheelt een paar rondes over het netwerk bij elke start, ook vanuit een widget of melding). test/offline.test.ts bewaakt de lijst. -->
+  <link rel="modulepreload" href="/agenda.js">
   <link rel="modulepreload" href="/androidapp.js">
   <link rel="modulepreload" href="/api.js">
   <link rel="modulepreload" href="/applink.js">
   <link rel="modulepreload" href="/attachments.js">
   <link rel="modulepreload" href="/badge.js">
   <link rel="modulepreload" href="/duestrip.js">
+  <link rel="modulepreload" href="/ics.js">
   <link rel="modulepreload" href="/route.js">
   <link rel="modulepreload" href="/calendar.js">
   <link rel="modulepreload" href="/calendarview.js">
