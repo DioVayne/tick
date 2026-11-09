@@ -97,6 +97,8 @@ export type TaskRow = {
   loc_trigger: string | null; loc_notified: number;
   repeat_rule: string | null; repeat_start: string | null; repeat_at: string | null; repeat_prev: string | null;
   deleted_at: string | null; copy_group: string | null; pinned: number;
+  /** Wie deze kopie stuurde (alleen op de hoofdtaak van een geaccepteerde kopie); blijft op de server, de app krijgt `copies.from`. */
+  copied_from: string | null;
   /** Wanneer de taak voor het laatst in de Tickmanager bekeken is (null = nooit). */
   reviewed_at: string | null;
   /** De gedeelde lijst van een hoofdtaak; wie hem afvinkte; op wiens naam hij staat (alleen in een gedeelde lijst). */
@@ -291,9 +293,9 @@ app.route('/api/background', backgroundApi);
 app.route('/mcp', mcpApi((req, env, ctx) => Promise.resolve(app.fetch(req, env, ctx))));
 
 const now = () => new Date().toISOString();
-/** Taak als JSON voor de client: 0/1 wordt boolean, de loc_*-kolommen worden één location-object en de repeat_*-kolommen één repeat-object (repeat_prev en copy_group blijven op de server). */
+/** Taak als JSON voor de client: 0/1 wordt boolean, de loc_*-kolommen worden één location-object en de repeat_*-kolommen één repeat-object (repeat_prev, copy_group en copied_from blijven op de server). */
 function asBool(t: TaskRow) {
-  const { loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_notified, repeat_rule, repeat_start, repeat_at, repeat_prev, copy_group, ...rest } = t;
+  const { loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_notified, repeat_rule, repeat_start, repeat_at, repeat_prev, copy_group, copied_from, ...rest } = t;
   return {
     ...rest,
     done: !!t.done,

@@ -134,7 +134,7 @@ export function fillShareBox(box, task, readOnly) {
     }
   }
   box.hidden = !rows.length;
-  box.replaceChildren(...(rows.length ? [el('ul', { class: 'share-list' }, ...rows)] : []));
+  box.replaceChildren(...(rows.length ? [el('p', { class: 'step-hint' }, t('share.hint')), el('ul', { class: 'share-list' }, ...rows)] : []));
 }
 
 /** De namen in de zin "Samen met …": de eigenaar (als jij het niet bent) en de deelnemers, behalve jijzelf. */

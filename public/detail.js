@@ -1,7 +1,7 @@
 import CONFIG from './settings.js';
 import { bindDrop, fillAttachmentsBox } from './attachments.js';
 import { confetti, isCouple } from './confetti.js';
-import { fillCopiesBox } from './copies.js';
+import { copyHeading, fillCopiesBox } from './copies.js';
 import { ask } from './dialog.js';
 import { autoGrow, createEditor } from './editor.js';
 import { icon } from './icons.js';
@@ -595,7 +595,8 @@ function drawRail(t) {
   const owner = !t.share || t.share.mine;
   // In een gedeelde lijst staan de leden bij de lijst; de eigenaar kan wel een kopie geven aan iemand anders.
   const shareShown = !t.parent_id && (list ? list.mine && !done : !!t.share || !done);
-  const key = JSON.stringify([done, remindAt, past, t.repeat, loc, t.list, t.parent_id, watchable, !!t.watch, shareShown, names, owner, !!t.copies && !t.parent_id]);
+  const copies = t.copies && !t.parent_id ? copyHeading(t) : null;
+  const key = JSON.stringify([done, remindAt, past, t.repeat, loc, t.list, t.parent_id, watchable, !!t.watch, shareShown, names, owner, copies]);
   if (v.railKey === key) return;
   v.railKey = key;
   // Na een keuze is de knop waarmee de kiezer openging vervangen: de focus gaat terug naar dezelfde stap.
@@ -629,7 +630,7 @@ function drawRail(t) {
       kind: 'share', icon: 'users', on: names.length > 0, lead: tr(names.length ? 'add.share_set' : list ? 'share.with_someone' : 'add.share'),
       value: names.join(', ') || null, open: owner ? opener('share', v.pickShare) : null, body: v.shareBox,
     }) : null,
-    t.copies && !t.parent_id ? step({ kind: 'copies', icon: 'users', on: true, lead: tr('copy.heading'), body: v.copiesBox }) : null,
+    copies ? step({ kind: 'copies', icon: 'copy', on: true, lead: copies.lead, value: copies.value, body: v.copiesBox }) : null,
   ].filter(Boolean));
   if (refocus) /** @type {HTMLElement | null} */ (v.rail.querySelector(`.step-${refocus} button.step-head`))?.focus({ preventScroll: true });
 }

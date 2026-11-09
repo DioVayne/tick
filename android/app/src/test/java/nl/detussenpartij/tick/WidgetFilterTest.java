@@ -108,4 +108,17 @@ public class WidgetFilterTest {
         // Wat al leesbaar is, blijft precies dezelfde kleur.
         assertEquals(0xFFD9C62B, WidgetFilter.readable(0xD9C62B, donker, true));
     }
+
+    @Test
+    public void gedeeldEnKopieZijnTweeVerschillendeIcoontjes() throws Exception {
+        JSONObject gewoon = task("a", "Inbox", null, null).put("share", JSONObject.NULL).put("copies", JSONObject.NULL);
+        JSONObject gedeeld = task("b", "Inbox", null, null).put("share", new JSONObject().put("mine", true)).put("copies", JSONObject.NULL);
+        JSONObject kopie = task("c", "Inbox", null, null).put("share", JSONObject.NULL)
+                .put("copies", new JSONObject().put("members", new JSONArray()).put("pending", new JSONArray().put(new JSONObject().put("name", "Bea"))));
+        assertTrue(!WidgetFilter.isShared(gewoon) && !WidgetFilter.isCopy(gewoon));
+        assertTrue(WidgetFilter.isShared(gedeeld) && !WidgetFilter.isCopy(gedeeld));
+        assertTrue(!WidgetFilter.isShared(kopie) && WidgetFilter.isCopy(kopie));
+        // Een subtaak toont geen kopie-icoontje, ook niet als er copies op zou staan.
+        assertTrue(!WidgetFilter.isCopy(task("d", "Inbox", null, "c").put("copies", new JSONObject())));
+    }
 }

@@ -117,6 +117,7 @@
     <string name="meta_repeat">Repeats</string>
     <string name="meta_place">Location</string>
     <string name="meta_shared">Shared</string>
+    <string name="meta_copy">Copy</string>
     <string name="meta_subtasks">Subtasks</string>
     <!-- Snelle taak (QuickAddActivity) -->
     <string name="quick_notes_hint">Description</string>

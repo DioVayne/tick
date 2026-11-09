@@ -10,8 +10,9 @@ import { type Locale, notifyUser, type Payload, type Sender, sendToAll } from '.
  */
 export type CopyMember = { name: string; done: boolean; done_at: string | null; progress: number | null };
 /** `self`: de niet-verwijderde subtaken van het exemplaar van de kijker zelf (afgevinkt en totaal), zonder de regels in
- * de beschrijving; de app telt die zelf uit de beschrijving zoals hij die kent. */
-export type Copies = { members: CopyMember[]; pending: { name: string }[]; self: { done: number; total: number } };
+ * de beschrijving; de app telt die zelf uit de beschrijving zoals hij die kent. `from`: wie de kijker dit exemplaar
+ * stuurde (alleen de naam, alleen op een eigen kopie), voor "Kopie van …"; null bij het origineel of een onbekende afzender. */
+export type Copies = { members: CopyMember[]; pending: { name: string }[]; self: { done: number; total: number }; from: string | null };
 
 /** Afgevinkt deel (0–1) van de takenlijst-regels in de beschrijving plus de subtaken; null als er niets te tellen is. */
 export function progressOf(description: string, kids: { done: number }[]): number | null {
@@ -64,12 +65,18 @@ export async function copiesFor(db: D1Database, userId: string, rows: Access[], 
       ') ORDER BY created_at, id',
     ).bind(JSON.stringify(invited), ...(open ? [new Date().toISOString()] : [])));
   }
+  // Afzenders van de eigen kopieën; alleen de naam gaat naar de app.
+  const senders = [...new Set(main.flatMap((r) => (r.copy_group && r.copied_from && r.user_id === userId ? [r.copied_from] : [])))];
+  if (senders.length) {
+    stmts.push(db.prepare('SELECT id, name FROM users WHERE id IN (SELECT value FROM json_each(?))').bind(JSON.stringify(senders)));
+  }
   const out = new Map<string, Copies>();
   if (!stmts.length) return out;
   const res = await db.batch(stmts);
   const members = res[0].results as MemberRow[];
+  const names = new Map((senders.length ? res[res.length - 1].results as { id: string; name: string }[] : []).map((u) => [u.id, u.name]));
   const kidsOf = (m: MemberRow) => (JSON.parse(m.kids) as number[]).map((done) => ({ done }));
-  const pending = invited.length ? res[res.length - 1].results as { task_id: string; name: string }[] : [];
+  const pending = invited.length ? res[1].results as { task_id: string; name: string }[] : [];
   for (const r of main) {
     const repeats = !!r.repeat_rule;
     const list = members.filter((m) => r.copy_group && m.copy_group === r.copy_group && m.id !== r.id && m.user_id !== userId).map((m): CopyMember => {
@@ -84,7 +91,8 @@ export async function copiesFor(db: D1Database, userId: string, rows: Access[], 
     if (!list.length && !waiting.length) continue;
     const own = members.find((m) => m.id === r.id);
     const kids = own ? kidsOf(own) : [];
-    out.set(r.id, { members: list, pending: waiting, self: { done: kids.filter((k) => k.done).length, total: kids.length } });
+    const from = r.user_id === userId && r.copied_from ? names.get(r.copied_from) ?? null : null;
+    out.set(r.id, { members: list, pending: waiting, self: { done: kids.filter((k) => k.done).length, total: kids.length }, from });
   }
   return out;
 }

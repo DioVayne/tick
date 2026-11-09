@@ -1,5 +1,5 @@
 import { confetti, isCouple } from './confetti.js';
-import { copyPills } from './copies.js';
+import { copyMeta } from './copies.js';
 import { bindTitle, renderDetail, selectTask, titleOf } from './detail.js';
 import { autoGrow } from './editor.js';
 import { icon } from './icons.js';
@@ -237,7 +237,7 @@ function taskItem(t, children) {
     const names = shareNames(t) || label;
     meta.push(el('span', { class: 'shared', title: label, 'aria-label': label }, icon('users', 'sm'), names));
   }
-  if (!t.parent_id && t.copies) meta.push(...copyPills(t));
+  if (!t.parent_id && t.copies) meta.push(...copyMeta(t));
   if (t.attachments?.length) {
     const label = tr('att.count', { n: t.attachments.length });
     meta.push(el('span', { class: 'att', title: label, 'aria-label': label }, icon('clip', 'sm'), String(t.attachments.length)));
