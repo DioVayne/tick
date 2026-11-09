@@ -33,7 +33,7 @@
     <string name="road_button_off">Op tijd melden onderweg uitzetten</string>
     <string name="road_help">Android meldt plekken een paar minuten te laat. Met de auto of fiets ben je dan al voorbij je cirkel. Zet je dit aan, dan maakt Tick de cirkels groter zolang je rijdt of fietst, zodat de melding op tijd komt.</string>
     <string name="road_dialog_title">Op tijd melden onderweg</string>
-    <string name="road_dialog_text">Android merkt pas na een paar minuten dat je bij een plek bent. Met de auto of fiets ben je dan al voorbij.\n\nTick lost dat op door de cirkels groter te maken zolang je rijdt of fietst. Hoeveel groter, leert Tick vanzelf van je eerdere meldingen.\n\nDaarvoor moet Tick weten óf je rijdt of fietst. Android vraagt daarom zo om toestemming voor “Fysieke activiteit”.\n\nTick gebruikt dit alleen om de cirkels groter of weer normaal te maken. Er wordt niets bewaard of verstuurd over waar je bent of hoe je reist.</string>
+    <string name="road_dialog_text">Android merkt pas na een paar minuten dat je bij een plek bent. Met de auto of fiets ben je dan al voorbij.\n\nTick lost dat op door de cirkels groter te maken zolang je rijdt of fietst. Hoeveel groter, leert Tick vanzelf van je eerdere meldingen.\n\nDaarvoor moet Tick weten óf je rijdt of fietst. Android vraagt daarom zo om toestemming voor “Fysieke activiteit”.\n\nTick gebruikt dit alleen om de cirkels groter of weer normaal te maken. Het is geen gezondheids- of fitnessfunctie. Alleen hoe laat eerdere meldingen kwamen blijft op deze telefoon; er wordt niets verstuurd over waar je bent of hoe je reist.</string>
     <string name="road_dialog_ok">Doorgaan</string>
     <string name="road_dialog_cancel">Niet nu</string>
     <string name="road_status_off">Uit.</string>
@@ -45,7 +45,7 @@
     <string name="loc_missing_location">locatie</string>
     <string name="loc_missing_background">locatie altijd toestaan</string>
     <string name="loc_background_title">Locatie altijd toestaan</string>
-    <string name="loc_background_text">Tick meldt een taak als je bij een plek aankomt of er vertrekt, ook als de app dicht is. Android vraagt dat apart: kies op het volgende scherm <b>Altijd toestaan</b>.</string>
+    <string name="loc_background_text">Tick gebruikt je locatie <b>op de achtergrond, ook als de app gesloten is of je hem niet gebruikt</b>, om je aan een taak te herinneren als je aankomt bij een plek die je hebt opgeslagen, of er weggaat.\n\nJe locatie blijft op deze telefoon: Tick stuurt je positie niet naar de server en deelt hem met niemand.\n\nAndroid vraagt dit apart: kies op het volgende scherm <b>Altijd toestaan</b>.</string>
     <string name="loc_done_failed">Afvinken mislukt (%s). Tik op Afvinken om het opnieuw te proberen.</string>
     <string name="loc_missing_system_location">locatie aan op de telefoon</string>
     <string name="loc_missing_channel">meldingscategorie Locatiemeldingen aan</string>
@@ -94,7 +94,7 @@
     <string name="pair_confirm_switch">Deze telefoon is verbonden met %1$s. Overstappen naar %2$s haalt de taken en locatiemeldingen van die Tick van deze telefoon.</string>
     <string name="pair_confirm_ok">Verbinden</string>
     <string name="pair_loc_title">Locatiemeldingen</string>
-    <string name="pair_loc_text">Tick kan je aan een taak herinneren als je ergens aankomt of weggaat. Daarvoor vraagt Android zo om je locatie.</string>
+    <string name="pair_loc_text">Tick kan je aan een taak herinneren als je aankomt bij een plek die je hebt opgeslagen, of er weggaat. Daarvoor gebruikt Tick je locatie. Je locatie blijft op deze telefoon: Tick stuurt je positie niet naar de server.\n\nAndroid vraagt zo om je locatie.</string>
     <string name="pair_loc_ok">Doorgaan</string>
     <string name="pair_loc_later">Niet nu</string>
     <!-- Updatemelding (Updates.java) -->
@@ -152,4 +152,5 @@
     <string name="quick_place_locating">Je locatie opzoeken…</string>
     <string name="quick_place_no_location">Je locatie is niet gevonden. Staat locatie aan?</string>
     <string name="quick_place_no_permission">Tick mag je locatie nog niet altijd gebruiken, dus deze plek meldt niets. Sta het toe in Tick op deze telefoon.</string>
+    <string name="battery_settings_hint">Kies Batterij en dan Onbeperkt.</string>
 </resources>

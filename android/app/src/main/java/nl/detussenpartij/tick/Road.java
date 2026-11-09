@@ -41,9 +41,14 @@ final class Road {
     /** Een laatst bekende locatie mag zo oud (ms) zijn als er geen verse komt. */
     private static final long LAST_LOCATION_MAX_AGE_MS = 2 * 60_000;
 
+    /** Zit "Op tijd melden onderweg" in deze app? Niet in de Play-app (geen ACTIVITY_RECOGNITION, zie app/build.gradle). */
+    static boolean available() {
+        return !BuildConfig.PLAY_STORE;
+    }
+
     /** Toestemming "Fysieke activiteit". */
     static boolean permitted(Context c) {
-        return c.checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED;
+        return available() && c.checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED;
     }
 
     /** Aangezet, met toestemming, en de gewone locatiemeldingen werken. */

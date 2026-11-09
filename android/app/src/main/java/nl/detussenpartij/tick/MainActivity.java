@@ -165,6 +165,11 @@ public class MainActivity extends Activity {
         roadStatus = new TextView(this);
         roadStatus.setPadding(0, 0, 0, (int) (12 * d));
         root.addView(roadStatus);
+        if (!Road.available()) {
+            road.setVisibility(View.GONE);
+            roadHelp.setVisibility(View.GONE);
+            roadStatus.setVisibility(View.GONE);
+        }
 
         battery = new Button(this);
         battery.setText(R.string.battery_button);
@@ -374,7 +379,17 @@ public class MainActivity extends Activity {
             if (Build.VERSION.SDK_INT >= 33) ask.add(Manifest.permission.POST_NOTIFICATIONS);
             ask.add(Manifest.permission.ACCESS_FINE_LOCATION);
             ask.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-            requestPermissions(ask.toArray(new String[0]), REQ_FOREGROUND);
+            if (granted(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                requestPermissions(ask.toArray(new String[0]), REQ_FOREGROUND); // alleen meldingen ontbreken nog
+                return;
+            }
+            // Eerst uitleggen waarom (Google Play: uitleg in de app vóór de systeemvraag), net als na het koppelen.
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.pair_loc_title)
+                    .setMessage(R.string.pair_loc_text)
+                    .setPositiveButton(R.string.pair_loc_ok, (dlg, w) -> requestPermissions(ask.toArray(new String[0]), REQ_FOREGROUND))
+                    .setNegativeButton(R.string.pair_loc_later, null)
+                    .show();
         } else if (!granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
             new AlertDialog.Builder(this)
                     .setTitle(R.string.loc_background_title)
@@ -382,9 +397,9 @@ public class MainActivity extends Activity {
                     // "Altijd toestaan" staat nooit in de eerste systeemvraag. Vanaf Android 11 opent deze vraag
                     // meteen het locatiescherm van Tick, met die keuze erop. Weigert Android hem (twee keer
                     // geweigerd), dan valt onRequestPermissionsResult terug op de instellingen van de app.
-                    .setPositiveButton(android.R.string.ok, (dlg, w) -> requestPermissions(
+                    .setPositiveButton(R.string.pair_loc_ok, (dlg, w) -> requestPermissions(
                             new String[] {Manifest.permission.ACCESS_BACKGROUND_LOCATION}, REQ_BACKGROUND))
-                    .setNegativeButton(android.R.string.cancel, null)
+                    .setNegativeButton(R.string.pair_loc_later, null)
                     .show();
         } else if (Notify.channelBlocked(this)) {
             // Toestemming is er, maar het kanaal "locatie" staat uit: dat kan alleen in de instellingen.

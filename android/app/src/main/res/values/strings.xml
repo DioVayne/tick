@@ -33,7 +33,7 @@
     <string name="road_button_off">On time on the road: turn off</string>
     <string name="road_help">Android reports places a few minutes late. By car or bike you are past your circle by then. Turn this on and Tick makes the circles bigger while you drive or cycle, so the notification comes on time.</string>
     <string name="road_dialog_title">On time on the road</string>
-    <string name="road_dialog_text">Android only notices after a few minutes that you are at a place. By car or bike you are already past it.\n\nTick fixes that by making the circles bigger while you drive or cycle. How much bigger, Tick learns by itself from your earlier notifications.\n\nFor that Tick needs to know whether you are driving or cycling. Android will therefore ask for permission for “Physical activity”.\n\nTick only uses this to make the circles bigger or normal again. Nothing about where you are or how you travel is stored or sent.</string>
+    <string name="road_dialog_text">Android only notices after a few minutes that you are at a place. By car or bike you are already past it.\n\nTick fixes that by making the circles bigger while you drive or cycle. How much bigger, Tick learns by itself from your earlier notifications.\n\nFor that Tick needs to know whether you are driving or cycling. Android will therefore ask for permission for “Physical activity”.\n\nTick only uses this to make the circles bigger or normal again. It is not a health or fitness feature. Only how late earlier notifications came stays on this phone; nothing about where you are or how you travel is sent.</string>
     <string name="road_dialog_ok">Continue</string>
     <string name="road_dialog_cancel">Not now</string>
     <string name="road_status_off">Off.</string>
@@ -45,7 +45,7 @@
     <string name="loc_missing_location">location</string>
     <string name="loc_missing_background">allow location all the time</string>
     <string name="loc_background_title">Allow location all the time</string>
-    <string name="loc_background_text">Tick notifies you about a task when you arrive at or leave a place, even when the app is closed. Android asks for this separately: on the next screen, choose <b>Allow all the time</b>.</string>
+    <string name="loc_background_text">Tick uses your location <b>in the background, also when the app is closed or not in use</b>, to remind you of a task when you arrive at or leave a place you saved.\n\nYour location stays on this phone: Tick does not send your position to the server and does not share it.\n\nAndroid asks for this separately: on the next screen, choose <b>Allow all the time</b>.</string>
     <string name="loc_done_failed">Completing failed (%s). Tap Complete to try again.</string>
     <string name="loc_missing_system_location">location turned on on the phone</string>
     <string name="loc_missing_channel">notification category Location notifications on</string>
@@ -94,7 +94,7 @@
     <string name="pair_confirm_switch">This phone is connected to %1$s. Switching to %2$s removes that Tick\'s tasks and location reminders from this phone.</string>
     <string name="pair_confirm_ok">Connect</string>
     <string name="pair_loc_title">Location reminders</string>
-    <string name="pair_loc_text">Tick can remind you of a task when you arrive at or leave a place. For that, Android will now ask for your location.</string>
+    <string name="pair_loc_text">Tick can remind you of a task when you arrive at or leave a place you saved. For that Tick uses your location. Your location stays on this phone: Tick does not send your position to the server.\n\nAndroid will now ask for your location.</string>
     <string name="pair_loc_ok">Continue</string>
     <string name="pair_loc_later">Not now</string>
     <!-- Updatemelding (Updates.java) -->
@@ -152,4 +152,5 @@
     <string name="quick_place_locating">Finding your location…</string>
     <string name="quick_place_no_location">Could not find your location. Is location on?</string>
     <string name="quick_place_no_permission">Tick may not use your location all the time yet, so this place will not notify you. Allow it in Tick on this phone.</string>
+    <string name="battery_settings_hint">Choose Battery, then Unrestricted.</string>
 </resources>

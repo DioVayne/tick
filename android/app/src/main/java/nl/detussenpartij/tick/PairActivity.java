@@ -117,9 +117,9 @@ public class PairActivity extends Activity {
                 new AlertDialog.Builder(this)
                         .setTitle(R.string.loc_background_title)
                         .setMessage(getText(R.string.loc_background_text))
-                        .setPositiveButton(android.R.string.ok, (dlg, w) -> requestPermissions(
+                        .setPositiveButton(R.string.pair_loc_ok, (dlg, w) -> requestPermissions(
                                 new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, REQ_BACKGROUND))
-                        .setNegativeButton(android.R.string.cancel, (dlg, w) -> askBatteryAndFinish())
+                        .setNegativeButton(R.string.pair_loc_later, (dlg, w) -> askBatteryAndFinish())
                         .setOnCancelListener(dlg -> askBatteryAndFinish())
                         .show();
                 break;
@@ -164,7 +164,8 @@ public class PairActivity extends Activity {
 
     /** Na het koppelen ook de batterijvraag: zonder vrijstelling verversen widget en locatiemeldingen op sommige telefoons niet. */
     private void askBatteryAndFinish() {
-        Battery.ask(this);
+        // De Play-app heeft geen systeemvraag; ongevraagd de instellingen openen na het koppelen zou verwarren.
+        if (Battery.canPrompt()) Battery.ask(this);
         finish();
     }
 
