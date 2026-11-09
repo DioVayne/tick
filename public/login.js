@@ -13,6 +13,6 @@ document.getElementById('f').addEventListener('submit', async (e) => {
     await forgetCachedConfig();
     location.href = afterLogin(new URLSearchParams(location.search).get('next'), inAndroidApp());
   }
-  // De server geeft de melding in de taal van de installatie.
+  // De server geeft de melding in de taal van de pagina (cookie tick_lang, anders Accept-Language).
   else err.textContent = (await r.json().catch(() => ({}))).error || r.statusText;
 });

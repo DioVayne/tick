@@ -7,7 +7,7 @@ import { pairApi, redeem } from './pair';
 import { authorize, type Auth, clearCookie, COOKIE, dummyVerify, passwordOk, sessionCookie } from './auth';
 import { assetLinks } from './assetlinks';
 import { contactEmail, deleteAccountPage, loginAssets, loginPage, privacyPage, termsPage } from './login';
-import { badRequest, HttpError } from './errors';
+import { badRequest, errorBody, HttpError } from './errors';
 import { normLocale, translate } from '../public/i18n.js';
 import { cleanLocation, cleanPlace, locColumns, locFromRow, type Place } from './location';
 import { repeatColumns, repeatFromRow, todayDefaultIso } from './repeat';
@@ -1348,14 +1348,15 @@ app.get('/api/geocode', async (c) => {
     return c.json(places.slice(0, 5));
   } catch (e) {
     console.error('geocode mislukt', e);
-    return c.json({ error: translate(c.get('lang'), 'err.geocode_failed') }, 502);
+    return c.json(errorBody(c.get('lang'), 'err.geocode_failed'), 502);
   }
 });
 
 app.onError((e, c) => {
-  if (e instanceof HttpError) return c.json({ error: translate(c.get('lang') ?? normLocale(c.env.LOCALE), e.key, e.vars) }, e.status);
+  const lang = c.get('lang') ?? normLocale(c.env.LOCALE);
+  if (e instanceof HttpError) return c.json(errorBody(lang, e.key, e.vars), e.status);
   console.error(e);
-  return c.json({ error: translate(c.get('lang') ?? normLocale(c.env.LOCALE), 'err.server') }, 500);
+  return c.json(errorBody(lang, 'err.server'), 500);
 });
 
 // Alles wat geen API is: statische bestanden (alleen na auth).

@@ -5,7 +5,7 @@ import { Offline, request } from './api.js';
 import { connectApp, isInApp, openPhoneSettings } from './androidapp.js';
 import { ask } from './dialog.js';
 import { icon } from './icons.js';
-import { dateLocale, t } from './i18n.js';
+import { dateLocale, errorText, t } from './i18n.js';
 import { disablePush, enablePush, forgetPush, pushState, resubscribeLocale } from './push.js';
 import { setDefaultTime, setTimeZone, setWeekStart } from './repeat.js';
 import { $, el, render, toast } from './render.js';
@@ -334,7 +334,7 @@ async function setBackground(file) {
       if (!blob.type.startsWith('image/')) { toast(t('set.background_not_image')); return; }
       const res = await fetch('/api/background', { method: 'PUT', headers: { 'content-type': blob.type }, body: blob });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || res.statusText);
+      if (!res.ok) throw new Error(errorText(data, res.statusText));
       applyBackground(data.version);
     }
     if (S.settings) S.settings = { ...S.settings, background: storeGet('tick.bg') };
@@ -959,7 +959,7 @@ async function downloadBackup() {
     let res;
     try { res = await fetch('/api/export'); } catch { throw new Offline(t('set.online_only')); }
     if (res.status === 401) { location.href = '/login'; return; }
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+    if (!res.ok) throw new Error(errorText(await res.json().catch(() => ({})), res.statusText));
     const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'tick-backup.json';
     const url = URL.createObjectURL(await res.blob());
     const a = el('a', { href: url, download: name, hidden: true });
@@ -1001,7 +1001,7 @@ async function importTickTick() {
     } catch { throw new Offline(t('set.online_only')); }
     if (res.status === 401) { location.href = '/login'; return; }
     const r = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(r.error || res.statusText);
+    if (!res.ok) throw new Error(errorText(r, res.statusText));
     toast(t('set.ticktick_done', { added: fmtNum(r.added), existing: fmtNum(r.existing), skipped: fmtNum(r.skipped) }), 'ok');
     load();
   } catch (e) { toast(t('set.ticktick_failed', { reason: offlineText(e) })); }

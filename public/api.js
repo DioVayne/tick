@@ -1,4 +1,4 @@
-import { t } from './i18n.js';
+import { errorText, t } from './i18n.js';
 
 /** Geen verbinding met de server (fetch zelf mislukte). */
 export class Offline extends Error {}
@@ -17,6 +17,6 @@ export async function request(method, path, body) {
   }
   if (res.status === 401) location.href = '/login';
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw Object.assign(new Error(data.error || res.statusText), { status: res.status });
+  if (!res.ok) throw Object.assign(new Error(errorText(data, res.statusText)), { status: res.status });
   return data;
 }

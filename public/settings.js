@@ -8,14 +8,14 @@ const LANG_KEY = 'tick.lang';
 const COOKIE = 'tick_lang';
 const known = (v) => (v === 'en' || v === 'nl' ? v : null);
 
-const stored = () => { try { return known(localStorage.getItem(LANG_KEY)); } catch { return null; } };
+/** De taalkeuze van dit apparaat; `undefined` als localStorage niet bruikbaar is (dan is het cookie het enige geheugen). */
+const stored = () => { try { return known(localStorage.getItem(LANG_KEY)); } catch { return undefined; } };
 
-/** Het cookie dat de server leest voor zijn meldingen; null wist het. @param {'en' | 'nl' | null} lang */
-const writeCookie = (lang) => {
-  document.cookie = lang
-    ? `${COOKIE}=${lang}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`
-    : `${COOKIE}=; Path=/; Max-Age=0; SameSite=Lax; Secure`;
-};
+/** Taal bij "automatisch": de browsertaal als Tick die kent, anders de standaardtaal van de installatie. */
+const autoLocale = () => pickLocale(navigator.languages) ?? CONFIG.defaultLocale;
+
+/** Het cookie dat de server leest voor zijn pagina's en meldingen. @param {'en' | 'nl'} lang */
+const writeCookie = (lang) => { document.cookie = `${COOKIE}=${lang}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`; };
 
 /**
  * Vertaalt een stuk pagina opnieuw: `data-i18n` (tekst) en `data-i18n-attr` ("attr:sleutel;attr2:sleutel2").
@@ -35,21 +35,23 @@ export function applyI18n(root = document) {
 }
 
 /**
- * Taalkeuze van dit apparaat: bewaart in localStorage en in het cookie dat de server leest, of wist beide
- * (null = automatisch). Laadt de pagina niet opnieuw; dat doet de aanroeper.
+ * Taalkeuze van dit apparaat: bewaart in localStorage (null = automatisch, wist de keuze) en zet het cookie dat de server
+ * leest op de taal die daaruit volgt. Laadt de pagina niet opnieuw; dat doet de aanroeper.
  * @param {'en' | 'nl' | null} choice
  */
 export function setLanguage(choice) {
   const lang = known(choice);
   try { if (lang) localStorage.setItem(LANG_KEY, lang); else localStorage.removeItem(LANG_KEY); } catch { /* geen opslag */ }
-  writeCookie(lang);
-  setLocale(lang ?? pickLocale(navigator.languages) ?? CONFIG.defaultLocale);
+  setLocale(lang ?? autoLocale());
+  writeCookie(getLocale());
 }
 
-// Het cookie kan verlopen of gewist zijn terwijl de keuze in localStorage nog staat; dan antwoordt de server in een andere taal.
+// localStorage is de bron; het cookie krijgt bij elke start de taal waarin de app nu staat, ook bij automatisch. Anders kon
+// het verlopen of gewist zijn, blijven staan van een oude keuze, of gaf Accept-Language een andere taal dan
+// navigator.languages; dan kwamen pagina's en meldingen van de server in een andere taal dan de app.
 const chosen = stored();
-if (chosen) writeCookie(chosen);
-setLocale(chosen ?? pickLocale(navigator.languages) ?? CONFIG.defaultLocale);
+setLocale(chosen ?? autoLocale());
+if (chosen !== undefined) writeCookie(getLocale());
 setTimeZone(CONFIG.timeZone);
 setDefaultTime(CONFIG.reminderTime);
 setWeekStart(CONFIG.weekStart);

@@ -18,7 +18,7 @@ const newTask = async (u: { cookie: string }, list = 'Thuis', e: Env = openEnv) 
   (await (await as(u, '/api/tasks', { method: 'POST', json: { title: `T ${uniq()}`, list } }, e)).json()) as { id: string; title: string };
 const share = async (u: { cookie: string }, to: string, e: Env = openEnv, mode = 'shared') =>
   as(u, '/api/shares', { method: 'POST', json: { task_id: (await newTask(u, 'Thuis', e)).id, mode, to } }, e);
-const limitError = (max: number) => ({ error: translate('en', 'err.share_limit', { max }) });
+const limitError = (max: number) => ({ error: translate('en', 'err.share_limit', { max }), key: 'err.share_limit', vars: { max } });
 
 describe('gratis versie: delen met 1 persoon', () => {
   it('met dezelfde persoon onbeperkt; een tweede persoon (met of zonder account) niet', async () => {

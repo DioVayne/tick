@@ -2274,6 +2274,21 @@ export const getLocale = () => current;
 export const t = (key, vars) => translate(current, key, vars);
 
 /**
+ * Tekst van een foutantwoord van de server ({ error, key, vars }) in de taal van de app: de sleutel vertaald, zodat de
+ * melding nooit in een andere taal staat dan de rest van het scherm. Zonder bekende sleutel de tekst van de server,
+ * anders de terugval (meestal `statusText`).
+ * @param {{ error?: string, key?: string, vars?: Record<string, string | number> } | null | undefined} data
+ * @param {string} fallback
+ * @param {string} [locale] standaard de taal van de app; een pagina van de server geeft `document.documentElement.lang`
+ * @returns {string}
+ */
+export function errorText(data, fallback, locale = current) {
+  const key = data?.key;
+  if (typeof key === 'string' && key in STRINGS.en) return translate(locale, key, data?.vars ?? {});
+  return data?.error || fallback;
+}
+
+/**
  * Rangtelwoord in de taal van de app: 1st/2nd/3rd/4th of 1e/2e; -1 is "last"/"laatste".
  * @param {number} n
  * @returns {string}
@@ -2289,7 +2304,7 @@ export function ordinal(n) {
 /** Locale voor Intl-datums en sorteren. @returns {'en-GB' | 'nl-NL'} */
 export const dateLocale = () => (current === 'nl' ? 'nl-NL' : 'en-GB');
 
-/** Error met een vertaalsleutel; HttpError en de server vertalen hem in de taal van de installatie. */
+/** Error met een vertaalsleutel; de server vertaalt hem in de taal van het verzoek, de app met `errorText` in zijn eigen taal. */
 export class KeyedError extends Error {
   /**
    * @param {string} key

@@ -103,7 +103,7 @@ describe('uitnodigingslink', () => {
     expect(await (await callWith(openEnv, '/join/onzin-code-die-niet-bestaat', html)).text()).toContain(translate('en', 'join.invalid'));
     const res = await callWith(openEnv, '/signup', { method: 'POST', json: { name: 'X', email: `x-${uniq()}@ex.test`, password: 'lang-genoeg-1', join: 'onzin' } });
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: translate('en', 'err.link_invalid') });
+    expect(await res.json()).toMatchObject({ error: translate('en', 'err.link_invalid') });
   });
 
   it('zonder OPEN_SIGNUP bestaat /join niet', async () => {

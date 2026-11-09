@@ -36,11 +36,11 @@ describe('favoriete plekken', () => {
     expect((await post({ name: 'Werk-dubbel', lat: 51, lng: 5 })).status).toBe(201);
     const dup = await post({ name: 'werk-DUBBEL', lat: 51, lng: 5 });
     expect(dup.status).toBe(409);
-    expect(await json(dup)).toEqual({ error: 'a favorite with this name already exists' });
+    expect(await json(dup)).toMatchObject({ error: 'a favorite with this name already exists' });
     const other = await json<Place>(await post({ name: 'Andere-plek', lat: 51, lng: 5 }));
     const res = await patch(other.id, { name: 'Werk-dubbel' });
     expect(res.status).toBe(409);
-    expect(await json(res)).toEqual({ error: 'a favorite with this name already exists' });
+    expect(await json(res)).toMatchObject({ error: 'a favorite with this name already exists' });
   });
 
   it('valideert zoals een locatie', async () => {

@@ -73,7 +73,7 @@ describe('agenda koppelen', () => {
     for (const url of ['', 'ftp://x/y.ics', 'niet een url', 'http://calendar.example.test/x.ics', 42]) {
       const res = await add(u.cookie, { url });
       expect(res.status).toBe(400);
-      expect(await res.json()).toEqual({ error: translate('en', 'err.calendar_url') });
+      expect(await res.json()).toMatchObject({ error: translate('en', 'err.calendar_url') });
     }
     expect((await add(u.cookie, { url: SECRET, name: 'x'.repeat(61) })).status).toBe(400);
   });

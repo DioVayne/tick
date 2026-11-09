@@ -1,6 +1,6 @@
 import { ask } from './dialog.js';
 import { icon } from './icons.js';
-import { t } from './i18n.js';
+import { errorText, t } from './i18n.js';
 import { el, toast } from './render.js';
 import CONFIG from './settings.js';
 import { load, state } from './store.js';
@@ -91,7 +91,7 @@ function send(taskId, prepared, onProgress) {
       let data = {};
       try { data = JSON.parse(xhr.responseText); } catch { /* geen JSON */ }
       if (xhr.status >= 200 && xhr.status < 300) resolve(data);
-      else reject(new Error(data.error || xhr.statusText));
+      else reject(new Error(errorText(data, xhr.statusText)));
     };
     xhr.send(prepared.blob);
   });
@@ -136,7 +136,7 @@ async function removeAttachment(a) {
   try {
     const res = await fetch(src(a), { method: 'DELETE' });
     if (res.status === 401) { location.href = '/login'; return false; }
-    if (!res.ok && res.status !== 404) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+    if (!res.ok && res.status !== 404) throw new Error(errorText(await res.json().catch(() => ({})), res.statusText));
     return true;
   } catch (e) {
     toast(e instanceof TypeError ? t('att.offline') : /** @type {Error} */ (e).message);
