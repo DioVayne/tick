@@ -1016,3 +1016,4 @@ html[data-drive] body.task-open .dback { min-height: 52px; }
 .set-cal-help { margin-top: 6px; }
 .set-cal-help summary { cursor: pointer; color: var(--link); font-size: .875rem; }
 .set-cal-help p { margin: 6px 0; color: var(--muted); font-size: .8125rem; }
+.share-dialog .share-now { margin: 0; font-size: .875rem; color: inherit; line-height: 1.4; }

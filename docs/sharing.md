@@ -42,6 +42,13 @@ Open a top-level task and tap **Do it together with…**. Pick someone and choos
 - **Copy** has a grey icon of two sheets, followed by a pill per person (see below), or "Copy, waiting for Sanne" until she accepts. In the task, the line says **Copy sent to Sanne** on yours and **Copy from Dio** on the one you received, with **Everyone ticks off their own copy.**
 - The Android widget shows the same two icons: blue people for shared, grey sheets for a copy (from app version 1.12.3).
 
+### Changing shared into copy, or back
+Pick someone who is already on the task and the dialog says how: shared or copy, and whether they have accepted yet. The other choice is then ready, and the button says **Change**.
+
+- **Not accepted yet:** the invitation simply changes from shared to copy or the other way round. The other person sees the new text in their invitation.
+- **Shared and accepted, now a copy:** after you confirm, they get their own copy of the task as it is now (ticked-off subtasks stay ticked off), in the same list and place where they had it. From then on you each tick off your own and changes no longer reach each other. Your own task stays as it is.
+- **A copy they already accepted:** that cannot become shared, because their copy may have changed. They delete their copy first; then you can share the task.
+
 The other person gets a notification with **Accept** and **Decline**, and a bar in the app; an accepted task lands in their Inbox. If they have Tick open, the bar appears by itself: straight away with notifications on, otherwise when they click into Tick or within two minutes. Only the owner can invite others. Anyone on a shared task can leave it; the owner can remove people or withdraw an invitation. Who is on it is listed in the task under *Together with*. Deleting a shared task deletes it for everyone.
 
 ## On an open Tick
