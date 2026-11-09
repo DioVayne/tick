@@ -41,11 +41,22 @@ android {
         applicationId tickSetting('tickPackage') ?: 'com.example.tick'
         minSdk 31
         targetSdk 36
-        versionCode 23
-        versionName '1.12.1'
+        versionCode 24
+        versionName '1.12.2'
         // Beginadres (leeg in de algemene app); voor testen op de emulator: -PtickBase=http://localhost:8787 (met adb reverse)
         buildConfigField 'String', 'TICK_BASE', "\"${tickBase}\""
         manifestPlaceholders = [tickHost: tickHost, tickScheme: tickScheme]
+        // De Play-app laat "Op tijd melden onderweg" (Fysieke activiteit) en de directe batterijvraag weg: Google Play
+        // ziet ACTIVITY_RECOGNITION als gezondheidsgegevens en staat REQUEST_IGNORE_BATTERY_OPTIMIZATIONS alleen toe
+        // voor een paar soorten apps. src/play/AndroidManifest.xml haalt beide permissies uit het manifest.
+        buildConfigField 'boolean', 'PLAY_STORE', tickPreset == 'play' ? 'true' : 'false'
+    }
+
+    if (tickPreset == 'play') {
+        sourceSets {
+            debug { manifest.srcFile 'src/play/AndroidManifest.xml' }
+            release { manifest.srcFile 'src/play/AndroidManifest.xml' }
+        }
     }
 
     signingConfigs {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Alleen bij -PtickPreset=play (zie app/build.gradle): de Play-app vraagt deze twee permissies niet. Zonder
+     Fysieke activiteit verbergt MainActivity "Op tijd melden onderweg"; de batterijknop opent dan de app-instellingen. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" tools:node="remove" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" tools:node="remove" />
+</manifest>
