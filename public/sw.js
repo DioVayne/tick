@@ -2,7 +2,7 @@
 
 // App-shell voor offline gebruik. Network-first: online krijg je altijd de nieuwste versie (geen mix van oude en
 // nieuwe modules na een deploy), offline de laatst bewaarde. Verhoog de versie als de lijst hieronder verandert.
-const CACHE = 'tick-shell-v76';
+const CACHE = 'tick-shell-v77';
 const SHELL = [
   '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/review.js', '/planner.js', '/manager.js', '/push.js', '/style.css', '/sortable.min.js',
   '/markdown.js', '/lists.js', '/editor.js', '/sidebar.js', '/detail.js', '/listpicker.js', '/listmenu.js', '/dialog.js',
@@ -72,7 +72,7 @@ self.addEventListener('push', (event) => {
       renotify: !!data.tag, // een groepsmelding vervangt de vorige onder dezelfde tag, maar moet wel opnieuw afgaan
       data,
       // De server stuurt de knoppen vertaald mee; zonder taak geen knoppen.
-      actions: data.taskId || data.shareId || data.listInviteId ? (data.actions ?? (data.taskId ? [{ action: 'done', title: '✓' }, { action: 'snooze', title: '+1h' }] : [])) : [],
+      actions: data.taskId || data.shareId || data.listInviteId ? (data.actions ?? (data.taskId ? [{ action: 'done', title: '✓' }, { action: 'snooze', title: 'In 1 hour' }] : [])) : [],
     }),
   ]));
 });
