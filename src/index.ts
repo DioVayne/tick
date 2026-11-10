@@ -32,7 +32,7 @@ import { purgeTrash, wipeStmts } from './trash';
 import { type Access, anyShared, getAccess, overlay, shareInfo, type ShareInfo, STEP, topMin, topOrder, visibleTasks } from './access';
 import { leaveShareStmts, notifyShareDone, notifyShareLocation, sharesApi } from './shares';
 import {
-  assertMayTick, attachStmts, detachStmts, dissolveStmts, listById, listNames, listOf, listPush, type ListRef, listSharing, nameOf, notifyListDone, sharedListsApi,
+  assertMayTick, attachStmts, detachStmts, dissolveStmts, listById, listNames, listOf, listPush, type ListRef, listSharing, nameOf, notifyListDone, rejoinStmt, sharedListsApi,
 } from './sharedlists';
 import { anyCopies, type Copies, copiesFor, notifyCopyDone } from './copies';
 import { backgroundApi } from './background';
@@ -396,12 +396,16 @@ const MAX_LIST = 100;
 const MIN_GAP = 1e-6;
 const MAX_SNOOZE_MIN = 30 * 24 * 60;
 
+/** De JSON-body als gewoon object; iets anders (null, tekst, getal, array) of onleesbare JSON is een 400. */
 async function body<T = Record<string, unknown>>(c: Context): Promise<T> {
+  let v: unknown;
   try {
-    return await c.req.json<T>();
+    v = await c.req.json<unknown>();
   } catch {
     throw new HttpError(400, 'err.invalid_json');
   }
+  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new HttpError(400, 'err.invalid_json');
+  return v as T;
 }
 
 function cleanTitle(v: unknown): string {
@@ -862,6 +866,9 @@ async function patchTask(c: Context<AppEnv>, id: string, b: Record<string, unkno
     parentId = parent?.id ?? null;
     if (parent) list = parent.list;
     if (parent && !('pinned' in b)) set('pinned', 0); // een subtaak pint niet
+  } else if (t.parent_id) {
+    // Een subtaak blijft in de lijst van haar ouder, ook voor de eigenaar (net als bij een deelnemer hieronder).
+    list = null;
   }
   // Een losgemaakte subtaak houdt haar lijst; is dat een gedeelde lijst, dan moet de nieuwe hoofdtaak er ook in.
   const target = list ?? (t.parent_id && !parentId ? overlay(t).list : null);
@@ -1040,6 +1047,8 @@ app.post('/api/tasks/:id/restore', async (c) => {
     ...(parent ? [back(parent)] : []), back(t),
     ...(orphan ? detachStmts(db, head!, userId, 'Inbox', ((await topMin(db, userId)) ?? 0) - STEP) : []),
     ...(join ? await attachStmts(db, head!, join, head!.user_id, head!.position) : []),
+    // Nog in een bestaande gedeelde lijst: wie intussen lid werd of zijn prullenbak leegde, krijgt zijn deelrij terug.
+    ...(head?.shared_list && !orphan ? [rejoinStmt(db, head.id, head.shared_list)] : []),
   ]);
   return c.json({ ok: true });
 });
@@ -1219,7 +1228,10 @@ app.post('/api/tasks/:id/reviewed', async (c) => {
 });
 
 app.post('/api/tasks/:id/snooze', async (c) => {
-  const { minutes } = await c.req.json<{ minutes?: unknown }>().catch(() => ({ minutes: undefined }));
+  // Zonder (leesbare) body: de standaard van 60 minuten; een body die geen object is, is een 400.
+  const raw = await c.req.json<unknown>().catch(() => ({}));
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new HttpError(400, 'err.invalid_json');
+  const { minutes } = raw as { minutes?: unknown };
   const m = minutes === undefined || minutes === null ? 60 : Number(minutes);
   if (!Number.isFinite(m)) throw new HttpError(400, 'err.must_be_number', { field: 'minutes' });
   const at = new Date(Date.now() + Math.min(Math.max(m, 1), MAX_SNOOZE_MIN) * 60_000).toISOString();

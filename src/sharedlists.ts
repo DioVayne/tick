@@ -92,6 +92,20 @@ export async function attachStmts(db: D1Database, task: Pick<TaskRow, 'id'>, lis
 }
 
 /**
+ * Een hoofdtaak die al in lijst `listId` zit (bij terugzetten uit de prullenbak): een deelrij voor elk geaccepteerd
+ * lid dat er geen heeft (erbij gekomen terwijl de taak in de prullenbak lag, of zijn prullenbak geleegd), bovenaan in
+ * zijn volgorde. Een bestaande deelrij blijft zoals hij is. Doet niets als de lijst niet meer bestaat.
+ */
+export function rejoinStmt(db: D1Database, taskId: string, listId: string): D1PreparedStatement {
+  return db.prepare(
+    'INSERT INTO task_shares (id, task_id, from_user, to_user, mode, status, list, position, created_at, responded_at) ' +
+    `SELECT lower(hex(randomblob(16))), ?1, l.owner_id, m.user_id, 'shared', 'accepted', m.name, ${topSql('m.user_id', '?3')}, ?4, ?4 ` +
+    "FROM list_members m JOIN shared_lists l ON l.id = m.list_id WHERE m.list_id = ?2 AND m.status = 'accepted' AND m.user_id != l.owner_id " +
+    'ON CONFLICT (task_id, to_user) DO NOTHING',
+  ).bind(taskId, listId, STEP, now());
+}
+
+/**
  * Maakt een hoofdtaak uit een gedeelde lijst een persoonlijke taak van `actorId` in `list`, met zijn subtaken. Alle
  * deelrijen gaan weg, en de meldrijen van de anderen (`task_watch`, `reminder_sent`). Zonder melding.
  */

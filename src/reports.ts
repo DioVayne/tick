@@ -128,7 +128,9 @@ reportsApi.use('*', async (c, next) => {
 });
 
 reportsApi.post('/', async (c) => {
-  const b = await c.req.json<Record<string, unknown>>().catch(() => { throw new HttpError(400, 'err.invalid_json'); });
+  const raw = await c.req.json<unknown>().catch(() => { throw new HttpError(400, 'err.invalid_json'); });
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new HttpError(400, 'err.invalid_json');
+  const b = raw as Record<string, unknown>;
   if (!REASONS.includes(b.reason as Reason)) throw new HttpError(400, 'err.report_reason');
   const note = typeof b.note === 'string' ? b.note.trim().slice(0, MAX_NOTE) : '';
   const db = c.env.DB;

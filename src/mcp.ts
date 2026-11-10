@@ -122,6 +122,8 @@ const TOOLS: Tool[] = [
   },
 ];
 
+const isObj = (v: unknown): v is Args => !!v && typeof v === 'object' && !Array.isArray(v);
+
 function seg(v: unknown): string {
   if (typeof v !== 'string' || !v) throw new ToolError('id is required');
   return encodeURIComponent(v);
@@ -169,6 +171,7 @@ export function mcpApi(api: Api) {
     }
     // Notificaties (zonder id) en antwoorden krijgen geen JSON-RPC-antwoord.
     if (!('id' in msg)) return c.body(null, 202);
+    if (msg.params !== undefined && msg.params !== null && !isObj(msg.params)) return c.json(rpcError(msg.id, -32602, 'Invalid params'));
     const params = (msg.params ?? {}) as Args;
 
     switch (msg.method) {
@@ -188,6 +191,8 @@ export function mcpApi(api: Api) {
       case 'tools/call': {
         const tool = TOOLS.find((t) => t.name === params.name);
         if (!tool) return c.json(rpcError(msg.id, -32602, `Unknown tool: ${String(params.name)}`));
+        const args = params.arguments ?? {};
+        if (!isObj(args)) return c.json(rpcError(msg.id, -32602, 'Invalid params: arguments must be an object'));
         const call: Call = async (method, path, body) => {
           const headers = new Headers();
           for (const h of ['authorization', 'accept-language', 'cookie', 'cf-connecting-ip']) {
@@ -202,7 +207,7 @@ export function mcpApi(api: Api) {
           return data;
         };
         try {
-          const out = await tool.run((params.arguments ?? {}) as Args, call);
+          const out = await tool.run(args, call);
           return c.json(rpc(msg.id, { content: [{ type: 'text', text: JSON.stringify(out) }] }));
         } catch (e) {
           if (!(e instanceof ToolError)) throw e;
