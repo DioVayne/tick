@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 1039" width="480" height="1039" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <!-- Drawing of an Android home screen with the Tick widget (one list: Home), after widget_tasks.xml / widget_item.xml. -->
+  <rect width="480" height="1039" fill="#dfe6ee"/>
+  <circle cx="430" cy="930" r="250" fill="#cfd9e5"/>
+  <circle cx="40" cy="880" r="120" fill="#fcd34d" fill-opacity=".45"/>
+  <circle cx="470" cy="80" r="90" fill="#cfd9e5"/>
+
+  <!-- status bar -->
+  <text x="28" y="38" font-size="20" font-weight="600" fill="#1e293b">9:41</text>
+  <g fill="#1e293b">
+    <path d="M372 36l20-20v20z"/>
+    <path d="M402 24a16 16 0 0 1 22 0l-11 13z"/>
+    <rect x="432" y="20" width="24" height="14" rx="3" fill="none" stroke="#1e293b" stroke-width="2"/>
+    <rect x="435" y="23" width="15" height="8" rx="1"/>
+    <rect x="457" y="24" width="3" height="6" rx="1"/>
+  </g>
+
+  <!-- top row of apps -->
+  <g transform="translate(42 84)">
+    <rect width="72" height="72" rx="20" fill="#1e293b"/>
+    <g transform="translate(36 37) scale(0.12) translate(-256 -260)">
+      <g transform="translate(256 260) scale(1.5) translate(-256 -260)"><path d="M256 104C184 104 132 158 132 226C132 312 256 416 256 416C256 416 380 312 380 226C380 158 328 104 256 104Z" fill="#fcd34d" stroke="#1e293b" stroke-width="16" stroke-linejoin="round"/><path d="M200 228l40 40 76-86" fill="none" stroke="#1e293b" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </g>
+  </g>
+  <g transform="translate(148 84)">
+    <rect width="72" height="72" rx="20" fill="#ffffff"/>
+    <rect x="16" y="24" width="40" height="28" rx="6" fill="#94a3b8"/>
+    <rect x="28" y="19" width="16" height="7" rx="2" fill="#94a3b8"/>
+    <circle cx="36" cy="38" r="9" fill="#ffffff"/>
+    <circle cx="36" cy="38" r="5" fill="#64748b"/>
+  </g>
+  <g transform="translate(260 84)">
+    <rect width="72" height="72" rx="20" fill="#ffffff"/>
+    <path d="M16 22l13-5 14 5 13-5v33l-13 5-14-5-13 5z" fill="#cbd5e1"/>
+    <path d="M29 17v33M43 22v33" stroke="#94a3b8" stroke-width="2"/>
+    <path d="M36 50s-8-8-8-14a8 8 0 0 1 16 0c0 6-8 14-8 14z" fill="#3d6cf2"/>
+    <circle cx="36" cy="36" r="3" fill="#ffffff"/>
+  </g>
+  <g transform="translate(366 84)">
+    <rect width="72" height="72" rx="20" fill="#ffffff"/>
+    <rect x="16" y="18" width="40" height="38" rx="6" fill="#e2e8f0"/>
+    <rect x="16" y="18" width="40" height="11" rx="5" fill="#94a3b8"/>
+    <text x="36" y="51" text-anchor="middle" font-size="18" font-weight="700" fill="#475569">3</text>
+  </g>
+  <g font-size="17" fill="#1e293b" text-anchor="middle">
+    <text x="78" y="182">Tick</text>
+    <text x="184" y="182">Camera</text>
+    <text x="296" y="182">Maps</text>
+    <text x="402" y="182">Calendar</text>
+  </g>
+
+  <!-- the widget -->
+  <rect x="24" y="224" width="432" height="588" rx="38" fill="#0f172a" fill-opacity=".08"/>
+  <rect x="24" y="220" width="432" height="588" rx="38" fill="#ffffff"/>
+  <text x="44" y="266" font-size="29" font-weight="700" fill="#1b1f24">Home</text>
+  <g transform="translate(351 240) scale(1.2)">
+    <path fill="#6b7280" d="M17.65,6.35C16.2,4.9 14.21,4 12,4c-4.42,0 -7.99,3.58 -7.99,8s3.57,8 7.99,8c3.73,0 6.84,-2.55 7.73,-6h-2.08c-0.82,2.33 -3.04,4 -5.65,4 -3.31,0 -6,-2.69 -6,-6s2.69,-6 6,-6c1.66,0 3.14,0.69 4.22,1.78L13,11h7V4l-2.35,2.35z"/>
+  </g>
+  <g transform="translate(405 236) scale(1.58)">
+    <path fill="#1f6feb" d="M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+  </g>
+  <text x="436" y="300" text-anchor="end" font-size="19" fill="#6b7280">Updated 09:41</text>
+
+  <!-- task 1: pinned, reminder, place, shared -->
+  <rect x="33" y="312" width="414" height="84" rx="19" fill="#f2f4f7"/>
+  <circle cx="62" cy="354" r="18" fill="none" stroke="#6b7280" stroke-width="3.4"/>
+  <text x="90" y="343" font-size="25" fill="#1b1f24">Buy groceries</text>
+  <g transform="translate(90 355) scale(0.875)" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></g>
+  <text x="116" y="373" font-size="20" fill="#6b7280" textLength="143" lengthAdjust="spacingAndGlyphs">Tue 3 Nov 17:30</text>
+  <g transform="translate(268 355) scale(0.875)" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></g>
+  <g transform="translate(297 355) scale(0.875)" fill="none" stroke="#1f6feb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.1a4 4 0 0 1 0 7.8M22 21v-1a6 6 0 0 0-4-5.6"/></g>
+
+  <!-- task 2 -->
+  <rect x="33" y="412" width="414" height="58" rx="19" fill="#f2f4f7"/>
+  <circle cx="62" cy="441" r="18" fill="none" stroke="#6b7280" stroke-width="3.4"/>
+  <text x="90" y="450" font-size="25" fill="#1b1f24">Clean out the shed</text>
+
+  <!-- task 3: just ticked off, still visible for undo -->
+  <rect x="33" y="475" width="414" height="58" rx="19" fill="#f2f4f7"/>
+  <circle cx="62" cy="504" r="20" fill="#1f6feb"/>
+  <path d="M53.5 505l6.4 6.4 12.8-13.8" fill="none" stroke="#ffffff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="90" y="513" font-size="25" fill="#6b7280" text-decoration="line-through">Fix the bike light</text>
+
+  <!-- task 4: reminder, repeat -->
+  <rect x="33" y="538" width="414" height="84" rx="19" fill="#f2f4f7"/>
+  <circle cx="62" cy="580" r="18" fill="none" stroke="#6b7280" stroke-width="3.4"/>
+  <text x="90" y="569" font-size="25" fill="#1b1f24">Pay the rent</text>
+  <g transform="translate(90 581) scale(0.875)" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></g>
+  <text x="116" y="599" font-size="20" fill="#6b7280" textLength="141" lengthAdjust="spacingAndGlyphs">Tue 1 Dec 09:00</text>
+  <g transform="translate(266 581) scale(0.875)" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/></g>
+
+  <!-- task 5: reminder, open subtasks -->
+  <rect x="33" y="627" width="414" height="84" rx="19" fill="#f2f4f7"/>
+  <circle cx="62" cy="669" r="18" fill="none" stroke="#6b7280" stroke-width="3.4"/>
+  <text x="90" y="658" font-size="25" fill="#1b1f24">Paint the bathroom</text>
+  <g transform="translate(90 670) scale(0.875)" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></g>
+  <text x="116" y="688" font-size="20" fill="#6b7280" textLength="138" lengthAdjust="spacingAndGlyphs">Sat 7 Nov 10:00</text>
+  <g transform="translate(263 670) scale(0.875)" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h2M4 12h2M4 18h2M9 6h11M9 12h11M9 18h11"/></g>
+  <text x="287" y="688" font-size="20" fill="#6b7280">2</text>
+
+  <!-- task 6: reminder, repeat -->
+  <rect x="33" y="716" width="414" height="84" rx="19" fill="#f2f4f7"/>
+  <circle cx="62" cy="758" r="18" fill="none" stroke="#6b7280" stroke-width="3.4"/>
+  <text x="90" y="747" font-size="25" fill="#1b1f24">Water the plants</text>
+  <g transform="translate(90 759) scale(0.875)" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></g>
+  <text x="116" y="777" font-size="20" fill="#6b7280" textLength="162" lengthAdjust="spacingAndGlyphs">Wed 11 Nov 09:00</text>
+  <g transform="translate(287 759) scale(0.875)" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/></g>
+
+  <!-- dock -->
+  <rect x="24" y="898" width="432" height="96" rx="36" fill="#ffffff" fill-opacity=".55"/>
+  <g transform="translate(42 910)">
+    <rect width="72" height="72" rx="20" fill="#ffffff"/>
+    <path d="M26 20c3 0 5 6 5 8s-4 3-4 5 6 10 9 11 3-4 5-4 8 2 8 5-3 6-6 6c-12 0-25-15-25-26 0-3 3-5 8-5z" fill="#94a3b8"/>
+  </g>
+  <g transform="translate(148 910)">
+    <rect width="72" height="72" rx="20" fill="#ffffff"/>
+    <path d="M16 22h40a4 4 0 0 1 4 4v18a4 4 0 0 1-4 4H32l-10 8v-8h-6a4 4 0 0 1-4-4V26a4 4 0 0 1 4-4z" fill="#cbd5e1"/>
+  </g>
+  <g transform="translate(260 910)">
+    <rect width="72" height="72" rx="20" fill="#ffffff"/>
+    <circle cx="36" cy="36" r="20" fill="none" stroke="#94a3b8" stroke-width="4"/>
+    <path d="M16 36h40M36 16c-7 7-7 33 0 40M36 16c7 7 7 33 0 40" fill="none" stroke="#94a3b8" stroke-width="3"/>
+  </g>
+  <g transform="translate(366 910)">
+    <rect width="72" height="72" rx="20" fill="#ffffff"/>
+    <rect x="14" y="22" width="44" height="30" rx="5" fill="#cbd5e1"/>
+    <path d="M16 25l20 15 20-15" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linejoin="round"/>
+  </g>
+  <rect x="180" y="1016" width="120" height="6" rx="3" fill="#1e293b"/>
+</svg>
