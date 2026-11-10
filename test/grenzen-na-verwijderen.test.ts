@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { callWith, createUser, openEnv, randomIp } from './helpers';
 import type { Env } from '../src/index';
 import { reserveMail } from '../src/mail';
-import { sendVerifyMail } from '../src/signup';
+import { sendVerifyMail, VERIFY_PER_RECIPIENT } from '../src/signup';
 import { deleteAccount } from '../src/users-api';
 
 // Elke test een eigen (verre) UTC-dag, zodat de daggrenzen van de ene test de andere niet raken.
@@ -73,12 +73,24 @@ describe('bevestigingsmails', () => {
     expect(await reserveMail(env.DB, lim, 'reset', (await createUser()).id, t)).toHaveProperty('id');
   });
 
-  it('hooguit één per adres per 24 uur, ook na verwijderen en opnieuw aanmelden', async () => {
-    freshDay();
+  it(`opnieuw sturen werkt, tot ${VERIFY_PER_RECIPIENT} per adres per 24 uur, ook na verwijderen en opnieuw aanmelden`, async () => {
+    const t = freshDay();
+    const at = (min: number) => vi.setSystemTime(t + min * 60_000);
     const email = `slachtoffer-${day}@ex.test`;
-    expect((await signup(openEnv, email)).status).toBe(201);
+    expect((await signup(openEnv, email)).status).toBe(201); // 1
+    at(6);
+    await sendVerifyMail(openEnv, await idOf(email), 'https://tick.test', 'en'); // 2: opnieuw sturen
+    expect(mails).toEqual([email, email]);
     await deleteAccount(openEnv, await idOf(email));
-    expect((await signup(openEnv, email)).status).toBe(201);
-    expect(mails).toEqual([email]);
+    at(12);
+    expect((await signup(openEnv, email)).status).toBe(201); // 3: nieuw account, zelfde adres
+    expect(mails).toHaveLength(3);
+    at(18);
+    await sendVerifyMail(openEnv, await idOf(email), 'https://tick.test', 'en'); // 4: te veel voor dit adres
+    expect(mails).toHaveLength(3);
+    // Een ander adres heeft zijn eigen grens.
+    const other = `ander-${day}@ex.test`;
+    expect((await signup(openEnv, other)).status).toBe(201);
+    expect(mails).toEqual([email, email, email, other]);
   });
 });

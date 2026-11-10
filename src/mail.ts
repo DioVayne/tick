@@ -72,8 +72,10 @@ export type MailLimits = {
   perDay?: number;
   /** Deel (0–1) van `MAIL_DAILY_LIMIT` dat deze soort mag gebruiken (standaard 1). */
   dailyShare?: number;
-  /** E-mailadres van de ontvanger: dan ook hooguit één mail van deze soort per adres per 24 uur. */
+  /** E-mailadres van de ontvanger: dan ook hooguit `recipientPerDay` mails van deze soort per adres per 24 uur. */
   recipient?: string;
+  /** Hoeveel mails van deze soort per ontvangend adres per 24 uur (standaard 1; telt alleen met `recipient`). */
+  recipientPerDay?: number;
 };
 
 /**
@@ -120,6 +122,7 @@ export async function reserveMail(db: D1Database, env: Env, kind: string, userId
   const perDay = o.perDay ?? ACCOUNT_PER_DAY;
   const daily = Math.floor(dailyLimit(env) * Math.min(1, Math.max(0, o.dailyShare ?? 1)));
   const hash = o.recipient ? await recipientHash(o.recipient) : null;
+  const perRecipient = o.recipientPerDay ?? 1;
   const flags = FLAG_KINDS.map((k) => `'${k}'`).join(', ');
   const [, insert] = await db.batch([
     db.prepare('DELETE FROM mail_log WHERE sent_at < ?').bind(iso(now - 2 * DAY)),
@@ -127,16 +130,16 @@ export async function reserveMail(db: D1Database, env: Env, kind: string, userId
       WHERE (SELECT COUNT(*) FROM mail_log WHERE user_id = ?3 AND kind = ?2 AND sent_at > ?5) = 0
         AND (SELECT COUNT(*) FROM mail_log WHERE user_id = ?3 AND kind = ?2 AND sent_at > ?6) < ?7
         AND (SELECT COUNT(*) FROM mail_log WHERE kind NOT IN (${flags}) AND sent_at >= ?8 AND sent_at < ?9) < ?10
-        AND (?11 IS NULL OR (SELECT COUNT(*) FROM mail_log WHERE kind = ?2 AND recipient_hash = ?11 AND sent_at > ?6) = 0)`)
-      .bind(id, kind, userId, iso(now), iso(now - gap), iso(now - DAY), perDay, iso(start), iso(start + DAY), daily, hash),
+        AND (?11 IS NULL OR (SELECT COUNT(*) FROM mail_log WHERE kind = ?2 AND recipient_hash = ?11 AND sent_at > ?6) < ?12)`)
+      .bind(id, kind, userId, iso(now), iso(now - gap), iso(now - DAY), perDay, iso(start), iso(start + DAY), daily, hash, perRecipient),
   ]);
   if (insert.meta.changes === 1) return { id };
   const [recent, toRecipient] = await Promise.all([
     db.prepare('SELECT COUNT(*) AS n, MAX(sent_at) AS last FROM mail_log WHERE user_id = ? AND kind = ? AND sent_at > ?')
       .bind(userId, kind, iso(now - DAY)).first<{ n: number; last: string | null }>(),
-    hash ? db.prepare('SELECT 1 AS x FROM mail_log WHERE kind = ? AND recipient_hash = ? AND sent_at > ?').bind(kind, hash, iso(now - DAY)).first() : null,
+    hash ? db.prepare('SELECT COUNT(*) AS n FROM mail_log WHERE kind = ? AND recipient_hash = ? AND sent_at > ?').bind(kind, hash, iso(now - DAY)).first<{ n: number }>() : null,
   ]);
-  const accountFull = !!toRecipient || (!!recent && (recent.n >= perDay || (gap > 0 && !!recent.last && recent.last > iso(now - gap))));
+  const accountFull = (!!toRecipient && toRecipient.n >= perRecipient) || (!!recent && (recent.n >= perDay || (gap > 0 && !!recent.last && recent.last > iso(now - gap))));
   return accountFull ? 'account_limit' : 'daily_limit';
 }
 
