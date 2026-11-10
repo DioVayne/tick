@@ -129,7 +129,9 @@ Je kunt een taak op twee manieren met iemand delen. **Gedeeld** is één taak vo
 - Na afvinken van de hele kopie, melding rechts: *Dio is klaar ✓*
 - Lijstdemo, knop: **Oppakken**; daarna bij de ander: *Dio pakt het op*; bij jezelf: *Jij pakt het op*
 
-### 3.3 Vrije momenten
+### 3.3 Vrije momenten (LATER: niet op de site)
+
+<!-- Weggehaald op 2026-11-10: agenda koppelen is nog niet af en de sectie klopte niet met de app. Tekst blijft hier staan voor later; de HTML, stijl en het script staan in site/later/. -->
 
 **Kop:** Tick weet wanneer je tijd hebt
 
@@ -754,7 +756,9 @@ You can share a task with someone in two ways. **Shared** is one task for both o
 - After ticking off the whole copy, notification on the right: *Dio is done ✓*
 - List demo, button: **Take it**; then for the other person: *Dio is on it*; for yourself: *You're on it*
 
-### 3.3 Free moments
+### 3.3 Free moments (LATER: not on the site)
+
+<!-- Removed on 2026-11-10, see the Dutch section. -->
 
 **Heading:** Tick knows when you have time
 
@@ -1286,3 +1290,26 @@ No. Your tasks are on the server and on your devices. Log in on a new device and
 15. **Gedeelde taak "Stoppen met delen"** (FAQ): dit is de knop *Stoppen met delen* / *Stop sharing* (`share.leave`) voor wie meedoet. De eigenaar ziet *Verwijderen* bij anderen (`share.remove`); of de eigenaar zelf kan stoppen zonder te verwijderen, staat niet in de docs.
 16. **iPhone-menutekst:** "Zet op beginscherm" is de Nederlandse iOS-term zoals ik die ken; de docs noemen alleen de Engelse *Add to Home Screen*.
 17. **"Kopie van Dio" in de demo:** de app toont *Kopie van* gevolgd door een naam (`copy.from`). Dat de naam er direct achter staat, volgt uit `docs/sharing.md` ("Copy from Dio").
+
+# Revisie 2026-11-10 (feedback van Dio)
+
+Wat er na de eerste versie op de site veranderd is. De tekst hierboven is het origineel; waar het hieronder anders staat, geldt dit.
+
+**Vorm**
+- Alle echte knoppen zijn pillen (helemaal rond). De markeerstift onder koppen is een smalle streep onder in de regel, die nooit over een andere regel valt. Op donker zakt de streep naar de onderkant, zodat de letters licht blijven.
+- Kantlijnnotities hebben alleen een pijl als die ergens naar wijst: bij het groeilijstje (omhoog naar het lijstje) en bij de rijmodus (naar het rijmodus-scherm). Bij privacy en de FAQ zijn de pijlen weg.
+- Het groeilijstje in het makersverhaal is een gewone regel tekst met kleine emoji (📝 👥 🤖 📅 🚗 🌐), geen pillen meer.
+- Kaartdemo: het poppetje is oranje met een witte rand en begint op het gras naast het huis, niet op de deur. De deur is op donker niet meer wit. In de melding staat geen rondje meer; **Afvinken** / *Complete* is genoeg.
+- Samen of kopie: beide telefoons doen mee. Gedeeld: afvinken op de ene telefoon vinkt hem op beide af, en de ander krijgt een melding. Kopie: ieder vinkt zijn eigen exemplaar af; het balkje op de ene telefoon is de voortgang van de ander. Nieuwe regels: *Vink iets af, links of rechts. Allebei de telefoons doen mee.* / *Tick something off, left or right. Both phones join in.* en *Ieder ziet het balkje van de ander groeien. Wat de ander afvinkte, zie je niet.* / *You each see the other's bar grow. What the other ticked off, you don't see.*
+- Alle functies: elke tegel heeft een emoji, en elk verhaal een echt scherm uit de app (NL-schermen op de NL-pagina, EN op de EN-pagina; `site/public/img/app/`, gemaakt met de demodata van de Play-schermen).
+- Wat werkt waar: rijen in groepen (Taken en herinneringen, Plekken en onderweg, Samen, Op je telefoon, Je gegevens en de rest), een icoon per kolom, drie tekens met een uitleg erboven (ja = groen met vinkje, deels = half oranje, nee = hol grijs) en om en om een lichte rij. Op een telefoon: de eerste kolom blijft staan, *Schuif de tabel opzij voor alle apparaten →* en een vervaging rechts zolang er meer is.
+
+**Tekst**
+- Makersverhaal: *Mijn vriendin, die ADD heeft, zei in één zin wat Tick moest kunnen:* / *My girlfriend, who has ADD, put what Tick had to do in one sentence:*
+- Sterretje bij *bij de winkel bent* (hero) en *als je er bent* (plekken). Voetnoot: *\* Meldingen op een plek werken (alleen) in de Android-app. Een iPhone-versie wil ik ooit ook maken, maar daar moet ik eerst nog even voor sparen.* / *\* Place reminders (only) work in the Android app. I'd like to make an iPhone version someday, but I'll have to save up for that first.*
+- Plekken: nieuw scherm van de rijmodus naast het plek-scherm, met de notitie *Kijk alsjeblieft niet te lang naar je scherm onder het rijden…* die ernaar wijst.
+- Demo na wegvegen, in de derde persoon (Tick praat niet als "ik", Dio wel): *Prima. De volgende keer dat je hier bent, meldt Tick zich weer. Tick is geduldig.* / *Fine. Next time you are here, Tick will be back. Tick is patient.*
+- Agenda koppelen (tegel): *Je afspraken naast je taken. Nog niet helemaal af.* / *Your appointments next to your tasks. Not quite finished.* Het verhaal belooft geen vrije momenten meer, alleen dat het op een eigen Tick in de maak is.
+- Zelf gehost: kolomkop *gratis Cloudflare-account, wat installeerwerk* / *free Cloudflare account, some setup*, een blok onder de tabel met een link naar SETUP.md, en eerlijk over delen: **Delen gaat alleen met mensen op dezelfde Tick-server** / **You can only share with people on the same Tick server**. Ook in *Kost het iets?* en FAQ 12. <!-- Nog te onderzoeken; als dat anders blijkt, pas het aan in de tabel (cel Taken en lijsten delen), het blok onder de tabel, Kost het iets? en FAQ 12. -->
+- FAQ 13: *Wat als je ermee stopt, Dio?* / *What if you stop, Dio?*, antwoord in de ik-vorm. Kantlijn bij de FAQ: *Stoppen met Tick? Ben ik niet van plan. Ik gebruik het zelf elke dag.* / *Stop making Tick? Not planning to. I use it every day.*
+- NL: *Instellingen › Data* heet in de app *Instellingen › Gegevens*; overal aangepast. Typfout *dat het telefoon zegt* → *dat je telefoon zegt*.

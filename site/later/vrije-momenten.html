@@ -1,0 +1,75 @@
+<!-- Bewaard voor later (2026-11-10): de sectie "Vrije momenten" / "Free moments" van ticktodo.nl.
+     Weggehaald omdat agenda koppelen nog niet af is en de sectie niet klopte met de app.
+     Niet publiek: deze map staat buiten site/public. Stijl: vrije-momenten.css, script: vrije-momenten.js.
+     Terugzetten: de NL-sectie na #samen-of-kopie in public/index.html, de EN-sectie na #shared-or-copy in public/en/index.html,
+     en in test/site.test.ts weer 'vrije-momenten': 'free-moments' in NL_TO_EN. -->
+
+<!-- NL -->
+<!-- 3.3 Vrije momenten -->
+<section id="vrije-momenten" class="band dark sec-center" aria-labelledby="vrij-title">
+<div class="wrap grid">
+<div class="week-wrap">
+<div class="week" role="img" aria-label="Een week in je agenda. Werk, voetbal, een tandarts en een verjaardag staan als grijze blokken. Drie vrije momenten lichten geel op: maandag om 12:00, woensdagavond en zaterdagmiddag.">
+<span class="corner" aria-hidden="true"></span>
+<span class="dh today" aria-hidden="true">ma · vandaag</span><span class="dh" aria-hidden="true">di</span><span class="dh" aria-hidden="true">wo</span><span class="dh" aria-hidden="true">do</span><span class="dh" aria-hidden="true">vr</span><span class="dh" aria-hidden="true">za</span><span class="dh" aria-hidden="true">zo</span>
+<div class="hours" aria-hidden="true"><span class="s1">08:00</span><span class="s5">10:00</span><span class="s9">12:00</span><span class="s13">14:00</span><span class="s17">16:00</span><span class="s21">18:00</span><span class="s25">20:00</span><span class="s28 last">22:00</span></div>
+<div class="day" aria-hidden="true"><span class="blk s2 e9">Werk</span><span class="blk free s9 e10 is-active" data-slot="a"></span><span class="blk s11 e19">Werk</span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e19">Werk</span><span class="blk s23 e27">Voetbal</span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e19">Werk</span><span class="blk free s23 e29" data-slot="b"></span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e11">Werk</span><span class="blk s13 e15">Tandarts</span><span class="blk s21 e25">Etentje</span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e17">Werk</span><span class="blk s25 e29">Film</span></div>
+<div class="day" aria-hidden="true"><span class="blk s5 e8">Markt</span><span class="blk free s11 e15" data-slot="c"></span></div>
+<div class="day" aria-hidden="true"><span class="blk s9 e15">Verjaardag</span></div>
+</div>
+<ul class="menu" aria-label="Voorbeeld van het herinneringsmenu">
+<li class="mh">Vrij in je agenda</li>
+<li class="mi is-active" data-slot="a"><span>Vandaag</span><span>12:00</span></li>
+<li class="mi" data-slot="b"><span>Woensdagavond</span><span>19:00</span></li>
+<li class="mi" data-slot="c"><span>Zaterdag</span><span>13:00</span></li>
+<li class="busy"><span>Morgen</span><span>Bezet: Werk</span></li>
+</ul>
+</div>
+<div class="free-copy stack">
+<p class="kicker">Vrije momenten</p>
+<h2 id="vrij-title">Tick weet wanneer je <span class="hl">tijd hebt</span></h2>
+<p class="body">Een taak inplannen gaat makkelijker als je weet wanneer je kunt. Koppel je online agenda en Tick ziet wanneer je bezet bent. Bij een herinnering stelt Tick dan vrije momenten voor: het eerste vrije halfuur, een vrije avond en een moment in het weekend. Staat er al iets op <em>Morgen</em>, dan zegt Tick <strong>Bezet:</strong> met de naam van de afspraak. Tick leest je agenda alleen. Het verandert er nooit iets in.</p>
+<p class="small">Werkt met Google Agenda, Outlook, iCloud en elke agenda met een iCal-adres. Tick haalt alleen titel, begin en eind op, van vandaag en de komende 14 dagen.</p>
+<p class="honest">Agenda koppelen staat op app.ticktodo.nl nog niet aan. Op een eigen Tick werkt het al. <strong>Zet in je agenda</strong> werkt overal.</p>
+</div>
+</div>
+</section>
+
+<!-- EN -->
+<!-- 3.3 Free moments -->
+<section id="free-moments" class="band dark sec-center" aria-labelledby="free-title">
+<div class="wrap grid">
+<div class="week-wrap">
+<div class="week" role="img" aria-label="A week in your calendar. Work, football, a dentist and a birthday show as grey blocks. Three free moments light up in yellow: Monday at 12:00, Wednesday evening and Saturday afternoon.">
+<span class="corner" aria-hidden="true"></span>
+<span class="dh today" aria-hidden="true">Mon · today</span><span class="dh" aria-hidden="true">Tue</span><span class="dh" aria-hidden="true">Wed</span><span class="dh" aria-hidden="true">Thu</span><span class="dh" aria-hidden="true">Fri</span><span class="dh" aria-hidden="true">Sat</span><span class="dh" aria-hidden="true">Sun</span>
+<div class="hours" aria-hidden="true"><span class="s1">08:00</span><span class="s5">10:00</span><span class="s9">12:00</span><span class="s13">14:00</span><span class="s17">16:00</span><span class="s21">18:00</span><span class="s25">20:00</span><span class="s28 last">22:00</span></div>
+<div class="day" aria-hidden="true"><span class="blk s2 e9">Work</span><span class="blk free s9 e10 is-active" data-slot="a"></span><span class="blk s11 e19">Work</span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e19">Work</span><span class="blk s23 e27">Football</span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e19">Work</span><span class="blk free s23 e29" data-slot="b"></span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e11">Work</span><span class="blk s13 e15">Dentist</span><span class="blk s21 e25">Dinner</span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e17">Work</span><span class="blk s25 e29">Film</span></div>
+<div class="day" aria-hidden="true"><span class="blk s5 e8">Market</span><span class="blk free s11 e15" data-slot="c"></span></div>
+<div class="day" aria-hidden="true"><span class="blk s9 e15">Birthday</span></div>
+</div>
+<ul class="menu" aria-label="Example of the reminder menu">
+<li class="mh">Free in your calendar</li>
+<li class="mi is-active" data-slot="a"><span>Today</span><span>12:00</span></li>
+<li class="mi" data-slot="b"><span>Wednesday evening</span><span>19:00</span></li>
+<li class="mi" data-slot="c"><span>Saturday</span><span>13:00</span></li>
+<li class="busy"><span>Tomorrow</span><span>Busy: Work</span></li>
+</ul>
+</div>
+<div class="free-copy stack">
+<p class="kicker">Free moments</p>
+<h2 id="free-title">Tick knows when you <span class="hl">have time</span></h2>
+<p class="body">Planning a task is easier when you know when you can. Link your online calendar and Tick sees when you're busy. When you set a reminder, Tick then suggests free moments: the first free half hour, a free evening and a moment at the weekend. Already have something on <em>Tomorrow</em>? Then Tick says <strong>Busy:</strong> with the name of the appointment. Tick only reads your calendar. It never changes anything in it.</p>
+<p class="small">Works with Google Calendar, Outlook, iCloud and any calendar with an iCal address. Tick only fetches the title, start and end, for today and the next 14 days.</p>
+<p class="honest">Linking a calendar is not switched on at app.ticktodo.nl yet. It already works on your own Tick. <strong>Add to calendar</strong> works everywhere.</p>
+</div>
+</div>
+</section>

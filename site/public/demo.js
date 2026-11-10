@@ -7,7 +7,7 @@
 // Map geometry in SVG units (viewBox 0 0 560 340). Everything else derives from this.
 const G = {
   w: 560, h: 340,
-  start: { x: 65, y: 220 },   // in front of the house
+  start: { x: 114, y: 220 },  // on the grass beside the house, not on its door
   door: { x: 470, y: 220 },   // in front of the shop window (beside the dark door)
   walkY: 220,                 // the pavement the walker follows
   fence: { x: 440, y: 178 },  // centre of the place
@@ -77,8 +77,8 @@ const MAP = `
 <rect class="tdemo-doorway" x="428" y="154" width="24" height="48" rx="3"/>
 <path class="tdemo-door-split" d="M440 156V202"/>
 <g transform="translate(440 178)"><circle class="tdemo-fence" r="128"/></g>
-<path class="tdemo-route" d="M65 220H470"/>
-<g class="tdemo-walker" tabindex="0" role="button" transform="translate(65 220)">
+<path class="tdemo-route" d="M114 220H470"/>
+<g class="tdemo-walker" tabindex="0" role="button" transform="translate(114 220)">
   <circle class="tdemo-hit" cy="-16" r="28"/>
   <g transform="translate(0 -16)"><circle class="tdemo-ring" r="20"/></g>
   <circle class="tdemo-focus" cy="-16" r="25"/>
@@ -102,13 +102,7 @@ const TEMPLATE = `
       <span class="tdemo-notif-now"></span>
       <button type="button" class="tdemo-close"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg></button>
     </div>
-    <p class="tdemo-notif-title">
-      <span class="tdemo-check" aria-hidden="true">
-        <svg viewBox="0 0 24 24" focusable="false"><path d="M6.5 12.5l3.7 3.7 7.3-8.2"/></svg>
-        <span class="tdemo-sparks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
-      </span>
-      <span class="tdemo-notif-task"></span>
-    </p>
+    <p class="tdemo-notif-title"><span class="tdemo-notif-task"></span></p>
     <p class="tdemo-notif-text"></p>
     <div class="tdemo-notif-actions">
       <button type="button" class="tdemo-btn tdemo-done"></button>

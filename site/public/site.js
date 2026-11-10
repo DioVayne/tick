@@ -46,85 +46,106 @@ if (!('name' in HTMLDetailsElement.prototype)) {
 }
 
 // ---------- Shared or copy: two phones ----------
+// Both phones work. Shared: one task, ticking it on either phone ticks it on both, and the other phone gets a
+// notification. Copy: each phone has its own copy; the pill on each phone shows the other person's progress.
 function mountShare(root) {
-  const state = { mode: 'shared', done: false, subs: [false, false, false] };
+  const state = {
+    mode: 'shared',
+    done: false, by: '', // shared: done, and who ticked it ('me' or 'her')
+    me: [false, false, false], her: [true, false, false], // copy: each person's subtasks
+    touched: false,
+  };
   const modeBtns = root.querySelectorAll('[data-set-mode]');
-  const mainBox = root.querySelector('[data-tick="main"]');
-  const subBoxes = [...root.querySelectorAll('.box.sub[data-tick]')];
-  const herBox = root.querySelector('[data-her="main"]');
+  const myMain = root.querySelector('[data-tick="main"]');
+  const mySubs = [...root.querySelectorAll('.box.sub[data-tick]')];
+  const herMain = root.querySelector('[data-her="main"]');
+  const herSubs = [...root.querySelectorAll('[data-her-sub]')];
+  const myTitle = myMain?.closest('.task-row')?.querySelector('.task-title');
   const herTitle = root.querySelector('[data-her-title]');
-  const myTitle = mainBox?.closest('.task-row')?.querySelector('.task-title');
-  const herBar = root.querySelector('.copy-pill.hers');
-  if (!mainBox || !herBox) return;
+  const pills = { me: root.querySelector('[data-pill="me"]'), her: root.querySelector('[data-pill="her"]') };
+  const pushes = [...root.querySelectorAll('[data-push]')];
+  if (!myMain || !herMain) return;
+
+  const paint = (box, on) => {
+    box.classList.toggle('is-on', on);
+    box.setAttribute('aria-pressed', String(on));
+  };
 
   function render() {
     const shared = state.mode === 'shared';
-    const n = state.subs.filter(Boolean).length;
-    const all = n === state.subs.length;
+    const allMe = state.me.every(Boolean);
+    const allHer = state.her.every(Boolean);
     root.dataset.mode = state.mode;
     root.classList.toggle('shared-done', shared && state.done);
-    root.classList.toggle('copy-some', !shared && n > 0);
-    root.classList.toggle('copy-all', !shared && all);
+    root.classList.toggle('copy-touched', !shared && state.touched);
     modeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.setMode === state.mode)));
 
-    const mine = shared ? state.done : all;
-    mainBox.classList.toggle('is-on', mine);
-    mainBox.setAttribute('aria-pressed', String(mine));
+    const mine = shared ? state.done : allMe;
+    const hers = shared ? state.done : allHer;
+    paint(myMain, mine);
+    paint(herMain, hers);
     myTitle?.classList.toggle('is-done-title', mine);
-    subBoxes.forEach((b, i) => {
-      b.classList.toggle('is-on', state.subs[i]);
-      b.setAttribute('aria-pressed', String(state.subs[i]));
-      b.closest('.sub-row')?.classList.toggle('is-done', state.subs[i]);
-    });
-
-    const hers = shared && state.done; // a copy: her own copy stays open
-    herBox.classList.toggle('is-on', hers);
     herTitle?.classList.toggle('is-done-title', hers);
-    herBar?.style.setProperty('--pct', Math.round((n / state.subs.length) * 100) + '%');
+    mySubs.forEach((b, i) => { paint(b, state.me[i]); b.closest('.sub-row')?.classList.toggle('is-done', state.me[i]); });
+    herSubs.forEach((b, i) => { paint(b, state.her[i]); b.closest('.sub-row')?.classList.toggle('is-done', state.her[i]); });
+
+    for (const [who, subs] of [['me', state.me], ['her', state.her]]) {
+      const pill = pills[who];
+      if (!pill) continue;
+      pill.style.setProperty('--pct', Math.round((subs.filter(Boolean).length / subs.length) * 100) + '%');
+      pill.classList.toggle('is-done', subs.every(Boolean));
+    }
+
+    // A notification on the other person's phone, right after the change that caused it.
+    const show = {
+      'shared-me': shared && state.done && state.by === 'me',
+      'shared-her': shared && state.done && state.by === 'her',
+      'copy-me': !shared && allMe && state.touched,
+      'copy-her': !shared && allHer && state.touched,
+    };
+    pushes.forEach((p) => p.classList.toggle('is-shown', !!show[p.dataset.push]));
   }
 
   modeBtns.forEach((b) => b.addEventListener('click', () => {
     state.mode = b.dataset.setMode;
     render();
   }));
-  mainBox.addEventListener('click', () => {
-    if (state.mode === 'shared') state.done = !state.done;
-    else {
-      const v = !state.subs.every(Boolean);
-      state.subs = state.subs.map(() => v);
+  const tickMain = (who) => {
+    if (state.mode === 'shared') {
+      state.done = !state.done;
+      state.by = state.done ? who : '';
+    } else {
+      const v = !state[who].every(Boolean);
+      state[who] = state[who].map(() => v);
+      state.touched = true;
     }
     render();
-  });
-  subBoxes.forEach((b, i) => b.addEventListener('click', () => {
-    state.subs[i] = !state.subs[i];
+  };
+  const tickSub = (who, i) => {
+    state[who][i] = !state[who][i];
+    state.touched = true;
     render();
-  }));
+  };
+  myMain.addEventListener('click', () => tickMain('me'));
+  herMain.addEventListener('click', () => tickMain('her'));
+  mySubs.forEach((b, i) => b.addEventListener('click', () => tickSub('me', i)));
+  herSubs.forEach((b, i) => b.addEventListener('click', () => tickSub('her', i)));
   render();
 }
 document.querySelectorAll('.share').forEach(mountShare);
 
-// ---------- Free moments: the suggestions in the menu light up their slot in turn ----------
-function mountWeek(root) {
-  const items = [...root.querySelectorAll('.mi[data-slot]')];
-  const slots = [...root.querySelectorAll('.blk.free[data-slot]')];
-  if (!items.length) return;
-  let i = 0;
-  const show = (k) => {
-    const key = items[k].dataset.slot;
-    items.forEach((it) => it.classList.toggle('is-active', it.dataset.slot === key));
-    slots.forEach((s) => s.classList.toggle('is-active', s.dataset.slot === key));
+// ---------- What works where: the fade on the right says "there is more"; it goes once you reach the end ----------
+document.querySelectorAll('.table-wrap').forEach((wrap) => {
+  const box = wrap.querySelector('.table-card');
+  if (!box) return;
+  const update = () => {
+    const more = box.scrollWidth - box.clientWidth - box.scrollLeft > 4;
+    wrap.classList.toggle('has-more', more);
   };
-  items.forEach((it, k) => it.addEventListener('mouseenter', () => { i = k; show(k); }));
-  if (reduceMotion.matches) return;
-  let timer = null;
-  const start = () => { if (!timer) timer = setInterval(() => { i = (i + 1) % items.length; show(i); }, 2600); };
-  const stop = () => { clearInterval(timer); timer = null; };
-  // Only cycle while the week is on screen.
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver((entries) => entries.forEach((e) => (e.isIntersecting ? start() : stop()))).observe(root);
-  } else start();
-}
-document.querySelectorAll('.week-wrap').forEach(mountWeek);
+  box.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+});
 
 // ---------- Tickmanager: one old task at a time ----------
 function mountTickmanager(root) {

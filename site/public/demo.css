@@ -29,6 +29,10 @@
   --tdemo-btn: #f1f5f9;
   --tdemo-btn-hover: #e2e8f0;
   --tdemo-focus: #2563eb;
+  /* The walker: orange with a white outline, so it reads as a figure on every part of the map. */
+  --tdemo-walker: #ea580c;
+  --tdemo-walker-edge: #ffffff;
+  --tdemo-door: #1e293b;
 }
 
 /* ---------- Colour tokens (dark) ---------- */
@@ -60,6 +64,9 @@
     --tdemo-btn: #334155;
     --tdemo-btn-hover: #475569;
     --tdemo-focus: #93c5fd;
+    --tdemo-walker: #fb923c;
+    --tdemo-walker-edge: #0f172a;
+    --tdemo-door: #475569;
   }
 }
 :root[data-theme="dark"] .tdemo,
@@ -90,6 +97,9 @@
   --tdemo-btn: #334155;
   --tdemo-btn-hover: #475569;
   --tdemo-focus: #93c5fd;
+  --tdemo-walker: #fb923c;
+  --tdemo-walker-edge: #0f172a;
+  --tdemo-door: #475569;
 }
 
 /* ---------- Frame ---------- */
@@ -136,7 +146,7 @@
 .tdemo-mark { fill: none; stroke: var(--tdemo-road-edge); stroke-width: 2; stroke-linecap: round; }
 .tdemo-house, .tdemo-shop { fill: var(--tdemo-house); stroke: var(--tdemo-ink); stroke-width: 2; }
 .tdemo-roof { fill: var(--tdemo-roof); stroke: var(--tdemo-roof); stroke-width: 2; stroke-linejoin: round; }
-.tdemo-door, .tdemo-doorway { fill: var(--tdemo-ink); }
+.tdemo-door, .tdemo-doorway { fill: var(--tdemo-door); }
 .tdemo-door-split { stroke: var(--tdemo-ground); stroke-width: 1.5; opacity: .6; }
 .tdemo-window { fill: var(--tdemo-window); }
 .tdemo-sign { fill: var(--tdemo-pin); }
@@ -183,13 +193,13 @@
 .tdemo-walker > .tdemo-hit { pointer-events: all; fill: transparent; }
 .tdemo-focus { fill: none; stroke: var(--tdemo-focus); stroke-width: 2.5; opacity: 0; }
 .tdemo-walker:focus-visible .tdemo-focus { opacity: 1; }
-.tdemo-shadow { fill: var(--tdemo-ink); opacity: .14; }
-.tdemo-body, .tdemo-head { fill: var(--tdemo-ink); }
-.tdemo-leg { stroke: var(--tdemo-ink); stroke-width: 3.6; stroke-linecap: round; }
+.tdemo-shadow { fill: #0f172a; opacity: .22; }
+.tdemo-body, .tdemo-head { fill: var(--tdemo-walker); stroke: var(--tdemo-walker-edge); stroke-width: 1.6; paint-order: stroke; }
+.tdemo-leg { stroke: var(--tdemo-walker); stroke-width: 3.6; stroke-linecap: round; }
 .tdemo-bag { fill: var(--tdemo-pin); stroke: #1e293b; stroke-width: 1.2; stroke-linejoin: round; }
 .tdemo-milk { fill: #ffffff; stroke: #1e293b; stroke-width: 1; opacity: 0; transition: opacity .3s; }
 .tdemo.has-milk .tdemo-milk { opacity: 1; }
-.tdemo-bikepart { fill: none; stroke: var(--tdemo-ink); stroke-width: 2; stroke-linejoin: round; opacity: 0; transition: opacity .3s; }
+.tdemo-bikepart { fill: none; stroke: var(--tdemo-walker); stroke-width: 2; stroke-linejoin: round; opacity: 0; transition: opacity .3s; }
 .tdemo.is-bike .tdemo-bikepart { opacity: 1; }
 
 /* Invitation: soft pulsing yellow ring until the first interaction. */
@@ -251,7 +261,7 @@
 .tdemo-close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
 .tdemo-close:focus-visible { outline: 2.5px solid var(--tdemo-focus); outline-offset: 1px; }
 
-.tdemo-notif-text { margin: -4px 0 9px 31px; color: var(--tdemo-muted); font-size: 14px; }
+.tdemo-notif-text { margin: -4px 0 9px; color: var(--tdemo-muted); font-size: 14px; }
 .tdemo-notif.is-bump { animation: tdemo-bump .4s ease-out; }
 @keyframes tdemo-bump {
   0% { transform: translate(-50%, 0); }
@@ -282,58 +292,7 @@
 .tdemo-notif-task { text-decoration: line-through transparent; transition: color .3s, text-decoration-color .3s; }
 .tdemo-notif.is-done .tdemo-notif-task { color: var(--tdemo-muted); text-decoration-color: var(--tdemo-muted); }
 
-.tdemo-check {
-  position: relative;
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border: 2px solid var(--tdemo-muted);
-  border-radius: 50%;
-  transition: background-color .25s, border-color .25s;
-}
-.tdemo-check svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.tdemo-check path {
-  fill: none;
-  stroke: #1e293b;
-  stroke-width: 2.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 20;
-  stroke-dashoffset: 20;
-  transition: stroke-dashoffset .35s ease-out .1s;
-}
-.tdemo-notif.is-done .tdemo-check { background: var(--tdemo-pin); border-color: var(--tdemo-pin); }
-.tdemo-notif.is-done .tdemo-check path { stroke-dashoffset: 0; }
-
-/* A few yellow sparks when ticked off. */
-.tdemo-sparks { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
-.tdemo-sparks i {
-  position: absolute;
-  left: -3px;
-  top: -3px;
-  width: 6px;
-  height: 6px;
-  border-radius: 2px;
-  background: var(--tdemo-pin);
-  opacity: 0;
-  transform: rotate(var(--a)) translateY(0);
-}
-.tdemo-sparks i:nth-child(odd) { border-radius: 50%; width: 5px; height: 5px; }
-.tdemo-sparks i:nth-child(1) { --a: 0deg; }
-.tdemo-sparks i:nth-child(2) { --a: 45deg; }
-.tdemo-sparks i:nth-child(3) { --a: 90deg; }
-.tdemo-sparks i:nth-child(4) { --a: 135deg; }
-.tdemo-sparks i:nth-child(5) { --a: 180deg; }
-.tdemo-sparks i:nth-child(6) { --a: 225deg; }
-.tdemo-sparks i:nth-child(7) { --a: 270deg; }
-.tdemo-sparks i:nth-child(8) { --a: 315deg; }
-.tdemo-notif.is-done .tdemo-sparks i { animation: tdemo-spark .75s cubic-bezier(.2, .7, .3, 1) .15s forwards; }
-@keyframes tdemo-spark {
-  0% { opacity: 1; transform: rotate(var(--a)) translateY(-6px) scale(1); }
-  100% { opacity: 0; transform: rotate(var(--a)) translateY(-24px) scale(.5); }
-}
-
-.tdemo-notif-actions { display: flex; gap: 8px; padding-left: 31px; }
+.tdemo-notif-actions { display: flex; gap: 8px; }
 .tdemo-btn {
   min-height: 36px;
   padding: 6px 14px;
@@ -444,8 +403,7 @@
   .tdemo-notif-icon { width: 14px; height: 14px; }
   .tdemo-close { width: 24px; height: 24px; }
   .tdemo-notif-title { grid-column: 1; margin: 2px 0 0; font-size: 14px; gap: 6px; }
-  .tdemo-check { width: 16px; height: 16px; border-width: 1.5px; }
-  .tdemo-notif-text { grid-column: 1; margin: 0 0 0 22px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tdemo-notif-text { grid-column: 1; margin: 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tdemo-notif-actions { grid-column: 2; grid-row: 2 / span 2; padding-left: 0; }
   .tdemo-btn { min-height: 32px; padding: 4px 12px; font-size: 13px; }
 }
@@ -454,5 +412,4 @@
 @media (prefers-reduced-motion: reduce) {
   .tdemo *, .tdemo *::before, .tdemo *::after { animation: none !important; transition: none !important; }
   .tdemo.is-fresh .tdemo-ring { opacity: .9; transform: scale(1.1); }
-  .tdemo-sparks { display: none; }
 }
