@@ -9,7 +9,10 @@ beforeAll(async () => {
   vi.stubGlobal('registration', { showNotification: async (title: string, opts: any) => { shown.push({ title, opts }); } });
   vi.stubGlobal('clients', { matchAll: async () => [], claim: async () => {}, openWindow: async () => null });
   const add = vi.spyOn(globalThis, 'addEventListener').mockImplementation(((type: string, fn: any) => { handlers.set(type, fn); }) as any);
-  try { await import('../public/sw.js'); } finally { add.mockRestore(); }
+  try {
+    // @ts-expect-error -- sw.js is een klassiek script zonder exports
+    await import('../public/sw.js');
+  } finally { add.mockRestore(); }
 });
 
 afterEach(() => { vi.restoreAllMocks(); shown.length = 0; });
