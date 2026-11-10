@@ -526,12 +526,16 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 .dfoot .actions { display: flex; gap: 8px; }
 .dfoot button { min-height: 44px; padding: 4px 12px; font-size: .875rem; }
 .avatar { display: none; }
-/* Desktop: het paneel als vlakken. Paneel iets donkerder (licht: grijs), kop en voet op de basiskleur, de onderdelen als
-   kaarten met een haarlijntje ertussen; Samen met heeft als enige een tint van het accent. */
-@media (min-width: 1024px) {
-  #detail { --inset: color-mix(in srgb, var(--card) 50%, var(--side)); --tile: color-mix(in srgb, var(--muted) 18%, var(--card)); background: var(--side); }
-  #detail .dhead { margin: 0 -18px; padding: 14px 18px; background: var(--bg); border-bottom: 1px solid var(--line); }
-  #detail .dback + .dhead { margin-top: -16px; }
+/* Het paneel (desktop) en taakscherm (mobiel) als vlakken. Paneel iets donkerder (licht: grijs), kop en voet op de basiskleur,
+   de onderdelen als kaarten met een haarlijntje ertussen; Samen met heeft als enige een tint van het accent.
+   --dpx is de zijrand van het paneel (de kop en voet lopen erdoorheen tot de rand). */
+@media (min-width: 1024px) { #detail .dback + .dhead { margin-top: -16px; } }
+@media (pointer: coarse) {
+  #detail .share-list .step-act, #detail .dfoot button.danger { min-height: 44px; }
+}
+@media all {
+  #detail { --dpx: 18px; --inset: color-mix(in srgb, var(--card) 50%, var(--side)); --tile: color-mix(in srgb, var(--muted) 18%, var(--card)); background: var(--side); }
+  #detail .dhead { margin: 0 calc(-1 * var(--dpx)); padding: 14px var(--dpx); background: var(--bg); border-bottom: 1px solid var(--line); }
   #detail .dhead .check { margin-top: 5px; }
   #detail .dpin { margin: -2px -6px 0 auto; border-radius: 10px; }
   #detail textarea.dt { font-size: 1.1875rem; letter-spacing: -.01em; }
@@ -548,7 +552,7 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
   #detail .step-share .step-body, #detail .step-copies .step-body { margin: 0; }
   #detail .dshare { gap: 0; }
   #detail .step-share .step-hint { padding: 0 14px 12px 58px; }
-  #detail .share-list li { min-height: 56px; gap: 12px; padding: 0 14px 0 12px; border-top: 1px solid var(--line); }
+  #detail .share-list li { flex-wrap: wrap; min-height: 56px; gap: 12px; padding: 0 14px 0 12px; border-top: 1px solid var(--line); }
   #detail .share-list .who { flex: 0 1 auto; font-weight: 500; }
   #detail .share-list .state { margin-right: auto; padding: 3px 10px; border-radius: 999px; background: var(--tile); font-size: .75rem; }
   #detail .share-list .step-act { min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; font-size: .8125rem; }
@@ -573,7 +577,7 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
   #detail:has(> .dhead) { display: flex; flex-direction: column; }
   #detail:has(> .dhead) > * { flex: none; }
   #detail:has(> .dhead) > :nth-last-child(2) { margin-bottom: 22px; }
-  #detail .dfoot { position: sticky; bottom: -16px; z-index: 2; margin: auto -18px -16px; padding: 12px 18px; background: var(--bg); border-top: 1px solid var(--line); }
+  #detail .dfoot { position: sticky; bottom: -16px; z-index: 2; margin: auto calc(-1 * var(--dpx)) -16px; padding: 12px var(--dpx); background: var(--bg); border-top: 1px solid var(--line); }
   #detail .dfoot button.danger { min-height: 40px; padding: 4px 16px; border-radius: 10px; background: color-mix(in srgb, var(--danger) 13%, transparent); font-weight: 500; }
   #detail .dfoot button.danger:hover { background: color-mix(in srgb, var(--danger) 22%, transparent); }
 }
@@ -607,6 +611,11 @@ a.menu-item { display: block; text-decoration: none; }
   body.task-open, html[data-boot-task] body { overflow: hidden; }
   body.task-open #detail, html[data-boot-task] #detail { display: block; position: fixed; inset: 0; z-index: 12; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); padding: max(8px, env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom)); }
   body.task-open .dback { display: inline-block; min-height: 40px; padding: 4px 0; margin-bottom: 4px; background: transparent; color: var(--link); font-size: 1.0625rem; }
+  /* De kaartstijl hierboven op het taakscherm: vlak van het paneel, zijrand 12px, de voet onderaan het scherm */
+  body.task-open #detail, html[data-boot-task] #detail { --dpx: 12px; background: var(--side); padding-bottom: 0; }
+  body.task-open #detail:has(> .dhead) { display: flex; flex-direction: column; }
+  body.task-open #detail .crumb, body.task-open #detail .dback { align-self: flex-start; }
+  body.task-open #detail .dfoot { bottom: 0; margin-bottom: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
 }
 
 /* Lijstmenu: ⋯ bij hover (alleen waar een muis is), hernoemveld, dialoog */
