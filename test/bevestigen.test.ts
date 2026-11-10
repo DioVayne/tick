@@ -95,12 +95,12 @@ describe('bevestigen', () => {
   it('e-mail wijzigen op een openbare Tick maakt onbevestigd en stuurt een mail; zonder OPEN_SIGNUP niet', async () => {
     const sent = resend();
     const u = await createUser();
-    const res = await callWith(openEnv, '/api/account', { method: 'PATCH', cookie: u.cookie, json: { email: `nieuw-${crypto.randomUUID()}@ex.test` } });
+    const res = await callWith(openEnv, '/api/account', { method: 'PATCH', cookie: u.cookie, json: { email: `nieuw-${crypto.randomUUID()}@ex.test`, password: u.password } });
     expect(res.status).toBe(200);
     expect(await verifiedAt(u.id)).toBeNull();
     expect(sent()).toHaveLength(1);
     const v = await createUser();
-    await callWith(env, '/api/account', { method: 'PATCH', cookie: v.cookie, json: { email: `nieuw-${crypto.randomUUID()}@ex.test` } });
+    expect((await callWith(env, '/api/account', { method: 'PATCH', cookie: v.cookie, json: { email: `nieuw-${crypto.randomUUID()}@ex.test`, password: v.password } })).status).toBe(200);
     expect(await verifiedAt(v.id)).toBeTruthy();
     // Zelfde adres opnieuw opslaan (alleen de naam gewijzigd) laat de bevestiging staan.
     const w = await createUser();

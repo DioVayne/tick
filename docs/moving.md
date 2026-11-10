@@ -14,7 +14,7 @@ Tasks can only be shared between people on the same Tick. If you want to switch,
    - check that everything is there;
    - then, if you like, delete your old account on the old Tick (**Settings › Account › Delete account**, see [Settings](settings.md)), and let the people you shared with know where you went.
 
-The code works for one hour. **Stop code** in the same window makes it stop at once; making a new code also stops the previous one.
+The code works for one hour. **Stop code** in the same window makes it stop at once; making a new code also stops the previous one. Changing your password, choosing a new one through a reset link, or **Log out on all other devices** on the old Tick stops the code too (see [Settings](settings.md#account)); make a new one if you still want to move.
 
 ## What comes along
 
