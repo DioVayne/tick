@@ -34,3 +34,6 @@ form.addEventListener('submit', async (e) => {
   err.textContent = (await r.json().catch(() => ({}))).error || r.statusText;
   if (r.status === 409 && taken) taken.hidden = false;
 });
+
+// Na succes blijft de knop uit (we gaan weg); komt de pagina terug uit de back-forward cache, dan weer bruikbaar.
+window.addEventListener('pageshow', () => { form.querySelector('button').disabled = false; });

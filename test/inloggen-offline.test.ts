@@ -24,4 +24,11 @@ describe('inlogpagina\'s zonder verbinding', () => {
       expect(src, path).toMatch(/\.disabled = false/);
     }
   });
+
+  it('na succes blijft de knop uit; terug via de bfcache zet pageshow hem weer aan', () => {
+    for (const [path, src] of Object.entries(scripts)) {
+      if (path.endsWith('forgot.js')) continue; // die haalt de knop bij succes weg
+      expect(src, path).toMatch(/addEventListener\('pageshow',[^\n]*\.disabled = false/);
+    }
+  });
 });
