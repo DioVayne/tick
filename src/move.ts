@@ -47,7 +47,11 @@ export type Bundle = {
 
 const isObj = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string';
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/**
+ * Een bijlage-id: een UUID met streepjes, of 32 hex-tekens zonder (`lower(hex(randomblob(16)))` in
+ * `copyAttachmentStmt`, bij een geaccepteerde kopie).
+ */
+const ATTACHMENT_ID = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32})$/i;
 const now = () => new Date().toISOString();
 
 // ---------- oude Tick: code maken en uitlezen ----------
@@ -379,7 +383,7 @@ moveInApi.post('/file', async (c) => {
   const userId = c.get('auth').userId;
   const { id, from, task_id: taskId, size } = body;
   if (!isStr(id) || !isStr(from) || !isStr(taskId) || typeof size !== 'number' || !Number.isInteger(size) || size < 0) throw new HttpError(400, 'err.invalid_json');
-  if (!UUID.test(id)) throw new HttpError(400, 'err.id_uuid');
+  if (!ATTACHMENT_ID.test(id)) throw new HttpError(400, 'err.id_uuid');
   if (!await db.prepare('SELECT 1 FROM tasks WHERE id = ? AND user_id = ?').bind(taskId, userId).first()) throw new HttpError(404, 'err.not_found');
   // Alleen een bijlage bij deze (eigen) taak telt als al verhuisd; een id dat hier bij iets anders hoort, is bezet.
   const existing = await db.prepare('SELECT task_id FROM attachments WHERE id = ?').bind(id).first<{ task_id: string }>();

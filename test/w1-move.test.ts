@@ -68,6 +68,28 @@ describe('C: /file met een bijlage-id', () => {
     }
   });
 
+  it('een bijlage-id van 32 hex-tekens (van een geaccepteerde kopie) verhuist gewoon', async () => {
+    const b = await createUser();
+    const taskId = crypto.randomUUID();
+    const hexId = crypto.randomUUID().replace(/-/g, ''); // zoals lower(hex(randomblob(16))) in copyAttachmentStmt
+    bundle = pack({
+      tasks: [{ id: taskId, title: 'kopie met bijlage', position: 1, created_at: now, updated_at: now }],
+      attachments: [{ id: hexId, task_id: taskId, name: 'k.bin', mime: 'application/octet-stream', size: 3, created_at: now }],
+    });
+    const imp = await json<{ files: { id: string; from: string; task_id: string; size: number }[] }>(await post(b, '/api/move/import', { code: CODE }));
+    expect(imp.files).toHaveLength(1);
+    expect(imp.files[0].id).toBe(hexId);
+    const f = imp.files[0];
+    const res = await post(b, '/api/move/file', file({ id: f.id, from: f.from, task_id: f.task_id, size: f.size }));
+    expect(res.status).toBe(200);
+    expect(await json(res)).toEqual({ ok: true, existed: false });
+    expect(await env.DB.prepare("SELECT status FROM attachments WHERE id = ?").bind(hexId).first('status')).toBe('ready');
+    // Hoofdletters of een andere lengte blijven geweigerd.
+    for (const id of [hexId.toUpperCase().slice(0, 31), hexId + '0', 'g'.repeat(32)]) {
+      expect((await post(b, '/api/move/file', file({ id, task_id: taskId }))).status, id).toBe(400);
+    }
+  });
+
   it('een id van een bijlage van een ander account telt niet als bestaand', async () => {
     const { b, t } = await setup();
     const c = await createUser();
