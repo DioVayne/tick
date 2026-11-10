@@ -4,7 +4,7 @@
 Type in the field at the top of a list (or press **N**) and press Enter. A new task goes into the list you are looking at; in *All* it goes into the Inbox.
 
 When you tap the field, a row of small colored icons shows under it (reminder, repeat, place, list, share, more). Tap one to set that first and type the title after. As soon as you type (or pick something), the field opens into a card with a short line for each thing you can add straight away:
-- **Remind me…** offers *Today*, *Tomorrow* and *Next week*; *Other day and time…* opens the full date and time picker.
+- **Remind me…** offers *Today*, *Tomorrow* and *Next week*; *Other day and time…* opens the full date and time picker. Days and times are those of the time zone set in [Settings](settings.md#language-and-time), even when your device is in another zone.
 - **Repeat** opens the same choices as in a task (every day, every week, and so on).
 - **Remind me at a place** opens the map, with your favorites, search and *On arrival* or *On leaving*. See [Places](places.md).
 - **In Inbox** shows where the task goes; tap it to pick another list.
