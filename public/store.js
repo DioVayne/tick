@@ -302,7 +302,8 @@ export function sync() {
             else {
               // 404: de taak is elders al verwijderd, dan vervalt de wijziging stil. Andere 4xx lukken nooit meer.
               if (e.status !== 404 && !dependsOnAbandoned(op)) report(tr('store.change_refused', { reason: e.message }));
-              forget(op);
+              // 409 op een nieuwe taak (err.id_taken): die taak staat al op de server, dus niets hangt ervan af.
+              if (!(op.type === 'create' && e.status === 409)) forget(op);
             }
           }
           await db.outboxDelete(op.seq);
@@ -377,6 +378,8 @@ async function loadOnce() {
     // Verbinding met IndexedDB kwijt: dan toch de verse serverdata tonen; de outbox komt bij de volgende ronde terug.
     const queued = owned ? await db.outboxAll().catch(() => []) : [];
     state.open = open;
+    // Wat de server laat zien, bestaat: dat is niet (meer) vervallen.
+    if (abandoned.size) for (const x of [...open, ...(done ?? [])]) abandoned.delete(x.id);
     if (done) { state.done = done; state.doneLoading = false; } // een eerdere ronde zonder Afgerond laat "Laden…" staan
     if (serverLists) state.serverLists = serverLists;
     if (invites) state.invites = invites;

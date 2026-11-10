@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // De Workers-runtime heeft geen IndexedDB: db.js valt terug op geheugen.
 import * as db from '../public/db.js';
-import { SET_ASIDE_AFTER_MS, SET_ASIDE_ATTEMPTS, init, on, state, sync } from '../public/store.js';
+import { SET_ASIDE_AFTER_MS, SET_ASIDE_ATTEMPTS, init, load, on, state, sync } from '../public/store.js';
 
 const ok = (body: unknown = []) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
 const fail = (status: number, error = 'kapot') => new Response(JSON.stringify({ error }), { status, headers: { 'content-type': 'application/json' } });
@@ -111,6 +111,29 @@ describe('outbox: een wijziging die steeds een 5xx krijgt', () => {
     expect(await sync()).toBe(true);
     expect(errors).toHaveLength(1);
     expect(await db.outboxAll()).toEqual([]);
+  });
+
+  it('een nieuwe taak die al bestaat (409): niet vervallen, een latere weigering op die taak krijgt gewoon een melding', async () => {
+    await db.outboxAdd({ type: 'create', task: task('i1'), body: { id: 'i1', title: 'Dubbel' }, at: '' });
+    await db.outboxAdd({ type: 'update', id: 'i1', body: { title: 'x'.repeat(600) }, at: '' });
+    serve((m) => (m === 'POST' ? fail(409, 'id bezet') : m === 'PATCH' ? fail(400, 'te lang') : ok([])));
+    expect(await sync()).toBe(true);
+    expect(errors).toHaveLength(2);
+    expect(errors[1]).toContain('te lang');
+  });
+
+  it('staat een vervallen nieuwe taak na een load() toch op de server, dan telt hij weer gewoon', async () => {
+    await db.outboxAdd({ type: 'create', task: task('s1'), body: { id: 's1', title: 'Toch' }, at: '' });
+    serve((m) => (m === 'POST' ? fail(400, 'nee') : ok([])));
+    expect(await sync()).toBe(true);
+    expect(errors).toHaveLength(1);
+    serve((m, p) => (p === '/api/tasks' ? ok([task('s1')]) : ok([])));
+    await load();
+    await db.outboxAdd({ type: 'update', id: 's1', body: { title: 'y' }, at: '' });
+    serve((m) => (m === 'PATCH' ? fail(400, 'weer nee') : ok([task('s1')])));
+    expect(await sync()).toBe(true);
+    expect(errors).toHaveLength(2);
+    expect(errors[1]).toContain('weer nee');
   });
 });
 
