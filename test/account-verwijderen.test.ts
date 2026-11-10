@@ -128,6 +128,13 @@ describe('openbare pagina en bevestiging', () => {
     expect(zonder).toContain(translate('nl', 'del.no_login_admin'));
   });
 
+  it('de zin over meldingen staat er alleen op een openbare Tick (waar melden bestaat), in beide talen', () => {
+    for (const lang of ['nl', 'en']) {
+      expect(deleteAccountPage(lang, null, false, true)).toContain(translate(lang, 'del.open_reports'));
+      expect(deleteAccountPage(lang, null, false, false)).not.toContain(translate(lang, 'del.open_reports'));
+    }
+  });
+
   it('/login?deleted=1 toont de bevestiging, /login zonder niet', async () => {
     expect(await (await page('nl', '/login?deleted=1')).text()).toContain(translate('nl', 'login.deleted'));
     expect(await (await page('nl', '/login')).text()).not.toContain(translate('nl', 'login.deleted'));

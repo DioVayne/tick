@@ -797,7 +797,7 @@ async function deleteAccount() {
   const password = await modal({
     title: t('set.delete_account'),
     body: [el('p', {}, t('set.delete_account_text')), el('p', {}, t('del.shared')), el('p', {}, t('del.retention')),
-      field(t('set.delete_account_password'), pw)],
+      reportsOn() ? el('p', {}, t('del.open_reports')) : null, field(t('set.delete_account_password'), pw)].filter(Boolean),
     // Zonder wachtwoord blijft de dialoog open, met de focus in het veld.
     buttons: [{ label: t('set.delete_account_button'), value: () => pw.value || (pw.focus(), undefined), kind: 'danger' },
       { label: t('set.cancel'), value: null, kind: 'ghost' }],
