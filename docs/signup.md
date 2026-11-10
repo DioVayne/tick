@@ -20,7 +20,7 @@ The button in an invitation email opens the sign-up screen with your address alr
 Right after you sign up, Tick sends you an email with a link. Tap it to confirm that the address is yours.
 
 - You can use Tick before you confirm. Only **sharing** waits: you can't share tasks or lists, and invitations from others don't reach you yet.
-- Until you confirm, a bar at the top of Tick says so, with **Send email again**. The link works for 7 days; a new email gives a new link.
+- Until you confirm, a bar at the top of Tick says so, with **Send email again** (up to 3 emails to the same address in 24 hours). The link works for 7 days; a new email gives a new link.
 - An account that is not confirmed within **30 days** is deleted, with everything in it. The bar shows the date.
 - Choosing a new password through **Forgot password?** also confirms your address, because that email reached you too.
 - If you change your email address under **⚙ Settings → Account**, you confirm the new one the same way.

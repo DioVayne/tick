@@ -7,7 +7,7 @@ The reminder is also the task's deadline: there is no separate due date.
 
 In the list the time is shown in grey under the task, so it does not stand out. Once the time has passed it turns red.
 
-A notification has two buttons: **Done** ticks the task off, **In 1 hour** moves the reminder an hour later. Tapping the notification opens the task.
+A notification has two buttons: **Done** ticks the task off, **In 1 hour** moves the reminder an hour later. If the button can't reach Tick (no connection, or you were logged out), the notification comes back so you can try again. Tapping the notification opens the task.
 
 Reminders can be up to a minute late, because Tick checks once a minute.
 

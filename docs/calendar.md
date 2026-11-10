@@ -35,7 +35,7 @@ Free moments fall between 08:00 and 22:00 in your time zone, on any day: Tick do
 Where you see them:
 - **The reminder menu** (tap *Remind me* on a task): under *Free in your calendar*. The usual choices (*Today*, *Tomorrow*, *Next week*) say **Busy: …** with the title of the appointment when you already have something at that time.
 - **Tickmanager › Schedule:** the free moments come first; *Tomorrow* and *Next week* show **Busy: …** when they clash.
-- **📅 Calendar:** your appointments appear as grey, slanted rows (in the agenda, with their times) and grey bars (in the month view), next to your tasks. You can't open them in Tick.
+- **📅 Calendar:** your appointments appear as grey, slanted rows (in the agenda, with their times) and grey bars (in the month view), next to your tasks. An appointment that runs over several days, or past midnight, shows on every day it covers. You can't open them in Tick.
 
 ## Add to calendar
 A task with a reminder has **Add to calendar** in its panel, below the reminder. It makes an appointment of 30 minutes at the reminder time:
