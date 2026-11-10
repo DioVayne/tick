@@ -332,7 +332,12 @@ async function setBackground(file) {
     } else {
       const { blob } = await prepare(file);
       if (!blob.type.startsWith('image/')) { toast(t('set.background_not_image')); return; }
-      const res = await fetch('/api/background', { method: 'PUT', headers: { 'content-type': blob.type }, body: blob });
+      // Een foto gaat niet als JSON, dus niet via request(); wel dezelfde afhandeling (zoals downloadBackup).
+      let res;
+      try {
+        res = await fetch('/api/background', { method: 'PUT', headers: { 'content-type': blob.type }, body: blob });
+      } catch { throw new Offline(t('set.online_only')); }
+      if (res.status === 401) { location.href = '/login'; return; }
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(errorText(data, res.statusText));
       applyBackground(data.version);
