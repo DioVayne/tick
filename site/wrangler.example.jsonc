@@ -1,16 +1,29 @@
-// Marketing site ticktodo.nl: a static Worker (assets only, no code). Not needed for running your own Tick.
-// Copy this file to site/wrangler.jsonc (not in git) and fill in your account ID, then: npx wrangler deploy
+// Marketing site ticktodo.nl: static assets plus a small Worker for the inline CMS (/beheer). Not needed for running
+// your own Tick.
+// Copy this file to site/wrangler.jsonc (not in git), fill in your account ID and the KV id, then: npx wrangler deploy
+// Set the admin password once with: npx wrangler secret put ADMIN_PASSWORD (without it, /beheer refuses every login).
 {
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "ticktodo-site",
   "compatibility_date": "2026-10-01",
   // Your Cloudflare account ID (dash.cloudflare.com, right column of Workers & Pages).
   "account_id": "YOUR_ACCOUNT_ID",
+  // The CMS: puts saved texts into the pages and handles /api/login, /api/logout and /api/content.
+  "main": "./worker/index.js",
   "assets": {
     "directory": "./public",
+    "binding": "ASSETS",
     // Unknown paths get public/404.html with status 404.
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    // Only the editable pages and the API go through the Worker; every other file is served directly.
+    // Keep in step with PAGINAS in worker/index.js.
+    "run_worker_first": ["/", "/index.html", "/en/", "/en/index.html", "/api/*"]
   },
+  // Saved texts (key "content": {data-edit key: html}) and login attempts per IP.
+  // Create it with: npx wrangler kv namespace create ticktodo-site-cms
+  "kv_namespaces": [
+    { "binding": "CMS", "id": "YOUR_KV_NAMESPACE_ID" }
+  ],
   "routes": [
     { "pattern": "ticktodo.nl", "custom_domain": true },
     { "pattern": "www.ticktodo.nl", "custom_domain": true }

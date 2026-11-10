@@ -17,6 +17,9 @@ Use the skill `setup-tick` (`.claude/skills/setup-tick/SKILL.md`); it follows [S
   - a row in the "Wat werkt waar" table when it differs between web, Android, iPhone and self-hosted;
   - an FAQ entry if it raises an obvious question.
   Same CSP rules as the PWA. `test/site.test.ts` checks that NL and EN match; a new section anchor goes into its NL→EN map. The copy lives in `docs/superpowers/specs/2026-11-09-website-copy.md`. Never promise what the app doesn't do.
+  - **The site texts are edited live** by the owner via `/beheer` (mini-CMS, see `ARCHITECTURE.md`). An edit in KV wins over the HTML. Before changing a text in the HTML, check whether its `data-edit` key has an override: from the site's deploy folder, `npx wrangler kv key get content --binding CMS --remote` (JSON `{key: html}`). If it does, change it there (or tell the owner to use "Origineel terugzetten" after your HTML change), otherwise your change won't show.
+  - A new text block gets `data-edit="key"` + `data-edit-label="Dutch name"`; the EN page uses the same key with `en-` in front. Never nest them, and don't put them on text a script fills in. Renaming or removing a key orphans its saved edit (the page falls back to the HTML).
+  - NL and EN can drift apart through the CMS (an edit to one language only); the tests can't see that.
 - **Google Play:** after every change, say which Play step it needs (no release / Play Console only / new build / build + Play Console), using [store/google-play/README.md](store/google-play/README.md). A new Android permission or a new kind of data always means Play Console work: tell the owner the exact steps.
 - **Verify:** `npm run typecheck` and `npm test` must pass. For UI changes also check the app in the browser with `npm run dev`.
 - **GitHub:** the repo is public. When a change is finished and verified, commit it on `main` and push to `origin`. Never commit `wrangler.jsonc`, secrets, keys or personal data.
