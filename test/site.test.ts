@@ -91,6 +91,59 @@ describe('website ticktodo.nl', () => {
     }
   });
 
+  // The mini-CMS (/beheer): data-edit marks the blocks Dio can edit live; edits are stored per key in KV.
+  const editKeys = (text: string) => [...text.matchAll(/\sdata-edit="([^"]*)"/g)].map((m) => m[1]);
+
+  it('data-edit keys: valid, unique per page, with a label', () => {
+    for (const rel of ['index.html', 'en/index.html']) {
+      const text = page(rel);
+      const keys = editKeys(text);
+      expect(keys.length, rel).toBeGreaterThan(100);
+      expect(new Set(keys).size, rel).toBe(keys.length);
+      for (const k of keys) expect(k, rel).toMatch(/^[a-z0-9-]{1,60}$/);
+      const tags = [...text.matchAll(/<[a-z0-9]+\b[^>]*\sdata-edit="[^"]*"[^>]*>/g)].map((m) => m[0]);
+      expect(tags.length, rel).toBe(keys.length);
+      for (const tag of tags) expect(tag, rel).toMatch(/\sdata-edit-label="[^"]+"/);
+    }
+  });
+
+  it('EN has the same data-edit keys as NL, with an en- prefix', () => {
+    const nl = editKeys(page('index.html'));
+    for (const k of nl) expect(k).not.toMatch(/^en-/);
+    expect(editKeys(page('en/index.html'))).toEqual(nl.map((k) => `en-${k}`));
+  });
+
+  it('data-edit blocks are not nested', () => {
+    const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+    for (const rel of ['index.html', 'en/index.html']) {
+      const stack: { tag: string; edit: boolean }[] = [];
+      for (const [tag, close, name, attrs] of page(rel).matchAll(/<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g)) {
+        const lower = name.toLowerCase();
+        if (close) {
+          const i = stack.map((s) => s.tag).lastIndexOf(lower);
+          if (i >= 0) stack.length = i;
+          continue;
+        }
+        const edit = /\sdata-edit="/.test(attrs);
+        if (edit) expect(stack.some((s) => s.edit), `${rel}: ${tag}`).toBe(false);
+        if (!VOID.has(lower) && !attrs.trimEnd().endsWith('/')) stack.push({ tag: lower, edit });
+      }
+    }
+  });
+
+  it('the CMS files exist and follow the CSP', () => {
+    for (const f of ['beheer/index.html', 'beheer/login.js', 'beheer/beheer.css', 'beheer/editor.js', 'beheer/editor.css']) {
+      expect(files.has(f), f).toBe(true);
+    }
+    const scripts = import.meta.glob<string>('../site/public/beheer/*.js', { query: '?raw', import: 'default', eager: true });
+    expect(Object.keys(scripts).length).toBe(2);
+    for (const [path, text] of Object.entries(scripts)) {
+      // No style elements or attributes and no inline handlers in the HTML the scripts build; el.style.x is fine.
+      expect(text, path).not.toMatch(/<style\b|createElement\(\s*['"]style['"]|\sstyle\s*=|setAttribute\(\s*['"]style['"]|cssText/i);
+      expect(text, path).not.toMatch(/\son[a-z]+\s*=\s*\\?['"]|<script\b|\beval\(|new Function\(/i);
+    }
+  });
+
   it('_headers sets the CSP and the other security headers', () => {
     const text = Object.values(headers)[0] ?? '';
     expect(text).toContain(
