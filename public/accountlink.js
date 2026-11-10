@@ -35,3 +35,6 @@ form.addEventListener('submit', async (e) => {
   err.textContent = r ? (await r.json().catch(() => ({}))).error || r.statusText : document.body.dataset.offline;
   button.disabled = false;
 });
+
+// Na succes blijft de knop uit (we gaan weg); komt de pagina terug uit de back-forward cache, dan weer bruikbaar.
+window.addEventListener('pageshow', () => { form.querySelector('button').disabled = false; });
