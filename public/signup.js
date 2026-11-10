@@ -4,8 +4,9 @@ import { afterLogin, forgetCachedConfig, inAndroidApp } from './next.js';
 const MIN_PASSWORD = 8;
 const err = document.getElementById('err');
 const taken = document.getElementById('taken');
+const form = document.getElementById('f');
 
-document.getElementById('f').addEventListener('submit', async (e) => {
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
   err.textContent = '';
   if (taken) taken.hidden = true;
@@ -17,14 +18,18 @@ document.getElementById('f').addEventListener('submit', async (e) => {
   const body = { name: document.getElementById('name').value.trim(), email: document.getElementById('email').value.trim(), password };
   // Via de link uit een uitnodigingsmail: de code gaat mee, zodat de uitnodiging de link volgt.
   if (document.body.dataset.join) body.join = document.body.dataset.join;
+  // Uit tijdens het versturen: twee keer klikken maakt niet twee keer een account aan.
+  const button = form.querySelector('button');
+  button.disabled = true;
   const r = await fetch('/signup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
     .catch(() => null);
-  if (!r) { err.textContent = document.body.dataset.offline; return; }
-  if (r.ok) {
+  if (r?.ok) {
     await forgetCachedConfig();
     location.href = afterLogin('/', inAndroidApp());
     return;
   }
+  button.disabled = false;
+  if (!r) { err.textContent = document.body.dataset.offline; return; }
   // De server geeft de melding in de taal van de pagina; bij een bestaand adres ook de link "Wachtwoord vergeten?".
   err.textContent = (await r.json().catch(() => ({}))).error || r.statusText;
   if (r.status === 409 && taken) taken.hidden = false;

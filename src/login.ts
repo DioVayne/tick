@@ -14,7 +14,7 @@ export function loginPage(locale: string | undefined, emptyEmailHint = false, de
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${t('login.title')}</title><meta name="theme-color" content="#ffffff">
 <script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
-</head><body>
+</head><body data-offline="${escapeHtml(t('app.you_are_offline'))}">
 <form id="f">${signup ? '<img class="logo" src="/icon.svg" alt="" width="64" height="64">' : ''}<h1>Tick</h1>${signup ? `<p class="intro">${t('login.welcome')}</p>` : ''}${deleted ? `<p class="ok" role="status">${t('login.deleted')}</p>` : ''}
 <input type="email" id="email" placeholder="${t('login.email')}" autocomplete="username" autofocus>
 <input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="current-password" required>
@@ -74,14 +74,14 @@ ${kind === 'invite' ? `<input type="text" id="name" placeholder="${t('link.name'
 ` : ''}<input type="password" id="pw" placeholder="${t('login.password')}" autocomplete="new-password" required>
 <button>${t(kind === 'invite' ? 'link.invite_submit' : 'link.reset_submit')}</button><p id="err" role="alert"></p></form>
 <script type="module" src="/accountlink.js"></script>`;
-  // data-short: de melding voor de controle in de browser, in de taal van de pagina.
+  // data-short en data-offline: meldingen voor het script in de browser, in de taal van de pagina.
   return `<!doctype html>
 <html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>${title}</title><meta name="theme-color" content="#ffffff">
 <script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
-</head><body data-kind="${kind}" data-short="${translate(lang, 'err.password_short', { min: MIN_PASSWORD })}">
+</head><body data-kind="${kind}" data-short="${translate(lang, 'err.password_short', { min: MIN_PASSWORD })}" data-offline="${escapeHtml(t('app.you_are_offline'))}">
 ${content}</body></html>`;
 }
 

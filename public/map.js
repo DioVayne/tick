@@ -58,8 +58,14 @@ async function openScreen(mode) {
   }
   if (isOpen) return undefined;
   isOpen = true;
+  // Het kaartscherm is modaal: de app erachter (alles in #app) is zolang inert, en bij het sluiten gaat de focus terug
+  // naar waar hij was. Dialogen en meldingen staan los in <body> en blijven bruikbaar.
+  const opener = document.activeElement;
+  const app = document.getElementById('app');
+  const wasInert = app?.inert ?? false;
   try {
     const L = await loadLeaflet();
+    if (app) app.inert = true;
     return await new Promise((resolve) => buildScreen(L, mode, resolve));
   } catch {
     // Ging het mis halverwege het opbouwen, dan mag het scherm niet half blijven staan.
@@ -69,6 +75,8 @@ async function openScreen(mode) {
     return undefined;
   } finally {
     isOpen = false;
+    if (app) app.inert = wasInert;
+    if (opener instanceof HTMLElement && opener !== document.body && opener.isConnected) opener.focus({ preventScroll: true });
   }
 }
 

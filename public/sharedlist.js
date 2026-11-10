@@ -22,6 +22,8 @@ function online() {
 }
 
 const self = (id) => id === CONFIG.userId;
+/** Enkelvoud (sleutel_one) bij precies 1, anders de meervoudsvorm (zoals in manager.js). */
+const plural = (key, n) => t(n === 1 ? `${key}_one` : key, { n });
 const nameOf = (person) => (self(person.id ?? person.user_id) ? t('share.you') : person.name);
 
 /** Namen als lijstje voor een zin ("Bob, Carla en Dirk"), in de taal van de app. */
@@ -191,12 +193,12 @@ export function doneBlock(name) {
   const clear = async () => {
     const answer = await ask({
       title: t('slist.clear_title'),
-      text: t('slist.clear_text', { n: tasks.length }),
+      text: plural('slist.clear_text', tasks.length),
       buttons: [{ label: t('dialog.cancel'), value: null, kind: 'ghost' }, { label: t('slist.clear'), value: 'ok', kind: 'danger' }],
     });
     if (answer !== 'ok' || !online()) return;
     const res = await clearDone(name);
-    if (res) toast(t('slist.cleared', { n: res.deleted }), 'ok');
+    if (res) toast(plural('slist.cleared', res.deleted), 'ok');
   };
   return el('section', { class: 'done-block', 'aria-labelledby': 'done-block-h' },
     el('div', { class: 'done-head' },
