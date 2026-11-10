@@ -10,7 +10,7 @@ const { tasks, skipped } = tickTickRows(readTickTickText(fs.readFileSync(src, 'u
 const q = (v) => (v == null || v === '' ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`);
 const lines = tasks.map((t) =>
   'INSERT OR REPLACE INTO tasks (id,title,description,list,parent_id,position,remind_at,notified,done,done_at,source,created_at,updated_at) VALUES (' +
-  [q(t.id), q(t.title), q(t.description), q(t.list), q(t.parent_id), t.position, q(t.remind_at), 0, t.done ? 1 : 0,
+  [q(t.id), q(t.title), q(t.description), q(t.list), q(t.parent_id), t.position, q(t.remind_at), t.notified ? 1 : 0, t.done ? 1 : 0,
     q(t.done_at), q('import'), q(t.created_at), q(t.created_at)].join(',') + ');');
 fs.writeFileSync(out, lines.join('\n') + '\n');
 console.log(`${lines.length} tasks written to ${out} (${skipped} without a title skipped)`);
