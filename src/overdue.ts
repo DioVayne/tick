@@ -7,6 +7,15 @@ import { zonedParts, zonedToUtc } from '../public/repeat.js';
 /** Hoogstens zoveel meldingen per persoon per dag; de oudste verlopen taken eerst. */
 export const MAX_OVERDUE = 10;
 
+/**
+ * Hoogstens zoveel mensen per ronde (elke minuut). Per persoon kost een ronde een paar D1-queries per melding; wie
+ * niet past, is de volgende minuut aan de beurt.
+ */
+export const MAX_OVERDUE_USERS = 10;
+
+/** De rijen van `user_settings` die deze ronde uit `loadUserPrefs` gebruikt (zone en standaardtijd, tijd, dag, webhook). */
+const OVERDUE_KEYS = ['timezone', 'reminder_time', 'overdue_time', 'overdue_day', 'fallback_webhook'];
+
 const pad = (n: number) => String(n).padStart(2, '0');
 const ymd = (y: number, m: number, d: number) => {
   const t = new Date(Date.UTC(y, m - 1, d)); // rekent een dag over de maandgrens goed door
@@ -35,12 +44,25 @@ type Row = { id: string; title: string; description: string; repeat_at: string |
  * dag draait. Er is geen tweede poging: morgen komt de volgende ronde.
  */
 export async function runOverdue(env: Env, install: InstallPrefs, send: Sender = sendToAll, now = Date.now()): Promise<void> {
-  const { results: users } = await env.DB.prepare('SELECT id, role FROM users').all<{ id: string; role: 'admin' | 'member' }>();
-  for (const user of users) {
-    const prefs = await loadUserPrefs(env, user);
+  // Eén query voor iedereen (draait elke minuut); wie aan de beurt is, bepalen we hier in het geheugen.
+  const { results } = await env.DB.prepare(
+    `SELECT u.id, u.role, s.key, s.value FROM users u LEFT JOIN user_settings s ON s.user_id = u.id AND s.key IN (${OVERDUE_KEYS.map(() => '?').join(', ')}) ORDER BY u.id`,
+  ).bind(...OVERDUE_KEYS).all<{ id: string; role: 'admin' | 'member'; key: string | null; value: string | null }>();
+  const byUser = new Map<string, { user: { id: string; role: 'admin' | 'member' }; rows: { key: string; value: string }[] }>();
+  for (const r of results) {
+    let entry = byUser.get(r.id);
+    if (!entry) byUser.set(r.id, (entry = { user: { id: r.id, role: r.role }, rows: [] }));
+    if (r.key !== null && r.value !== null) entry.rows.push({ key: r.key, value: r.value });
+  }
+  let handled = 0;
+  for (const { user, rows } of byUser.values()) {
+    // Hoogstens zoveel mensen per ronde (de limiet van D1 per aanroep); de rest is de volgende minuut aan de beurt.
+    if (handled >= MAX_OVERDUE_USERS) break;
+    const prefs = await loadUserPrefs(env, user, Promise.resolve(rows));
     if (!prefs.overdueTime) continue;
     const local = localNow(prefs, now);
     if (local.clock < prefs.overdueTime || prefs.overdueDay === local.day) continue;
+    handled++;
     const { results: tasks } = await env.DB.prepare(
       'SELECT id, title, description, repeat_at FROM tasks WHERE done = 0 AND deleted_at IS NULL AND remind_at IS NOT NULL AND remind_at < ? ' +
       "AND (user_id = ? OR COALESCE(parent_id, id) IN (SELECT task_id FROM task_shares WHERE to_user = ? AND status = 'accepted')) " +
