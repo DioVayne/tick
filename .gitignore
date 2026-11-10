@@ -25,3 +25,6 @@ notes/
 # ondertekeningssleutels, ook als keytool ze per ongeluk hier neerzet
 *.jks
 *.keystore
+
+# eigen werkwijze van de eigenaar
+CLAUDE.local.md
