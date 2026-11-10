@@ -324,6 +324,8 @@ export function render() {
   const a = document.activeElement;
   const typing = a instanceof HTMLTextAreaElement && a.classList.contains('title-edit') && root.contains(a)
     ? { start: a.selectionStart, end: a.selectionEnd, dir: a.selectionDirection } : null;
+  // Een andere knop in een taakrij (vinkje, titel, Annuleren…): na het opnieuw opbouwen dezelfde knop van dezelfde taak.
+  const focus = !typing && a instanceof HTMLElement && root.contains(a) ? focusKey(root, a) : null;
   // Dezelfde weergave als de vorige keer en in beeld (verborgen, zoals achter de instellingen, staat alles op 0): wat
   // verschuift, glijdt (zie glide).
   const view = JSON.stringify([state.list, state.showDone, state.showTrash, state.query]);
@@ -336,12 +338,65 @@ export function render() {
   if (before && shown) glide(root, before, after);
   layout = after;
   lastView = shown ? view : '';
+  if (focus) restoreFocus(root, focus);
   const f = root.querySelector('.title-edit');
   if (!(f instanceof HTMLTextAreaElement)) return;
   autoGrow(f);
   if (!typing) return;
   f.focus({ preventScroll: true });
   f.setSelectionRange(typing.start, typing.end, typing.dir);
+}
+
+// De knoppen van een taakrij, op volgorde van voorkeur als de knop zelf weg is (Annuleren na ongedaan maken: het vinkje).
+const ROW_CONTROLS = ['check', 'title', 'undo', 'pinned', 'claim'];
+
+/**
+ * Wat de focus had, zo dat het na renderList terug te vinden is: de taak (data-id), welke knop van de rij, en de taken in
+ * volgorde (voor een buurman als de taak zelf weg is). Iets buiten een taakrij: alleen de class en de positie.
+ * @param {HTMLElement} root @param {HTMLElement} a
+ */
+function focusKey(root, a) {
+  const li = a.closest('li.task[data-id]');
+  const ids = [...root.querySelectorAll('li.task[data-id]')].map((x) => /** @type {HTMLElement} */ (x).dataset.id);
+  if (!li) {
+    const all = [...root.querySelectorAll('button, a[href], input, textarea, select, [tabindex]')];
+    return { id: null, cls: a.className, index: all.indexOf(a), ids };
+  }
+  return { id: /** @type {HTMLElement} */ (li).dataset.id, cls: ROW_CONTROLS.find((c) => a.classList.contains(c)) ?? null, ids };
+}
+
+/**
+ * Zet de focus terug na een nieuwe opbouw van de lijst, maar alleen als hij weg is (op <body> viel): wie intussen
+ * zelf ergens anders heen ging, houden we niet tegen.
+ * @param {HTMLElement} root @param {ReturnType<typeof focusKey>} key
+ */
+function restoreFocus(root, key) {
+  const a = document.activeElement;
+  if (a && a !== document.body) return;
+  const usable = (/** @type {Element | null | undefined} */ e) =>
+    e instanceof HTMLElement && !(/** @type {any} */ (e).disabled) && e.checkVisibility() ? e : null;
+  const inRow = (/** @type {string} */ id) => {
+    const li = root.querySelector(`li.task[data-id="${CSS.escape(id)}"]`);
+    if (!li) return null;
+    const own = (/** @type {string} */ c) => usable(li.querySelector(`:scope > .row .${c}, :scope > .meta .${c}`));
+    return (key.cls && own(key.cls)) || own('check') || own('title') || own('title-edit');
+  };
+  let target = null;
+  if (key.id) {
+    target = inRow(key.id);
+    // De taak is weg (afgevinkt en verdwenen, elders verwijderd): de volgende taak, anders de vorige.
+    const at = key.ids.indexOf(key.id);
+    for (let i = 1; !target && (at + i < key.ids.length || at - i >= 0); i++) {
+      target = (at + i < key.ids.length && inRow(key.ids[at + i])) || (at - i >= 0 && inRow(key.ids[at - i])) || null;
+    }
+  } else {
+    const all = [...root.querySelectorAll('button, a[href], input, textarea, select, [tabindex]')];
+    // Dezelfde plek met dezelfde soort knop (bijvoorbeeld de tweede uitnodiging), anders de eerste van die soort.
+    const same = all[key.index]?.className === key.cls ? all[key.index] : all.find((e) => e.className === key.cls);
+    target = usable(same) ?? usable(all[Math.min(key.index, all.length - 1)]);
+  }
+  target ??= usable(root.querySelector('li.task .check'));
+  target?.focus({ preventScroll: true });
 }
 
 /**
