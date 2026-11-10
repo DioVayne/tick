@@ -1024,7 +1024,10 @@ async function importTickTick() {
     if (res.status === 401) { location.href = '/login'; return; }
     const r = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(errorText(r, res.statusText));
-    toast(t('set.ticktick_done', { added: fmtNum(r.added), existing: fmtNum(r.existing), skipped: fmtNum(r.skipped) }), 'ok');
+    const done = t('set.ticktick_done', { added: fmtNum(r.added), existing: fmtNum(r.existing), skipped: fmtNum(r.skipped) });
+    // Herhalingen komen niet mee (public/ticktick.js); zeg hoeveel taken er een hadden.
+    const repeats = !(r.repeats > 0) ? '' : r.repeats === 1 ? t('set.ticktick_repeats_one') : t('set.ticktick_repeats_count', { count: fmtNum(r.repeats) });
+    toast(repeats ? `${done}. ${repeats}` : done, 'ok');
     load();
   } catch (e) { toast(t('set.ticktick_failed', { reason: offlineText(e) })); }
 }

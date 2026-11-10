@@ -3,7 +3,7 @@ import type { AppEnv, TaskRow } from './index';
 import { HttpError } from './errors';
 import { sessionOnly } from './guards';
 import { normalizeRule, zonedParts } from '../public/repeat.js';
-import { inZone } from './time';
+import { inZone, localToUtcIso } from './time';
 import type { User } from './users';
 import { readTickTickText, tickTickRows } from '../public/ticktick.js';
 import { attachStmts, listOf, type ListRef } from './sharedlists';
@@ -239,7 +239,11 @@ importApi.post('/ticktick', async (c) => {
   const rows = readTickTickText(text);
   if (!rows.length) throw new HttpError(400, 'err.ticktick_invalid');
   const userId = c.get('auth').userId;
-  const { tasks: rowsOut, skipped } = tickTickRows(rows, tickTickPrefix(c.get('user')));
+  // Een hele dag krijgt de eigen "Herinnering zonder tijd" in de eigen zone (localToUtcIso, synchroon in tickTickRows).
+  const prefs = c.get('prefs');
+  const { tasks: rowsOut, skipped, repeats } = tickTickRows(rows, tickTickPrefix(c.get('user')), {
+    allDay: (ymd: string) => localToUtcIso(ymd, prefs),
+  });
   const db = c.env.DB;
   // Een ouder die al bij een ander account bestaat (INSERT OR IGNORE laat hem daar staan), of die niet in dit bestand
   // en niet bij jezelf staat: dan wordt het kind een gewone taak, anders hangt het onder de taak van een ander.
@@ -253,8 +257,10 @@ importApi.post('/ticktick', async (c) => {
   });
   const stmts = tasks.map((t) => db.prepare(
     `INSERT OR IGNORE INTO tasks (id, user_id, title, description, list, parent_id, position, remind_at, notified, done, done_at, source, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 'import', ?, ?)`,
-  ).bind(t.id, userId, t.title, t.description, t.list, t.parent_id, t.position, t.remind_at, t.done ? 1 : 0, t.done_at, t.created_at, t.created_at));
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'import', ?, ?)`,
+  ).bind(t.id, userId, t.title, t.description, t.list, t.parent_id, t.position, t.remind_at, t.notified ? 1 : 0, t.done ? 1 : 0, t.done_at,
+    t.created_at, t.created_at));
   const added = await insertBatched(db, stmts);
-  return c.json({ added, existing: tasks.length - added, skipped });
+  // Een tijd die al voorbij is, staat als gemeld (`notified`): anders komt er na de import een melding per verlopen taak.
+  return c.json({ added, existing: tasks.length - added, skipped, repeats });
 });
