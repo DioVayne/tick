@@ -5,7 +5,7 @@ import { sessionCookie } from './auth';
 import { HttpError } from './errors';
 import { checkPassword, consumeLink, createLink } from './links';
 import { joinInvalidPage, signupPage, verifyPage } from './login';
-import { claimCapNotice, mailEnabled, mailLayout, releaseMail, reserveMail, sendMail, SIGNUP_CAP } from './mail';
+import { claimCapNotice, mailEnabled, mailLayout, releaseMail, reserveMail, reserveSignup, sendMail, SIGNUP_CAP } from './mail';
 import { claimEmailInvites, claimInvites, inviteByCode } from './invites';
 import { authorize } from './auth';
 import { hashPassword } from './password';
@@ -30,9 +30,6 @@ export function signupDailyLimit(env: Env): number {
   const n = Number(env.SIGNUP_DAILY_LIMIT);
   return Number.isInteger(n) && n >= 1 ? n : DEFAULT_SIGNUP_LIMIT;
 }
-
-/** Begin van de UTC-dag als ISO-tekst. */
-const dayStartIso = (ms: number) => new Date(ms - (ms % 86_400_000)).toISOString();
 
 /**
  * /signup: zelf een account maken op een openbare Tick (vóór de auth-middleware gemonteerd). Uit → 404. Een bestaand
@@ -85,21 +82,23 @@ signupPages.post('/signup', async (c) => {
   // Hetzelfde adres als in de uitnodiging: de mail kwam aan, dus het adres is bevestigd.
   const confirmed = !!join && join.email.toLowerCase() === email.toLowerCase();
   const now = Date.now();
-  const today = await db.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'member' AND created_at >= ?")
-    .bind(dayStartIso(now)).first<{ n: number }>();
-  if ((today?.n ?? 0) >= signupDailyLimit(c.env)) {
+  // De daggrens telt rijen `signup` in mail_log, niet de accounts: een verwijderd account telt zo nog mee.
+  const slot = await reserveSignup(db, signupDailyLimit(c.env), now);
+  if (!slot) {
     await inBackground(c, notifySignupCap(c.env, now), 'aanmeldgrens');
     throw new HttpError(429, 'err.signup_full');
   }
-  if (await db.prepare('SELECT 1 FROM users WHERE email = ?').bind(email).first()) throw new HttpError(409, 'err.email_taken');
   const id = crypto.randomUUID();
   try {
+    if (await db.prepare('SELECT 1 FROM users WHERE email = ?').bind(email).first()) throw new HttpError(409, 'err.email_taken');
     // De termijn van 30 dagen loopt alleen als er een bevestigingsmail kan komen.
     const deadline = !confirmed && mailEnabled(c.env) ? new Date(now + UNVERIFIED_TTL_MS).toISOString() : null;
     const ts = new Date(now).toISOString();
     await db.prepare("INSERT INTO users (id, name, email, password_hash, role, session_version, created_at, verify_deadline, email_verified_at) VALUES (?, ?, ?, ?, 'member', 1, ?, ?, ?)")
       .bind(id, name, email, await hashPassword(password), ts, deadline, confirmed ? ts : null).run();
   } catch (e) {
+    // Geen account gemaakt: de plek telt niet mee.
+    await releaseMail(db, slot);
     if (/UNIQUE constraint failed/.test((e as Error).message)) throw new HttpError(409, 'err.email_taken');
     throw e;
   }
@@ -126,6 +125,11 @@ export function verifyBy(env: Env, user: Pick<User, 'email_verified_at' | 'verif
   return user.verify_deadline;
 }
 
+/** Deel van `MAIL_DAILY_LIMIT` dat bevestigingsmails samen mogen gebruiken. */
+export const VERIFY_DAILY_SHARE = 0.5;
+/** Hooguit zoveel bevestigingsmails per adres per 24 uur (ook over verwijderde accounts heen), zodat opnieuw sturen werkt. */
+export const VERIFY_PER_RECIPIENT = 3;
+
 /** Mailt een bevestigingslink naar een onbevestigd account, binnen de grenzen van `reserveMail`. */
 export async function sendVerifyMail(env: Env, userId: string, origin: string, lang: Locale): Promise<void> {
   if (!mailEnabled(env)) return;
@@ -133,7 +137,9 @@ export async function sendVerifyMail(env: Env, userId: string, origin: string, l
   const user = await db.prepare('SELECT email FROM users WHERE id = ? AND email IS NOT NULL AND email_verified_at IS NULL')
     .bind(userId).first<{ email: string }>();
   if (!user) return;
-  const slot = await reserveMail(db, env, 'verify', userId);
+  // Hooguit de helft van de maildaggrens (herstelmails houden ruimte) en een paar per adres per 24 uur, ook over een
+  // verwijderd account heen; binnen die grens werkt "opnieuw sturen" gewoon.
+  const slot = await reserveMail(db, env, 'verify', userId, Date.now(), { dailyShare: VERIFY_DAILY_SHARE, recipient: user.email, recipientPerDay: VERIFY_PER_RECIPIENT });
   if (typeof slot !== 'object') return;
   const { code } = await createLink(db, 'verify', userId, userId);
   const t = (key: string) => translate(lang, key);

@@ -72,7 +72,8 @@ export function deleteUserStmts(db: D1Database, id: string): D1PreparedStatement
       .map((t) => db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(id)),
     // Ook links die deze gebruiker zelf aanmaakte (created_by verwijst naar users).
     db.prepare('DELETE FROM account_links WHERE user_id = ? OR created_by = ?').bind(id, id),
-    db.prepare('DELETE FROM mail_log WHERE user_id = ?').bind(id),
+    // Niet wissen maar loskoppelen: de rijen tellen mee voor de daggrenzen (anders zet verwijderen die terug).
+    db.prepare('UPDATE mail_log SET user_id = NULL WHERE user_id = ?').bind(id),
     db.prepare('DELETE FROM users WHERE id = ?').bind(id),
   ];
 }

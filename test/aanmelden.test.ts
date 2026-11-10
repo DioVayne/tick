@@ -75,7 +75,8 @@ describe('met OPEN_SIGNUP', () => {
 
   it('daggrens: bij de grens 429 en één melding aan de beheerder', async () => {
     const lim: Env = { ...openEnv, SIGNUP_DAILY_LIMIT: '1' };
-    await createUser(); // vandaag al een lid erbij: de grens van 1 is bereikt
+    // Vandaag al een aanmelding (de grens telt de rijen 'signup' in mail_log): de grens van 1 is bereikt.
+    await env.DB.prepare("INSERT INTO mail_log (id, kind, user_id, sent_at) VALUES (?, 'signup', NULL, ?)").bind(crypto.randomUUID(), new Date().toISOString()).run();
     const res = await signup({ name: 'D', email: fresh(), password: 'lang-genoeg-1' }, lim);
     expect(res.status).toBe(429);
     expect(await res.json()).toEqual(err('err.signup_full'));
