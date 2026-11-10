@@ -419,7 +419,9 @@ Je kunt een uitnodiging melden, een taak die iemand met je deelde, een gedeelde 
 
 **Blokkeer ook** staat standaard aan. Blokkeren stopt alles wat je met die persoon deelt, beide kanten op, en hun uitnodigingen komen niet meer aan. Die persoon krijgt dat niet te horen. Je kunt ook **Alleen blokkeren**.
 
-Wie je geblokkeerd hebt, staat onder **Instellingen › Account › Geblokkeerde mensen**. Daar haal je de blokkade weer weg.
+In kopieën van dezelfde taak zien jullie elkaars naam en voortgang niet meer, en krijg je geen *“… is klaar ✓”* van elkaar.
+
+Wie je geblokkeerd hebt, staat onder **Instellingen › Account › Geblokkeerde mensen**. Daar haal je de blokkade weer weg. Dan zien jullie elkaar weer in kopieën die jullie allebei nog hebben. Wat gedeeld was, komt niet vanzelf terug, maar je kunt opnieuw delen.
 
 Op een Tick die je zelf host voor je huishouden bestaan deze knoppen niet. Daar ken je elkaar.
 
@@ -430,6 +432,8 @@ Op een Tick die je zelf host voor je huishouden bestaan deze knoppen niet. Daar 
 Kom je van TickTick? Maak daar een back-up. Dat geeft een CSV-bestand. In Tick ga je naar **Instellingen › Data** en kies je het bestand bij *Taken uit TickTick halen*.
 
 Tick zet je taken erin en laat zien hoeveel er nieuw waren, hoeveel er al stonden en hoeveel er werden overgeslagen. Importeer je hetzelfde bestand nog een keer, dan slaat Tick over wat er al is en houdt het je wijzigingen.
+
+De vervaldatum van een open taak wordt je herinnering; een hele dag komt op je standaardtijd. Verlopen taken komen binnen zonder een stapel meldingen. Herhalingen komen niet mee; Tick zegt hoeveel taken er een hadden.
 
 Het bestand mag tot 10 MB zijn.
 
@@ -467,9 +471,11 @@ Sleutels maak je onder **Instellingen › Geavanceerd › Sleutels**. Je ziet ee
 - **Lees meer:**
 **Wachtwoord vergeten?** Tik erop op het inlogscherm en vul je e-mailadres in. Je krijgt een mail met een link om een nieuw wachtwoord te kiezen. Die werkt een uur. Geen mail? Kijk in je spam. Na vijf minuten kun je een nieuwe link vragen.
 
-Onder **Instellingen › Account** verander je je naam, e-mailadres en wachtwoord. **Uitloggen op andere apparaten** helpt als je je telefoon kwijt bent.
+Onder **Instellingen › Account** verander je je naam, e-mailadres en wachtwoord. **Uitloggen op andere apparaten** helpt als je je telefoon kwijt bent. Voor een nieuw e-mailadres vraagt Tick je huidige wachtwoord. Verander je je wachtwoord of log je uit op andere apparaten, dan werken een verhuiscode en ongebruikte links voor een nieuw wachtwoord niet meer.
 
 **Account verwijderen** wist alles: taken, plekken, bijlagen, instellingen, sleutels en gekoppelde apparaten. Je bevestigt met je wachtwoord, en het kan niet ongedaan worden. Het gaat direct. Reservekopieën zijn binnen 30 dagen gewist. Een gedeelde lijst van jou gaat naar een ander lid. Taken die je los deelde, verdwijnen ook bij de anderen; kopieën blijven.
+
+Op app.ticktodo.nl blijft een melding die jij deed of die over jou ging wel bewaard, maar zonder jou: alleen de reden, de datums en de uitkomst. Je naam, e-mailadres en toelichting gaan mee weg.
 
 Kun je niet meer inloggen? Op app.ticktodo.nl/delete-account staat hoe je je account toch laat verwijderen, en hoe je alleen een deel van je gegevens wist.
 
@@ -483,7 +489,7 @@ Tick is er in het Nederlands en het Engels. Standaard volgt het de taal van je a
 
 De taal hoort bij het apparaat. Je telefoon kan Nederlands zijn en je werklaptop Engels. Meldingen komen in de taal van het apparaat waar ze heen gaan.
 
-Je stelt ook je tijdzone in, met een knop om die van je apparaat over te nemen. Verander je hem, dan blijven je herinneringen op dezelfde kloktijd in de nieuwe zone. Verder kies je je standaardtijd voor een herinnering zonder tijd, en of de week op maandag of zondag begint.
+Je stelt ook je tijdzone in, met een knop om die van je apparaat over te nemen. Verander je hem, dan blijven je herinneringen op dezelfde kloktijd in de nieuwe zone. Alle tijden zie en kies je in die zone, ook als je apparaat in een andere zone staat. Verder kies je je standaardtijd voor een herinnering zonder tijd, en of de week op maandag of zondag begint.
 
 Meer talen? Misschien later. Ik spreek er zelf maar twee goed genoeg.
 
@@ -551,7 +557,7 @@ Ik maak Tick zelf, in Nederland. Er zit geen reclame in, geen tracking en geen s
 Cloudflare host Tick; daar staan je gegevens. Meldingen gaan via de pushdienst van je browser of telefoon, versleuteld. Kaarten en adressen zoeken komen van OpenStreetMap. Mails, zoals *Wachtwoord vergeten?*, gaan via Resend.
 
 **Zelf aan de knoppen**
-Je kunt al je taken downloaden onder **Instellingen › Data**, en je account zelf verwijderen. Dan gaat alles direct weg; reservekopieën zijn binnen 30 dagen gewist.
+Je kunt al je taken downloaden onder **Instellingen › Data**, en je account zelf verwijderen. Dan gaat alles direct weg, behalve een geanonimiseerde versie van meldingen; reservekopieën zijn binnen 30 dagen gewist.
 
 Eén cookie houdt je ingelogd. Meer niet.
 
@@ -610,7 +616,7 @@ Nee. Je telefoon let zelf op je plekken en vertelt Tick alleen dat een melding a
 Nee. Je kiest de tijd zelf met *Vandaag*, *Morgen*, *Volgende week* of een andere dag en tijd. Dan weet je zeker wat er staat.
 
 **Hoe verwijder ik mijn account?**
-In de app: **Instellingen › Account › Account verwijderen**. Je bevestigt met je wachtwoord en alles gaat direct weg. Kun je niet meer inloggen, kijk dan op app.ticktodo.nl/delete-account. Download eerst een back-up als je je taken wilt houden.
+In de app: **Instellingen › Account › Account verwijderen**. Je bevestigt met je wachtwoord. Dan gaat alles direct weg, behalve een geanonimiseerde versie van meldingen; reservekopieën zijn binnen 30 dagen gewist. Kun je niet meer inloggen, kijk dan op app.ticktodo.nl/delete-account. Download eerst een back-up als je je taken wilt houden.
 
 **Kan ik Tick zelf hosten?**
 Ja. De code staat op GitHub (DioVayne/tick), onder de MIT-licentie. Je zet het op een gratis Cloudflare-account. Met Claude Code duurt dat ongeveer een kwartier; het kan ook met de hand. Daarna kun je iedereen in je huishouden uitnodigen.
@@ -619,7 +625,7 @@ Ja. De code staat op GitHub (DioVayne/tick), onder de MIT-licentie. Je zet het o
 Dan hoor je dat minstens 30 dagen van tevoren, zodat je je taken kunt downloaden. En omdat Tick open source is, verdwijnt het niet: je kunt het zelf hosten, of iemand anders doet het. Ik ben het overigens niet van plan. Ik gebruik het zelf elke dag.
 
 **Kan ik over van TickTick?**
-Ja. Maak in TickTick een back-up (CSV) en importeer die onder **Instellingen › Data**.
+Ja. Maak in TickTick een back-up (CSV) en importeer die onder **Instellingen › Data**. Vervaldatums worden herinneringen; herhalingen komen niet mee.
 
 **Is mijn gegevens kwijt als mijn telefoon stuk gaat?**
 Nee. Je taken staan op de server en op je apparaten. Log in op een nieuw apparaat en alles is er weer.
@@ -1043,7 +1049,9 @@ You can report an invitation, a task someone shared with you, a shared list (**R
 
 **Also block** is ticked by default. Blocking stops everything you share with that person, both ways, and their invitations no longer reach you. They aren't told. You can also choose **Only block**.
 
-The people you blocked are under **Settings › Account › Blocked people**. You can lift the block there.
+In copies of the same task you no longer see each other's name and progress, and you don't get each other's *“… is done ✓”*.
+
+The people you blocked are under **Settings › Account › Blocked people**. You can lift the block there. Then you see each other again in copies you both still have. What was shared doesn't come back by itself, but you can share again.
 
 On a Tick you host yourself for your household, these buttons don't exist. There you know each other.
 
@@ -1054,6 +1062,8 @@ On a Tick you host yourself for your household, these buttons don't exist. There
 Coming from TickTick? Make a backup there. That gives you a CSV file. In Tick, go to **Settings › Data** and pick the file at *Get tasks from TickTick*.
 
 Tick adds your tasks and shows how many were new, how many were already there and how many were skipped. Import the same file again and Tick skips what's already there and keeps your changes.
+
+The due date of an open task becomes your reminder; an all-day one lands at your default time. Overdue tasks come in without a pile of notifications. Repeats don't come along; Tick tells you how many tasks had one.
 
 The file can be up to 10 MB.
 
@@ -1091,9 +1101,11 @@ You make keys under **Settings › Advanced › Keys**. You see a key once, and 
 - **Read more:**
 **Forgot password?** Tap it on the login screen and enter your email address. You get an email with a link to choose a new password. It works for an hour. No email? Check your spam. After five minutes you can ask for a new link.
 
-Under **Settings › Account** you change your name, email address and password. **Log out on other devices** helps when you've lost your phone.
+Under **Settings › Account** you change your name, email address and password. **Log out on other devices** helps when you've lost your phone. A new email address asks for your current password. Change your password or log out on other devices, and a moving code and unused links to choose a new password stop working.
 
 **Delete account** erases everything: tasks, places, attachments, settings, keys and linked devices. You confirm with your password, and it can't be undone. It happens right away. Backups are erased within 30 days. A shared list you own passes to another member. Tasks you shared on their own disappear for the others too; copies stay.
+
+On app.ticktodo.nl, a report you made or that was about you does stay, but without you: only the reason, the dates and the outcome. Your name, email address and note are removed too.
 
 Can't log in anymore? app.ticktodo.nl/delete-account explains how to get your account deleted anyway, and how to delete only part of your data.
 
@@ -1107,7 +1119,7 @@ Tick comes in English and Dutch. By default it follows your device's language, o
 
 The language belongs to the device. Your phone can be in Dutch and your work laptop in English. Notifications come in the language of the device they go to.
 
-You also set your time zone, with a button to take the one from your device. Change it, and your reminders stay at the same clock time in the new zone. You also pick your default time for a reminder without a time, and whether the week starts on Monday or Sunday.
+You also set your time zone, with a button to take the one from your device. Change it, and your reminders stay at the same clock time in the new zone. All times are shown and picked in that zone, even when your device is in another one. You also pick your default time for a reminder without a time, and whether the week starts on Monday or Sunday.
 
 More languages? Maybe later. I only speak two well enough myself.
 
@@ -1177,7 +1189,7 @@ I make Tick myself, in the Netherlands. There are no ads, no tracking and no sta
 Cloudflare hosts Tick; your data is stored there. Notifications go through the push service of your browser or phone, encrypted. Maps and address search come from OpenStreetMap. Emails, such as *Forgot password?*, go through Resend.
 
 **You're in control**
-You can download all your tasks under **Settings › Data**, and delete your account yourself. Then everything goes right away; backups are erased within 30 days.
+You can download all your tasks under **Settings › Data**, and delete your account yourself. Then everything goes right away, except an anonymised record of reports; backups are erased within 30 days.
 
 One cookie keeps you logged in. That's it.
 
@@ -1236,7 +1248,7 @@ No. Your phone watches your places itself and only tells Tick that a notificatio
 No. You choose the time yourself with *Today*, *Tomorrow*, *Next week* or another day and time. Then you know for sure what's set.
 
 **How do I delete my account?**
-In the app: **Settings › Account › Delete account**. You confirm with your password and everything goes right away. Can't log in anymore? See app.ticktodo.nl/delete-account. Download a backup first if you want to keep your tasks.
+In the app: **Settings › Account › Delete account**. You confirm with your password. Then everything goes right away, except an anonymised record of reports; backups are erased within 30 days. Can't log in anymore? See app.ticktodo.nl/delete-account. Download a backup first if you want to keep your tasks.
 
 **Can I host Tick myself?**
 Yes. The code is on GitHub (DioVayne/tick), under the MIT licence. You put it on a free Cloudflare account. With Claude Code that takes about fifteen minutes; you can also do it by hand. Then you can invite everyone in your household.
@@ -1245,7 +1257,7 @@ Yes. The code is on GitHub (DioVayne/tick), under the MIT licence. You put it on
 Then you'll hear at least 30 days in advance, so you can download your tasks. And because Tick is open source, it doesn't disappear: you can host it yourself, or someone else does. I'm not planning to, by the way. I use it every day.
 
 **Can I move from TickTick?**
-Yes. Make a backup (CSV) in TickTick and import it under **Settings › Data**.
+Yes. Make a backup (CSV) in TickTick and import it under **Settings › Data**. Due dates become reminders; repeats don't come along.
 
 **Do I lose my data if my phone breaks?**
 No. Your tasks are on the server and on your devices. Log in on a new device and everything is back.
