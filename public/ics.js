@@ -24,18 +24,32 @@ export function googleCalendarUrl(task) {
   return `https://calendar.google.com/calendar/render?${q}`;
 }
 
-/** Tekst volgens RFC 5545: \ ; , en regeleinden ge-escaped. @param {string} s */
-const esc = (s) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+/** Tekst volgens RFC 5545: \ ; , en regeleinden (ook een losse \r) ge-escaped. @param {string} s */
+const esc = (s) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r\n|\r|\n/g, '\\n');
 
-/** Een regel van hooguit 75 tekens, de rest op vervolgregels die met een spatie beginnen. @param {string} line */
+/** UTF-8-lengte van één teken (code point). @param {number} cp */
+const utf8Len = (cp) => (cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4);
+
+/**
+ * Een regel van hooguit 75 bytes (UTF-8), de rest op vervolgregels die met een spatie beginnen (die telt mee).
+ * Alleen tussen tekens geknipt, nooit midden in een teken of surrogaatpaar.
+ * @param {string} line
+ */
 function fold(line) {
   const out = [];
-  let rest = line;
-  while (rest.length > 75) {
-    out.push(rest.slice(0, 75));
-    rest = ' ' + rest.slice(75);
+  let cur = '';
+  let bytes = 0;
+  for (const ch of line) {
+    const n = utf8Len(/** @type {number} */ (ch.codePointAt(0)));
+    if (bytes + n > 75) {
+      out.push(cur);
+      cur = ' ';
+      bytes = 1;
+    }
+    cur += ch;
+    bytes += n;
   }
-  out.push(rest);
+  out.push(cur);
   return out.join('\r\n');
 }
 
