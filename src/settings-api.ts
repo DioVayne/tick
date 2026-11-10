@@ -29,7 +29,7 @@ const validZone = (tz: unknown): tz is string => {
   }
 };
 
-function validWebhook(v: unknown): v is string {
+export function validWebhook(v: unknown): v is string {
   if (typeof v !== 'string' || v.length > MAX_WEBHOOK || !v.startsWith('https://')) return false;
   try {
     return new URL(v).protocol === 'https:';

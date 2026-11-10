@@ -47,7 +47,7 @@ const days = (v: string | undefined, def: number): number => {
   return v !== undefined && /^\d+$/.test(v) && n >= 1 && n <= 365 ? n : def;
 };
 
-const validZone = (tz: string | undefined | null): tz is string => {
+export const validZone = (tz: string | undefined | null): tz is string => {
   if (!tz) return false;
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: tz });
@@ -57,7 +57,7 @@ const validZone = (tz: string | undefined | null): tz is string => {
   }
 };
 
-const validTime = (s: string | undefined | null): s is string => !!s && /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+export const validTime = (s: string | undefined | null): s is string => !!s && /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
 
 /** Leest de instellingen van de installatie met één query en valideert wat er staat. */
 export async function loadInstallPrefs(env: Env): Promise<InstallPrefs> {
