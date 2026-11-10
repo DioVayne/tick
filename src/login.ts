@@ -99,7 +99,8 @@ const escapeHtml = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCode
 
 /** Openbare pagina (zonder inlog) die uitlegt hoe je je account verwijdert: de link die Google Play vraagt. */
 // forgot: mailen staat aan, dan wijst "Kun je niet inloggen?" eerst naar /forgot.
-export function deleteAccountPage(locale: string | undefined, contact: string | null, forgot = false): string {
+// open: een openbare Tick (OPEN_SIGNUP), waar melden bestaat: dan ook de zin dat een melding geanonimiseerd blijft.
+export function deleteAccountPage(locale: string | undefined, contact: string | null, forgot = false, open = false): string {
   const lang = normLocale(locale);
   const t = (key: string, vars?: Record<string, string>) => translate(lang, key, vars);
   const mail = contact ? escapeHtml(contact) : '';
@@ -117,7 +118,8 @@ export function deleteAccountPage(locale: string | undefined, contact: string | 
 <h2>${t('del.what_title')}</h2>
 <p>${t('del.what')}</p>
 <p>${t('del.shared')}</p>
-<p>${t('del.retention')}</p>
+<p>${t('del.retention')}</p>${open ? `
+<p>${t('del.open_reports')}</p>` : ''}
 <p>${t('del.backup')}</p>
 <h2>${t('del.some_title')}</h2>
 <p>${t('del.some_intro')}</p>

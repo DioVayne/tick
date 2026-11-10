@@ -180,7 +180,7 @@ app.get('/login', async (c) => {
   return c.html(loginPage(c.get('lang'), hint && !openSignup(c.env), c.req.query('deleted') === '1', mailEnabled(c.env), openSignup(c.env)));
 });
 // Zonder inlog: uitleg over je account verwijderen, voor de link die Google Play vraagt.
-app.get('/delete-account', (c) => c.html(deleteAccountPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), mailEnabled(c.env))));
+app.get('/delete-account', (c) => c.html(deleteAccountPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), mailEnabled(c.env), openSignup(c.env))));
 app.get('/privacy', (c) => c.html(privacyPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), c.env.OPERATOR_NAME, mailEnabled(c.env), openSignup(c.env), calendarOn(c.env))));
 // Zonder inlog, alleen op een openbare Tick: de algemene voorwaarden, met een vaste taal per adres.
 for (const [path, lang] of [['/terms', 'en'], ['/voorwaarden', 'nl']] as const) {
