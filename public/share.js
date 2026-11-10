@@ -190,7 +190,9 @@ export function fillShareBox(box, task, readOnly) {
   box.dataset.key = key;
   const rows = [];
   if (!(task.shared_list && sharedOf(task.list))) {
-    if (s && !s.mine) rows.push(el('li', {}, el('span', { class: 'who' }, s.owner.name), el('span', { class: 'state' }, t('share.owner'))));
+    // De bol met de beginletter is alleen op desktop te zien (style.css).
+    const avatar = (name, me) => el('span', { class: 'avatar' + (me ? ' me' : ''), 'aria-hidden': 'true' }, [...name][0]?.toUpperCase() ?? '');
+    if (s && !s.mine) rows.push(el('li', {}, avatar(s.owner.name), el('span', { class: 'who' }, s.owner.name), el('span', { class: 'state' }, t('share.owner'))));
     for (const m of s?.members ?? []) {
       const self = m.user_id === CONFIG.userId;
       // Een ontvanger ziet de andere deelnemers, maar kan alleen zichzelf eraf halen.
@@ -198,6 +200,7 @@ export function fillShareBox(box, task, readOnly) {
         ? el('button', { class: 'step-act', type: 'button', onclick: () => removeMember(task, m) }, self ? t('share.leave') : t('share.remove'))
         : null;
       rows.push(el('li', {},
+        avatar(self ? t('share.you') : m.name, self),
         el('span', { class: 'who' }, self ? t('share.you') : m.name),
         el('span', { class: 'state' }, m.status === 'pending' ? t('share.pending') : t('share.accepted')),
         action));

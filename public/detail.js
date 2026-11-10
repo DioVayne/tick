@@ -466,18 +466,19 @@ function build(t, readOnly) {
     const subInput = el('input', { placeholder: tr('detail.add_subtask_placeholder'), 'aria-label': tr('detail.add_subtask'), maxlength: '500' });
     subs = el('section', { class: 'subs dsect sect-subs' },
       el('h3', {}, tr('detail.subtasks')),
-      subList,
-      readOnly ? null : el('form', {
-        autocomplete: 'off',
-        onsubmit: (e) => {
-          e.preventDefault();
-          const value = subInput.value.trim();
-          const task = current(id);
-          if (!value || !task) return;
-          subInput.value = '';
-          save(addSubtask(task, value));
-        },
-      }, subInput));
+      el('div', { class: 'dcard' },
+        subList,
+        readOnly ? null : el('form', {
+          autocomplete: 'off',
+          onsubmit: (e) => {
+            e.preventDefault();
+            const value = subInput.value.trim();
+            const task = current(id);
+            if (!value || !task) return;
+            subInput.value = '';
+            save(addSubtask(task, value));
+          },
+        }, subInput)));
   }
 
   // Vastpinnen: alleen een open hoofdtaak.
@@ -530,9 +531,10 @@ function build(t, readOnly) {
   const copiesBox = el('div', { class: 'step-body dcopies', hidden: true });
   // Omschrijving, subtaken en bijlagen: secties over de volle breedte, met een gekleurd puntje in de kop.
   const filesBox = el('section', { class: 'dfiles dsect sect-file', hidden: true });
-  const noteSect = el('section', { class: 'dsect sect-note' }, el('h3', {}, tr('detail.description')), desc,
-    readOnly ? null : el('p', { class: 'md-hint' }, tr('detail.markdown_hint') + ' ',
-      el('a', { href: 'https://www.markdownguide.org/cheat-sheet/', target: '_blank', rel: 'noopener' }, tr('detail.markdown_link'))));
+  const noteSect = el('section', { class: 'dsect sect-note' }, el('h3', {}, tr('detail.description')),
+    el('div', { class: 'dcard' }, desc,
+      readOnly ? null : el('p', { class: 'md-hint' }, tr('detail.markdown_hint') + ' ',
+        el('a', { href: 'https://www.markdownguide.org/cheat-sheet/', target: '_blank', rel: 'noopener' }, tr('detail.markdown_link')))));
   $('#detail').replaceChildren(...[
     back,
     crumb,
@@ -656,7 +658,8 @@ function drawRail(t) {
   v.lastKind = null;
   const opener = (kind, fn) => (done ? null : (anchor) => { v.lastKind = kind; fn(anchor); });
   const clear = (run, title) => ({ label: tr('detail.clear'), title, run });
-  v.rail.replaceChildren(...[
+  // Eigenschappen in één kaart (.rgroup); Samen met en Kopieën zijn elk een eigen kaart (alleen desktop, zie style.css).
+  const props = [
     // Afgerond: alleen wat er was, geen lege zinnen.
     done && !remindAt ? null : step({
       kind: 'when', icon: 'bell', on: !!remindAt, past, lead: tr(remindAt ? 'add.when_set' : 'add.when'), value: remindAt ? fmt(remindAt) : null,
@@ -677,6 +680,9 @@ function drawRail(t) {
     // Een subtaak volgt de lijst van de hoofdtaak: gewone tekst, geen knop.
     step({ kind: 'list', icon: 'folder', on: false, lead: tr('add.in'), value: t.list, note: t.parent_id ? tr('detail.follows_parent') : null, open: t.parent_id ? null : opener('list', v.pickList) }),
     watchable ? step({ kind: 'watch', icon: 'eye', on: !!t.watch, lead: tr('slist.watch'), open: opener('watch', v.toggleWatch), pressed: !!t.watch }) : null,
+  ].filter(Boolean);
+  v.rail.replaceChildren(...[
+    props.length ? el('div', { class: 'rgroup' }, ...props) : null,
     shareShown ? step({
       kind: 'share', icon: 'users', on: names.length > 0, lead: tr(names.length ? 'add.share_set' : list ? 'share.with_someone' : 'add.share'),
       value: names.join(', ') || null, open: owner ? opener('share', v.pickShare) : null, body: v.shareBox,
