@@ -1,11 +1,9 @@
 import { dateLocale, t } from './i18n.js';
 import { icon } from './icons.js';
-import { el, toLocalInput } from './render.js';
+import { el, fromLocalInput, toLocalInput } from './render.js';
 import { openDatePicker } from './datepicker.js';
 import { showMenu } from './popover.js';
-import { chipDays, getDefaultTime } from './repeat.js';
-import { quickDays } from './calendar.js';
-import { busyAt, calendarSlots, whenText } from './planner.js';
+import { busyAt, calendarSlots, quickWhen, whenText } from './planner.js';
 import { busyNow } from './agenda.js';
 
 // De tijdlijn van de invoerkaart (composer.js) en het detailpaneel (detail.js): per eigenschap een zin met een gekleurde
@@ -83,7 +81,6 @@ export function openMenu(anchor, label, build, onDismiss = () => {}) {
 export const menuOpen = () => !!closeMenu;
 export const closeStepMenu = () => closeMenu?.();
 
-const p2 = (n) => String(n).padStart(2, '0');
 
 /**
  * Herinnering kiezen: eerst een kort menu (Vandaag, Morgen, Volgende week, Andere dag en tijd…), net als de
@@ -95,22 +92,23 @@ const p2 = (n) => String(n).padStart(2, '0');
  * @param {{ note?: string, onDismiss?: () => void }} [opts]
  */
 export function openWhenMenu(anchor, current, set, { note, onDismiss } = {}) {
-  const n = new Date();
-  const now = { y: n.getFullYear(), m: n.getMonth() + 1, d: n.getDate(), h: n.getHours() };
-  const quick = quickDays(now, chipDays()[0] === 6 ? 'sun' : 'mon');
-  const def = `${p2(getDefaultTime().h)}:${p2(getDefaultTime().mi)}`;
-  const weekday = new Intl.DateTimeFormat(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
-  const [y, m, d] = quick.nextWeek.split('-').map(Number);
+  // Alles in de ingestelde zone (wandklok), niet met de klok van het apparaat.
+  const quick = quickWhen(Date.now());
+  const def = quick.def;
+  // De dag van volgende week is een kale datum: als UTC-middernacht, getoond in UTC.
+  const weekday = new Intl.DateTimeFormat(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const [y, m, d] = quick.nextWeek.slice(0, 10).split('-').map(Number);
   const options = [
     // Vandaag: het volgende hele uur, zolang dat nog vandaag is.
-    now.h < 23 ? [t('dp.today'), `${p2(now.h + 1)}:00`, `${quick.today}T${p2(now.h + 1)}:00`] : null,
-    [t('dp.tomorrow'), def, `${quick.tomorrow}T${def}`],
-    [t('dp.next_week'), `${weekday.format(new Date(y, m - 1, d))} · ${def}`, `${quick.nextWeek}T${def}`],
+    quick.today ? [t('dp.today'), quick.today.slice(11, 16), quick.today] : null,
+    [t('dp.tomorrow'), def, quick.tomorrow],
+    [t('dp.next_week'), `${weekday.format(new Date(Date.UTC(y, m - 1, d)))} · ${def}`, quick.nextWeek],
   ].filter(Boolean);
   // Met een gekoppelde agenda: wat er op een voorstel al staat, en daaronder de eerstvolgende vrije momenten.
   const busy = busyNow();
   const busyOn = (value) => {
-    const hit = busy ? busyAt(new Date(value).getTime(), busy) : null;
+    const at = fromLocalInput(value);
+    const hit = busy && at ? busyAt(Date.parse(at), busy) : null;
     return hit ? t('planner.busy', { title: hit.title || t('cal.busy') }) : null;
   };
   const free = busy ? calendarSlots(busy, Date.now()).map((s) => {
