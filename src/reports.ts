@@ -25,8 +25,9 @@ export const REPORTS_PER_DAY = 10;
 const MAX_NOTE = 500;
 const DAY = 86_400_000;
 
+/** `reporter_id`/`reported_id` NULL: dat account is verwijderd (zie `anonymiseReportsStmts` in src/users.ts). */
 export type ReportRow = {
-  id: string; reporter_id: string; reported_id: string; reason: Reason; note: string;
+  id: string; reporter_id: string | null; reported_id: string | null; reason: Reason; note: string;
   task_id: string | null; list_id: string | null; attachment_id: string | null; title: string; attachment_name: string | null;
   status: 'open' | 'dismissed' | 'removed' | 'suspended'; created_at: string; handled_at: string | null;
 };
@@ -167,12 +168,18 @@ async function adminAddresses(env: Env): Promise<string[]> {
 export async function sendReportMail(env: Env, reportId: string, origin: string, lang: Locale): Promise<void> {
   if (!mailEnabled(env)) return;
   const r = await env.DB.prepare('SELECT r.*, a.name AS reporter_name, b.name AS reported_name FROM reports r ' +
-    'JOIN users a ON a.id = r.reporter_id JOIN users b ON b.id = r.reported_id WHERE r.id = ?').bind(reportId)
-    .first<ReportRow & { reporter_name: string; reported_name: string }>();
-  if (!r) return;
+    'LEFT JOIN users a ON a.id = r.reporter_id LEFT JOIN users b ON b.id = r.reported_id WHERE r.id = ?').bind(reportId)
+    .first<ReportRow & { reporter_name: string | null; reported_name: string | null }>();
+  // Is de melder al weg (account verwijderd voordat deze mail op de achtergrond vertrok), dan is er geen grens per
+  // melder meer om binnen te blijven; de melding staat wel op de beheerpagina.
+  if (!r?.reporter_id) return;
   const t = (key: string, vars: Record<string, string> = {}) => translate(lang, key, vars);
-  const what = r.attachment_name ? `${r.title} — ${r.attachment_name}` : r.title;
-  const intro = t('mail.report_intro', { reporter: r.reporter_name, reported: r.reported_name, reason: t(`report.reason_${r.reason}`), title: what }) +
+  const title = r.title || t('admin.title_removed');
+  const what = r.attachment_name ? `${title} — ${r.attachment_name}` : title;
+  const intro = t('mail.report_intro', {
+    reporter: r.reporter_name ?? t('admin.account_deleted'), reported: r.reported_name ?? t('admin.account_deleted'),
+    reason: t(`report.reason_${r.reason}`), title: what,
+  }) +
     (r.note ? `\n\n${t('mail.report_note', { note: r.note })}` : '');
   const body = mailLayout(lang, {
     heading: t('mail.report_heading'), intro,
@@ -180,8 +187,8 @@ export async function sendReportMail(env: Env, reportId: string, origin: string,
     outro: t('mail.report_outro'),
   });
   for (const to of await adminAddresses(env)) {
-    const slot = await reserveMail(env.DB, env, 'report', r.reporter_id, Date.now(), { gapMs: 0, perDay: REPORTS_PER_DAY * 3 });
+    const slot = await reserveMail(env.DB, env, 'report', r.reporter_id!, Date.now(), { gapMs: 0, perDay: REPORTS_PER_DAY * 3 });
     if (typeof slot !== 'object') return;
-    if (!(await sendMail(env, { to, subject: t('mail.report_subject', { title: r.title }), ...body }))) await releaseMail(env.DB, slot.id);
+    if (!(await sendMail(env, { to, subject: t('mail.report_subject', { title }), ...body }))) await releaseMail(env.DB, slot.id);
   }
 }

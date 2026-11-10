@@ -64,8 +64,10 @@ adminPages.get('/reports', async (c) => {
     'LEFT JOIN users a ON a.id = r.reporter_id LEFT JOIN users b ON b.id = r.reported_id ' +
     "ORDER BY CASE WHEN r.status = 'open' THEN 0 ELSE 1 END, r.created_at DESC LIMIT 200")
     .all<ReportRow & { reporter_name: string | null; reported_name: string | null }>();
-  const rows = results.map((r) => `<tr><td>${esc(when(r.created_at, lang))}</td><td><a href="/admin/reports/${r.id}">${esc(r.title)}</a></td>` +
-    `<td>${esc(t(`report.reason_${r.reason}`))}</td><td>${esc(r.reporter_name ?? '')}</td><td>${esc(r.reported_name ?? '')}</td><td>${esc(t(`admin.status_${r.status}`))}</td></tr>`).join('\n');
+  // Een verwijderd account (id NULL, of een id zonder account) heet "verwijderd account"; een gewiste titel krijgt een vaste tekst.
+  const name = (n: string | null) => (n === null ? `<em>${t('admin.account_deleted')}</em>` : esc(n));
+  const rows = results.map((r) => `<tr><td>${esc(when(r.created_at, lang))}</td><td><a href="/admin/reports/${r.id}">${r.title ? esc(r.title) : `<em>${t('admin.title_removed')}</em>`}</a></td>` +
+    `<td>${esc(t(`report.reason_${r.reason}`))}</td><td>${name(r.reporter_name)}</td><td>${name(r.reported_name)}</td><td>${esc(t(`admin.status_${r.status}`))}</td></tr>`).join('\n');
   return c.html(page(lang, t('admin.reports_title'), `<h1>${t('admin.reports_title')}</h1>
 ${results.length ? `<div class="scroll"><table><thead><tr><th>${t('admin.col_when')}</th><th>${t('admin.col_what')}</th><th>${t('admin.col_reason')}</th>` +
     `<th>${t('admin.col_reporter')}</th><th>${t('admin.col_reported')}</th><th>${t('admin.col_status')}</th></tr></thead><tbody>
@@ -79,11 +81,14 @@ adminPages.get('/reports/:id', async (c) => {
   const lang = normLocale(c.get('lang'));
   const t = (k: string, v?: Record<string, string>) => translate(lang, k, v);
   const r = await reportOf(db, c.req.param('id'));
-  const who = (id: string) => db.prepare('SELECT id, name, email, created_at, suspended_at, role FROM users WHERE id = ?').bind(id).first<Person>();
+  const who = async (id: string | null) => (id ? db.prepare('SELECT id, name, email, created_at, suspended_at, role FROM users WHERE id = ?').bind(id).first<Person>() : null);
   const [reporter, reported] = await Promise.all([who(r.reporter_id), who(r.reported_id)]);
   const person = (p: Person | null) => (p
     ? `${esc(p.name)} &lt;${esc(p.email ?? '')}&gt; · ${t('admin.since', { date: esc(when(p.created_at, lang)) })}${p.suspended_at ? ` · <strong>${t('admin.suspended')}</strong>` : ''}`
-    : t('admin.account_gone'));
+    : `<em>${t('admin.account_gone')}</em>`);
+  const title = r.title || t('admin.title_removed');
+  // Losgekoppeld bij het verwijderen van een account: uitleggen wat er weg is.
+  const anonymised = r.reporter_id === null || r.reported_id === null;
 
   // De inhoud zoals hij nu is.
   const ids = await contentTaskIds(db, r);
@@ -116,8 +121,9 @@ adminPages.get('/reports/:id', async (c) => {
     canSuspend && reported.suspended_at ? button('unsuspend', t('admin.unsuspend', { name: esc(reported.name) })) : '',
   ].join('');
 
-  return c.html(page(lang, r.title, `<p><a href="/admin/reports">← ${t('admin.reports_title')}</a></p>
-<h1>${esc(r.title)}${r.attachment_name ? ` — ${esc(r.attachment_name)}` : ''}</h1>
+  return c.html(page(lang, title, `<p><a href="/admin/reports">← ${t('admin.reports_title')}</a></p>
+<h1>${esc(title)}${r.attachment_name ? ` — ${esc(r.attachment_name)}` : ''}</h1>
+${anonymised ? `<p class="gone">${t('admin.anonymised')}</p>` : ''}
 <dl>
 <dt>${t('admin.col_reason')}</dt><dd>${esc(t(`report.reason_${r.reason}`))}</dd>
 ${r.note ? `<dt>${t('admin.note')}</dt><dd>${esc(r.note)}</dd>` : ''}
@@ -202,8 +208,10 @@ adminPages.post('/reports/:id/:action', async (c) => {
     await removeContent(c.env, r);
     await mark('removed').run();
   } else if (action === 'suspend' || action === 'unsuspend') {
+    // Het gemelde account is verwijderd: er is niemand meer om te schorsen.
+    if (!r.reported_id) throw new HttpError(410, 'err.account_deleted');
     const target = await db.prepare('SELECT role FROM users WHERE id = ?').bind(r.reported_id).first<{ role: string }>();
-    if (!target) throw new HttpError(404, 'err.not_found');
+    if (!target) throw new HttpError(410, 'err.account_deleted');
     if (target.role === 'admin') throw new HttpError(400, 'err.suspend_admin');
     if (action === 'suspend') await db.batch([...suspendStmts(db, r.reported_id), mark('suspended')]);
     else await db.prepare('UPDATE users SET suspended_at = NULL WHERE id = ?').bind(r.reported_id).run();
