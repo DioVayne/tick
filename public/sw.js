@@ -2,7 +2,7 @@
 
 // App-shell voor offline gebruik. Network-first: online krijg je altijd de nieuwste versie (geen mix van oude en
 // nieuwe modules na een deploy), offline de laatst bewaarde. Verhoog de versie als de lijst hieronder verandert.
-const CACHE = 'tick-shell-v80';
+const CACHE = 'tick-shell-v81';
 const SHELL = [
   '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/review.js', '/planner.js', '/agenda.js', '/ics.js', '/manager.js', '/push.js', '/style.css', '/sortable.min.js',
   '/markdown.js', '/lists.js', '/editor.js', '/sidebar.js', '/detail.js', '/listpicker.js', '/listmenu.js', '/dialog.js',
@@ -78,12 +78,20 @@ self.addEventListener('push', (event) => {
 });
 
 self.addEventListener('notificationclick', (event) => {
-  const { taskId, url, occurrence, shareId, listInviteId } = event.notification.data || {};
-  event.notification.close();
+  const n = event.notification;
+  const { taskId, url, occurrence, shareId, listInviteId } = n.data || {};
+  n.close();
+  // Mislukt de actie (geen verbinding, sessie verlopen, serverfout), dan komt dezelfde melding met dezelfde knoppen
+  // terug: anders denk je dat de taak is afgevinkt of verzet terwijl er niets gebeurde. Een andere 4xx (taak of
+  // uitnodiging weg, op naam van een ander) lukt ook later niet: dan niet terug, zoals sync() in store.js.
+  const showAgain = () => self.registration.showNotification(n.title, {
+    body: n.body, icon: n.icon, badge: n.badge, tag: n.tag, data: n.data, actions: n.actions ?? [],
+  }).catch(() => {});
   // Na de actie een open Tick laten verversen: het meldingenpaneel maakt de app niet onzichtbaar, dus zonder
   // dit bericht ziet hij de wijziging pas bij de volgende keer laden.
   const call = (path, method, body) =>
     fetch(path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      .then((res) => { if (res.redirected || res.status === 401 || res.status >= 500) return showAgain(); }, showAgain)
       .finally(() => self.clients.matchAll({ type: 'window' })
         .then((wins) => wins.forEach((w) => w.postMessage({ type: 'refresh' }))));
   // Uitnodiging om een taak te delen: Accepteren of Weigeren zonder de app te openen.
