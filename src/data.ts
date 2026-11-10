@@ -44,6 +44,11 @@ const isId = (v: unknown) => typeof v === 'string' && v !== '';
 const NOT_NULL = new Set(['title', 'description', 'list', 'position', 'notified', 'done', 'source', 'created_at', 'updated_at', 'loc_notified', 'pinned']);
 const isNum = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
 const invalid = () => new HttpError(400, 'err.backup_invalid');
+/** Een tijd als UTC-ISO, of null als hij niet te lezen is. */
+const isoOrNull = (v: unknown): string | null => {
+  const ms = isStr(v) ? Date.parse(v as string) : NaN;
+  return Number.isNaN(ms) ? null : new Date(ms).toISOString();
+};
 
 /** Voorvoegsel voor TickTick-ids: de beheerder houdt `tt`, anderen krijgen een eigen reeks zodat ids niet botsen. */
 export function tickTickPrefix(user: Pick<User, 'id' | 'role'>): string {
@@ -121,6 +126,10 @@ export async function mergeTasks(db: D1Database, userId: string, tasks: unknown[
       row[col] = v;
     }
     if (opts.keepDeleted && isStr(t.deleted_at)) row.deleted_at = t.deleted_at;
+    // Tijden als UTC-ISO; een onleesbare tijd wordt null (bij een ritme valt dan hieronder het ritme weg).
+    for (const col of ['remind_at', 'repeat_start', 'repeat_at'] as const) {
+      if (row[col] !== undefined && row[col] !== null) row[col] = isoOrNull(row[col]);
+    }
     if (isStr(row.remind_at) && Date.parse(row.remind_at as string) <= now) row.notified = 1;
     // Geen ongedaan-maakstand uit een bestand (die is na 15 minuten toch verlopen), en een ritme alleen als het klopt.
     row.repeat_prev = null;
