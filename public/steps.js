@@ -56,8 +56,16 @@ export function openMenu(anchor, label, build, onDismiss = () => {}) {
     if (then) gone.then(then);
   };
   const menu = el('div', { class: 'menu', role: 'menu', 'aria-label': label }, ...build(choose));
-  const hide = showMenu(menu, anchor, () => { close(); onDismiss(); });
-  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); onDismiss(); } };
+  // Dicht zonder keuze: de focus stond in het menu, dat nu weg is. Terug naar de knop waarmee het openging (als de
+  // aanroeper hem niet zelf ergens anders neerzette), anders belandt hij op <body>.
+  const dismiss = () => {
+    close();
+    onDismiss();
+    const a = document.activeElement;
+    if (anchor.isConnected && (!a || a === document.body)) anchor.focus();
+  };
+  const hide = showMenu(menu, anchor, dismiss);
+  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); dismiss(); } };
   const onDown = (e) => { if (!menu.contains(e.target) && !anchor.contains(e.target) && !e.target.classList?.contains('sheet-scrim')) close(); };
   function close() {
     closeMenu = null;
