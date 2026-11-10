@@ -78,8 +78,13 @@ export function renderSidebar() {
   // Een lijst die alleen afgeronde taken heeft staat er gewoon met 0.
   const total = all.reduce((n, l) => n + l.open, 0);
   const inbox = all.find((l) => l.name === 'Inbox');
+  // Had een lijst de focus (Enter op een lijst, of een verversing terwijl je met Tab door de lijsten gaat), dan krijgt
+  // dezelfde lijst hem na het opnieuw opbouwen terug; is die weg, dan de gekozen lijst.
+  const side = $('#side-lists');
+  const a = document.activeElement;
+  const had = a instanceof HTMLElement && side.contains(a) ? (a.id ? { id: a.id } : { list: a.closest('[data-list]')?.getAttribute('data-list') ?? null }) : null;
   // Blokken: Alle en Inbox, dan de eigen lijsten (met Nieuwe lijst eronder, in #side-new), elk met een vaste kleur.
-  $('#side-lists').replaceChildren(
+  side.replaceChildren(
     el('div', { class: 'side-grp' },
       item(null, t('ui.all'), total, icon('all')),
       inbox ? item(inbox.name, inbox.name, inbox.open, icon('inbox')) : null,
@@ -87,6 +92,11 @@ export function renderSidebar() {
     el('p', { class: 'side-h' }, t('ui.lists')),
     el('div', { class: 'side-grp side-mine' }, ...all.filter((l) => l !== inbox).map((l) => item(l.name, l.name, l.open, dot(l.name, all.map((x) => x.name)), !!l.shared))),
   );
+  if (had && (!document.activeElement || document.activeElement === document.body)) {
+    const items = /** @type {HTMLElement[]} */ ([...side.querySelectorAll('button.item')]);
+    const back = had.id ? items.find((b) => b.id === had.id) : items.find((b) => b.dataset.list === had.list);
+    (back ?? side.querySelector('button.item.on') ?? items[0])?.focus({ preventScroll: true });
+  }
   updateHeader();
 }
 
