@@ -4,8 +4,9 @@ import { afterLogin, forgetCachedConfig, inAndroidApp } from './next.js';
 const MIN_PASSWORD = 8;
 const kind = document.body.dataset.kind;
 const err = document.getElementById('err');
+const form = document.getElementById('f');
 
-document.getElementById('f').addEventListener('submit', async (e) => {
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
   err.textContent = '';
   const password = document.getElementById('pw').value;
@@ -16,15 +17,21 @@ document.getElementById('f').addEventListener('submit', async (e) => {
   const body = kind === 'invite'
     ? { name: document.getElementById('name').value.trim(), email: document.getElementById('email').value.trim(), password }
     : { password };
+  // Uit tijdens het versturen: twee keer klikken verstuurt niet twee keer.
+  const button = form.querySelector('button');
+  button.disabled = true;
   const r = await fetch(location.pathname, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
-  });
-  if (r.ok) {
+  }).catch(() => null);
+  if (r?.ok) {
     await forgetCachedConfig();
     location.href = afterLogin('/', inAndroidApp());
+    return;
   }
-  // De server geeft de melding in de taal van de pagina (cookie tick_lang, anders Accept-Language).
-  else err.textContent = (await r.json().catch(() => ({}))).error || r.statusText;
+  // Geen verbinding: de melding uit de pagina (data-offline). Anders geeft de server de melding in de taal van de
+  // pagina (cookie tick_lang, anders Accept-Language).
+  err.textContent = r ? (await r.json().catch(() => ({}))).error || r.statusText : document.body.dataset.offline;
+  button.disabled = false;
 });
