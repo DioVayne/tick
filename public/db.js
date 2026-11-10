@@ -25,8 +25,16 @@ async function tx(store, mode, fn) {
   const db = await open();
   if (!db) return null;
   return new Promise((resolve, reject) => {
-    const t = db.transaction(store, mode);
-    const req = fn(t.objectStore(store));
+    let t, req;
+    try {
+      t = db.transaction(store, mode);
+      req = fn(t.objectStore(store));
+    } catch (e) {
+      // Verbinding kwijt (de browser sloot hem, opslag gewist, versiewissel): de volgende aanroep opent opnieuw.
+      if (e?.name === 'InvalidStateError') dbp = undefined;
+      reject(e);
+      return;
+    }
     t.oncomplete = () => resolve(req.result);
     t.onerror = t.onabort = () => reject(t.error);
   });
@@ -50,6 +58,12 @@ export async function outboxAdd(op) {
   if (await open()) return tx('outbox', 'readwrite', (s) => s.add(op));
   op.seq = ++memory.seq;
   memory.outbox.set(op.seq, op);
+}
+
+/** Schrijft een wachtende wijziging terug onder dezelfde `seq`, bijvoorbeeld met het aantal mislukte pogingen. */
+export async function outboxPut(op) {
+  if (await open()) return tx('outbox', 'readwrite', (s) => s.put(op));
+  if (memory.outbox.has(op.seq)) memory.outbox.set(op.seq, op);
 }
 
 export async function outboxDelete(seq) {

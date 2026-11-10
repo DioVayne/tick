@@ -246,12 +246,35 @@ async function enqueue(op) {
   }
 }
 
+/** Een wijziging die zo vaak een 5xx kreeg ... */
+export const SET_ASIDE_ATTEMPTS = 5;
+/** ... en waarvan de eerste fout zo oud is, gaat uit de outbox (met een melding), zodat de rest niet blijft wachten. */
+export const SET_ASIDE_AFTER_MS = 10 * 60_000;
+
+// Taken waarvan het aanmaken opzij is gezet of geweigerd (in deze sessie). Een latere wijziging aan zo'n taak (of een
+// subtaak eronder) die daarna ook mislukt, vervalt stil: de melding over de eerste zegt al wat er niet bewaard is.
+const abandoned = new Set();
+const dependsOnAbandoned = (op) => abandoned.has(op.id) || (op.type === 'create' && abandoned.has(op.body?.parent_id));
+/** Laat een wijziging vallen; was het een nieuwe taak, dan geldt alles wat daarvan afhangt als vervallen. */
+function forget(op) {
+  if (op.type === 'create' && op.task?.id) abandoned.add(op.task.id);
+}
+/** Melding bij een opzijgezette wijziging, met de naam van de taak of lijst als die bekend is. */
+function setAsideText(op) {
+  const title = op.type === 'create' ? op.body?.title : op.id ? find(op.id)?.title : op.name ?? op.from;
+  return title ? tr('store.set_aside', { title }) : tr('store.set_aside_plain');
+}
+
 let syncing = null;
 /**
  * Speelt de outbox op volgorde af. Geeft false als er nog iets wacht (offline of serverfout).
  * Wacht eerst op de eigenaarscontrole van init; mislukte die, dan speelt hij niets af (de outbox kan van een ander zijn).
+ * Een wijziging die steeds een 5xx krijgt (SET_ASIDE_ATTEMPTS keer, en de eerste fout SET_ASIDE_AFTER_MS geleden), gaat
+ * met een melding uit de outbox; daarna volgt een load(), zodat het scherm de stand van de server toont. Offline of
+ * een netwerkfout telt niet als poging.
  */
 export function sync() {
+  let setAside = false;
   syncing ??= (async () => {
     try {
       if (!(await ownerReady)) return false;
@@ -264,9 +287,23 @@ export function sync() {
               state.offline = true;
               return false;
             }
-            if (!e.status || e.status === 401 || e.status >= 500) return false; // later opnieuw
-            // 404: de taak is elders al verwijderd, dan vervalt de wijziging stil. Andere 4xx lukken nooit meer.
-            if (e.status !== 404) report(tr('store.change_refused', { reason: e.message }));
+            if (e.status >= 500) {
+              const now = Date.now();
+              op.attempts = (op.attempts ?? 0) + 1;
+              op.firstFailAt ??= now;
+              if (op.attempts < SET_ASIDE_ATTEMPTS || now - op.firstFailAt < SET_ASIDE_AFTER_MS) {
+                await db.outboxPut(op).catch(() => {});
+                return false; // later opnieuw
+              }
+              if (!dependsOnAbandoned(op)) report(setAsideText(op));
+              forget(op);
+              setAside = true;
+            } else if (!e.status || e.status === 401) return false; // later opnieuw
+            else {
+              // 404: de taak is elders al verwijderd, dan vervalt de wijziging stil. Andere 4xx lukken nooit meer.
+              if (e.status !== 404 && !dependsOnAbandoned(op)) report(tr('store.change_refused', { reason: e.message }));
+              forget(op);
+            }
           }
           await db.outboxDelete(op.seq);
         }
@@ -276,6 +313,8 @@ export function sync() {
     } finally {
       syncing = null;
       state.pending = (await ownerReady) ? (await db.outboxAll().catch(() => [])).length : 0;
+      // Binnen een load() haalt die ronde de serverstand al op; anders hier een ronde starten.
+      if (setAside && !loading) load().catch(() => {});
     }
   })();
   return syncing;
