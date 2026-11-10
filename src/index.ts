@@ -4,6 +4,7 @@ import { reportsApi } from './reports';
 import { Hono, type Context } from 'hono';
 import { keysApi } from './keys';
 import { pairApi, redeem } from './pair';
+import { moveApi, moveInApi, moveOut } from './move';
 import { authorize, type Auth, clearCookie, COOKIE, dummyVerify, passwordOk, sessionCookie } from './auth';
 import { assetLinks } from './assetlinks';
 import { contactEmail, deleteAccountPage, loginAssets, loginPage, privacyPage, termsPage } from './login';
@@ -220,6 +221,8 @@ app.post('/login', async (c) => {
 });
 
 app.post('/api/pair/redeem', redeem);
+// Zonder inlog: een andere Tick haalt met een verhuiscode je gegevens op (src/move.ts).
+app.route('/api/move/out', moveOut);
 
 app.post('/logout', (c) => {
   c.header('Set-Cookie', clearCookie);
@@ -286,6 +289,8 @@ app.route('/api/device', deviceApi);
 app.route('/api/devices', devicesApi);
 app.route('/api/export', exportApi);
 app.route('/api/import', importApi);
+app.route('/api/move', moveApi);
+app.route('/api/move', moveInApi);
 app.route('/api/shares', sharesApi);
 app.route('/api/shared-lists', sharedListsApi);
 app.route('/api/blocks', blocksApi);

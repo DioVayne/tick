@@ -17,8 +17,8 @@ export const OPEN_STALE_MS = 15 * 60_000;
 /** De cron ververst een feed na een uur. */
 export const CRON_STALE_MS = 60 * 60_000;
 const CRON_BATCH = 5;
-const MAX_FEEDS = 10;
-const MAX_NAME = 60;
+export const MAX_FEEDS = 10;
+export const MAX_FEED_NAME = 60;
 const MAX_URL = 2000;
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_EVENTS = 500;
@@ -61,14 +61,14 @@ function feedKeys(secret: string) {
 const b64 = (b: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new Uint8Array(b)));
 const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
-async function sealUrl(env: Env, feedId: string, url: string): Promise<string> {
+export async function sealUrl(env: Env, feedId: string, url: string): Promise<string> {
   const { aes } = await feedKeys(env.SESSION_SECRET);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode(feedId) }, aes, enc.encode(url));
   return `v1.${b64(iv)}.${b64(ct)}`;
 }
 
-async function openUrl(env: Env, feedId: string, sealed: string): Promise<string> {
+export async function openUrl(env: Env, feedId: string, sealed: string): Promise<string> {
   const [v, iv, ct] = sealed.split('.');
   if (v !== 'v1' || !iv || !ct) throw new Error('onbekend formaat');
   const { aes } = await feedKeys(env.SESSION_SECRET);
@@ -76,7 +76,7 @@ async function openUrl(env: Env, feedId: string, sealed: string): Promise<string
   return new TextDecoder().decode(plain);
 }
 
-async function hashUrl(env: Env, userId: string, url: string): Promise<string> {
+export async function hashUrl(env: Env, userId: string, url: string): Promise<string> {
   const { mac } = await feedKeys(env.SESSION_SECRET);
   const sig = await crypto.subtle.sign('HMAC', mac, enc.encode(`${userId}\n${url}`));
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -215,7 +215,7 @@ calendarApi.post('/feeds', async (c) => {
   const url = cleanUrl(body.url);
   if (!url) throw new HttpError(400, 'err.calendar_url');
   const name = typeof body.name === 'string' ? body.name.trim() : '';
-  if (name.length > MAX_NAME) throw new HttpError(400, 'err.too_long', { field: 'name', max: MAX_NAME });
+  if (name.length > MAX_FEED_NAME) throw new HttpError(400, 'err.too_long', { field: 'name', max: MAX_FEED_NAME });
   const user = c.get('user');
   const count = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM calendar_feeds WHERE user_id = ?').bind(user.id).first<number>('n');
   if ((count ?? 0) >= MAX_FEEDS) throw new HttpError(400, 'err.calendar_too_many', { max: MAX_FEEDS });

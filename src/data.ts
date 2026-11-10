@@ -9,12 +9,12 @@ import { readTickTickText, tickTickRows } from '../public/ticktick.js';
 import { attachStmts, listOf, type ListRef } from './sharedlists';
 
 /** Kolommen van `tasks` die in een backup horen; alles daarbuiten wordt genegeerd. */
-const TASK_COLUMNS: (keyof TaskRow)[] = [
+export const TASK_COLUMNS: (keyof TaskRow)[] = [
   'id', 'title', 'description', 'list', 'parent_id', 'position', 'remind_at', 'notified', 'done', 'done_at', 'source',
   'created_at', 'updated_at', 'loc_name', 'loc_lat', 'loc_lng', 'loc_radius', 'loc_trigger', 'loc_notified',
   'repeat_rule', 'repeat_start', 'repeat_at', 'repeat_prev', 'pinned', 'reviewed_at',
 ];
-const PLACE_COLUMNS = ['id', 'name', 'lat', 'lng', 'radius', 'created_at', 'updated_at'] as const;
+export const PLACE_COLUMNS = ['id', 'name', 'lat', 'lng', 'radius', 'created_at', 'updated_at'] as const;
 
 type Row = Record<string, unknown>;
 
@@ -51,7 +51,7 @@ export function tickTickPrefix(user: Pick<User, 'id' | 'role'>): string {
 }
 
 /** Zoekt de eigenaar van de gegeven ids op, in chunks van 50. */
-async function ownersOf(db: D1Database, table: 'tasks' | 'places', ids: string[]): Promise<Map<string, string>> {
+export async function ownersOf(db: D1Database, table: 'tasks' | 'places', ids: string[]): Promise<Map<string, string>> {
   const owners = new Map<string, string>();
   for (let i = 0; i < ids.length; i += 50) {
     const chunk = ids.slice(i, i + 50);
@@ -87,11 +87,22 @@ importApi.post('/backup', async (c) => {
   if (!isObj(body) || body.app !== 'tick' || body.version !== 1 || !Array.isArray(body.tasks)) throw invalid();
   const places = body.places === undefined ? [] : body.places;
   if (!Array.isArray(places)) throw invalid();
-  const tasks = body.tasks as unknown[];
+  const r = await mergeTasks(c.env.DB, c.get('auth').userId, body.tasks as unknown[], places);
+  return c.json({ tasks: r.tasks, places: r.places, skipped: r.skipped });
+});
 
+/**
+ * Taken en plekken uit een back-up of verhuizing samenvoegen met het account (`upsert` per id; niets wordt gewist).
+ * Eerst alles valideren, zodat een ongeldig bestand niets schrijft (400 err.backup_invalid). Ids van een ander
+ * account vallen weg (`skipped`). Met `keepDeleted` houdt een taak uit de prullenbak zijn `deleted_at` (verhuizen);
+ * anders komt hij terug (back-up terugzetten).
+ */
+export async function mergeTasks(db: D1Database, userId: string, tasks: unknown[], places: unknown[], opts: { keepDeleted?: boolean } = {}):
+  Promise<{ tasks: number; places: number; skipped: number }> {
   // Eerst alles valideren, zodat een ongeldig bestand niets schrijft.
   for (const t of tasks) {
     if (!isObj(t) || !isId(t.id) || !isStr(t.title) || !isNum(t.position) || !isStr(t.created_at) || !isStr(t.updated_at)) throw invalid();
+    if (opts.keepDeleted && t.deleted_at !== undefined && t.deleted_at !== null && !isStr(t.deleted_at)) throw invalid();
   }
   for (const p of places) {
     if (!isObj(p) || !isId(p.id) || !isStr(p.name) || !isNum(p.lat) || !isNum(p.lng) || !isNum(p.radius) || !isStr(p.created_at) || !isStr(p.updated_at)) throw invalid();
@@ -99,7 +110,6 @@ importApi.post('/backup', async (c) => {
   // Optionele kolommen: tekst, getal of null; null bij een NOT NULL-kolom valt weg zodat de standaardwaarde geldt.
   // Een reminder die al voorbij is telt als gemeld: anders komt na het terugzetten een stoot oude meldingen.
   const now = Date.now();
-  const userId = c.get('auth').userId;
   let skipped = 0;
   const taskRows0 = (tasks as Row[]).map((t) => {
     const row: Row = {};
@@ -110,6 +120,7 @@ importApi.post('/backup', async (c) => {
       if (!isStr(v) && !isNum(v)) throw invalid();
       row[col] = v;
     }
+    if (opts.keepDeleted && isStr(t.deleted_at)) row.deleted_at = t.deleted_at;
     if (isStr(row.remind_at) && Date.parse(row.remind_at as string) <= now) row.notified = 1;
     // Geen ongedaan-maakstand uit een bestand (die is na 15 minuten toch verlopen), en een ritme alleen als het klopt.
     row.repeat_prev = null;
@@ -122,7 +133,6 @@ importApi.post('/backup', async (c) => {
     return row;
   });
 
-  const db = c.env.DB;
   // Ids die van een ander account zijn, vallen weg.
   const taskOwners = await ownersOf(db, 'tasks', [...new Set(taskRows0.map((t) => t.id as string))]);
   const taskRows = taskRows0.filter((t) => {
@@ -180,12 +190,12 @@ importApi.post('/backup', async (c) => {
     placeStmts.push(upsert(db, 'places', PLACE_COLUMNS, p, userId));
   }
 
-  // deleted_at = NULL: een taak uit het bestand die in de prullenbak staat, komt terug.
-  await insertBatched(db, ordered.map((t) => upsert(db, 'tasks', [...TASK_COLUMNS, 'deleted_at'], { ...t, deleted_at: null }, userId)));
+  // deleted_at = NULL: een taak uit het bestand die in de prullenbak staat, komt terug (behalve bij verhuizen).
+  await insertBatched(db, ordered.map((t) => upsert(db, 'tasks', [...TASK_COLUMNS, 'deleted_at'], { ...t, deleted_at: t.deleted_at ?? null }, userId)));
   await insertBatched(db, placeStmts);
   await attachImported(db, userId, ordered.filter((t) => !isStr(t.parent_id)).map((t) => t.id as string));
-  return c.json({ tasks: ordered.length, places: placeStmts.length, skipped });
-});
+  return { tasks: ordered.length, places: placeStmts.length, skipped };
+}
 
 /**
  * Een geïmporteerde hoofdtaak in de naam van een van jouw gedeelde lijsten hoort bij die lijst, net als een nieuwe

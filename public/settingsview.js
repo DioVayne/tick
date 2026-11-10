@@ -1007,12 +1007,145 @@ async function importTickTick() {
   } catch (e) { toast(t('set.ticktick_failed', { reason: offlineText(e) })); }
 }
 
+// ---------- 🚚 Verhuizen (src/move.ts) ----------
+
+/** Oude Tick: een verhuiscode maken en tonen, met de stappen voor de nieuwe Tick. */
+async function moveOut() {
+  let r;
+  try { r = await request('POST', '/api/move/code'); } catch (e) { toast(t('move.failed', { reason: offlineText(e) })); return; }
+  const until = new Date(r.expires_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
+  const stop = await modal({
+    title: t('move.out_title'),
+    body: [el('p', {}, t('move.out_text')), secret(t('move.code'), r.code),
+      el('ol', { class: 'move-steps' }, el('li', {}, t('move.out_step1')), el('li', {}, t('move.out_step2')), el('li', {}, t('move.out_step3'))),
+      el('p', {}, t('move.out_valid', { time: until }))],
+    buttons: [{ label: t('move.close'), value: null }, { label: t('move.out_stop'), value: 'stop', kind: 'ghost' }],
+  });
+  if (stop !== 'stop') return;
+  try {
+    await request('DELETE', '/api/move/code');
+    toast(t('move.out_stopped'), 'ok');
+  } catch (e) { toast(t('move.failed', { reason: offlineText(e) })); }
+}
+
+/** Een venster dat openblijft tot `close()`, met een regel tekst en een voortgangsbalk. */
+function progressBox(title) {
+  const text = el('p', {}, '');
+  const bar = /** @type {HTMLProgressElement} */ (el('progress', { class: 'move-progress', max: '1' }));
+  const dialog = /** @type {HTMLDialogElement} */ (el('dialog', { class: 'dialog', 'aria-labelledby': 'dialog-title' },
+    el('h2', { id: 'dialog-title' }, title), text, bar, el('p', {}, t('move.busy_keep_open'))));
+  dialog.addEventListener('cancel', (e) => e.preventDefault()); // Esc stopt het verhuizen niet halverwege
+  document.body.append(dialog);
+  dialog.showModal();
+  return {
+    set(line, part = null) {
+      text.textContent = line;
+      if (part === null) bar.removeAttribute('value'); else bar.value = part;
+    },
+    close() { if (dialog.open) dialog.close(); dialog.remove(); },
+  };
+}
+
+const hostOf = (url) => { try { return new URL(url).host; } catch { return String(url ?? ''); } };
+
+/** Nieuwe Tick: code plakken, zien wat er meekomt, verhuizen (eerst alles behalve bestanden, dan de bestanden één voor één). */
+async function moveIn() {
+  const input = /** @type {HTMLInputElement} */ (el('input', { type: 'text', autocomplete: 'off', spellcheck: 'false', placeholder: 'https://…/api/move/out/…' }));
+  const code = await modal({
+    title: t('move.in_title'),
+    body: [el('p', {}, t('move.in_text')), field(t('move.in_field'), input)],
+    buttons: [{ label: t('move.next'), value: () => input.value.trim() || (input.focus(), undefined) }, { label: t('set.cancel'), value: null, kind: 'ghost' }],
+  });
+  if (!code) return;
+  let p;
+  const check = progressBox(t('move.in_title'));
+  check.set(t('move.checking'));
+  try {
+    p = await request('POST', '/api/move/preview', { code });
+  } catch (e) {
+    toast(t('move.failed', { reason: offlineText(e) }));
+    return;
+  } finally { check.close(); }
+  const items = [
+    t('move.count_tasks', { n: fmtNum(p.tasks) }),
+    p.trash ? t('move.count_trash', { n: fmtNum(p.trash) }) : null,
+    p.places ? t('move.count_places', { n: fmtNum(p.places) }) : null,
+    p.lists ? t('move.count_lists', { n: fmtNum(p.lists) }) : null,
+    p.settings ? t('move.count_settings', { n: fmtNum(p.settings) }) : null,
+    p.files ? t('move.count_files', { n: fmtNum(p.files), size: fmtSize(p.bytes) }) : null,
+    p.calendars ? t('move.count_calendars', { n: fmtNum(p.calendars) }) : null,
+    p.background ? t('move.preview_background') : null,
+  ].filter(Boolean);
+  const notes = [
+    p.shared ? t('move.preview_shared', { shared: fmtNum(p.shared) }) : null,
+    p.files_blocked ? t('move.preview_files_blocked', { n: fmtNum(p.files_blocked) }) : null,
+    p.calendars_blocked ? t('move.preview_calendars_blocked', { n: fmtNum(p.calendars_blocked) }) : null,
+    t('move.preview_merge'),
+  ].filter(Boolean);
+  const go = await modal({
+    title: t('move.preview_title', { source: hostOf(p.source) }),
+    body: [p.account ? el('p', {}, t('move.preview_account', { name: p.account })) : null,
+      el('ul', { class: 'move-steps' }, ...items.map((x) => el('li', {}, x))), ...notes.map((x) => el('p', {}, x))].filter(Boolean),
+    buttons: [{ label: t('move.start'), value: 'go' }, { label: t('set.cancel'), value: null, kind: 'ghost' }],
+  });
+  if (go !== 'go') return;
+
+  const box = progressBox(t('move.busy_title'));
+  let r = null;
+  let failed = 0;
+  try {
+    box.set(t('move.busy_tasks'));
+    r = await request('POST', '/api/move/import', { code });
+    const files = r.files ?? [];
+    for (let i = 0; i < files.length; i++) {
+      box.set(t('move.busy_files', { done: fmtNum(i + 1), total: fmtNum(files.length) }), i / files.length);
+      try { await request('POST', '/api/move/file', { code, ...files[i] }); } catch (e) {
+        if (e instanceof Offline) throw e;
+        failed++;
+      }
+    }
+    if (r.background) {
+      box.set(t('move.busy_background'));
+      try { await request('POST', '/api/move/background', { code }); } catch (e) { if (e instanceof Offline) throw e; }
+    }
+  } catch (e) {
+    box.close();
+    toast(t(r ? 'move.stopped' : 'move.failed', { reason: offlineText(e) }));
+    if (r) load();
+    return;
+  }
+  box.close();
+  const skipped = (r.files_skipped ?? 0) + (r.calendars_skipped ?? 0) + (r.skipped ?? 0);
+  await modal({
+    title: t('move.done_title'),
+    body: [
+      el('p', {}, t('move.done_summary')),
+      el('ul', { class: 'move-steps' }, ...[
+        t('move.count_tasks', { n: fmtNum(r.tasks) }),
+        r.places ? t('move.count_places', { n: fmtNum(r.places) }) : null,
+        r.files?.length ? t('move.count_files_done', { n: fmtNum(r.files.length - failed) }) : null,
+        r.calendars ? t('move.count_calendars', { n: fmtNum(r.calendars) }) : null,
+      ].filter(Boolean).map((x) => el('li', {}, x))),
+      failed ? el('p', {}, t('move.done_failed', { n: fmtNum(failed) })) : null,
+      skipped ? el('p', {}, t('move.done_skipped', { n: fmtNum(skipped) })) : null,
+      el('h3', { class: 'set-h3' }, t('move.next_title')),
+      el('ol', { class: 'move-steps' }, el('li', {}, t('move.next_phone', { host: location.host })), el('li', {}, t('move.next_check')),
+        el('li', {}, t('move.next_old', { source: hostOf(r.source) }))),
+    ].filter(Boolean),
+    buttons: [{ label: t('move.close'), value: 'ok' }],
+  });
+  // Instellingen, achtergrond en lijsten zijn veranderd: alles opnieuw laden.
+  location.reload();
+}
+
 function paintData() {
   const off = !S.online;
   paint('data',
     row(t('set.backup'), btn(t('set.download'), downloadBackup, { disabled: off }), homeNote(t('set.backup_note') + (CONFIG.attachments ? ' · ' + t('set.backup_no_files') : ''))),
     row(t('set.restore'), btn(t('set.choose_file'), restoreBackup, { disabled: off }), homeNote(t('set.restore_note'))),
     row(t('set.ticktick'), btn(t('set.import_csv'), importTickTick, { disabled: off }), homeNote(t('set.ticktick_note'))),
+    row(t('set.move_in'), btn(t('set.move_in_button'), moveIn, { disabled: off }), homeNote(t('set.move_in_note'))),
+    row(t('set.move'), btn(t('set.move_button'), moveOut, { disabled: off }), homeNote(t('set.move_note'))),
     CONFIG.attachments ? storageRow() : null);
 }
 
