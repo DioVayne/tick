@@ -72,7 +72,7 @@ Some things are protected:
 - **"I'll take it"** in a shared list: if someone else took the task first, yours is refused with a message.
 
 ### "Could not be saved"
-If your Tick keeps answering with an error to one change (5 tries, for more than 10 minutes), Tick sets that change aside so the changes after it can still go through, and tells you: *A change to "…" could not be saved*. The list then shows what your Tick actually has, so check that task and make the change again. Changes that depend on it (for example a subtask under a new task that could not be saved) are dropped with it, without a message each. Being offline never counts: changes made offline wait as long as needed.
+If your Tick keeps answering with an error to one change (5 tries, for more than 10 minutes) while it handles the rest normally, Tick sets that change aside so the changes after it can still go through, and tells you: *A change to "…" could not be saved*. The list then shows what your Tick actually has, so check that task and make the change again. Changes that depend on it (for example a subtask under a new task that could not be saved) are dropped with it, without a message each. Being offline never counts, and neither does a Tick that is down altogether (every request fails): then all changes wait as long as needed.
 
 ## Bookmarks
 The address in the browser follows what you see (`#/inbox`, `#/calendar`, `#/task/…`), so you can bookmark a list, the calendar or a single task.
