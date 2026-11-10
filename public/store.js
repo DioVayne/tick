@@ -238,7 +238,8 @@ async function enqueue(op) {
   try {
     // Niet in de outbox van de vorige gebruiker schrijven terwijl die nog gewist wordt. Mislukte de controle, dan
     // kan de outbox van een ander zijn: dan niet erin schrijven (sync speelt hem dan toch niet af).
-    if (!(await ownerReady)) return;
+    // Niet stil: de wijziging staat alleen in beeld en is na de volgende load weg.
+    if (!(await ownerReady)) throw ownerError ?? new Error(tr('api.offline'));
     await db.outboxAdd(op);
   } catch (e) {
     report(tr('store.save_failed', { reason: e.message }));
@@ -334,7 +335,8 @@ async function loadOnce() {
       soft(request('GET', '/api/shared-lists/incoming')),
     ]);
     const owned = await ownerReady; // false: de lokale gegevens kunnen van een ander zijn, dan niet lezen of schrijven
-    const queued = owned ? await db.outboxAll() : [];
+    // Verbinding met IndexedDB kwijt: dan toch de verse serverdata tonen; de outbox komt bij de volgende ronde terug.
+    const queued = owned ? await db.outboxAll().catch(() => []) : [];
     state.open = open;
     if (done) { state.done = done; state.doneLoading = false; } // een eerdere ronde zonder Afgerond laat "Laden…" staan
     if (serverLists) state.serverLists = serverLists;
@@ -396,6 +398,8 @@ export const SETTINGS_CACHE = 'tick.settings-cache';
  * @type {Promise<boolean>}
  */
 let ownerReady = Promise.resolve(true);
+/** Waarom de eigenaarscontrole mislukte (voor de foutmelding bij een wijziging), of null. */
+let ownerError = /** @type {Error | null} */ (null);
 
 const PUSH_TIMEOUT_MS = 2000;
 
@@ -443,7 +447,8 @@ export async function ensureOwner(userId) {
  */
 export async function init(userId, userName) {
   me = { id: userId, name: userName ?? null };
-  ownerReady = ensureOwner(userId).then(() => true, () => false);
+  ownerError = null;
+  ownerReady = ensureOwner(userId).then(() => true, (e) => { ownerError = e instanceof Error ? e : new Error(String(e)); return false; });
   // Fail-closed: zonder geslaagde controle geen lokale kopie en geen outbox, alleen wat de server geeft.
   if (await ownerReady) {
     try {
@@ -517,6 +522,9 @@ export function toggleDone(t) {
   if (pending) { // opnieuw tikken binnen de periode: ongedaan maken
     clearTimeout(pending.timer);
     state.justDone.delete(t.id);
+    // Intussen ververst: de afgevinkte taak staat niet meer in state.open (en Afgerond is niet geladen). Eerst terugzetten,
+    // anders vindt applyLocal hem niet en verdwijnt de rij tot de volgende load.
+    if (!find(t.id)) state.open.push(pending.task ?? t);
     // Herhalende taak: de keer waar hij nu (na het lokale doorschuiven) op staat, zodat de server de juiste stap terugdraait.
     return update(t.id, t.repeat && !t.parent_id ? { done: false, occurrence: t.repeat.at } : { done: false });
   }
