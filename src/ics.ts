@@ -87,7 +87,8 @@ function parseWhen(value: string, params: Record<string, string>, fallback: stri
   const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z?)$/.exec(value);
   if (!m) return null;
   const [y, mo, da, h, mi, s] = m.slice(1, 7).map(Number);
-  if (m[7]) return { ms: Date.UTC(y, mo - 1, da, h, mi, s), allDay: false, zone: resolveZone(params.TZID) ?? fallback };
+  // Een tijd in UTC (…Z) negeert TZID, en een reeks met zo'n begin herhaalt op een vaste UTC-tijd (RFC 5545).
+  if (m[7]) return { ms: Date.UTC(y, mo - 1, da, h, mi, s), allDay: false, zone: 'UTC' };
   const zone = resolveZone(params.TZID) ?? fallback;
   return { ms: inTz(zone, () => zonedToUtc(y, mo, da, h, mi)) + s * 1000, allDay: false, zone };
 }
