@@ -76,9 +76,30 @@ export type MailLimits = {
   recipient?: string;
 };
 
-/** Soorten rijen in `mail_log` die vlaggen zijn en niet als verstuurde mail tellen. */
+/**
+ * Soorten rijen in `mail_log` die geen verstuurde mail zijn en dus niet voor `MAIL_DAILY_LIMIT` tellen: vlaggen
+ * (de beheerder is vandaag gemeld) en `signup` (één rij per aanmelding, voor `SIGNUP_DAILY_LIMIT`; zie src/signup.ts).
+ */
 export const SIGNUP_CAP = 'signup_cap';
-const FLAG_KINDS = [CAP_NOTICE, SIGNUP_CAP];
+export const SIGNUP = 'signup';
+const FLAG_KINDS = [CAP_NOTICE, SIGNUP_CAP, SIGNUP];
+
+/**
+ * Reserveert een plek voor een aanmelding: één rij `signup` (zonder account, zodat verwijderen hem niet weghaalt),
+ * alleen als er vandaag (UTC) nog geen `limit` zijn. Eén INSERT … SELECT … WHERE, zodat gelijktijdige aanmeldingen de
+ * grens niet samen overschrijden. Geeft het id (terug te geven met `releaseMail`) of null als de grens bereikt is.
+ */
+export async function reserveSignup(db: D1Database, limit: number, now = Date.now()): Promise<string | null> {
+  const id = crypto.randomUUID();
+  const start = dayStart(now);
+  const [, insert] = await db.batch([
+    db.prepare('DELETE FROM mail_log WHERE sent_at < ?').bind(iso(now - 2 * DAY)),
+    db.prepare(`INSERT INTO mail_log (id, kind, user_id, sent_at) SELECT ?1, ?2, NULL, ?3
+      WHERE (SELECT COUNT(*) FROM mail_log WHERE kind = ?2 AND sent_at >= ?4 AND sent_at < ?5) < ?6`)
+      .bind(id, SIGNUP, iso(now), iso(start), iso(start + DAY), limit),
+  ]);
+  return insert.meta.changes === 1 ? id : null;
+}
 
 /** SHA-256 (hex) van het getrimde, kleingeschreven adres; het adres zelf komt niet in `mail_log`. */
 export async function recipientHash(email: string): Promise<string> {
