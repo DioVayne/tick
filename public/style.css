@@ -525,6 +525,58 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 .dfoot button.danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .dfoot .actions { display: flex; gap: 8px; }
 .dfoot button { min-height: 44px; padding: 4px 12px; font-size: .875rem; }
+.avatar { display: none; }
+/* Desktop: het paneel als vlakken. Paneel iets donkerder (licht: grijs), kop en voet op de basiskleur, de onderdelen als
+   kaarten met een haarlijntje ertussen; Samen met heeft als enige een tint van het accent. */
+@media (min-width: 1024px) {
+  #detail { --inset: color-mix(in srgb, var(--card) 50%, var(--side)); --tile: color-mix(in srgb, var(--muted) 18%, var(--card)); background: var(--side); }
+  #detail .dhead { margin: 0 -18px; padding: 14px 18px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  #detail .dback + .dhead { margin-top: -16px; }
+  #detail .dhead .check { margin-top: 5px; }
+  #detail .dpin { margin: -2px -6px 0 auto; border-radius: 10px; }
+  #detail textarea.dt { font-size: 1.1875rem; letter-spacing: -.01em; }
+  #detail .rail { display: grid; gap: 18px; margin: 18px 0 0; padding: 0; }
+  #detail .rgroup, #detail .step-share, #detail .step-copies, #detail .dcard, #detail .dfiles > ul, #detail .dfiles > .att-add {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  #detail .step::after { display: none; }
+  #detail .rgroup > .step + .step { border-top: 1px solid var(--line); }
+  #detail .step-head { gap: 14px; min-height: 50px; padding: 0 14px 0 12px; border-radius: 0; }
+  #detail .step-dot { width: 32px; height: 32px; border: 0; border-radius: 9px; background: var(--tile); }
+  #detail .step-dot .ico { width: 18px; height: 18px; }
+  #detail .step.on .step-dot { background: color-mix(in srgb, var(--c) 20%, var(--card)); }
+  #detail .step-share.on .step-row, #detail .step-share.on .step-hint { background: color-mix(in srgb, var(--accent) 8%, var(--card)); }
+  #detail .step-share .step-body, #detail .step-copies .step-body { margin: 0; }
+  #detail .dshare { gap: 0; }
+  #detail .step-share .step-hint { padding: 0 14px 12px 58px; }
+  #detail .share-list li { min-height: 56px; gap: 12px; padding: 0 14px 0 12px; border-top: 1px solid var(--line); }
+  #detail .share-list .who { flex: 0 1 auto; font-weight: 500; }
+  #detail .share-list .state { margin-right: auto; padding: 3px 10px; border-radius: 999px; background: var(--tile); font-size: .75rem; }
+  #detail .share-list .step-act { min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; font-size: .8125rem; }
+  #detail .avatar { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; font-size: .8125rem; font-weight: 600;
+    background: color-mix(in srgb, var(--accent) 24%, var(--card)); color: var(--link); }
+  #detail .avatar.me { background: var(--tile); color: var(--muted); }
+  #detail .dcopies { padding: 4px 14px 12px 58px; }
+  #detail .dsect { margin-top: 22px; padding-top: 0; border-top: 0; }
+  #detail .dsect > h3 { margin: 0 0 8px 4px; color: var(--muted); font-size: .71875rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+  #detail .dsect > h3::before { display: none; }
+  #detail .dcard:focus-within { border-color: var(--accent); }
+  #detail .dcard > .desc { padding: 8px 16px; border-radius: 0; background: transparent; }
+  #detail .dcard > .desc:focus-within { outline: none; }
+  #detail .dcard > .md-hint { margin: 0; padding: 9px 16px; background: var(--inset); border-top: 1px solid var(--line); }
+  #detail .subs li { padding-left: 12px; }
+  #detail .subs li + li { border-top: 1px solid var(--line); }
+  #detail .subs ul:not(:empty) + form { border-top: 1px solid var(--line); }
+  #detail .subs input { box-sizing: border-box; width: 100%; margin: 0; padding: 14px 16px; border: 0; border-radius: 0; background: transparent; }
+  #detail .subs input:focus-visible { outline: none; }
+  #detail .dfiles > ul { padding: 10px; }
+  #detail .att-add .secbtn { width: 100%; justify-content: flex-start; gap: 12px; min-height: 50px; padding: 0 14px 0 16px; border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: .9375rem; }
+  #detail:has(> .dhead) { display: flex; flex-direction: column; }
+  #detail:has(> .dhead) > * { flex: none; }
+  #detail:has(> .dhead) > :nth-last-child(2) { margin-bottom: 22px; }
+  #detail .dfoot { position: sticky; bottom: -16px; z-index: 2; margin: auto -18px -16px; padding: 12px 18px; background: var(--bg); border-top: 1px solid var(--line); }
+  #detail .dfoot button.danger { min-height: 40px; padding: 4px 16px; border-radius: 10px; background: color-mix(in srgb, var(--danger) 13%, transparent); font-weight: 500; }
+  #detail .dfoot button.danger:hover { background: color-mix(in srgb, var(--danger) 22%, transparent); }
+}
 #resizer:hover, body.resizing #resizer { background: var(--accent); }
 body.resizing { cursor: col-resize; user-select: none; }
 
