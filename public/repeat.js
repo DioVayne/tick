@@ -113,6 +113,73 @@ export function zonedToUtc(y, m, d, h, mi) {
   return guess - offsetMs(utc);
 }
 
+/**
+ * UTC-moment van een wandklok die iemand kiest (`m` is 1-12), zoals een browser lokale tijd leest: een tijd in het gat
+ * van de zomertijd schuift de lengte van het gat op (02:30 wordt 03:30), en een tijd die twee keer bestaat (de nacht naar
+ * wintertijd) is de eerste. Zo geeft de app precies wat hij gaf toen hij met de klok van het apparaat rekende, als die
+ * in dezelfde zone staat. (zonedToUtc kiest bij een dubbele tijd de tweede; de ritme-engine blijft daarbij.)
+ * @param {number} y
+ * @param {number} m
+ * @param {number} d
+ * @param {number} h
+ * @param {number} mi
+ * @returns {number}
+ */
+export function wallToUtc(y, m, d, h, mi) {
+  const guess = Date.UTC(y, m - 1, d, h, mi);
+  const before = offsetMs(guess - DAG_MS);
+  const after = offsetMs(guess + DAG_MS);
+  const hits = [before, after].map((o) => guess - o).filter((u) => offsetMs(u) === guess - u);
+  return hits.length ? Math.min(...hits) : guess - before;
+}
+
+const pad2 = (n) => String(n).padStart(2, '0');
+
+/**
+ * Een UTC-tijd als wandklok 'YYYY-MM-DDTHH:MM' in de ingestelde zone (de vorm van de datumkiezer en van
+ * <input type="datetime-local">). Leeg of onleesbaar wordt ''.
+ * @param {string | null | undefined} iso
+ * @returns {string}
+ */
+export function toWallInput(iso) {
+  const ms = iso ? Date.parse(iso) : NaN;
+  if (isNaN(ms)) return '';
+  const p = zonedParts(ms);
+  return `${p.y}-${pad2(p.m)}-${pad2(p.d)}T${pad2(p.h)}:${pad2(p.mi)}`;
+}
+
+/**
+ * Een gekozen wandklok 'YYYY-MM-DDTHH:MM' in de ingestelde zone als ISO UTC; leeg of onleesbaar wordt null.
+ * @param {string | null | undefined} value
+ * @returns {string | null}
+ */
+export function fromWallInput(value) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value || '');
+  if (!m) return null;
+  const ms = wallToUtc(Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5]));
+  return isNaN(ms) ? null : new Date(ms).toISOString();
+}
+
+/** @type {Map<string, Intl.DateTimeFormat>} */
+const formats = new Map();
+/**
+ * Een datumopmaak in de ingestelde zone (een `timeZone` in `opts` wint, bijvoorbeeld 'UTC' voor een kale kalenderdag).
+ * Bewaard per zone, taal en opties: een nieuwe Intl.DateTimeFormat per taak is merkbaar traag.
+ * @param {string} locale
+ * @param {Intl.DateTimeFormatOptions} opts
+ * @returns {Intl.DateTimeFormat}
+ */
+export function zonedFormat(locale, opts) {
+  const key = `${TZ}|${locale}|${JSON.stringify(opts)}`;
+  let f = formats.get(key);
+  if (!f) {
+    if (formats.size > 50) formats.clear();
+    f = new Intl.DateTimeFormat(locale, { timeZone: TZ, ...opts });
+    formats.set(key, f);
+  }
+  return f;
+}
+
 const bad = (s) => new KeyedError('err.invalid_rule', { value: String(s) });
 
 /**

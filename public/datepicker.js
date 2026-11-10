@@ -2,20 +2,24 @@ import { monthGrid, pickerDefault, quickDays } from './calendar.js';
 import { dateLocale, t } from './i18n.js';
 import { backCloses, narrow, place } from './popover.js';
 import { el } from './render.js';
-import { chipDays, getDefaultTime } from './repeat.js';
+import { chipDays, getDefaultTime, zonedParts } from './repeat.js';
 import { timeGrid } from './timepicker.js';
 
 // Eigen datum- en tijdkiezer: snelknoppen (vandaag, morgen, volgende week), een maand met de weekdagen erboven
 // (in de volgorde van "week begint op"), het tijdveld en drie vaste tijden. Het tijdveld opent de tijdkiezer op de
 // plek van de maand, zodat de knoppen onderaan in beeld blijven.
 // Op een smal scherm schuift hij van onderen in beeld, op een breed scherm staat hij onder de knop.
-// Werkt met lokale tijd als 'YYYY-MM-DDTHH:MM' (zoals een datetime-local-veld, zie toLocalInput/fromLocalInput
-// in render.js); daarom rekent ook "nu" hier met de klok van het apparaat. null is wissen.
+// Werkt met de wandklok 'YYYY-MM-DDTHH:MM' in de ingestelde tijdzone (zie toLocalInput/fromLocalInput in render.js);
+// daarom rekent ook "nu" hier in die zone, niet met de klok van het apparaat. null is wissen.
+// Kalenderdagen zijn hier kale datums: als UTC-middernacht, getoond met timeZone 'UTC', zodat de zone van het apparaat
+// (en een zomertijdwissel daarin) niet meetelt.
 
 const TIMES = ['09:00', '13:00', '19:00'];
 const p2 = (n) => String(n).padStart(2, '0');
-const dayKey = (d) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
-const fromKey = (key) => { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d); };
+/** Kalenderdag als UTC-middernacht. `m` is 1-12; d mag buiten de maand lopen. */
+const dayDate = (y, m, d) => new Date(Date.UTC(y, m - 1, d));
+const dayKey = (d) => `${d.getUTCFullYear()}-${p2(d.getUTCMonth() + 1)}-${p2(d.getUTCDate())}`;
+const fromKey = (key) => { const [y, m, d] = key.split('-').map(Number); return dayDate(y, m, d); };
 
 /**
  * @param {HTMLElement} anchor de knop die de kiezer opent (focus gaat daar weer heen)
@@ -25,23 +29,22 @@ const fromKey = (key) => { const [y, m, d] = key.split('-').map(Number); return 
  *   quick: false laat Vandaag/Morgen/Volgende week weg (de invoerkaart heeft die al in zijn eigen menu)
  */
 export function openDatePicker(anchor, value, onPick, opts = {}) {
-  const n = new Date();
-  const now = { y: n.getFullYear(), m: n.getMonth() + 1, d: n.getDate(), h: n.getHours(), mi: n.getMinutes() };
+  const now = zonedParts(Date.now()); // wandklok in de ingestelde zone
   const nowTime = `${p2(now.h)}:${p2(now.mi)}`;
-  const today = dayKey(n);
+  const today = dayKey(dayDate(now.y, now.m, now.d));
   const start = pickerDefault(now, getDefaultTime());
   const weekStart = chipDays()[0] === 6 ? 'sun' : 'mon';
   const quick = quickDays(now, weekStart);
   let day = value ? value.slice(0, 10) : start.day;
   let time = value ? value.slice(11, 16) : start.time;
   let month = fromKey(day);
-  month.setDate(1);
+  month = dayDate(month.getUTCFullYear(), month.getUTCMonth() + 1, 1);
 
   const locale = dateLocale();
-  const fmtMonth = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' });
-  const fmtWeekday = new Intl.DateTimeFormat(locale, { weekday: 'short' });
-  const fmtDay = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const fmtSum = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' });
+  const fmtMonth = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const fmtWeekday = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
+  const fmtDay = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const fmtSum = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 
   const title = el('span', { class: 'dp-month', 'aria-live': 'polite' });
   const grid = el('div', { class: 'dp-grid' });
@@ -58,11 +61,11 @@ export function openDatePicker(anchor, value, onPick, opts = {}) {
   const quickButtons = /** @type {const} */ ([['today', 'dp.today'], ['tomorrow', 'dp.tomorrow'], ['nextWeek', 'dp.next_week']])
     .map(([k, label]) => el('button', { type: 'button', 'data-day': quick[k], onclick: () => pickQuick(quick[k]) }, t(label)));
   const summary = el('span', { class: 'dp-sum' });
-  const shift = (months) => { month = new Date(month.getFullYear(), month.getMonth() + months, 1); drawDays(); };
+  const shift = (months) => { month = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + months, 1)); drawDays(); };
 
   // In de volgorde van de weekstart; 1 januari 2024 was een maandag (wd 0).
   const weekdays = el('div', { class: 'dp-wd', 'aria-hidden': 'true' },
-    ...chipDays(weekStart).map((wd) => el('span', {}, fmtWeekday.format(new Date(2024, 0, 1 + wd)))));
+    ...chipDays(weekStart).map((wd) => el('span', {}, fmtWeekday.format(dayDate(2024, 1, 1 + wd)))));
 
   const calArea = el('div', { class: 'dp-cal' },
     el('div', { class: 'dp-head' },
@@ -91,7 +94,7 @@ export function openDatePicker(anchor, value, onPick, opts = {}) {
 
   function drawDays() {
     title.textContent = fmtMonth.format(month);
-    const cells = monthGrid(month.getFullYear(), month.getMonth() + 1, weekStart).flat();
+    const cells = monthGrid(month.getUTCFullYear(), month.getUTCMonth() + 1, weekStart).flat();
     grid.replaceChildren(...cells.map(({ key, d, inMonth }) => {
       const cls = ['dp-day'];
       if (!inMonth) cls.push('out');
@@ -129,7 +132,7 @@ export function openDatePicker(anchor, value, onPick, opts = {}) {
   function pick(key, focus = false) {
     day = key;
     const d = fromKey(key);
-    if (d.getMonth() !== month.getMonth() || d.getFullYear() !== month.getFullYear()) month = new Date(d.getFullYear(), d.getMonth(), 1);
+    if (d.getUTCMonth() !== month.getUTCMonth() || d.getUTCFullYear() !== month.getUTCFullYear()) month = dayDate(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
     drawDays();
     if (focus) /** @type {HTMLElement | null} */ (grid.querySelector(`[data-day="${key}"]`))?.focus();
   }
@@ -146,8 +149,7 @@ export function openDatePicker(anchor, value, onPick, opts = {}) {
     if (!step) return;
     e.preventDefault();
     const d = fromKey(day);
-    d.setDate(d.getDate() + step);
-    pick(dayKey(d), true);
+    pick(dayKey(dayDate(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate() + step)), true);
   });
 
   let done = false;

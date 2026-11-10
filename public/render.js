@@ -14,6 +14,7 @@ import { renderInvites } from './share.js';
 import { claimControl, doneBlock } from './sharedlist.js';
 import { deleteWithUndo, enableSwipe, swipedAway } from './swipe.js';
 import { dueStrip } from './duestrip.js';
+import { fromWallInput, getTimeZone, toWallInput, zonedFormat } from './repeat.js';
 
 export const $ = (s) => document.querySelector(s);
 
@@ -66,20 +67,18 @@ export function checkOff(task) {
 }
 
 // ---------- tijd ----------
-export const toLocalInput = (iso) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-};
-export const fromLocalInput = (v) => (v ? new Date(v).toISOString() : null);
-// toLocaleString met opties maakt per aanroep een nieuwe formatter; met veel taken met een datum is dat merkbaar.
-let fmtCache = { locale: '', f: /** @type {Intl.DateTimeFormat | null} */ (null) };
+// Eén zone in de hele app: de ingestelde tijdzone (TIMEZONE, setTimeZone in repeat.js), ook als het apparaat in een
+// andere zone staat. 'YYYY-MM-DDTHH:MM' is de wandklok in die zone (de vorm van de datumkiezer).
+export const toLocalInput = (iso) => toWallInput(iso);
+export const fromLocalInput = (v) => fromWallInput(v);
+// Eén formatter per taal en zone: een nieuwe per taak met een datum is merkbaar traag.
+let fmtCache = { key: '', f: /** @type {Intl.DateTimeFormat | null} */ (null) };
 export const fmt = (iso) => {
-  if (fmtCache.locale !== dateLocale()) {
-    fmtCache = { locale: dateLocale(), f: new Intl.DateTimeFormat(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) };
+  const key = `${dateLocale()}|${getTimeZone()}`;
+  if (fmtCache.key !== key) {
+    fmtCache = { key, f: zonedFormat(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) };
   }
-  return fmtCache.f.format(new Date(iso));
+  return /** @type {Intl.DateTimeFormat} */ (fmtCache.f).format(new Date(iso));
 };
 
 // ---------- zoeken ----------

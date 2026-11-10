@@ -32,6 +32,27 @@ function atDefaultTime(key) {
   return new Date(zonedToUtc(y, m, d, def.h, def.mi)).toISOString();
 }
 
+const p2 = (n) => String(n).padStart(2, '0');
+
+/**
+ * De snelkeuzes van het herinneringsmenu (steps.js) als wandklok 'YYYY-MM-DDTHH:MM' in de ingestelde zone: vandaag op
+ * het volgende hele uur (null vanaf 23:00), morgen en het begin van volgende week op de standaardtijd (`def`).
+ * @param {number} nowMs
+ * @param {'mon' | 'sun'} [weekStart] standaard de ingestelde weekstart
+ * @returns {{ today: string | null, tomorrow: string, nextWeek: string, def: string }}
+ */
+export function quickWhen(nowMs, weekStart = chipDays()[0] === 6 ? 'sun' : 'mon') {
+  const now = zonedParts(nowMs);
+  const days = quickDays(now, weekStart);
+  const def = `${p2(getDefaultTime().h)}:${p2(getDefaultTime().mi)}`;
+  return {
+    today: now.h < 23 ? `${days.today}T${p2(now.h + 1)}:00` : null,
+    tomorrow: `${days.tomorrow}T${def}`,
+    nextWeek: `${days.nextWeek}T${def}`,
+    def,
+  };
+}
+
 /**
  * Vaste voorstellen: vandaag (alleen als de standaardtijd nog komt), morgen en volgende week.
  * @param {number} now
