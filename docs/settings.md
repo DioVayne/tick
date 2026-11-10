@@ -23,7 +23,7 @@ Shown when linked calendars are switched on for your Tick. See [Linking your cal
 
 ## Language and time
 - **Language** (this device): automatic, English or Nederlands. Error messages and the login page on this device follow it too. Notifications come in the language of the device they go to.
-- **Time zone** (you), with a button to take the zone of this device. Changing it keeps your reminders at the same clock time in the new zone.
+- **Time zone** (you), with a button to take the zone of this device. Changing it keeps your reminders at the same clock time in the new zone. All times in Tick are shown and picked in this zone, also when your device is set to another one (when you travel, for instance): *Today*, *Tomorrow*, overdue and the calendar follow it too. Travelling for a while? Change the zone here, or use the button.
 - **Reminder without a time** (you): used when you only pick a date. 09:00 by default.
 - **Week starts on** Monday or Sunday (you).
 
