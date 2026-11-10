@@ -25,8 +25,9 @@ Block someone from the report window (**Also block**, or **Only block** to block
 
 - stops everything you share with that person, both ways: their tasks leave your Tick and yours leave theirs. If one of you owns a shared list the other is in, the member leaves it. A list someone else owns stays as it is.
 - stops their invitations from reaching you. They are not told: to them, an invitation looks sent, the same as to an address without an account.
+- hides you from each other in copies of the same task: you no longer see each other's pill (name and progress) or "Copy from …", and neither of you gets the other's "*Name* is done ✓". The copies themselves stay as they are, and the other people with a copy still see you both.
 
-Your blocked people are under **⚙ Settings → Account → Blocked people**. **Unblock** lifts the block; what was shared before does not come back, but you can share again.
+Your blocked people are under **⚙ Settings → Account → Blocked people**. **Unblock** lifts the block; what was shared before does not come back, but you can share again. Copies you both still have show each other again.
 
 ## What the administrator can do
 The administrator opens the report from the link in the email, or from **⚙ Settings → Accounts → Reports**: a page only they can see, signed in. There they see the reported content as it is now, with its files, and who reported it and who it is about. They can:
@@ -34,5 +35,14 @@ The administrator opens the report from the link in the email, or from **⚙ Set
 - mark it as **Nothing wrong**;
 - **Remove content**: the task or file is deleted for good. A file also disappears from copies other people accepted;
 - **Suspend** the account: it is signed out, can no longer sign in or use its keys, and everything it shared with others stops. Its own tasks are kept. The administrator can lift a suspension.
+
+## When an account is deleted
+A report does not disappear when the person who reported, or the person it is about, deletes their account. The report stays on the administrator's page (and the link in the email keeps working), but without that person:
+
+- their account shows as **Deleted account**; their name and email address are gone;
+- the note is removed, whoever wrote it;
+- if it was the reported person who left, the title and file name are removed too (shown as "removed with the account"), and so is the link to a reported list, which passes to another member.
+
+What stays is that there was a report, the reason, when it was made, and its status and when it was handled. **Suspend** is not offered for a deleted account. Content that still exists, for example a task the deleted person put in someone else's list, can still be removed.
 
 See also [Sharing](sharing.md) and [Privacy](privacy.md).

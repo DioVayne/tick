@@ -35,7 +35,7 @@ describe('migratie 0022 (melden en blokkeren)', () => {
     expect(row).toEqual({ user_id: a.id, added_by: b.id });
   });
 
-  it('account verwijderen wist zijn blokkades en meldingen', async () => {
+  it('account verwijderen wist zijn blokkades en koppelt hem los van zijn meldingen', async () => {
     const [a, b] = [await createUser(), await createUser()];
     await env.DB.batch([
       env.DB.prepare('INSERT INTO blocks (user_id, blocked_id, created_at) VALUES (?, ?, ?)').bind(a.id, b.id, NOW),
@@ -47,5 +47,8 @@ describe('migratie 0022 (melden en blokkeren)', () => {
     const n = async (sql: string) => (await env.DB.prepare(sql).bind(a.id).first<{ n: number }>())!.n;
     expect(await n('SELECT COUNT(*) AS n FROM blocks WHERE user_id = ?1 OR blocked_id = ?1')).toBe(0);
     expect(await n('SELECT COUNT(*) AS n FROM reports WHERE reporter_id = ?1 OR reported_id = ?1')).toBe(0);
+    // Sinds migratie 0026 blijven de meldingen zelf, losgekoppeld van het verwijderde account.
+    const left = await env.DB.prepare('SELECT reporter_id, reported_id FROM reports WHERE reporter_id = ?1 OR reported_id = ?1').bind(b.id).all();
+    expect(left.results).toEqual(expect.arrayContaining([{ reporter_id: null, reported_id: b.id }, { reporter_id: b.id, reported_id: null }]));
   });
 });
