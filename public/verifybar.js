@@ -3,12 +3,13 @@
 import { request, Offline } from './api.js';
 import { getLocale, t } from './i18n.js';
 import { el, toast } from './render.js';
+import { getTimeZone } from './repeat.js';
 import CONFIG from './settings.js';
 
 /** Tekst van de balk; `verifyBy` is een ISO-tijd of null (dan zonder datum). */
 export function verifyBarText(verifyBy, locale) {
   if (!verifyBy) return t('verify.banner_nodate');
-  const date = new Date(verifyBy).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date(verifyBy).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: getTimeZone() });
   return t('verify.banner', { date });
 }
 

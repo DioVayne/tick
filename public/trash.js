@@ -1,10 +1,11 @@
 import { ask } from './dialog.js';
 import { dateLocale, t } from './i18n.js';
 import { el } from './render.js';
+import { getTimeZone } from './repeat.js';
 import CONFIG from './settings.js';
 import { emptyTrash, purgeTask, restoreTask, state } from './store.js';
 
-const when = (iso) => new Date(iso).toLocaleString(dateLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const when = (iso) => new Date(iso).toLocaleString(dateLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: getTimeZone() });
 
 /** Bevestigt "definitief verwijderen" of "prullenbak legen"; true als de gebruiker doorgaat. */
 async function sure(title, text, label) {

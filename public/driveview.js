@@ -9,7 +9,7 @@ import { createDetector, driveTasks, snoozeValid } from './drive.js';
 import { dateLocale, t } from './i18n.js';
 import { icon } from './icons.js';
 import { $, checkOff, el, fmt, toast } from './render.js';
-import { zonedParts } from './repeat.js';
+import { getTimeZone, zonedParts } from './repeat.js';
 import CONFIG from './settings.js';
 import { on, state } from './store.js';
 
@@ -116,7 +116,7 @@ function section(title, tasks, meta) {
 function when(iso) {
   const p = zonedParts(Date.now());
   if (Date.parse(iso) < startOfDay(p.y, p.m, p.d)) return fmt(iso);
-  return new Intl.DateTimeFormat(dateLocale(), { hour: '2-digit', minute: '2-digit', timeZone: CONFIG.timeZone }).format(new Date(iso));
+  return new Intl.DateTimeFormat(dateLocale(), { hour: '2-digit', minute: '2-digit', timeZone: getTimeZone() }).format(new Date(iso));
 }
 
 function paint() {
