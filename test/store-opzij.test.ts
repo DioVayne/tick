@@ -17,6 +17,7 @@ const serve = (answer: (method: string, path: string, body: any) => Response) =>
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any, opts: any) => {
     const method = opts?.method ?? 'GET';
     calls.push(`${method} ${String(input)}`);
+    clock += 1; // elk verzoek kost tijd: een antwoord komt na het vorige
     return answer(method, String(input), opts?.body ? JSON.parse(opts.body) : null);
   });
   return calls;
@@ -38,32 +39,59 @@ afterEach(async () => {
 });
 
 describe('outbox: een wijziging die steeds een 5xx krijgt', () => {
-  it('telt pogingen; pas na 5 keer én 10 minuten gaat hij opzij, met een melding met de taaknaam, en de rest gaat door', async () => {
-    state.open = [task('a', { title: 'Melk kopen' }), task('b')] as any;
+  it('telt pogingen; pas na 5 keer én 10 minuten (en de server werkt verder) gaat hij opzij, met een melding met de taaknaam, en de rest gaat door', async () => {
+    const both = [task('a', { title: 'Melk kopen' }), task('b')];
+    state.open = both as any;
     await db.outboxAdd({ type: 'update', id: 'a', body: { title: 'Melk kopen!' }, at: '' });
     await db.outboxAdd({ type: 'update', id: 'b', body: { title: 'b!' }, at: '' });
-    const calls = serve((m, p) => (m === 'PATCH' && p === '/api/tasks/a' ? fail(503) : ok([])));
+    const start = clock;
+    // Alleen deze ene wijziging faalt; de rest van de server (de lijst ophalen) werkt.
+    const calls = serve((m, p) => (m === 'PATCH' && p === '/api/tasks/a' ? fail(503) : p === '/api/tasks' ? ok(both) : ok([])));
 
     for (let i = 1; i < SET_ASIDE_ATTEMPTS; i++) {
-      expect(await sync()).toBe(false);
+      await load();
       const [head] = await db.outboxAll();
-      expect(head).toMatchObject({ id: 'a', attempts: i, firstFailAt: Date.parse('2026-11-10T12:00:00Z') });
+      expect(head).toMatchObject({ id: 'a', attempts: i });
+      expect(head.firstFailAt).toBeGreaterThanOrEqual(start);
       tick(60_000);
     }
     // 5e poging, maar de eerste fout is pas 4 minuten oud: blijft staan.
-    expect(await sync()).toBe(false);
+    await load();
     expect((await db.outboxAll()).map((o: any) => o.id)).toEqual(['a', 'b']);
     expect(errors).toEqual([]);
     expect(calls.some((c) => c === 'PATCH /api/tasks/b')).toBe(false);
 
     tick(SET_ASIDE_AFTER_MS);
-    expect(await sync()).toBe(true);
+    const before = calls.length;
+    await load();
     expect(await db.outboxAll()).toEqual([]);
     expect(calls.filter((c) => c === 'PATCH /api/tasks/b')).toHaveLength(1);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain('Melk kopen');
-    await settle();
-    expect(calls).toContain('GET /api/tasks'); // daarna de stand van de server ophalen
+    expect(calls.slice(before)).toContain('GET /api/tasks'); // daarna de stand van de server
+  });
+
+  it('server helemaal plat, een uur lang: niets gaat opzij en er komt geen opzij-melding; de wijzigingen wachten', async () => {
+    state.open = [task('p', { title: 'Plat' }), task('q')] as any;
+    await db.outboxAdd({ type: 'update', id: 'p', body: { title: 'p!' }, at: '' });
+    await db.outboxAdd({ type: 'update', id: 'q', body: { title: 'q!' }, at: '' });
+    serve(() => fail(503));
+    for (let i = 0; i < 60; i++) {
+      await (i % 2 ? sync() : load()); // de app doet allebei: losse sync-rondes en volledige rondes
+      tick(60_000);
+    }
+    expect((await db.outboxAll()).map((o: any) => o.id)).toEqual(['p', 'q']);
+    expect(errors.filter((e) => e.includes('could not be saved') || e.includes('set it aside'))).toEqual([]);
+    expect((await db.outboxAll())[0].attempts).toBe(60);
+  });
+
+  it('alleen sync-rondes zonder ander teken van leven van de server: niets gaat opzij', async () => {
+    state.open = [task('w')] as any;
+    await db.outboxAdd({ type: 'update', id: 'w', body: { title: 'w!' }, at: '' });
+    serve((m) => (m === 'PATCH' ? fail(500) : ok([])));
+    for (let i = 0; i < SET_ASIDE_ATTEMPTS + 3; i++) { expect(await sync()).toBe(false); tick(SET_ASIDE_AFTER_MS); }
+    expect(await db.outboxAll()).toHaveLength(1);
+    expect(errors).toEqual([]);
   });
 
   it('offline of een netwerkfout telt niet als poging', async () => {
@@ -97,7 +125,7 @@ describe('outbox: een wijziging die steeds een 5xx krijgt', () => {
       if (m === 'PATCH' && (p === '/api/tasks/n1' || p === '/api/tasks/n2')) return fail(404);
       return ok([]);
     });
-    for (let i = 0; i < SET_ASIDE_ATTEMPTS; i++) { await sync(); tick(3 * 60_000); }
+    for (let i = 0; i < SET_ASIDE_ATTEMPTS; i++) { await load(); tick(3 * 60_000); }
     expect(await db.outboxAll()).toEqual([]);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain('Nieuw');

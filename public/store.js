@@ -251,6 +251,11 @@ export const SET_ASIDE_ATTEMPTS = 5;
 /** ... en waarvan de eerste fout zo oud is, gaat uit de outbox (met een melding), zodat de rest niet blijft wachten. */
 export const SET_ASIDE_AFTER_MS = 10 * 60_000;
 
+// Wanneer de server voor het laatst een verzoek van deze store gewoon beantwoordde (een wijziging uit de outbox, of de
+// lijst ophalen in load()). Een wijziging gaat pas opzij als dat na zijn eerste fout nog gebeurde: dan ligt het aan die
+// ene wijziging. Is de server helemaal plat, dan gaat er niets opzij en wacht alles, zoals offline.
+let serverOkAt = 0;
+
 // Taken waarvan het aanmaken opzij is gezet of geweigerd (in deze sessie). Een latere wijziging aan zo'n taak (of een
 // subtaak eronder) die daarna ook mislukt, vervalt stil: de melding over de eerste zegt al wat er niet bewaard is.
 const abandoned = new Set();
@@ -270,8 +275,9 @@ let syncing = null;
  * Speelt de outbox op volgorde af. Geeft false als er nog iets wacht (offline of serverfout).
  * Wacht eerst op de eigenaarscontrole van init; mislukte die, dan speelt hij niets af (de outbox kan van een ander zijn).
  * Een wijziging die steeds een 5xx krijgt (SET_ASIDE_ATTEMPTS keer, en de eerste fout SET_ASIDE_AFTER_MS geleden), gaat
- * met een melding uit de outbox; daarna volgt een load(), zodat het scherm de stand van de server toont. Offline of
- * een netwerkfout telt niet als poging.
+ * met een melding uit de outbox, maar alleen als de server na die eerste fout nog wel iets anders gewoon beantwoordde
+ * (`serverOkAt`); daarna volgt een load(), zodat het scherm de stand van de server toont. Offline of een netwerkfout
+ * telt niet als poging; bij een server die helemaal plat is, wacht alles.
  */
 export function sync() {
   let setAside = false;
@@ -282,6 +288,7 @@ export function sync() {
         for (const op of ops) {
           try {
             await request(...toHttp(op));
+            serverOkAt = Date.now();
           } catch (e) {
             if (e instanceof Offline) {
               state.offline = true;
@@ -291,7 +298,8 @@ export function sync() {
               const now = Date.now();
               op.attempts = (op.attempts ?? 0) + 1;
               op.firstFailAt ??= now;
-              if (op.attempts < SET_ASIDE_ATTEMPTS || now - op.firstFailAt < SET_ASIDE_AFTER_MS) {
+              const serverWorks = serverOkAt > op.firstFailAt;
+              if (op.attempts < SET_ASIDE_ATTEMPTS || now - op.firstFailAt < SET_ASIDE_AFTER_MS || !serverWorks) {
                 await db.outboxPut(op).catch(() => {});
                 return false; // later opnieuw
               }
@@ -374,6 +382,7 @@ async function loadOnce() {
       soft(request('GET', '/api/tasks?shared_done=1')),
       soft(request('GET', '/api/shared-lists/incoming')),
     ]);
+    serverOkAt = Date.now(); // de server antwoordde (GET /api/tasks gaf 2xx)
     const owned = await ownerReady; // false: de lokale gegevens kunnen van een ander zijn, dan niet lezen of schrijven
     // Verbinding met IndexedDB kwijt: dan toch de verse serverdata tonen; de outbox komt bij de volgende ronde terug.
     const queued = owned ? await db.outboxAll().catch(() => []) : [];
