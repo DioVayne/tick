@@ -6,6 +6,8 @@ You only do this once. Afterwards you change everything in the app itself (**⚙
 
 **Easiest:** open this folder in [Claude Code](https://claude.com/claude-code) and say *"set up Tick"*. Claude follows the steps below with you (skill `setup-tick`), generates the keys and asks you for the choices. You type your own password; Claude never sees it.
 
+The folder `site/` is the website ticktodo.nl; you can ignore it for your own Tick.
+
 ## What you need
 - A Cloudflare account. The free plan is enough: Workers, D1, Cron Triggers and Rate Limiting. Tick uses one cron trigger; the free plan allows 5 per account, so if you already have 5, the deploy reports *"reached the Workers Free limit of 5 cron triggers"* and reminders will not be sent until you free one up.
   No credit card needed: only the optional attachments (step 11) ask for a payment method on file.

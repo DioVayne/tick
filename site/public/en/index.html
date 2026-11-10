@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tick: to-do app with reminders by time and place</title>
+<meta name="description" content="A free to-do app that reminds you at the right moment, even when you reach the shop. Share tasks and lists. No ads, no tracking, open source.">
+<link rel="canonical" href="https://ticktodo.nl/en/">
+<link rel="alternate" hreflang="nl" href="https://ticktodo.nl/">
+<link rel="alternate" hreflang="en" href="https://ticktodo.nl/en/">
+<link rel="alternate" hreflang="x-default" href="https://ticktodo.nl/">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#1e293b">
+<link rel="icon" href="/img/icon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tick">
+<meta property="og:url" content="https://ticktodo.nl/en/">
+<meta property="og:locale" content="en_GB">
+<meta property="og:locale:alternate" content="nl_NL">
+<meta property="og:title" content="Tick: reminders at the right moment">
+<meta property="og:description" content="A free to-do app that lets you know when you're at the supermarket. Share lists, tidy up old tasks, and no ads. Made in the Netherlands.">
+<meta property="og:image" content="https://ticktodo.nl/img/social-preview.png">
+<meta property="og:image:width" content="2560">
+<meta property="og:image:height" content="1280">
+<meta property="og:image:alt" content="Tick: reminders that know where you are">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tick: reminders at the right moment">
+<meta name="twitter:description" content="A free to-do app that lets you know when you're at the supermarket. Share lists, tidy up old tasks, and no ads. Made in the Netherlands.">
+<meta name="twitter:image" content="https://ticktodo.nl/img/social-preview.png">
+<link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="/demo.css">
+<script type="module" src="/demo.js"></script>
+<script type="module" src="/site.js"></script>
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="site-head">
+<div class="bar">
+<a class="logo" href="/en/" aria-label="Tick, back to the top">
+<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="0.5" y="0.5" width="33" height="33" rx="9" fill="#1e293b" stroke="#475569"/><path d="M17 27s-7-6.4-7-12.4a7 7 0 0 1 14 0C24 20.6 17 27 17 27z" fill="#fcd34d"/><circle cx="17" cy="14.6" r="2.6" fill="#1e293b"/></svg>
+<span>Tick</span>
+</a>
+<nav class="main-nav" aria-label="Main menu">
+<a href="#features">Features</a>
+<a href="#what-works-where">What works where</a>
+<a href="#privacy">Privacy</a>
+<a href="#cost">Does it cost anything?</a>
+<a href="#faq">Questions</a>
+</nav>
+<span class="spacer"></span>
+<a class="lang" href="/" hreflang="nl" lang="nl">Nederlands</a>
+<a class="head-cta" href="https://app.ticktodo.nl/signup">Try it free</a>
+</div>
+</header>
+
+<main id="content">
+
+<!-- 1 Hero -->
+<section id="top" class="band dark hero" aria-labelledby="hero-title">
+<div class="wrap grid">
+<div class="hero-copy">
+<p class="eyebrow">Free · Web and Android · No ads</p>
+<h1 id="hero-title">Tick reminds you when you <span class="hl">reach the shop</span>.</h1>
+<p class="lead">Tick is a free to-do app that reminds you at the right moment. At a time, or when you get somewhere. For your own head full of loose ends, and for everything you sort out together. No ads, no tracking.</p>
+<div class="btns">
+<a class="btn btn-pin" href="https://app.ticktodo.nl/signup">Try it free in your browser <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+<a class="btn btn-ghost" href="https://github.com/DioVayne/tick/releases/latest">Free Android app</a>
+</div>
+<p class="hero-fine"><em>On an iPhone or iPad, add Tick to your home screen from Safari. No App Store needed.</em></p>
+<p class="hero-fine">The Android app comes from GitHub: when it asks for your Tick's address, enter <strong>app.ticktodo.nl</strong>. Google Play: coming soon.</p>
+</div>
+<div class="hero-demo">
+<div class="tdemo" data-tick-demo
+     data-hint="Drag me to the shop"
+     data-walk="Walk there"
+     data-arrived="📍 Arrived at the supermarket"
+     data-arrived-bike="📍 Almost at the supermarket"
+     data-task="Buy milk"
+     data-done-label="Complete"
+     data-dismiss-label="Swipe away notification"
+     data-after-done="Ticked off. See, it works. I was surprised too."
+     data-after-dismiss="Fine. Next time you are here, I'll be back. I'm patient."
+     data-bike="On the bike"
+     data-bike-note="On a bike you are past your circle in no time. With On time on the road, Tick makes the circle bigger, so the notification comes in time."
+     data-radius="200 m"
+     data-radius-bike="400 m"
+     data-reset="Start over"
+     data-footnote="Notifications at a place work in the Android app."
+     data-app="Tick"
+     data-now="now"
+     data-icon="/img/icon.svg"
+     data-aria-map="A small map with a house, a street and a supermarket with a circle around it."
+     data-aria-walker="Walker. Use the arrow keys or drag into the circle; Enter walks to the shop."
+     data-aria-notification="Notification from Tick">
+<img class="tdemo-fallback" src="/img/demo-static.svg" width="560" height="340" alt="A small map: someone walks into a circle around the supermarket and gets a notification from Tick: Buy milk.">
+</div>
+<p class="foot">Place reminders work in the Android app. <em>On time on the road</em> is only in the Android app from GitHub.</p>
+</div>
+</div>
+</section>
+
+<!-- 2 Maker -->
+<section id="maker" class="band" aria-labelledby="maker-title">
+<div class="wrap grid">
+<div class="maker-left">
+<h2 id="maker-title">How a hobby project got <span class="hl">slightly out of hand</span></h2>
+<div class="maker-shot"><img src="/img/task-en.png" width="540" height="960" loading="lazy" alt="Tick on a phone: a grocery task with a reminder, a place at the supermarket, shared with Sanne, and a checklist in the description."></div>
+</div>
+<div class="maker-right">
+<p>Hi, I'm Dio. I made Tick because I needed an app that reminds me of things. One that does what I want, and doesn't suddenly disappear or start costing money.</p>
+<p>My girlfriend has ADD. She said what Tick had to do, in one sentence:</p>
+<p class="quote">“Tick gives me reminders at the right moment, for example when I'm <span class="hl">at the shop</span> and mustn't forget to buy something.”</p>
+<p>That's where it started. We both use it now, every day.</p>
+<p>The idea was a small list for the two of us. Then came shared lists, an Android app, a calendar and a driving mode. Now it has its own website.</p>
+<ol class="growth" aria-label="How Tick grew">
+<li><span>A list for two</span></li>
+<li><span>Shared lists</span></li>
+<li><span>Android app</span></li>
+<li><span>Calendar</span></li>
+<li><span>Driving mode</span></li>
+<li><span>This website</span></li>
+</ol>
+<div class="note-wrap down">
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M34 34C20 34 10 26 8 10"/><path d="M3 16l5-7 6 6"/></svg>
+<p class="note">I'd like to say this was the plan. It wasn't.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- 3.1 In the right place -->
+<section id="in-the-right-place" class="band dark sec-center" aria-labelledby="place-title">
+<div class="wrap grid">
+<div class="place-copy stack">
+<p class="kicker">In the right place</p>
+<h2 id="place-title">A reminder <span class="hl">when you get there</span></h2>
+<p class="lead">Some things you can only do once you're somewhere. Buying milk at the supermarket. Taking the parcel when you leave the house. Give a task a place on the map and choose <strong>On arrival</strong> or <strong>On leaving</strong>. Your phone watches that place itself, and Tick lets you know the moment your phone says you're there. By car or bike you are sometimes past it before Android notices. So Tick makes the circle bigger on the road. And when you're behind the wheel, the screen gets bigger and simpler.</p>
+<ul class="dots">
+<li><span>Pick a place by searching, dragging the map, <em>My location</em> or a favorite. Radius from 200 m to 2 km.</span></li>
+<li><span>Swipe the notification away and it comes back the next time you arrive. <strong>Complete</strong> finishes the task.</span></li>
+<li><span>Already notified and you want it again? Tap <strong>Notify again</strong>.</span></li>
+<li><span>A shared task with a place: everyone gets their own notification. Whoever passes the shop first does the shopping.</span></li>
+<li><span><strong>On time on the road</strong> (only the Android app from GitHub): in the car or on the bike, circles get bigger. How much, Tick learns from your earlier notifications.</span></li>
+<li><span><strong>Driving mode</strong>: when Tick notices you're driving, you see big buttons, tasks <em>Nearby</em> and what's due today.</span></li>
+<li><span>Your position is not sent to Tick. Your phone only reports that a reminder went off.</span></li>
+<li><span>Place reminders work in the Android app. On an iPhone you can set a place, but you won't get a notification for it.</span></li>
+</ul>
+</div>
+<div class="place-art">
+<div class="shot"><img src="/img/place-en.jpg" width="540" height="960" loading="lazy" alt="Picking a place in Tick: a map with a circle around the spot, favorites, On arrival or On leaving, and a radius of 200 metres."></div>
+<div class="note-wrap">
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M34 34C20 34 10 26 8 10"/><path d="M3 16l5-7 6 6"/></svg>
+<p class="note">Please don't look at your screen too long while driving. That's exactly why it's big.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- 3.2 Shared or copy -->
+<section id="shared-or-copy" class="band" aria-labelledby="share-title">
+<div class="wrap grid share" data-mode="shared">
+<div class="share-copy stack">
+<p class="kicker">Shared or copy</p>
+<h2 id="share-title">Do it together, or <span class="hl">each your own</span></h2>
+<p class="body">You can share a task with someone in two ways. <strong>Shared</strong> is one task for both of you: done is done for everyone. Handy for the groceries, or the bins that need to go out. <strong>Copy</strong> gives the other person their own copy. You each tick off your own, and you see how far the other is. Handy when you both have to do the same thing, like your tax return. You can also share a whole list. Then you tap <strong>Take it</strong> and the others see you're on it.</p>
+</div>
+<div class="share-toggle">
+<div class="pills" role="group" aria-label="Way of sharing">
+<button type="button" data-set-mode="shared" aria-pressed="true">Shared</button>
+<button type="button" data-set-mode="copy" aria-pressed="false">Copy</button>
+</div>
+<p class="mode-explain" aria-live="polite"><span class="only-shared">One task for both of you: done is done for everyone.</span><span class="only-copy">They get their own copy; you see each other's progress.</span></p>
+</div>
+
+<div class="phones">
+<div class="phone-col">
+<span class="who">You</span>
+<div class="phone"><div class="screen">
+<p class="list-name">Home</p>
+<div class="task">
+<div class="task-row">
+<button type="button" class="box" data-tick="main" aria-pressed="false"><span class="sr-only only-shared">Tick off Put the bins out</span><span class="sr-only only-copy">Tick off Do the tax return</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+<div class="task-text">
+<span class="task-title"><span class="only-shared">Put the bins out</span><span class="only-copy">Do the tax return</span></span>
+<span class="task-meta only-shared"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.6-.3 4.2 1.4 4.6 4.3"/></svg>Shared with Sanne</span>
+<span class="task-meta only-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy sent to Sanne</span>
+<span class="copy-pill only-copy">Sanne <span class="bar bar-33"><i></i></span></span>
+</div>
+</div>
+<div class="subs only-copy">
+<div class="sub-row"><button type="button" class="box sub" data-tick="0" aria-pressed="false"><span class="sr-only">Tick off: </span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><span>Find the annual statement</span></div>
+<div class="sub-row"><button type="button" class="box sub" data-tick="1" aria-pressed="false"><span class="sr-only">Tick off: </span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><span>Log in</span></div>
+<div class="sub-row"><button type="button" class="box sub" data-tick="2" aria-pressed="false"><span class="sr-only">Tick off: </span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><span>Submit</span></div>
+</div>
+</div>
+<p class="phone-line"><span class="only-shared">Ticking it off counts for everyone.</span><span class="only-copy">Everyone ticks off their own copy.</span></p>
+</div></div>
+</div>
+
+<div class="middle">
+<svg width="56" height="24" viewBox="0 0 56 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h50M44 4l8 8-8 8"/></svg>
+<p aria-live="polite"><span class="note cap cap-start">Tick something off on the left and watch the right.</span><span class="note cap cap-shared">Ticked off on both sides.</span><span class="note cap cap-copy">Sanne sees your bar grow. What you ticked off, she doesn't see.</span></p>
+</div>
+
+<div class="phone-col">
+<span class="who">Sanne</span>
+<div class="phone"><div class="screen">
+<p class="list-name">Inbox</p>
+<div class="task">
+<div class="task-row">
+<span class="box" data-her="main"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+<div class="task-text">
+<span class="task-title" data-her-title><span class="only-shared">Put the bins out</span><span class="only-copy">Do the tax return</span></span>
+<span class="task-meta only-shared"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.6-.3 4.2 1.4 4.6 4.3"/></svg>Shared with Dio</span>
+<span class="task-meta only-copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy from Dio</span>
+<span class="copy-pill hers only-copy"><span class="ok">✓ </span>Dio <span class="bar"><i></i></span></span>
+</div>
+</div>
+<div class="subs only-copy">
+<div class="sub-row is-done"><span class="box sub is-on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>Find the annual statement</span></div>
+<div class="sub-row"><span class="box sub"></span><span>Log in</span></div>
+<div class="sub-row"><span class="box sub"></span><span>Submit</span></div>
+</div>
+</div>
+<p class="phone-line"><span class="only-shared">Ticking it off counts for everyone.</span><span class="only-copy">Everyone ticks off their own copy.</span></p>
+<div class="push for-shared" role="status">
+<span class="push-head"><svg width="14" height="14" viewBox="0 0 18 18" aria-hidden="true"><rect width="18" height="18" rx="5" fill="#1e293b"/><path d="M9 15s-4-3.6-4-7a4 4 0 0 1 8 0c0 3.4-4 7-4 7z" fill="#fcd34d"/></svg>Tick · now</span>
+<span class="push-title">Put the bins out</span>
+<span class="push-text">Dio ticked this off ✓</span>
+</div>
+<div class="push for-copy" role="status">
+<span class="push-head"><svg width="14" height="14" viewBox="0 0 18 18" aria-hidden="true"><rect width="18" height="18" rx="5" fill="#1e293b"/><path d="M9 15s-4-3.6-4-7a4 4 0 0 1 8 0c0 3.4-4 7-4 7z" fill="#fcd34d"/></svg>Tick · now</span>
+<span class="push-title">Do the tax return</span>
+<span class="push-text">Dio is done ✓</span>
+</div>
+</div></div>
+</div>
+</div>
+
+<ul class="share-notes">
+<li><strong>Shared:</strong> everyone can change the task and add subtasks. A reminder at a time or place reaches everyone on it.</li>
+<li><strong>Copy:</strong> you see a name with a small bar per person, or a ✓ when they're done. You never see the other person's title, notes or subtasks.</li>
+<li><strong>Shared list:</strong> everyone can add, change, tick off and delete. Tap <strong>Take it</strong> and the others see <em>Dio is on it</em>. In the free version you share with one person.</li>
+</ul>
+</div>
+</section>
+
+<!-- 3.3 Free moments -->
+<section id="free-moments" class="band dark sec-center" aria-labelledby="free-title">
+<div class="wrap grid">
+<div class="week-wrap">
+<div class="week" role="img" aria-label="A week in your calendar. Work, football, a dentist and a birthday show as grey blocks. Three free moments light up in yellow: Monday at 12:00, Wednesday evening and Saturday afternoon.">
+<span class="corner" aria-hidden="true"></span>
+<span class="dh today" aria-hidden="true">Mon · today</span><span class="dh" aria-hidden="true">Tue</span><span class="dh" aria-hidden="true">Wed</span><span class="dh" aria-hidden="true">Thu</span><span class="dh" aria-hidden="true">Fri</span><span class="dh" aria-hidden="true">Sat</span><span class="dh" aria-hidden="true">Sun</span>
+<div class="hours" aria-hidden="true"><span class="s1">08:00</span><span class="s5">10:00</span><span class="s9">12:00</span><span class="s13">14:00</span><span class="s17">16:00</span><span class="s21">18:00</span><span class="s25">20:00</span><span class="s28 last">22:00</span></div>
+<div class="day" aria-hidden="true"><span class="blk s2 e9">Work</span><span class="blk free s9 e10 is-active" data-slot="a"></span><span class="blk s11 e19">Work</span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e19">Work</span><span class="blk s23 e27">Football</span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e19">Work</span><span class="blk free s23 e29" data-slot="b"></span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e11">Work</span><span class="blk s13 e15">Dentist</span><span class="blk s21 e25">Dinner</span></div>
+<div class="day" aria-hidden="true"><span class="blk s3 e17">Work</span><span class="blk s25 e29">Film</span></div>
+<div class="day" aria-hidden="true"><span class="blk s5 e8">Market</span><span class="blk free s11 e15" data-slot="c"></span></div>
+<div class="day" aria-hidden="true"><span class="blk s9 e15">Birthday</span></div>
+</div>
+<ul class="menu" aria-label="Example of the reminder menu">
+<li class="mh">Free in your calendar</li>
+<li class="mi is-active" data-slot="a"><span>Today</span><span>12:00</span></li>
+<li class="mi" data-slot="b"><span>Wednesday evening</span><span>19:00</span></li>
+<li class="mi" data-slot="c"><span>Saturday</span><span>13:00</span></li>
+<li class="busy"><span>Tomorrow</span><span>Busy: Work</span></li>
+</ul>
+</div>
+<div class="free-copy stack">
+<p class="kicker">Free moments</p>
+<h2 id="free-title">Tick knows when you <span class="hl">have time</span></h2>
+<p class="body">Planning a task is easier when you know when you can. Link your online calendar and Tick sees when you're busy. When you set a reminder, Tick then suggests free moments: the first free half hour, a free evening and a moment at the weekend. Already have something on <em>Tomorrow</em>? Then Tick says <strong>Busy:</strong> with the name of the appointment. Tick only reads your calendar. It never changes anything in it.</p>
+<p class="small">Works with Google Calendar, Outlook, iCloud and any calendar with an iCal address. Tick only fetches the title, start and end, for today and the next 14 days.</p>
+<p class="honest">Linking a calendar is not switched on at app.ticktodo.nl yet. It already works on your own Tick. <strong>Add to calendar</strong> works everywhere.</p>
+</div>
+</div>
+</section>
+
+<!-- 3.4 Tickmanager -->
+<section id="old-tasks" class="band alt sec-center" aria-labelledby="tm-title">
+<div class="wrap grid">
+<div class="tm-copy stack">
+<p class="kicker">Tickmanager</p>
+<h2 id="tm-title">Old tasks get a <span class="hl">second chance</span></h2>
+<p class="body">Every list has them: tasks that sank to the bottom months ago. The Tickmanager brings them back one by one, oldest first. For each task you choose: <strong>Schedule</strong>, <strong>Move to top</strong>, <strong>Leave it</strong> or <strong>Delete</strong>. One tap, and on to the next. An orange button shows how many are waiting. So you tidy your list in a few minutes, without having to take in everything at once.</p>
+<p class="small">A new task is old after 14 days. Pinned tasks, repeating tasks and tasks with a reminder in the future don't take part. Works offline too.</p>
+</div>
+<div class="tm-art tm" data-of="{n} of {total}" data-summary="{s} scheduled, {t} moved to top, {d} deleted, {l} left as is" data-done="All done. Your list is up to date." data-again="Start over" data-stop="Stop">
+<div class="tm-back b1" aria-hidden="true">Take the car to the garage</div>
+<div class="tm-back b2" aria-hidden="true">Fix the bike light</div>
+<div class="tm-card">
+<div class="tm-top"><span class="tm-of" aria-live="polite">1 of 8</span><button type="button" class="tm-stop">Stop</button></div>
+<div class="tm-task"><span class="tm-title">Clear out the shed</span><span class="tm-sub">Home · not looked at for 4 months</span></div>
+<div class="tm-actions">
+<button type="button" data-act="s">Schedule</button>
+<button type="button" data-act="t">Move to top</button>
+<button type="button" data-act="l">Leave it</button>
+<button type="button" data-act="d" class="del">Delete</button>
+</div>
+</div>
+<span class="bolt" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6L13 3z"/></svg><span class="count">8</span></span>
+<p class="tm-summary" aria-live="polite">2 scheduled, 1 moved to top, 1 deleted, 4 left as is</p>
+<ul class="tm-queue" hidden>
+<li data-sub="Home · not looked at for 4 months">Clear out the shed</li>
+<li data-sub="Home · not looked at for 3 months">Fix the bike light</li>
+<li data-sub="Inbox · not looked at for 3 months">Take the car to the garage</li>
+<li data-sub="Inbox · not looked at for 2 months">Return Mark's book</li>
+<li data-sub="Home · not looked at for 2 months">Hang the curtains</li>
+<li data-sub="Work · not looked at for 7 weeks">Archive old emails</li>
+<li data-sub="Home · not looked at for 6 weeks">Paint the planters</li>
+<li data-sub="Inbox · not looked at for 3 weeks">Make the holiday photo book</li>
+</ul>
+</div>
+</div>
+</section>
+
+<!-- 4 All features -->
+<section id="features" class="band" aria-labelledby="features-title">
+<div class="wrap">
+<div class="feat-head">
+<h2 id="features-title">All <span class="hl">features</span></h2>
+<p class="small">Tap a tile for the whole story.</p>
+</div>
+<div class="feats">
+
+<details class="feat" id="entry-card" name="features">
+<summary class="tile"><span class="tile-h"><h3>Entry card</h3></span><span class="tile-line">Type a task and add what belongs with it straight away.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Entry card</p><a class="story-anchor" href="#entry-card">#entry-card</a></div><div class="story-b">
+<p>Adding a task starts with typing in the field at the top of your list. Press Enter and it's in. Want more? The field opens into a card. It has a short sentence for each part: <strong>Remind me…</strong>, <strong>Repeat</strong>, <strong>Remind me at a place</strong>, the list it goes into, and <strong>Do it together with…</strong>. A sentence in grey is still empty. Tap it and choose.</p>
+<p>Under the sentences is <strong>Description, subtasks or attachment</strong>. There you write notes, add subtasks, or attach a photo or file. You can also paste a picture or drop a file on the card.</p>
+<p>Tick doesn't pull a date out of what you type. You choose the time yourself, with <em>Today</em>, <em>Tomorrow</em>, <em>Next week</em> or <strong>Other day and time…</strong>. So you always know exactly what's set.</p>
+<p>With a keyboard: <strong>N</strong> opens the field, <strong>Shift+Enter</strong> adds the task and opens it right away, <strong>Esc</strong> empties the card. Open the task later and you see the same sentences. What you filled in shows in colour.</p>
+</div></div>
+</details>
+
+<details class="feat" id="reminders" name="features">
+<summary class="tile"><span class="tile-h"><h3>Reminders</h3></span><span class="tile-line">Today, tomorrow or next week, in one tap.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Reminders</p><a class="story-anchor" href="#reminders">#reminders</a></div><div class="story-b">
+<p>Tap <strong>Remind me…</strong> on a task and choose <em>Today</em>, <em>Tomorrow</em> or <em>Next week</em>. For another moment there's <strong>Other day and time…</strong>. A new reminder starts at the next whole hour. Pick only a date, and Tick uses your default time: 09:00, unless you changed it.</p>
+<p>At that moment you get a notification on every device where you turned notifications on. It has two buttons: <strong>Done</strong> ticks the task off, <strong>In 1 hour</strong> moves it an hour later. Tap the notification itself to open the task.</p>
+<p>The reminder is also the deadline. There is no separate due date. In the list, the time is in grey under the task. Once it has passed, it turns red.</p>
+<p>Every day at 09:00 Tick sends a notification for overdue tasks, with <strong>Done</strong> and <strong>Tomorrow</strong>. At most ten, oldest first. You can change that time, or turn it off.</p>
+<p>Notifications can be up to a minute late, because Tick checks once a minute. Fair is fair.</p>
+</div></div>
+</details>
+
+<details class="feat" id="repeating" name="features">
+<summary class="tile"><span class="tile-h"><h3>Repeating</h3></span><span class="tile-line">Every week on Wednesday, until a date if you like.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Repeating</p><a class="story-anchor" href="#repeating">#repeating</a></div><div class="story-b">
+<p>At a reminder, choose under <strong>Repeat</strong> how often: every day, week, month or year. Or every so many days, on certain weekdays, on a day of the month, or on, say, the third Sunday. An end date works too.</p>
+<p>Tick off a repeating task and it moves on to the next time. It stays open, and its subtasks reopen.</p>
+<p>A missed time is skipped. The next time is always in the future, so you don't get a pile of catch-up notifications.</p>
+<p>Snooze, or choose <em>Tomorrow</em>, and only this one time moves. To change every time, change the rhythm under <strong>Repeat</strong>.</p>
+<p>Times follow the clock of your time zone. 10:00 stays 10:00 when daylight saving time starts. “On the 31st” falls on the last day of shorter months.</p>
+</div></div>
+</details>
+
+<details class="feat" id="due-today" name="features">
+<summary class="tile"><span class="tile-h"><h3>Due today</h3></span><span class="tile-line">What's due today, from all your lists, at the top.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Due today</p><a class="story-anchor" href="#due-today">#due-today</a></div><div class="story-b">
+<p>At the top of your list is a bar <strong>Due today</strong> with a number. That's how many tasks are due today, overdue ones included. When something is overdue, the bar is red.</p>
+<p>Tap the bar and it folds open. You see every task due today from all your lists, shared ones too, earliest first, with the name of its list. Open a task, or tick it off right there. Each device remembers whether you left the bar open or closed.</p>
+<p>The same number is on the app icon and on the browser tab. The small tab icon gets a red dot when something is overdue. So you see at a glance whether something is waiting, without opening the app.</p>
+<p>Nothing due today? Then the bar is gone. Rather not see a number? Turn the counter off per device in Settings.</p>
+</div></div>
+</details>
+
+<details class="feat" id="calendar" name="features">
+<summary class="tile"><span class="tile-h"><h3>Calendar</h3></span><span class="tile-line">A month view and an agenda of what's coming.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Calendar</p><a class="story-anchor" href="#calendar">#calendar</a></div><div class="story-b">
+<p><strong>Calendar</strong> in the sidebar shows your open tasks with a date. In two ways: as a month grid, with bars on the days that have something, and as an agenda, day by day. What's overdue is at the top.</p>
+<p>Repeating tasks show with their coming times. So you also see the bins three weeks from now.</p>
+<p>The week starts on Monday or Sunday, as you choose in Settings. With a linked calendar, your appointments show as grey blocks between your tasks. You can't open those in Tick; they're there to show when you're busy.</p>
+<p>Tap a task to open it and change the time.</p>
+</div></div>
+</details>
+
+<details class="feat" id="link-calendar" name="features">
+<summary class="tile"><span class="tile-h"><h3>Link your calendar</h3><span class="tag">Own Tick</span></span><span class="tile-line">Tick sees when you're busy and suggests free moments.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Linking your calendar</p><a class="story-anchor" href="#link-calendar">#link-calendar</a></div><div class="story-b">
+<p>Link your online calendar with its secret iCal address. That works with Google Calendar, Outlook, iCloud and any calendar that has such an address. In Tick, go to <strong>Settings › Calendars</strong>, paste the address and tap <strong>Link calendar</strong>. Up to ten calendars, for example <em>Work</em> and <em>Home</em>.</p>
+<p>About once an hour, Tick fetches your appointments: only title, start and end, for today and the next 14 days. Descriptions, locations and attendees are not read. Appointments marked <em>free</em> and cancelled ones are skipped.</p>
+<p>Tick then suggests free moments, in the reminder menu under <em>Free in your calendar</em> and in the Tickmanager. The first free half hour, the first free evening and a moment at the weekend. When you already have something at a suggested time, Tick says <strong>Busy:</strong> with the title.</p>
+<p>Tick only reads. It never changes anything in your calendar. The address is stored encrypted and never shown again. <strong>Unlink</strong> erases everything Tick fetched.</p>
+<p>The other way round: <strong>Add to calendar</strong> makes a 30-minute appointment at the reminder time, in Google Calendar or as an .ics file. That works without linking.</p>
+<p><em>At app.ticktodo.nl, linking a calendar is not switched on yet.</em></p>
+</div></div>
+</details>
+
+<details class="feat" id="subtasks" name="features">
+<summary class="tile"><span class="tile-h"><h3>Subtasks</h3></span><span class="tile-line">2/4 done, right in your list.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Subtasks</p><a class="story-anchor" href="#subtasks">#subtasks</a></div><div class="story-b">
+<p>Break a big task into small steps. A task can have one level of subtasks. In the list they share one grey block: the subtasks smaller and lighter, with a thin line to the task above. Next to the title you see how many are done, such as <strong>2/4</strong>.</p>
+<p>A subtask follows its task. It's in the same list, and when you tick off the task, the subtasks go with it. Tick off a subtask and it drops to the bottom within its task.</p>
+<p>In a repeating task the subtasks reopen as soon as the task moves on. Handy for a fixed round, like the weekly cleaning.</p>
+<p>Share a task as a copy, and the other person's progress shows in the bar you see. Their subtasks themselves you don't see.</p>
+</div></div>
+</details>
+
+<details class="feat" id="notes" name="features">
+<summary class="tile"><span class="tile-h"><h3>Notes</h3></span><span class="tile-line">With headings, links and lists to tick off.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Notes with checklists</p><a class="story-anchor" href="#notes">#notes</a></div><div class="story-b">
+<p>Every task has a <strong>Description</strong>. Put in whatever you like: an address, a link, a shopping list. You write in markdown: headings, <strong>bold</strong>, <em>italics</em>, lists, links, quotes and code.</p>
+<p>A line like <code>- [ ] milk</code> becomes a box you can tick while reading the note. So you have a quick list inside a task, without every item needing its own subtask.</p>
+<p>Tables, images and HTML show as plain text. Title and notes save while you type.</p>
+<p>Search looks in your notes too, including those of completed tasks.</p>
+</div></div>
+</details>
+
+<details class="feat" id="attachments" name="features">
+<summary class="tile"><span class="tile-h"><h3>Photos and files</h3></span><span class="tile-line">Add them to any task.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Photos and files</p><a class="story-anchor" href="#attachments">#attachments</a></div><div class="story-b">
+<p>A photo of the paint colour, the receipt, the manual as a PDF. Tap <strong>Photo or file</strong> on a task, or paste or drop it in. Tap a photo for a large view, with previous and next.</p>
+<p>Photos are scaled down before they're uploaded. They lose their EXIF data on the way, such as where they were taken.</p>
+<p>At most 20 files per task, each up to 10 MB. At app.ticktodo.nl you have 100 MB per account. <strong>Settings › Data › Storage</strong> shows how much you use.</p>
+<p>Deleting an attachment can't be undone. Attachments need a connection; photos you've already seen stay visible offline. A backup lists which attachments there were, but doesn't contain the files.</p>
+</div></div>
+</details>
+
+<details class="feat" id="offline" name="features">
+<summary class="tile"><span class="tile-h"><h3>Works offline</h3></span><span class="tile-line">Changes go along once you're back online.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Works offline</p><a class="story-anchor" href="#offline">#offline</a></div><div class="story-b">
+<p>In the basement, on the train, abroad without data. Tick works without a connection, once you've opened it online and logged in.</p>
+<p>Adding, changing and ticking off tasks just carries on. Tick saves it on your device and sends it once you're connected again. If two devices changed the same field, the last change wins.</p>
+<p>In a shared list you can add, tick off and <strong>Take it</strong> offline. If two people take the same task offline, whoever comes online first gets it.</p>
+<p>What needs a connection: sharing, the trash, attachments and the map. The Tickmanager works offline, with the tasks already on your device.</p>
+</div></div>
+</details>
+
+<details class="feat" id="themes" name="features">
+<summary class="tile"><span class="tile-h"><h3>Light, dark or the 70s</h3></span><span class="tile-line">Make it a bit yours.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Themes</p><a class="story-anchor" href="#themes">#themes</a></div><div class="story-b">
+<p>Tick follows your device in light or dark, or you choose. There's also a colour theme: the default, or <strong>Retro 70s</strong>, in light and dark too. I could have regretted that one. I don't.</p>
+<p>You set the text size and the space between tasks: compact, normal or roomy. An example task changes along, so you see what you pick.</p>
+<p>Want your own <strong>background photo</strong>? Set it once, for all your devices.</p>
+<p>Ticking off a task gives you confetti. If your device asks for reduced motion, Tick leaves it out.</p>
+<p>Theme, colour theme and text size are per device. So your phone can be dark and your laptop light.</p>
+</div></div>
+</details>
+
+<details class="feat" id="widget" name="features">
+<summary class="tile"><span class="tile-h"><h3>Widget and quick add</h3><span class="tag">Android</span></span><span class="tile-line">Your list on your home screen.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Widget and quick add</p><a class="story-anchor" href="#widget">#widget</a></div><div class="story-b">
+<p>Put the Tick widget on your Android home screen. You choose what it shows: all tasks, <em>Today and overdue</em>, or one list. You set the text size and line spacing, and make it as big as you like.</p>
+<p>Tick tasks off right on the widget. You get three seconds to undo. Tap a task to open it, or the header to open the app on that list. Each row shows what belongs with it: reminder, list, place, repeat, sharing and open subtasks.</p>
+<p>With <strong>➕</strong> on the widget, the <em>New task</em> shortcut on the app icon, or <em>Share</em> from another app, a panel opens at the bottom. Type the title and pick a list, a reminder, a place or a repeat if you like. Turn on <em>Add another one after this</em> to type several tasks in a row.</p>
+<p>The widget and quick add are only in the Android app.</p>
+</div></div>
+</details>
+
+<details class="feat" id="places" name="features" open>
+<summary class="tile"><span class="tile-h"><h3>Places</h3><span class="tag">Android</span></span><span class="tile-line">A notification when you arrive or leave.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Places</p><a class="story-anchor" href="#places">#places</a></div><div class="story-b">
+<p>Give a task a place and Tick lets you know when you <strong>arrive</strong> or <strong>leave</strong>. The shopping list at the supermarket. The screws when you park at the hardware store. The parcel as you step out the door.</p>
+<p>Tap <strong>Remind me at a place</strong> on a task. Search for an address, drag the map, tap <em>My location</em> or pick a favorite. Choose <strong>On arrival</strong> or <strong>On leaving</strong>, and the radius: from 200 m to 2 km. A place you use often, you keep with <strong>☆ Save as favorite</strong>.</p>
+<p>Not the right moment? Swipe the notification away and it comes back the next time you arrive. <strong>Notify again</strong> re-arms a place that already went off.</p>
+<p>Your phone watches the places itself and only tells Tick that a notification went off. Tick keeps no record of where you've been.</p>
+<p>Place reminders only work in the Android app. On an iPhone or in the browser you can still set the place. Maps come from OpenStreetMap.</p>
+</div></div>
+</details>
+
+<details class="feat" id="driving-mode" name="features">
+<summary class="tile"><span class="tile-h"><h3>Driving mode</h3></span><span class="tile-line">Big and simple behind the wheel.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Driving mode</p><a class="story-anchor" href="#driving-mode">#driving-mode</a></div><div class="story-b">
+<p>When Tick notices you're driving, the screen gets bigger and simpler. You see a bar <strong>Driving mode detected</strong>, with tasks <strong>Nearby</strong> (within 3 km, closest first) and what's due <strong>Today</strong>. Every task has a big round button to tick it off, and there's a big <strong>Add task</strong> button.</p>
+<p>Tick switches it on when the app is open and you've been going faster than about 25 km/h for half a minute. Three minutes of standing still or walking, and the normal view comes back. A traffic light or a jam doesn't count.</p>
+<p>Sitting next to the driver, or on a train? Tap <strong>Not now</strong>. <strong>Never</strong> turns it off on all your devices.</p>
+<p>For this, Tick uses your location only on this device, only while Tick is open. It's not sent to the server and not stored. Tick never asks for your location out of the blue.</p>
+<p>Please don't look at your screen too long while driving. That's exactly why it's big.</p>
+</div></div>
+</details>
+
+<details class="feat" id="on-time-on-the-road" name="features">
+<summary class="tile"><span class="tile-h"><h3>On time on the road</h3><span class="tag">GitHub app</span></span><span class="tile-line">On time by bike or car.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">On time on the road</p><a class="story-anchor" href="#on-time-on-the-road">#on-time-on-the-road</a></div><div class="story-b">
+<p>Android only notices you've reached a place a few minutes later. On foot that hardly matters. By car or bike you're past it by then.</p>
+<p>In the Android app, under <strong>Tick on this phone</strong>, turn on <em>On time on the road</em>. While you drive or cycle, Tick makes arrival circles bigger. The notification then comes around the edge of the circle you set, and says <em>“Almost at …”</em>.</p>
+<p>How much bigger, Tick learns from your earlier notifications, separately for car and bike. A circle never grows so big that you're already inside it when you set off. When you get out or off, the circles go back to normal.</p>
+<p>Tick asks for the permission <strong>Physical activity</strong>, only to know <em>whether</em> you drive or cycle. It's not a fitness feature. Nothing about where you are or how you travel is sent.</p>
+<p>This is only in the Android app from GitHub, not in the Google Play version.</p>
+</div></div>
+</details>
+
+<details class="feat" id="tickmanager" name="features">
+<summary class="tile"><span class="tile-h"><h3>Tickmanager</h3></span><span class="tile-line">Old tasks come back one by one.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Tickmanager</p><a class="story-anchor" href="#tickmanager">#tickmanager</a></div><div class="story-b">
+<p>Tasks you haven't looked at in a long time sink to the bottom of a list. The Tickmanager brings them back. An orange lightning button (on a wide screen: <em>Tickmanager</em> under Inbox) shows how many are waiting.</p>
+<p>Tap <strong>Start tidying up</strong> and you see one task at a time, oldest first, with how long you haven't looked at it. For each task you choose: <strong>Schedule</strong>, <strong>Move to top</strong>, <strong>Leave it</strong> or <strong>Delete</strong>. At the top you see how far you are, and <strong>Stop</strong> lets you continue later.</p>
+<p>A new task is old after 14 days, a task you already looked at after 30. You can change both. Pinned tasks, repeating tasks and tasks with a reminder in the future don't take part. You choose per list whether it takes part.</p>
+<p>In a shared list, “looked at” counts for everyone. Which lists you skip is yours.</p>
+<p>Works offline too. Rather not? Turn off <strong>Show Tickmanager</strong> in Settings.</p>
+</div></div>
+</details>
+
+<details class="feat" id="sharing" name="features">
+<summary class="tile"><span class="tile-h"><h3>Sharing tasks</h3></span><span class="tile-line">Shared to do together, or a copy for each.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Sharing tasks</p><a class="story-anchor" href="#sharing">#sharing</a></div><div class="story-b">
+<p>Open a task and tap <strong>Do it together with…</strong>. Pick someone and choose how.</p>
+<p><strong>Shared</strong> is one task for everyone. Done is done for everyone, everyone can change it and add subtasks, and each person keeps it in their own list. A reminder at a time or place reaches everyone. You recognise it by the blue people icon and <em>Shared with …</em>.</p>
+<p><strong>Copy</strong> gives the other person their own copy, with all subtasks open. You each tick off your own. You recognise it by the grey icon of two sheets and a name with a progress bar. When the other is done, you get a notification <em>“… is done ✓”</em>.</p>
+<p>The other person gets a notification with <strong>Accept</strong> and <strong>Decline</strong>. An accepted task lands in their Inbox.</p>
+<p>At app.ticktodo.nl you share with an email address. If that person has no account yet, they get an invitation by email. You confirm your own email address first. In the free version you share with one person: as many tasks and lists as you like.</p>
+</div></div>
+</details>
+
+<details class="feat" id="shared-lists" name="features">
+<summary class="tile"><span class="tile-h"><h3>Shared lists</h3></span><span class="tile-line">One list together, and you see who does what.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Shared lists</p><a class="story-anchor" href="#shared-lists">#shared-lists</a></div><div class="story-b">
+<p>The groceries for the house, the packing list for a weekend away. Share a whole list and every task in it is shared with everyone in the list. Choose <strong>Share…</strong> in the list menu and invite someone. They accept once and have the whole list.</p>
+<p>Everyone can add, change, tick off and delete. Tap <strong>Take it</strong> under a task and the others see <em>“… is on it”</em>. Only you can tick it off then. Tap again to let go.</p>
+<p>A ticked-off task doesn't vanish. It moves to the <strong>Ticked off</strong> block at the bottom, with who did it and when. <strong>Clear</strong> moves them to the trash for everyone.</p>
+<p>By default you get no notification when someone else ticks something off. Turn on <strong>Notify when ticked off</strong> for the whole list, or choose <strong>Notify me when this is ticked off</strong> per task.</p>
+<p>Drag a task to one of your own lists and it's yours alone. Drag one of your own tasks in and it belongs to everyone. Only the person who shared the list can invite people, remove them or delete the list.</p>
+</div></div>
+</details>
+
+<details class="feat" id="reporting-and-blocking" name="features">
+<summary class="tile"><span class="tile-h"><h3>Reporting and blocking</h3></span><span class="tile-line">Got something that shouldn't be there? Gone.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Reporting and blocking</p><a class="story-anchor" href="#reporting-and-blocking">#reporting-and-blocking</a></div><div class="story-b">
+<p>At app.ticktodo.nl anyone can make an account. So it can happen that someone sends you something you don't want. That's what <strong>Report</strong> is for.</p>
+<p>You can report an invitation, a task someone shared with you, a shared list (<strong>Report list</strong>), or a file someone else added. Choose a reason: spam, inappropriate, illegal or something else, and add a note if you like. It disappears from your Tick straight away. The administrator gets an email and looks at it.</p>
+<p><strong>Also block</strong> is ticked by default. Blocking stops everything you share with that person, both ways, and their invitations no longer reach you. They aren't told. You can also choose <strong>Only block</strong>.</p>
+<p>The people you blocked are under <strong>Settings › Account › Blocked people</strong>. You can lift the block there.</p>
+<p>On a Tick you host yourself for your household, these buttons don't exist. There you know each other.</p>
+</div></div>
+</details>
+
+<details class="feat" id="ticktick" name="features">
+<summary class="tile"><span class="tile-h"><h3>Moving from TickTick</h3></span><span class="tile-line">Bring your tasks along.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Import from TickTick</p><a class="story-anchor" href="#ticktick">#ticktick</a></div><div class="story-b">
+<p>Coming from TickTick? Make a backup there. That gives you a CSV file. In Tick, go to <strong>Settings › Data</strong> and pick the file at <em>Get tasks from TickTick</em>.</p>
+<p>Tick adds your tasks and shows how many were new, how many were already there and how many were skipped. Import the same file again and Tick skips what's already there and keeps your changes.</p>
+<p>The file can be up to 10 MB.</p>
+<p>Moving from another app? I haven't built that yet. TickTick was the app I used myself.</p>
+</div></div>
+</details>
+
+<details class="feat" id="backup" name="features">
+<summary class="tile"><span class="tile-h"><h3>Backup</h3></span><span class="tile-line">Download all your tasks in one file.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Backup</p><a class="story-anchor" href="#backup">#backup</a></div><div class="story-b">
+<p>Under <strong>Settings › Data</strong> you download a backup of all your tasks. Completed tasks and places are included. Your settings, keys, tasks others shared with you and the files of attachments are not.</p>
+<p>With <strong>Restore a backup</strong> you put such a file back. Tick first shows what's in it. Then it merges by task: tasks in the file replace the same task here, and deleted ones come back. Nothing is deleted.</p>
+<p>A backup is also your way out. Your tasks are yours, and you take them with you if you want.</p>
+</div></div>
+</details>
+
+<details class="feat" id="integrations" name="features">
+<summary class="tile"><span class="tile-h"><h3>Integrations</h3></span><span class="tile-line">Claude, Home Assistant and an inbox for your own automations.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Integrations</p><a class="story-anchor" href="#integrations">#integrations</a></div><div class="story-b">
+<p>For people who like to tinker, Tick has a few ways in.</p>
+<p><strong>Claude (MCP):</strong> Tick has an MCP server, so Claude Code or Claude Desktop can manage your tasks: search, add, change, tick off, snooze and move them to the trash. Claude uses a key of its own that you can revoke at any time. It can't reach your settings, keys or password.</p>
+<p><strong>Inbox API:</strong> with an <em>Inbox</em> key you add tasks from a shortcut, a script or an email rule. With title, notes, date, list and repeat. Such a key can only add tasks, nothing else.</p>
+<p><strong>Home Assistant:</strong> sensors for your open, today's and overdue tasks, and actions to complete, postpone and add tasks. All in one package file.</p>
+<p><strong>Fallback webhook:</strong> when a notification couldn't be delivered within 15 minutes, Tick can send it to a webhook of your own, for example a chat app.</p>
+<p>You make keys under <strong>Settings › Advanced › Keys</strong>. You see a key once, and revoking works immediately.</p>
+</div></div>
+</details>
+
+<details class="feat" id="account" name="features">
+<summary class="tile"><span class="tile-h"><h3>Your account</h3></span><span class="tile-line">Lost your password, or want to leave? You do it yourself.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Your account</p><a class="story-anchor" href="#account">#account</a></div><div class="story-b">
+<p><strong>Forgot password?</strong> Tap it on the login screen and enter your email address. You get an email with a link to choose a new password. It works for an hour. No email? Check your spam. After five minutes you can ask for a new link.</p>
+<p>Under <strong>Settings › Account</strong> you change your name, email address and password. <strong>Log out on other devices</strong> helps when you've lost your phone.</p>
+<p><strong>Delete account</strong> erases everything: tasks, places, attachments, settings, keys and linked devices. You confirm with your password, and it can't be undone. It happens right away. Backups are erased within 30 days. A shared list you own passes to another member. Tasks you shared on their own disappear for the others too; copies stay.</p>
+<p>Can't log in anymore? <a href="https://app.ticktodo.nl/delete-account">app.ticktodo.nl/delete-account</a> explains how to get your account deleted anyway, and how to delete only part of your data.</p>
+<p>Want to keep your tasks? Download a backup first.</p>
+</div></div>
+</details>
+
+<details class="feat" id="languages" name="features">
+<summary class="tile"><span class="tile-h"><h3>English and Dutch</h3></span><span class="tile-line">Per device, in your own time zone.</span><span class="more"><span class="lm">Read more</span><span class="cl">Close</span></span></summary>
+<div class="story"><div class="story-h"><p class="story-title">Languages</p><a class="story-anchor" href="#languages">#languages</a></div><div class="story-b">
+<p>Tick comes in English and Dutch. By default it follows your device's language, or you choose under <strong>Settings › Language and time</strong>. Error messages and the login screen follow along.</p>
+<p>The language belongs to the device. Your phone can be in Dutch and your work laptop in English. Notifications come in the language of the device they go to.</p>
+<p>You also set your time zone, with a button to take the one from your device. Change it, and your reminders stay at the same clock time in the new zone. You also pick your default time for a reminder without a time, and whether the week starts on Monday or Sunday.</p>
+<p>More languages? Maybe later. I only speak two well enough myself.</p>
+</div></div>
+</details>
+
+</div>
+</div>
+</section>
+
+<!-- 5 What works where -->
+<section id="what-works-where" class="band alt" aria-labelledby="www-title">
+<div class="wrap">
+<div class="grid www-head">
+<h2 id="www-title">What works <span class="hl">where</span></h2>
+<p>Place notifications, the widget and quick add need the Android app. Apple gives a home-screen app less room. Everything to do with tasks, lists, reminders and sharing works everywhere.</p>
+</div>
+<div class="table-card" tabindex="0" role="region" aria-labelledby="www-title">
+<table class="www">
+<thead>
+<tr>
+<th scope="col">Feature</th>
+<th scope="col">Web app<small>app.ticktodo.nl in your browser</small></th>
+<th scope="col">Android<small>Google Play, in testing</small></th>
+<th scope="col">Android<small>APK via GitHub</small></th>
+<th scope="col">iPhone / iPad<small>home screen via Safari</small></th>
+<th scope="col">Self-hosted<small>your own Cloudflare account</small></th>
+</tr>
+</thead>
+<tbody>
+<tr><th scope="row">Tasks, lists, subtasks, notes</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Reminders at a time (notifications)</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes,</span> iOS 16.4+, from the home screen</span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Repeating</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Due today and counter on the icon</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Calendar</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Linking your calendar</th><td>not yet</td><td>not yet</td><td>only with your own Tick</td><td>not yet</td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Add to calendar</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Setting a place on a task</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Place notifications</th><td><span class="n"><span class="sr-only">no</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="n"><span class="sr-only">no</span></span></td><td>with the Android app</td></tr>
+<tr><th scope="row">On time on the road</th><td><span class="n"><span class="sr-only">no</span></span></td><td><span class="n"><span class="sr-only">no</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="n"><span class="sr-only">no</span></span></td><td>with the GitHub app</td></tr>
+<tr><th scope="row">Driving mode</th><td><span class="y"><span class="sr-only">yes,</span> on a phone, with location</span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Home-screen widget</th><td><span class="n"><span class="sr-only">no</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="n"><span class="sr-only">no</span></span></td><td>with the Android app</td></tr>
+<tr><th scope="row">Quick add and sharing from other apps</th><td><span class="n"><span class="sr-only">no</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="n"><span class="sr-only">no</span></span></td><td>with the Android app</td></tr>
+<tr><th scope="row">Works offline</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Sharing tasks and lists</th><td>with 1 person (free)</td><td>with 1 person (free)</td><td>with 1 person at app.ticktodo.nl</td><td>with 1 person (free)</td><td><span class="y"><span class="sr-only">yes,</span> with everyone on your Tick</span></td></tr>
+<tr><th scope="row">Make your own account</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes,</span> at app.ticktodo.nl</span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td>through an invitation link</td></tr>
+<tr><th scope="row">Reporting and blocking</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes,</span> at app.ticktodo.nl</span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="n"><span class="sr-only">no,</span> only on an open Tick</span></td></tr>
+<tr><th scope="row">Tickmanager</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Photos and files</th><td><span class="y"><span class="sr-only">yes,</span> 100 MB per account</span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td>if you turn them on</td></tr>
+<tr><th scope="row">Backup and TickTick import</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Themes, language and time zone</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Claude (MCP), inbox API, Home Assistant</th><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td><td><span class="y"><span class="sr-only">yes</span></span></td></tr>
+<tr><th scope="row">Updates</th><td>automatic</td><td>through Google Play</td><td>the app tells you about a new version</td><td>automatic</td><td>update it yourself (<em>“update Tick”</em> in Claude Code)</td></tr>
+</tbody>
+</table>
+</div>
+
+<div id="android" class="android">
+<h3>The Android app</h3>
+<div class="android-b">
+<p>The free Android app is on GitHub. Download it on your phone and open the file; Android asks whether you allow installing from your browser. When the app asks for your Tick's address, enter <strong>app.ticktodo.nl</strong> and log in. The GitHub version also has <em>On time on the road</em>.</p>
+<p><a class="link-u" href="https://github.com/DioVayne/tick/releases/latest">Download the Android app on GitHub →</a></p>
+<p class="soon">Google Play: coming soon. The Google Play version is still in testing. Later, use one of them, not both.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- 6 Privacy -->
+<section id="privacy" class="band dark" aria-labelledby="privacy-title">
+<div class="wrap grid">
+<div class="priv-copy stack">
+<h2 id="privacy-title">Your tasks are <span class="hl">yours</span></h2>
+<p class="lead">I make Tick myself, in the Netherlands. There are no ads, no tracking and no statistics about how you use the app. Your data is not sold or shared with anyone for marketing. The code is open source, so anyone can check what Tick does.</p>
+</div>
+<div class="priv-note note-wrap">
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M34 34C20 34 10 26 8 10"/><path d="M3 16l5-7 6 6"/></svg>
+<p class="note">One cookie keeps you logged in. That's it.</p>
+</div>
+<div class="cards3">
+<div class="pcard">
+<h3>What Tick keeps</h3>
+<ul>
+<li>Your account: name, email address, your password as a scrambled code, and when you last used Tick.</li>
+<li>What you put in: tasks, notes, lists, reminders, places you save, attachments and your settings.</li>
+<li>Linked phones, and the address your browser or phone gives to deliver notifications.</li>
+<li>If you link a calendar: only the title, start and end of each appointment, for the next 14 days.</li>
+</ul>
+</div>
+<div class="pcard key">
+<h3>What Tick <span class="hl">doesn't</span> keep</h3>
+<ul>
+<li>Where you are. Your phone checks itself whether you arrive at a place, and only tells Tick that a notification went off. There's no log of where you've been.</li>
+<li>How you drive. Driving mode and <em>On time on the road</em> use your location and movement only on your phone.</li>
+<li>Where your photos were taken. Tick removes that data before they're uploaded.</li>
+</ul>
+</div>
+<div class="pcard">
+<h3>Services Tick uses</h3>
+<p>Cloudflare hosts Tick; your data is stored there. Notifications go through the push service of your browser or phone, encrypted. Maps and address search come from OpenStreetMap. Emails, such as <em>Forgot password?</em>, go through Resend.</p>
+<h3>You're in control</h3>
+<p>You can download all your tasks under <strong>Settings › Data</strong>, and delete your account yourself. Then everything goes right away; backups are erased within 30 days.</p>
+</div>
+</div>
+<a class="priv-link link-u" href="https://app.ticktodo.nl/privacy">Read the full privacy policy →</a>
+</div>
+</section>
+
+<!-- 7 Does it cost anything -->
+<section id="cost" class="band sec-cost" aria-labelledby="cost-title">
+<div class="wrap grid">
+<div class="cost-left">
+<h2 id="cost-title">Does it cost anything?</h2>
+<p class="cost-no"><span class="hl">No.</span></p>
+<p class="cost-sub">Tick is free right now.</p>
+</div>
+<div class="cost-right">
+<p>In the free version on app.ticktodo.nl you share with one person. As many tasks and lists as you like, but with that same person. What others share with you doesn't count. So you can always accept an invitation.</p>
+<p>Hosting and development do cost something. Maybe there will be paid extras later to cover that. Tick doesn't need to make a profit. If it pays for itself, I'm happy.</p>
+<p>What's free when you sign up won't become paid without me telling you in advance. That's in the <a href="https://app.ticktodo.nl/terms">terms</a> too.</p>
+<p class="selfhost">Rather do it all yourself? Tick is open source. You can put it on your own free Cloudflare account, with no limit on the number of people. <a href="https://github.com/DioVayne/tick">Source code on GitHub</a></p>
+</div>
+</div>
+</section>
+
+<!-- 8 FAQ -->
+<section id="faq" class="band alt" aria-labelledby="faq-title">
+<div class="wrap grid">
+<div class="faq-left">
+<h2 id="faq-title">Frequently asked <span class="hl">questions</span></h2>
+<div class="note-wrap down">
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M34 34C20 34 10 26 8 10"/><path d="M3 16l5-7 6 6"/></svg>
+<p class="note">What if Dio stops? I'm not planning to. I use it every day.</p>
+</div>
+</div>
+<div class="faq-list">
+<details class="qa" id="faq-1" name="faq" open><summary>What's the difference between shared and copy?<span class="pm" aria-hidden="true"></span></summary><p>Shared is one task for both of you: done is done for everyone, and everyone can change it. A copy is the other person's own copy. You each tick off your own, and you see each other's progress.</p></details>
+<details class="qa" id="faq-2" name="faq"><summary>What does the other person see with a copy?<span class="pm" aria-hidden="true"></span></summary><p>A task of their own, with the title, the description and all subtasks open, and the line <em>Copy from</em> with your name. After that it's their task: what they change, you don't see, and the other way round. You only see each other's progress: a name with a small bar, or a ✓ when someone is done.</p></details>
+<details class="qa" id="faq-3" name="faq"><summary>What happens when I delete a shared task?<span class="pm" aria-hidden="true"></span></summary><p>It disappears for everyone on it. It goes to the trash and stays there for 30 days. Only want to be rid of it yourself, without removing it for the other person? Choose <strong>Stop sharing</strong>.</p></details>
+<details class="qa" id="faq-4" name="faq"><summary>Can I share a copy later?<span class="pm" aria-hidden="true"></span></summary><p>As long as the other person hasn't accepted the copy yet, yes: pick the same person and tap <strong>Change</strong>. Once they've accepted it, no, because that copy may have changed. They delete the copy first; then you can share the task. The other way round does work: turning a shared task into a copy.</p></details>
+<details class="qa" id="faq-5" name="faq"><summary>Does the other person need an account?<span class="pm" aria-hidden="true"></span></summary><p>At app.ticktodo.nl you share with an email address. If that address has no account yet, it gets an invitation by email, with a link to sign up. The invitation is then waiting for them. An invitation stays open for 30 days. You confirm your own email address before you can share.</p></details>
+<details class="qa" id="faq-6" name="faq"><summary>How many people can I share with?<span class="pm" aria-hidden="true"></span></summary><p>In the free version, one person, with as many tasks and lists as you like. What others share with you doesn't count.</p></details>
+<details class="qa" id="faq-7" name="faq"><summary>Does Tick work on an iPhone?<span class="pm" aria-hidden="true"></span></summary><p>Yes. Open app.ticktodo.nl in Safari, tap the Share button and choose <strong>Add to Home Screen</strong>. Tick then opens like an app, with notifications (iOS 16.4 or newer). Place reminders, a widget and quick add aren't possible on an iPhone. There's no App Store app: that needs a paid Apple account and a review for every update.</p></details>
+<details class="qa" id="faq-8" name="faq"><summary>Is there an Android app?<span class="pm" aria-hidden="true"></span></summary><p>Yes. There's a free app on GitHub, and a version in Google Play that's still in testing. The GitHub version also has <em>On time on the road</em>. Use one of them, not both. How to install it is under <a href="#android">the Android app</a>.</p></details>
+<details class="qa" id="faq-9" name="faq"><summary>Does Tick know where I am?<span class="pm" aria-hidden="true"></span></summary><p>No. Your phone watches your places itself and only tells Tick that a notification went off. Driving mode uses your location only on your device, while Tick is open. Tick only keeps the places you save yourself.</p></details>
+<details class="qa" id="faq-10" name="faq"><summary>Does Tick pick up a date from what I type?<span class="pm" aria-hidden="true"></span></summary><p>No. You choose the time yourself with <em>Today</em>, <em>Tomorrow</em>, <em>Next week</em> or another day and time. Then you know for sure what's set.</p></details>
+<details class="qa" id="faq-11" name="faq"><summary>How do I delete my account?<span class="pm" aria-hidden="true"></span></summary><p>In the app: <strong>Settings › Account › Delete account</strong>. You confirm with your password and everything goes right away. Can't log in anymore? See <a href="https://app.ticktodo.nl/delete-account">app.ticktodo.nl/delete-account</a>. Download a backup first if you want to keep your tasks.</p></details>
+<details class="qa" id="faq-12" name="faq"><summary>Can I host Tick myself?<span class="pm" aria-hidden="true"></span></summary><p>Yes. The code is on <a href="https://github.com/DioVayne/tick">GitHub (DioVayne/tick)</a>, under the MIT licence. You put it on a free Cloudflare account. With Claude Code that takes about fifteen minutes; you can also do it by hand. Then you can invite everyone in your household.</p></details>
+<details class="qa" id="faq-13" name="faq"><summary>What if Dio stops?<span class="pm" aria-hidden="true"></span></summary><p>Then you'll hear at least 30 days in advance, so you can download your tasks. And because Tick is open source, it doesn't disappear: you can host it yourself, or someone else does. I'm not planning to, by the way. I use it every day.</p></details>
+<details class="qa" id="faq-14" name="faq"><summary>Can I move from TickTick?<span class="pm" aria-hidden="true"></span></summary><p>Yes. Make a backup (CSV) in TickTick and import it under <strong>Settings › Data</strong>.</p></details>
+<details class="qa" id="faq-15" name="faq"><summary>Do I lose my data if my phone breaks?<span class="pm" aria-hidden="true"></span></summary><p>No. Your tasks are on the server and on your devices. Log in on a new device and everything is back.</p></details>
+</div>
+</div>
+</section>
+
+</main>
+
+<!-- 9 Footer -->
+<footer class="site-foot">
+<div class="wrap">
+<div class="closer">
+<p class="h2">Leave the remembering <span class="hl">to Tick</span>.</p>
+<div class="btns">
+<a class="btn btn-pin" href="https://app.ticktodo.nl/signup">Try it free in your browser</a>
+<a class="btn btn-ghost" href="#android">Free Android app</a>
+</div>
+</div>
+<div class="foot-grid">
+<div class="foot-brand">
+<a class="logo" href="/en/"><svg width="30" height="30" viewBox="0 0 34 34" aria-hidden="true"><rect x="0.5" y="0.5" width="33" height="33" rx="9" fill="#1e293b" stroke="#475569"/><path d="M17 27s-7-6.4-7-12.4a7 7 0 0 1 14 0C24 20.6 17 27 17 27z" fill="#fcd34d"/><circle cx="17" cy="14.6" r="2.6" fill="#1e293b"/></svg><span>Tick</span></a>
+<em>Tick. Reminders at the right moment.</em>
+</div>
+<nav class="foot-nav c1" aria-label="Tick">
+<span class="fh">Tick</span>
+<a href="https://app.ticktodo.nl/signup">Try it free</a>
+<a href="#android">Android app</a>
+<a href="#faq-7">iPhone and iPad</a>
+<a href="#what-works-where">What works where</a>
+<a href="#faq">FAQ</a>
+</nav>
+<nav class="foot-nav c2" aria-label="More">
+<span class="fh">More</span>
+<a href="https://github.com/DioVayne/tick/blob/main/docs/README.md">User guide (GitHub)</a>
+<a href="https://github.com/DioVayne/tick">Source code</a>
+<a href="https://github.com/DioVayne/tick/blob/main/SETUP.md">Host it yourself</a>
+<a href="/" hreflang="nl" lang="nl">Nederlands</a>
+</nav>
+<nav class="foot-nav c3" aria-label="Legal">
+<span class="fh">Legal</span>
+<a href="/privacy-en">Privacy policy</a>
+<a href="https://app.ticktodo.nl/privacy">Web app privacy</a>
+<a href="https://app.ticktodo.nl/terms">Terms</a>
+<a href="https://app.ticktodo.nl/delete-account">Delete account</a>
+</nav>
+</div>
+<div class="foot-fine">
+<p>Made in the Netherlands by Dio. No ads, no tracking. Open source under the MIT licence.</p>
+<p>Questions? Email <a href="mailto:dio@ticktodo.nl">dio@ticktodo.nl</a>. Tick at app.ticktodo.nl is offered by Dio Communicatieadvies.</p>
+</div>
+</div>
+</footer>
+</body>
+</html>

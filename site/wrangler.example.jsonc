@@ -1,0 +1,18 @@
+// Marketing site ticktodo.nl: a static Worker (assets only, no code). Not needed for running your own Tick.
+// Copy this file to site/wrangler.jsonc (not in git) and fill in your account ID, then: npx wrangler deploy
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "ticktodo-site",
+  "compatibility_date": "2026-10-01",
+  // Your Cloudflare account ID (dash.cloudflare.com, right column of Workers & Pages).
+  "account_id": "YOUR_ACCOUNT_ID",
+  "assets": {
+    "directory": "./public",
+    // Unknown paths get public/404.html with status 404.
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    { "pattern": "ticktodo.nl", "custom_domain": true },
+    { "pattern": "www.ticktodo.nl", "custom_domain": true }
+  ]
+}

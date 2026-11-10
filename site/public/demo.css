@@ -1,0 +1,458 @@
+/* Tick hero demo "Loop naar de winkel". Pairs with demo.js. CSP-safe: no inline styles. */
+
+/* ---------- Colour tokens (light) ---------- */
+.tdemo {
+  --tdemo-ink: #1e293b;          /* deep slate: outlines, walker, text */
+  --tdemo-pin: #fcd34d;          /* Tick pin yellow */
+  --tdemo-pin-strong: #e0a800;   /* yellow edge that still reads on light ground */
+  --tdemo-surface: #ffffff;      /* component card */
+  --tdemo-border: #e2e8f0;
+  --tdemo-text: #1e293b;
+  --tdemo-muted: #64748b;
+  --tdemo-ground: #eef2f6;
+  --tdemo-block: #e2e8f0;
+  --tdemo-park: #e4eae6;
+  --tdemo-tree: #cfd9d3;
+  --tdemo-road: #ffffff;
+  --tdemo-road-edge: #d6dde6;
+  --tdemo-dash: #cbd5e1;
+  --tdemo-lot: #e6ebf1;
+  --tdemo-house: #ffffff;
+  --tdemo-roof: #1e293b;
+  --tdemo-window: #cfe0ef;
+  --tdemo-shop: #ffffff;
+  --tdemo-awning: #ffffff;
+  --tdemo-fence: rgba(252, 211, 77, 0.2);
+  --tdemo-fence-in: rgba(252, 211, 77, 0.34);
+  --tdemo-card: #ffffff;
+  --tdemo-card-shadow: 0 10px 30px rgba(15, 23, 42, 0.16), 0 2px 6px rgba(15, 23, 42, 0.08);
+  --tdemo-btn: #f1f5f9;
+  --tdemo-btn-hover: #e2e8f0;
+  --tdemo-focus: #2563eb;
+}
+
+/* ---------- Colour tokens (dark) ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tdemo:not([data-theme="light"]) {
+    --tdemo-ink: #e2e8f0;
+    --tdemo-pin-strong: #fcd34d;
+    --tdemo-surface: #0f172a;
+    --tdemo-border: #1e293b;
+    --tdemo-text: #f1f5f9;
+    --tdemo-muted: #94a3b8;
+    --tdemo-ground: #172131;
+    --tdemo-block: #1f2b3d;
+    --tdemo-park: #1b2a2a;
+    --tdemo-tree: #24393a;
+    --tdemo-road: #263246;
+    --tdemo-road-edge: #2f3d53;
+    --tdemo-dash: #3d4c63;
+    --tdemo-lot: #1d2839;
+    --tdemo-house: #2a3649;
+    --tdemo-roof: #475569;
+    --tdemo-window: #3b5068;
+    --tdemo-shop: #2a3649;
+    --tdemo-awning: #334155;
+    --tdemo-fence: rgba(252, 211, 77, 0.12);
+    --tdemo-fence-in: rgba(252, 211, 77, 0.22);
+    --tdemo-card: #1e293b;
+    --tdemo-card-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+    --tdemo-btn: #334155;
+    --tdemo-btn-hover: #475569;
+    --tdemo-focus: #93c5fd;
+  }
+}
+:root[data-theme="dark"] .tdemo,
+.tdemo[data-theme="dark"] {
+  --tdemo-ink: #e2e8f0;
+  --tdemo-pin-strong: #fcd34d;
+  --tdemo-surface: #0f172a;
+  --tdemo-border: #1e293b;
+  --tdemo-text: #f1f5f9;
+  --tdemo-muted: #94a3b8;
+  --tdemo-ground: #172131;
+  --tdemo-block: #1f2b3d;
+  --tdemo-park: #1b2a2a;
+  --tdemo-tree: #24393a;
+  --tdemo-road: #263246;
+  --tdemo-road-edge: #2f3d53;
+  --tdemo-dash: #3d4c63;
+  --tdemo-lot: #1d2839;
+  --tdemo-house: #2a3649;
+  --tdemo-roof: #475569;
+  --tdemo-window: #3b5068;
+  --tdemo-shop: #2a3649;
+  --tdemo-awning: #334155;
+  --tdemo-fence: rgba(252, 211, 77, 0.12);
+  --tdemo-fence-in: rgba(252, 211, 77, 0.22);
+  --tdemo-card: #1e293b;
+  --tdemo-card-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --tdemo-btn: #334155;
+  --tdemo-btn-hover: #475569;
+  --tdemo-focus: #93c5fd;
+}
+
+/* ---------- Frame ---------- */
+.tdemo {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--tdemo-max-width, 560px);
+  margin-inline: auto;
+  padding: 10px;
+  border: 1px solid var(--tdemo-border);
+  border-radius: var(--tdemo-radius, 22px);
+  background: var(--tdemo-surface);
+  color: var(--tdemo-text);
+  font-family: var(--tdemo-font, inherit);
+  font-size: 15px;
+  line-height: 1.4;
+}
+.tdemo *, .tdemo *::before, .tdemo *::after { box-sizing: border-box; }
+.tdemo-fallback { display: block; width: 100%; height: auto; border-radius: calc(var(--tdemo-radius, 22px) - 8px); }
+
+.tdemo-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(var(--tdemo-radius, 22px) - 8px);
+  background: var(--tdemo-ground);
+}
+.tdemo-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ---------- Map ---------- */
+.tdemo-ground { fill: var(--tdemo-ground); }
+.tdemo-block { fill: var(--tdemo-block); }
+.tdemo-park { fill: var(--tdemo-park); }
+.tdemo-tree { fill: var(--tdemo-tree); }
+.tdemo-road { fill: var(--tdemo-road); }
+.tdemo-edge { fill: none; stroke: var(--tdemo-road-edge); stroke-width: 2; }
+.tdemo-dash { fill: none; stroke: var(--tdemo-dash); stroke-width: 2; stroke-dasharray: 10 10; }
+.tdemo-lot { fill: var(--tdemo-lot); }
+.tdemo-mark { fill: none; stroke: var(--tdemo-road-edge); stroke-width: 2; stroke-linecap: round; }
+.tdemo-house, .tdemo-shop { fill: var(--tdemo-house); stroke: var(--tdemo-ink); stroke-width: 2; }
+.tdemo-roof { fill: var(--tdemo-roof); stroke: var(--tdemo-roof); stroke-width: 2; stroke-linejoin: round; }
+.tdemo-door, .tdemo-doorway { fill: var(--tdemo-ink); }
+.tdemo-door-split { stroke: var(--tdemo-ground); stroke-width: 1.5; opacity: .6; }
+.tdemo-window { fill: var(--tdemo-window); }
+.tdemo-sign { fill: var(--tdemo-pin); }
+.tdemo-glyph { fill: none; stroke: #1e293b; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tdemo-glyph-dot { fill: #1e293b; }
+.tdemo-awn-a { fill: var(--tdemo-pin); }
+.tdemo-awn-b { fill: var(--tdemo-awning); }
+
+/* The place circle: scaled via --tdemo-fs (set by JS) so it can grow smoothly. */
+.tdemo-fence {
+  fill: var(--tdemo-fence);
+  stroke: var(--tdemo-pin-strong);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+  vector-effect: non-scaling-stroke;
+  transform: scale(var(--tdemo-fs, .625));
+  transition: transform .6s cubic-bezier(.3, .7, .2, 1), fill .3s;
+}
+.tdemo.is-inside .tdemo-fence { fill: var(--tdemo-fence-in); }
+
+.tdemo-fence-label {
+  position: absolute;
+  left: var(--tdemo-lx, 50%);
+  top: var(--tdemo-ly, 50%);
+  transform: translate(-50%, -50%);
+  padding: 1px 8px;
+  border: 1.5px solid var(--tdemo-pin-strong);
+  border-radius: 999px;
+  background: var(--tdemo-card);
+  color: var(--tdemo-text);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: left .6s cubic-bezier(.3, .7, .2, 1);
+}
+
+.tdemo-route { fill: none; stroke: var(--tdemo-muted); stroke-width: 2; stroke-dasharray: 2 7; stroke-linecap: round; opacity: .55; }
+
+/* ---------- Walker ---------- */
+.tdemo-walker { cursor: grab; touch-action: none; outline: none; -webkit-tap-highlight-color: transparent; }
+.tdemo.is-dragging .tdemo-walker { cursor: grabbing; }
+.tdemo-walker > * { pointer-events: none; }
+.tdemo-walker > .tdemo-hit { pointer-events: all; fill: transparent; }
+.tdemo-focus { fill: none; stroke: var(--tdemo-focus); stroke-width: 2.5; opacity: 0; }
+.tdemo-walker:focus-visible .tdemo-focus { opacity: 1; }
+.tdemo-shadow { fill: var(--tdemo-ink); opacity: .14; }
+.tdemo-body, .tdemo-head { fill: var(--tdemo-ink); }
+.tdemo-leg { stroke: var(--tdemo-ink); stroke-width: 3.6; stroke-linecap: round; }
+.tdemo-bag { fill: var(--tdemo-pin); stroke: #1e293b; stroke-width: 1.2; stroke-linejoin: round; }
+.tdemo-milk { fill: #ffffff; stroke: #1e293b; stroke-width: 1; opacity: 0; transition: opacity .3s; }
+.tdemo.has-milk .tdemo-milk { opacity: 1; }
+.tdemo-bikepart { fill: none; stroke: var(--tdemo-ink); stroke-width: 2; stroke-linejoin: round; opacity: 0; transition: opacity .3s; }
+.tdemo.is-bike .tdemo-bikepart { opacity: 1; }
+
+/* Invitation: soft pulsing yellow ring until the first interaction. */
+.tdemo-ring { fill: none; stroke: var(--tdemo-pin-strong); stroke-width: 3; opacity: 0; }
+.tdemo.is-fresh .tdemo-ring { animation: tdemo-pulse 1.9s ease-out infinite; }
+@keyframes tdemo-pulse {
+  0% { transform: scale(.7); opacity: .95; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+
+.tdemo.is-walking .tdemo-leg-a { animation: tdemo-step .36s ease-in-out infinite alternate; }
+.tdemo.is-walking .tdemo-leg-b { animation: tdemo-step .36s ease-in-out infinite alternate-reverse; }
+@keyframes tdemo-step {
+  from { transform: rotate(-24deg); }
+  to { transform: rotate(24deg); }
+}
+
+/* ---------- Notification (Android style) ---------- */
+.tdemo-notif {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: min(94%, 380px);
+  padding: 10px 12px 10px;
+  border-radius: 18px;
+  background: var(--tdemo-card);
+  color: var(--tdemo-text);
+  box-shadow: var(--tdemo-card-shadow);
+  transform: translate(-50%, calc(-100% - 20px));
+  visibility: hidden;
+  transition: transform .45s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .45s;
+}
+.tdemo.is-notified .tdemo-notif {
+  /* --tdemo-swipe / --tdemo-swipe-o are set by JS while swiping sideways. */
+  transform: translate(calc(-50% + var(--tdemo-swipe, 0px)), 0);
+  opacity: var(--tdemo-swipe-o, 1);
+  visibility: visible;
+  transition: transform .45s cubic-bezier(.2, .8, .2, 1), opacity .2s, visibility 0s;
+  touch-action: pan-y;
+  cursor: grab;
+}
+.tdemo.is-notified .tdemo-notif.is-swiping { transition: none; cursor: grabbing; }
+.tdemo .tdemo-notif.is-instant { transition: none; }
+
+.tdemo-close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -6px -4px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--tdemo-muted);
+  cursor: pointer;
+}
+.tdemo-close:hover { background: var(--tdemo-btn); color: var(--tdemo-text); }
+.tdemo-close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.tdemo-close:focus-visible { outline: 2.5px solid var(--tdemo-focus); outline-offset: 1px; }
+
+.tdemo-notif-text { margin: -4px 0 9px 31px; color: var(--tdemo-muted); font-size: 14px; }
+.tdemo-notif.is-bump { animation: tdemo-bump .4s ease-out; }
+@keyframes tdemo-bump {
+  0% { transform: translate(-50%, 0); }
+  35% { transform: translate(-50%, 4px); }
+  100% { transform: translate(-50%, 0); }
+}
+
+.tdemo-notif-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--tdemo-muted);
+  font-size: 12.5px;
+}
+.tdemo-notif-icon { flex: none; width: 18px; height: 18px; }
+.tdemo-notif-app { color: var(--tdemo-text); font-weight: 600; }
+.tdemo-notif-now { margin-right: auto; }
+
+.tdemo-notif-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 6px 0 9px;
+  font-size: 16px;
+  font-weight: 650;
+}
+.tdemo-notif-task { text-decoration: line-through transparent; transition: color .3s, text-decoration-color .3s; }
+.tdemo-notif.is-done .tdemo-notif-task { color: var(--tdemo-muted); text-decoration-color: var(--tdemo-muted); }
+
+.tdemo-check {
+  position: relative;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--tdemo-muted);
+  border-radius: 50%;
+  transition: background-color .25s, border-color .25s;
+}
+.tdemo-check svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tdemo-check path {
+  fill: none;
+  stroke: #1e293b;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+  transition: stroke-dashoffset .35s ease-out .1s;
+}
+.tdemo-notif.is-done .tdemo-check { background: var(--tdemo-pin); border-color: var(--tdemo-pin); }
+.tdemo-notif.is-done .tdemo-check path { stroke-dashoffset: 0; }
+
+/* A few yellow sparks when ticked off. */
+.tdemo-sparks { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.tdemo-sparks i {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--tdemo-pin);
+  opacity: 0;
+  transform: rotate(var(--a)) translateY(0);
+}
+.tdemo-sparks i:nth-child(odd) { border-radius: 50%; width: 5px; height: 5px; }
+.tdemo-sparks i:nth-child(1) { --a: 0deg; }
+.tdemo-sparks i:nth-child(2) { --a: 45deg; }
+.tdemo-sparks i:nth-child(3) { --a: 90deg; }
+.tdemo-sparks i:nth-child(4) { --a: 135deg; }
+.tdemo-sparks i:nth-child(5) { --a: 180deg; }
+.tdemo-sparks i:nth-child(6) { --a: 225deg; }
+.tdemo-sparks i:nth-child(7) { --a: 270deg; }
+.tdemo-sparks i:nth-child(8) { --a: 315deg; }
+.tdemo-notif.is-done .tdemo-sparks i { animation: tdemo-spark .75s cubic-bezier(.2, .7, .3, 1) .15s forwards; }
+@keyframes tdemo-spark {
+  0% { opacity: 1; transform: rotate(var(--a)) translateY(-6px) scale(1); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(-24px) scale(.5); }
+}
+
+.tdemo-notif-actions { display: flex; gap: 8px; padding-left: 31px; }
+.tdemo-btn {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tdemo-btn);
+  color: var(--tdemo-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tdemo-btn:hover { background: var(--tdemo-btn-hover); }
+.tdemo-done { background: var(--tdemo-pin); color: #1e293b; }
+.tdemo-done:hover { background: #fbbf24; }
+.tdemo-done:disabled { cursor: default; }
+
+/* ---------- Below the map ---------- */
+.tdemo-status {
+  min-height: 2.8em;
+  margin: 10px 4px 4px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.tdemo.is-fresh .tdemo-status::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--tdemo-pin);
+  box-shadow: 0 0 0 2px var(--tdemo-pin-strong);
+  vertical-align: 1px;
+}
+.tdemo-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.tdemo-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 2px; }
+.tdemo-walk, .tdemo-reset {
+  min-height: 44px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tdemo-walk { border: 2px solid #1e293b; background: var(--tdemo-pin); color: #1e293b; }
+.tdemo-walk:hover { background: #fbbf24; }
+.tdemo-reset { margin-left: auto; border: 1.5px solid var(--tdemo-border); background: transparent; color: var(--tdemo-muted); }
+.tdemo-reset:hover { color: var(--tdemo-text); border-color: var(--tdemo-muted); }
+
+.tdemo-bike { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; font-weight: 500; }
+.tdemo-bike input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.tdemo-switch {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--tdemo-btn-hover);
+  transition: background-color .25s;
+}
+.tdemo-switch::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .3);
+  transition: transform .25s;
+}
+.tdemo-bike input:checked + .tdemo-switch { background: var(--tdemo-pin-strong); }
+.tdemo-bike input:checked + .tdemo-switch::after { transform: translateX(16px); }
+
+.tdemo-walk:focus-visible, .tdemo-reset:focus-visible, .tdemo-btn:focus-visible,
+.tdemo-bike input:focus-visible + .tdemo-switch {
+  outline: 2.5px solid var(--tdemo-focus);
+  outline-offset: 2px;
+}
+
+.tdemo-foot { margin: 8px 4px 2px; color: var(--tdemo-muted); font-size: 13px; }
+
+@media (max-width: 420px) {
+  .tdemo { padding: 8px; }
+  .tdemo-fence-label { font-size: 11px; padding: 0 6px; }
+  /* Compact notification: title and text on the left, the button beside them, so the shop stays visible. */
+  .tdemo-notif {
+    top: 4px;
+    width: 96%;
+    padding: 6px 8px 7px 10px;
+    border-radius: 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 8px;
+    align-items: center;
+  }
+  .tdemo-notif-head { grid-column: 1 / -1; font-size: 11px; }
+  .tdemo-notif-icon { width: 14px; height: 14px; }
+  .tdemo-close { width: 24px; height: 24px; }
+  .tdemo-notif-title { grid-column: 1; margin: 2px 0 0; font-size: 14px; gap: 6px; }
+  .tdemo-check { width: 16px; height: 16px; border-width: 1.5px; }
+  .tdemo-notif-text { grid-column: 1; margin: 0 0 0 22px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tdemo-notif-actions { grid-column: 2; grid-row: 2 / span 2; padding-left: 0; }
+  .tdemo-btn { min-height: 32px; padding: 4px 12px; font-size: 13px; }
+}
+
+/* ---------- Reduced motion: everything works, nothing moves ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .tdemo *, .tdemo *::before, .tdemo *::after { animation: none !important; transition: none !important; }
+  .tdemo.is-fresh .tdemo-ring { opacity: .9; transform: scale(1.1); }
+  .tdemo-sparks { display: none; }
+}
