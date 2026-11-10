@@ -69,4 +69,6 @@ Copies stay linked. On your copy you see the copy icon and a pill per person: th
 
 When someone ticks off their copy, the others get a notification "*Name* is done ✓".
 
+On an open Tick, two people who have blocked each other don't see each other's pill and don't get each other's notification; the rest of the group sees and hears both as usual (see [Reporting and blocking](reporting.md)).
+
 Each person can have only one copy of the same task.

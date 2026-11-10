@@ -21,7 +21,8 @@ export async function blockedBetween(db: D1Database, a: string, b: string): Prom
 /**
  * Statements voor "me blokkeert other": de blokkade, alle deelrijen (en hun bezorgrijen) op elkaars taken, het
  * lidmaatschap als de een eigenaar is van een gedeelde lijst waar de ander in zit (een lijst van een derde blijft), en
- * uitnodigingen aan elkaars adres. Async: de lijsten worden eerst opgezocht.
+ * uitnodigingen aan elkaars adres. Async: de lijsten worden eerst opgezocht. Kopiegroepen blijven: daar filteren
+ * `copiesFor` en `notifyCopyDone` (src/copies.ts) de blokkade bij het lezen, zodat opheffen het terugbrengt.
  */
 export async function blockStmts(db: D1Database, me: string, other: string): Promise<D1PreparedStatement[]> {
   const { results: lists } = await db.prepare(
