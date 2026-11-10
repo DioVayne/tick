@@ -60,9 +60,19 @@ export async function outboxAdd(op) {
   memory.outbox.set(op.seq, op);
 }
 
-/** Schrijft een wachtende wijziging terug onder dezelfde `seq`, bijvoorbeeld met het aantal mislukte pogingen. */
+/**
+ * Schrijft een wachtende wijziging terug onder dezelfde `seq`, bijvoorbeeld met het aantal mislukte pogingen. Alleen als
+ * hij er nog staat (lezen en schrijven in één transactie): heeft een ander tabblad hem intussen verstuurd en gewist, dan
+ * zou terugzetten hem nog eens laten versturen, over een nieuwere wijziging heen.
+ */
 export async function outboxPut(op) {
-  if (await open()) return tx('outbox', 'readwrite', (s) => s.put(op));
+  if (await open()) {
+    return tx('outbox', 'readwrite', (s) => {
+      const req = s.get(op.seq);
+      req.onsuccess = () => { if (req.result) s.put(op); };
+      return req;
+    });
+  }
   if (memory.outbox.has(op.seq)) memory.outbox.set(op.seq, op);
 }
 
