@@ -47,6 +47,7 @@ export type Bundle = {
 
 const isObj = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const now = () => new Date().toISOString();
 
 // ---------- oude Tick: code maken en uitlezen ----------
@@ -229,13 +230,18 @@ async function fetchBundle(base: string): Promise<Bundle> {
   if (!isObj(b) || b.app !== 'tick' || b.kind !== 'move') throw new HttpError(400, 'err.move_not_supported');
   if (b.version !== 1) throw new HttpError(400, 'err.move_version');
   const arr = (v: unknown) => (Array.isArray(v) ? v : []);
+  // Alles hier gecontroleerd, vóór de import iets schrijft: taken en plekken moeten objecten zijn (de velden zelf
+  // controleert mergeTasks), de rest valt weg als hij niet klopt.
+  const tasks = arr(b.tasks);
+  const places = arr(b.places);
+  if (!tasks.every(isObj) || !places.every(isObj)) throw new HttpError(400, 'err.backup_invalid');
   return {
     app: 'tick', kind: 'move', version: 1, exported_at: isStr(b.exported_at) ? b.exported_at : '', source: new URL(base).origin,
     account: { name: isObj(b.account) && isStr(b.account.name) ? b.account.name : '' },
-    tasks: arr(b.tasks) as Row[], places: arr(b.places) as Row[],
+    tasks, places,
     lists: arr(b.lists).filter(isStr), review_skip: arr(b.review_skip).filter(isStr),
     settings: isObj(b.settings) ? Object.fromEntries(Object.entries(b.settings).filter(([, v]) => isStr(v))) as Record<string, string> : {},
-    calendars: arr(b.calendars).filter((x): x is { name: string; url: string } => isObj(x) && isStr(x.url) && isStr(x.name ?? '')),
+    calendars: arr(b.calendars).filter((x): x is { name: string; url: string } => isObj(x) && isStr(x.url) && isStr(x.name)),
     attachments: arr(b.attachments).filter((a): a is FileRef => isObj(a) && isStr(a.id) && isStr(a.task_id) && typeof a.size === 'number'),
     background: b.background === true,
   };
@@ -373,8 +379,14 @@ moveInApi.post('/file', async (c) => {
   const userId = c.get('auth').userId;
   const { id, from, task_id: taskId, size } = body;
   if (!isStr(id) || !isStr(from) || !isStr(taskId) || typeof size !== 'number' || !Number.isInteger(size) || size < 0) throw new HttpError(400, 'err.invalid_json');
+  if (!UUID.test(id)) throw new HttpError(400, 'err.id_uuid');
   if (!await db.prepare('SELECT 1 FROM tasks WHERE id = ? AND user_id = ?').bind(taskId, userId).first()) throw new HttpError(404, 'err.not_found');
-  if (await db.prepare('SELECT 1 FROM attachments WHERE id = ?').bind(id).first()) return c.json({ ok: true, existed: true });
+  // Alleen een bijlage bij deze (eigen) taak telt als al verhuisd; een id dat hier bij iets anders hoort, is bezet.
+  const existing = await db.prepare('SELECT task_id FROM attachments WHERE id = ?').bind(id).first<{ task_id: string }>();
+  if (existing) {
+    if (existing.task_id === taskId) return c.json({ ok: true, existed: true });
+    throw new HttpError(409, 'err.id_taken');
+  }
   const max = maxUpload(env);
   if (size > max) throw new HttpError(413, 'err.file_too_big', { max: Math.round(max / 1024 / 1024) });
   const quota = maxAccount(env);
