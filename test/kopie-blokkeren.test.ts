@@ -1,7 +1,8 @@
 import { env } from 'cloudflare:workers';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { notifyCopyDone } from '../src/copies';
 import type { TaskRow } from '../src/index';
+import { userSettingStmt } from '../src/prefs';
 import type { Sender } from '../src/push';
 import { callAs, createUser, json, type Task } from './helpers';
 
@@ -132,6 +133,33 @@ describe('blokkeren in een kopiegroep', () => {
       expect(byName.to).toEqual([c.id]);
     } finally {
       await unblock(a, d);
+    }
+  });
+
+  it('via de route telt wie afvinkte, niet iedereen op het exemplaar', async () => {
+    const g = await group();
+    const HOOK_A = 'https://hook.invalid/blok-a', HOOK_C = 'https://hook.invalid/blok-c';
+    await userSettingStmt(env.DB, a.id, 'fallback_webhook', HOOK_A).run();
+    await userSettingStmt(env.DB, c.id, 'fallback_webhook', HOOK_C).run();
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(null, { status: 200 }));
+    const hits = (url: string) => spy.mock.calls.filter(([u]) => String(u) === url).length;
+    await block(a, d);
+    try {
+      // b vinkt zijn eigen exemplaar af; d deelt het, maar vinkte niet af: a's blokkade van d telt dan niet.
+      expect((await callAs(b.cookie, `/api/tasks/${g.tb}`, { method: 'PATCH', json: { done: true } })).status).toBe(200);
+      await vi.waitFor(() => expect(hits(HOOK_C)).toBe(1));
+      await vi.waitFor(() => expect(hits(HOOK_A)).toBe(1));
+      // Nu vinkt d (deelnemer) af: c krijgt hem, a niet.
+      expect((await callAs(d.cookie, `/api/tasks/${g.tb}`, { method: 'PATCH', json: { done: false } })).status).toBe(200);
+      expect((await callAs(d.cookie, `/api/tasks/${g.tb}`, { method: 'PATCH', json: { done: true } })).status).toBe(200);
+      await vi.waitFor(() => expect(hits(HOOK_C)).toBe(2));
+      await new Promise((r) => setTimeout(r, 50));
+      expect(hits(HOOK_A)).toBe(1);
+    } finally {
+      vi.restoreAllMocks();
+      await unblock(a, d);
+      await userSettingStmt(env.DB, a.id, 'fallback_webhook', null).run();
+      await userSettingStmt(env.DB, c.id, 'fallback_webhook', null).run();
     }
   });
 });

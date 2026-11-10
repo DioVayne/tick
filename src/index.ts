@@ -611,7 +611,7 @@ async function copyDone(c: Context<AppEnv>, t: TaskRow) {
   if (t.parent_id) return;
   const user = c.get('user'), locale = c.get('install').defaultLocale, actorId = c.get('auth').userId;
   await Promise.all([
-    t.copy_group && inBackground(c, notifyCopyDone(c.env, t, user.name, locale), 'kopie klaar'),
+    t.copy_group && inBackground(c, notifyCopyDone(c.env, t, { id: actorId, name: user.name }, locale), 'kopie klaar'),
     inBackground(c, Promise.all([
       t.shared_list && notifyListDone(c.env, t, actorId, user.name, locale, listPush.send),
       notifyShareDone(c.env, t, actorId, user.name, locale, listPush.send),
