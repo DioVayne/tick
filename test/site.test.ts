@@ -27,7 +27,7 @@ const detailsIds = (text: string) => [...text.matchAll(/<details\b[^>]*\bid="([^
 // The anchors are in the page's own language; this is the one-to-one translation between the two pages.
 const NL_TO_EN: Record<string, string> = {
   top: 'top', maker: 'maker', 'op-de-juiste-plek': 'in-the-right-place', 'samen-of-kopie': 'shared-or-copy',
-  'vrije-momenten': 'free-moments', 'oude-taken': 'old-tasks', functies: 'features', 'wat-werkt-waar': 'what-works-where',
+  'oude-taken': 'old-tasks', functies: 'features', 'wat-werkt-waar': 'what-works-where',
   privacy: 'privacy', kost: 'cost', vragen: 'faq',
   invoerkaart: 'entry-card', herinneringen: 'reminders', herhalen: 'repeating', vandaag: 'due-today', kalender: 'calendar',
   'agenda-koppelen': 'link-calendar', subtaken: 'subtasks', notities: 'notes', bijlagen: 'attachments', offline: 'offline',

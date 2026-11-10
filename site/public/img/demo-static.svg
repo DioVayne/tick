@@ -38,11 +38,11 @@
   <!-- walker -->
   <g transform="translate(410 220)">
     <ellipse rx="9" ry="2.5" fill="#1e293b" opacity=".14"/>
-    <g transform="translate(0 -12)" stroke="#1e293b" stroke-width="3.6" stroke-linecap="round">
+    <g transform="translate(0 -12)" stroke="#ea580c" stroke-width="3.6" stroke-linecap="round">
       <line x1="0" y1="0" x2="-4" y2="10.5"/><line x1="0" y1="0" x2="4" y2="10.5"/>
     </g>
-    <rect x="-5" y="-27" width="10" height="17" rx="5" fill="#1e293b"/>
-    <circle cy="-32" r="5.5" fill="#1e293b"/>
+    <rect x="-5" y="-27" width="10" height="17" rx="5" fill="#ea580c" stroke="#ffffff" stroke-width="1.6" paint-order="stroke"/>
+    <circle cy="-32" r="5.5" fill="#ea580c" stroke="#ffffff" stroke-width="1.6" paint-order="stroke"/>
     <path d="M5 -20h7l1 9h-9z" fill="#fcd34d" stroke="#1e293b" stroke-width="1.2" stroke-linejoin="round"/>
   </g>
   <!-- notification card -->
@@ -55,9 +55,8 @@
     <rect x="36" y="15" width="34" height="8" rx="4" fill="#1e293b"/>
     <rect x="78" y="15" width="22" height="8" rx="4" fill="#cbd5e1"/>
     <path d="M318 14l8 8M326 14l-8 8" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>
-    <circle cx="23" cy="41" r="10" fill="none" stroke="#64748b" stroke-width="2"/>
-    <rect x="42" y="35" width="110" height="12" rx="6" fill="#1e293b"/>
-    <rect x="42" y="55" width="150" height="8" rx="4" fill="#cbd5e1"/>
-    <rect x="42" y="70" width="76" height="20" rx="10" fill="#fcd34d"/>
+    <rect x="14" y="35" width="110" height="12" rx="6" fill="#1e293b"/>
+    <rect x="14" y="55" width="150" height="8" rx="4" fill="#cbd5e1"/>
+    <rect x="14" y="70" width="76" height="20" rx="10" fill="#fcd34d"/>
   </g>
 </svg>

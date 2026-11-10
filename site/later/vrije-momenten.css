@@ -1,0 +1,48 @@
+/* Bewaard voor later: stijl van de sectie Vrije momenten (uit site/public/site.css, 2026-11-10). */
+/* ---------- Free moments ---------- */
+.week-wrap { grid-column: 1 / span 7; position: relative; padding-bottom: 36px; }
+.week { border-radius: 24px; box-shadow: 0 0 0 1px var(--s-line); padding: 24px; display: grid; grid-template-columns: 40px repeat(7, minmax(0, 1fr)); column-gap: 8px; row-gap: 10px; }
+.week .dh { font-size: 13px; font-weight: 600; text-align: center; color: var(--s-muted); line-height: 1.3; }
+.week .dh.today { color: var(--pin); }
+.hours, .day { display: grid; grid-template-rows: repeat(28, 12px); }
+.hours { font-size: 11px; color: var(--s-muted); line-height: 1; }
+.hours span { grid-column: 1; transform: translateY(-5px); }
+.hours span.last { align-self: end; transform: translateY(5px); }
+.day { position: relative; border-radius: 10px; background: rgba(148, 163, 184, .06); }
+.blk { grid-column: 1; margin: 1px 2px; border-radius: 8px; background: #334155; color: #cbd5e1; font-size: 11px; line-height: 1.25; padding: 4px 6px; overflow: hidden; }
+.blk.free { margin: 0; background: rgba(252, 211, 77, .18); border: 2px solid var(--pin); box-shadow: 0 0 0 5px rgba(252, 211, 77, .14), 0 0 22px rgba(252, 211, 77, .35); transition: box-shadow .4s, background-color .4s; }
+.blk.free.is-active { background: rgba(252, 211, 77, .34); box-shadow: 0 0 0 7px rgba(252, 211, 77, .22), 0 0 32px rgba(252, 211, 77, .6); }
+@media (prefers-reduced-motion: no-preference) {
+  .blk.free { animation: glow 2.6s ease-in-out infinite alternate; }
+  .blk.free.is-active { animation: none; }
+  @keyframes glow { from { box-shadow: 0 0 0 3px rgba(252, 211, 77, .1), 0 0 12px rgba(252, 211, 77, .2); } to { box-shadow: 0 0 0 6px rgba(252, 211, 77, .16), 0 0 26px rgba(252, 211, 77, .42); } }
+}
+/* Rows: 08:00 = 1, every half hour +1 */
+.s2 { grid-row-start: 2; } .s3 { grid-row-start: 3; } .s5 { grid-row-start: 5; } .s9 { grid-row-start: 9; }
+.s11 { grid-row-start: 11; } .s13 { grid-row-start: 13; } .s17 { grid-row-start: 17; } .s21 { grid-row-start: 21; }
+.s23 { grid-row-start: 23; } .s25 { grid-row-start: 25; } .s1 { grid-row-start: 1; } .s28 { grid-row-start: 28; }
+.e8 { grid-row-end: 8; } .e9 { grid-row-end: 9; } .e10 { grid-row-end: 10; } .e11 { grid-row-end: 11; }
+.e15 { grid-row-end: 15; } .e17 { grid-row-end: 17; } .e19 { grid-row-end: 19; } .e25 { grid-row-end: 25; }
+.e27 { grid-row-end: 27; } .e29 { grid-row-end: 29; }
+.menu { position: absolute; right: -28px; bottom: 0; width: 270px; background: #ffffff; color: #191919; border-radius: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); padding: 14px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.4; list-style: none; margin: 0; }
+.menu .mh { font-size: 12px; font-weight: 600; color: #5c5c5c; padding: 0 6px 4px; }
+.menu .mi { padding: 7px 8px; border-radius: 6px; display: flex; justify-content: space-between; gap: 12px; transition: background-color .3s; }
+.menu .mi.is-active { background: #f3f3f3; }
+.menu .mi span:last-child { color: #5c5c5c; }
+.menu .busy { border-top: 1px solid #ececec; margin-top: 4px; padding: 9px 8px 2px; display: flex; justify-content: space-between; gap: 12px; }
+.menu .busy span:last-child { color: #b45309; }
+.free-copy { grid-column: 9 / span 4; }
+.free-copy .body { font-size: 18px; line-height: 1.65; }
+.honest { font-size: 14px; line-height: 1.5; color: var(--s-muted); font-style: italic; padding: 12px 14px; border-radius: 10px; background: var(--raise); }
+.honest strong { color: var(--ink-soft); }
+@media (max-width: 900px) {
+  .week-wrap { padding-bottom: 0; display: flex; flex-direction: column; gap: 16px; }
+  .week { border-radius: 18px; padding: 12px; grid-template-columns: repeat(7, minmax(0, 1fr)); column-gap: 4px; row-gap: 8px; }
+  .week .hours, .week .corner { display: none; }
+  .week .dh { font-size: 11px; }
+  .hours, .day { grid-template-rows: repeat(28, 9px); }
+  .day { border-radius: 6px; }
+  .blk { font-size: 0; padding: 0; margin: 1px; border-radius: 5px; }
+  .menu { position: static; width: auto; box-shadow: none; }
+  .honest { font-size: 13px; padding: 12px; }
+}
