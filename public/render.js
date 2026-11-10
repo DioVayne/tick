@@ -590,7 +590,11 @@ function enableSorting(root) {
       preventOnFilter: false, forceFallback: true, fallbackTolerance: 5,
       delay: 250, touchStartThreshold: 8,
       animation: 150, direction: 'vertical',
-      onStart: (evt) => { if (ul.dataset.parent === '' && wide.matches) startListDrop(evt.item.dataset.id); },
+      // Alleen een hoofdtaak naar een lijst of de prullenbak: een subtaak die hier los staat (zoekresultaat, ouder niet
+      // in beeld) volgt de lijst van haar ouder, en de server weigert `{ list }` op een subtaak.
+      onStart: (evt) => {
+        if (ul.dataset.parent === '' && wide.matches && !findOpen(evt.item.dataset.id)?.parent_id) startListDrop(evt.item.dataset.id);
+      },
       // Slepen blijft binnen het eigen deel: een vastgepinde taak niet tussen de andere, en andersom.
       onMove: (evt) => pinnedOf(findOpen(evt.dragged.dataset.id)) === pinnedOf(findOpen(evt.related.dataset.id)),
       onEnd: (evt) => {
