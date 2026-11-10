@@ -46,8 +46,12 @@ export function readTickTickText(text) {
     .map((r) => Object.fromEntries(h.map((k, i) => [k, r[i]])));
 }
 
-/** @param {string} v */
-const iso = (v) => (v ? new Date(v.replace(/([+-]\d{2})(\d{2})$/, '$1:$2')).toISOString() : null);
+/** ISO-tijd, of null bij een lege of onleesbare datum (één kapotte rij mag de import niet afbreken).
+ * @param {string} v */
+const iso = (v) => {
+  const ms = v ? Date.parse(v.replace(/([+-]\d{2})(\d{2})$/, '$1:$2')) : NaN;
+  return Number.isNaN(ms) ? null : new Date(ms).toISOString();
+};
 /** @param {string} s */
 const clean = (s) => s.replace(/\r\n?/g, '\n').replace(/\\([()\[\]#*_>.\-!+])/g, '$1').replace(/▫\n?/g, '').trim();
 
