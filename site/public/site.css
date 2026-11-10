@@ -75,10 +75,11 @@ h2, .h2 { font-size: 46px; line-height: 1.08; font-weight: 700; letter-spacing: 
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
-/* On slate the letters stay light, so the stroke sits lower, mostly under the baseline. */
-.dark .hl, .site-foot .hl { background: linear-gradient(to bottom, transparent 76%, var(--pin) 76%, var(--pin) 94%, transparent 94%); }
+/* On a dark background light letters on a yellow stroke read poorly (about 1.3:1), so there the words
+   themselves turn yellow and the stroke goes. */
+.dark .hl, .site-foot .hl { background: none; color: var(--pin); padding: 0; margin: 0; }
 @media (prefers-color-scheme: dark) {
-  .hl { background: linear-gradient(to bottom, transparent 76%, var(--pin) 76%, var(--pin) 94%, transparent 94%); }
+  .hl { background: none; color: var(--pin); padding: 0; margin: 0; }
 }
 
 /* Margin note: handwritten-ish aside. A curly arrow only where it points at something real. */
