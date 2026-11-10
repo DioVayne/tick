@@ -12,10 +12,10 @@ import { openRepeatPicker } from './repeatpicker.js';
 import { openMap } from './map.js';
 import { renderMarkdown } from './markdown.js';
 import { formatRadius, wakeAndroidApp } from './places.js';
-import { $, checkOff, el, fmt, fromLocalInput, render, toLocalInput } from './render.js';
+import { $, checkOff, el, fmt, fromLocalInput, render, toLocalInput, toast } from './render.js';
 import { reviewPrefsOf } from './review.js';
 import { staleCount } from './sidebar.js';
-import { addSubtask, claimedByOther, findDone, remove, sharedOf, snooze, state, toggleDone, update, updateQueued, watchTask } from './store.js';
+import { addSubtask, claimedByOther, findDone, remove, sharedOf, snooze, state, sync, toggleDone, update, updateQueued, watchTask } from './store.js';
 import { openReportDialog, reportableTask } from './report.js';
 import { fillShareBox, openShareDialog, shareNames } from './share.js';
 import { openMenu, openWhenMenu, step } from './steps.js';
@@ -109,13 +109,41 @@ function flushField(id, field) {
   if (field === 'title') value = value.trim();
   // Elders verwijderd, een lege titel, of niets veranderd (de editor meldt ook ongewijzigde tekst): geen PATCH.
   if (!t || !value && field === 'title' || value === t[field]) { showStatus(); return; }
-  save(update(id, { [field]: value }));
+  const done = update(id, { [field]: value });
+  save(done);
+  return done;
 }
 
 /** Slaat een wachtende titel, omschrijving of reminder meteen op, voor de taak waarvoor hij bedoeld is. */
 export function flushPending() {
   for (const [id, p] of [...pending]) for (const field of Object.keys(p)) flushField(id, field);
 }
+
+/**
+ * Download het .ics-bestand pas als de wachtende wijzigingen (de gekozen tijd, een offline gemaakte taak) bij de server
+ * zijn: het bestand komt van daar. Lukt dat niet (offline), dan zeggen we dat in plaats van een oud of ontbrekend bestand.
+ * @param {Promise<unknown> | undefined} saving de net verstuurde wijziging, als die er is
+ */
+async function icsWhenSaved(saving, href, file) {
+  await Promise.resolve(saving).catch(() => {});
+  if (!(await sync().catch(() => false))) {
+    toast(state.offline ? tr('render.pending_offline') : tr('render.pending'));
+    return;
+  }
+  const a = el('a', { href, download: file, hidden: true });
+  document.body.append(a);
+  a.click();
+  a.remove();
+}
+
+/** Na een stapmenu zonder keuze (Esc, Annuleren, terug): de focus terug op de stap waarmee het openging. */
+const backTo = (anchor) => () => {
+  if (view) view.lastKind = null;
+  if (anchor.isConnected) { anchor.focus(); return; }
+  // De tijdlijn is intussen opnieuw getekend: dezelfde stap in de nieuwe.
+  const kind = anchor.closest('.step')?.className.match(/step-(\w+)/)?.[1];
+  /** @type {HTMLElement | null} */ (kind ? view?.rail.querySelector(`.step-${kind} .step-head`) : null)?.focus();
+};
 
 function save(promise) {
   saving++;
@@ -337,7 +365,7 @@ function build(t, readOnly) {
       setPending(id, 'remind_at', fromLocalInput(value));
       flushSoon();
       render(); // de stap en Herhalen meteen bijwerken, niet pas na het opslaan
-    }, { note: task.repeat ? tr('dp.only_this_time') : undefined }); // het ritme (repeat_at) blijft staan
+    }, { note: task.repeat ? tr('dp.only_this_time') : undefined, onDismiss: backTo(anchor) }); // het ritme (repeat_at) blijft staan
   };
   // Zet in je agenda: Google Agenda (een link) of een .ics-bestand voor Outlook, Apple en de rest; 30 minuten vanaf de herinnering.
   const addToCalendar = (anchor) => {
@@ -345,13 +373,20 @@ function build(t, readOnly) {
     const at = task ? remindOf(task) : null;
     if (!task || !at) return;
     const ev = { id, title: task.title, remind_at: at };
+    const href = `/api/tasks/${encodeURIComponent(id)}/calendar.ics`;
+    const file = `tick-${id.slice(0, 8)}.ics`;
     openMenu(anchor, tr('detail.add_cal'), (choose) => [
       el('a', { class: 'menu-item', role: 'menuitem', href: googleCalendarUrl(ev), target: '_blank', rel: 'noopener', onclick: () => choose(null) },
         tr('detail.add_cal_google')),
-      // Een nog niet opgeslagen tijd gaat eerst naar de server, want het bestand komt van daar.
-      el('a', { class: 'menu-item', role: 'menuitem', href: `/api/tasks/${encodeURIComponent(id)}/calendar.ics`, download: `tick-${id.slice(0, 8)}.ics`,
-        onclick: () => { flushField(id, 'remind_at'); choose(null); } }, tr('detail.add_cal_ics')),
-    ]);
+      // Het bestand komt van de server: een nog niet opgeslagen tijd (of een offline gemaakte taak) moet daar eerst zijn.
+      el('a', { class: 'menu-item', role: 'menuitem', href, download: file,
+        onclick: (e) => {
+          const wait = hasPending(id, 'remind_at') || state.pending > 0; // anders is alles al bij de server: gewoon downloaden
+          if (wait) e.preventDefault();
+          choose(null);
+          if (wait) icsWhenSaved(flushField(id, 'remind_at'), href, file);
+        } }, tr('detail.add_cal_ics')),
+    ], backTo(anchor));
   };
   // Verzetten en wissen winnen van een gekozen, nog niet opgeslagen tijd (die anders na de klik alsnog zou gaan).
   const snoozeRemind = () => { dropField(id, 'remind_at'); save(snooze(id, 60)); };
