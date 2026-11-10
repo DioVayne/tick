@@ -58,7 +58,21 @@ When attachments are set up ([SETUP.md, step 11](../SETUP.md#11-optional-attachm
 Deleting a task moves it to **Trash**, together with its subtasks. Tasks stay there for 30 days; restore them, delete them for good, or empty the trash. Emptying deletes only the tasks you own.
 
 ## Offline
-Tick works without a connection once you have opened it online and logged in. Changes are saved on the device and sent when you are back online; if two devices changed the same field, the last change wins. Sharing, the trash, attachments and the map need a connection.
+Tick works without a connection once you have opened it online and logged in. Changes are saved on the device and sent, in order, when you are back online. While something is waiting, the list says *Saving…*. Sharing, the trash, attachments and the map need a connection.
+
+### Editing on several devices
+Tick does not merge edits. Each change you make is sent as "set this field to this value", and the change that **reaches your Tick last** wins, per field:
+- Edit the title on your phone while it is offline, and the reminder on your laptop: both stick, because they are different fields.
+- Edit the **same** field on both (for example the title, or the description), and the device that comes back online last overwrites the other, even if its edit was made earlier. The description is one field: the other device's text is replaced, not combined.
+- The other device shows the result the next time it refreshes (on opening Tick, or when it comes back online).
+
+Some things are protected:
+- **Ticking off a repeating task** is sent for one occurrence. If another device already moved the task on, the late tick does nothing, so an occurrence is never skipped twice.
+- A change to a task that was **deleted** on another device is dropped without a message.
+- **"I'll take it"** in a shared list: if someone else took the task first, yours is refused with a message.
+
+### "Could not be saved"
+If your Tick keeps answering with an error to one change (5 tries, for more than 10 minutes), Tick sets that change aside so the changes after it can still go through, and tells you: *A change to "…" could not be saved*. The list then shows what your Tick actually has, so check that task and make the change again. Changes that depend on it (for example a subtask under a new task that could not be saved) are dropped with it, without a message each. Being offline never counts: changes made offline wait as long as needed.
 
 ## Bookmarks
 The address in the browser follows what you see (`#/inbox`, `#/calendar`, `#/task/…`), so you can bookmark a list, the calendar or a single task.
