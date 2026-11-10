@@ -819,15 +819,28 @@ function profileForm(off) {
   const a = S.account;
   const name = /** @type {HTMLInputElement} */ (el('input', { type: 'text', maxlength: '60', autocomplete: 'name', required: true, disabled: off || !a }));
   const email = /** @type {HTMLInputElement} */ (el('input', { type: 'email', maxlength: '254', autocomplete: 'email', disabled: off || !a }));
+  // Een ander e-mailadres vraagt je huidige wachtwoord (de server controleert het); het veld staat er alleen dan.
+  const pw = /** @type {HTMLInputElement} */ (el('input', { type: 'password', autocomplete: 'current-password', disabled: off || !a }));
+  const pwField = field(t('set.email_password'), pw);
   name.value = a?.name ?? CONFIG.userName ?? '';
   email.value = a?.email ?? '';
+  const emailChanged = () => !!email.value.trim() && email.value.trim().toLowerCase() !== (S.account?.email ?? '').toLowerCase();
+  const showPw = () => {
+    pwField.hidden = !emailChanged();
+    pw.required = !pwField.hidden;
+    if (pwField.hidden) pw.value = '';
+  };
+  showPw();
+  email.addEventListener('input', showPw);
   const form = /** @type {HTMLFormElement} */ (el('form', { class: 'set-form' },
-    field(t('set.name'), name), field(t('set.email'), email),
+    field(t('set.name'), name), field(t('set.email'), email), pwField,
     el('div', {}, el('button', { type: 'submit', class: 'set-btn primary', disabled: off || !a }, t('set.save')))));
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const changed = emailChanged();
+    if (changed && !pw.value) { toast(t('set.email_password_needed')); pw.focus(); return; }
     // Een leeg e-mailadres sturen we niet mee: de server weigert dat, en de beheerder mag er (nog) geen hebben.
-    const patch = { name: name.value.trim(), ...(email.value.trim() ? { email: email.value.trim() } : {}) };
+    const patch = { name: name.value.trim(), ...(email.value.trim() ? { email: email.value.trim() } : {}), ...(changed ? { password: pw.value } : {}) };
     try {
       const r = await request('PATCH', '/api/account', patch);
       S.account = { name: r.name, email: r.email ?? null };
@@ -835,7 +848,11 @@ function profileForm(off) {
       toast(t('set.saved'), 'ok');
       paintAccount();
       paintUsers();
-    } catch (err) { toast(t('set.save_failed', { reason: offlineText(err) })); }
+    } catch (err) {
+      toast(t('set.save_failed', { reason: offlineText(err) }));
+      // Fout wachtwoord (403): opnieuw invullen.
+      if (/** @type {any} */ (err).status === 403) { pw.value = ''; pw.focus(); }
+    }
   });
   return form;
 }

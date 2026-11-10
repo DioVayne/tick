@@ -23,7 +23,7 @@ Right after you sign up, Tick sends you an email with a link. Tap it to confirm 
 - Until you confirm, a bar at the top of Tick says so, with **Send email again** (up to 3 emails to the same address in 24 hours). The link works for 7 days; a new email gives a new link.
 - An account that is not confirmed within **30 days** is deleted, with everything in it. The bar shows the date.
 - Choosing a new password through **Forgot password?** also confirms your address, because that email reached you too.
-- If you change your email address under **⚙ Settings → Account**, you confirm the new one the same way.
+- If you change your email address under **⚙ Settings → Account** (this asks for your current password), you confirm the new one the same way.
 
 ## Nobody sees who else is on this Tick
 On an open Tick, people can't see each other's names or addresses. You share by typing someone's full email address (see [Sharing](sharing.md#on-an-open-tick)). People you already share a task or list with appear as a button in the share dialog, so you don't have to type them again. With the free version you share with one person (see [Sharing](sharing.md#on-an-open-tick)).

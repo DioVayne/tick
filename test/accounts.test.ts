@@ -79,9 +79,9 @@ describe('accountbeheer', () => {
   it('profiel: naam en e-mailadres wijzigen; een bestaand adres geeft 409; leeg is ongeldig', async () => {
     const b = await createUser();
     const c = await createUser();
-    expect((await callAs(b.cookie, '/api/account', { method: 'PATCH', json: { name: 'Bram', email: 'bram@example.test' } })).status).toBe(200);
+    expect((await callAs(b.cookie, '/api/account', { method: 'PATCH', json: { name: 'Bram', email: 'bram@example.test', password: b.password } })).status).toBe(200);
     expect(await json(await callAs(b.cookie, '/api/account'))).toMatchObject({ name: 'Bram', email: 'bram@example.test', role: 'member' });
-    expect((await callAs(c.cookie, '/api/account', { method: 'PATCH', json: { email: 'BRAM@example.test' } })).status).toBe(409);
+    expect((await callAs(c.cookie, '/api/account', { method: 'PATCH', json: { email: 'BRAM@example.test', password: c.password } })).status).toBe(409);
     expect((await callAs(b.cookie, '/api/account', { method: 'PATCH', json: { email: '' } })).status).toBe(400);
     expect((await callAs(b.cookie, '/api/account', { method: 'PATCH', json: { email: 'geen-adres' } })).status).toBe(400);
     expect((await callAs(b.cookie, '/api/account', { method: 'PATCH', json: { name: '   ' } })).status).toBe(400);

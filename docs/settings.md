@@ -30,6 +30,9 @@ Shown when linked calendars are switched on for your Tick. See [Linking your cal
 ## Account
 Your name and email address, change your **Password**, **Log out on all other devices** (you stay logged in here) and **Log out here only**.
 
+- **Changing your email address** asks for your current password: when you type a different address, a password field appears under it. Only the name, or the same address in other capitals, needs no password. The administrator of a Tick without a password of their own uses the login password from the setup.
+- **Changing your password** and **Log out on all other devices** also stop what is still open outside a login: a [moving code](moving.md) you made, and any unused link to choose a new password. The same happens when you choose a new password through such a link (**Forgot password?** or a link from the administrator). Your keys and linked phones keep working.
+
 **Delete account** erases everything in your account: tasks and subtasks, places, attachments, your background photo, settings, keys, linked devices and notifications. You confirm with your password, and it can't be undone. Shared lists pass to another member. Tasks you shared on their own disappear for the others too; copies stay. Your data is removed from Tick right away. Backups are erased automatically within 30 days. Afterwards you are logged out and see a confirmation on the login page. Want to keep your tasks? Download a backup first (see [Data](#data)).
 
 The administrator can't delete their own account, so a Tick never ends up without an administrator.

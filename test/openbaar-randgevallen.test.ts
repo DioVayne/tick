@@ -30,13 +30,13 @@ async function signUp(email = `s-${uniq()}@ex.test`, e: Env = openEnv) {
   const res = await callWith(e, '/signup', { method: 'POST', json: { name: 'Sam', email, password: 'lang-genoeg-1' } });
   expect(res.status).toBe(201);
   const id = (await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>())!.id;
-  return { cookie: res.headers.get('set-cookie')!.split(';')[0], id, email };
+  return { cookie: res.headers.get('set-cookie')!.split(';')[0], id, email, password: 'lang-genoeg-1' };
 }
 
 describe('review: openbare Tick', () => {
   it('1. een gevestigd account dat zijn adres wijzigt, wordt niet opgeruimd', async () => {
     const u = await createUser({ createdAt: new Date(Date.now() - 60 * DAY).toISOString() });
-    expect((await as(u, '/api/account', { method: 'PATCH', json: { email: `nieuw-${uniq()}@ex.test` } })).status).toBe(200);
+    expect((await as(u, '/api/account', { method: 'PATCH', json: { email: `nieuw-${uniq()}@ex.test`, password: u.password } })).status).toBe(200);
     await purgeUnverified(openEnv, Date.now());
     expect(await exists(u.id)).toBe(true);
     const cfg = await (await as(u, '/config.js')).text();
@@ -47,7 +47,7 @@ describe('review: openbare Tick', () => {
     const s = await signUp();
     const old = linkIn(sent().at(-1)!.text, 'verify');
     const victim = `slachtoffer-${uniq()}@ex.test`;
-    await as(s, '/api/account', { method: 'PATCH', json: { email: victim } });
+    expect((await as(s, '/api/account', { method: 'PATCH', json: { email: victim, password: s.password } })).status).toBe(200);
     await callWith(openEnv, old, { accept: 'text/html' });
     expect(await verified(s.id)).toBeNull();
   });
@@ -56,7 +56,7 @@ describe('review: openbare Tick', () => {
     const s = await signUp();
     await callWith(openEnv, '/forgot', { method: 'POST', json: { email: s.email } });
     const reset = linkIn(sent().at(-1)!.text, 'reset');
-    await as(s, '/api/account', { method: 'PATCH', json: { email: `ander-${uniq()}@ex.test` } });
+    expect((await as(s, '/api/account', { method: 'PATCH', json: { email: `ander-${uniq()}@ex.test`, password: s.password } })).status).toBe(200);
     await callWith(openEnv, reset, { method: 'POST', json: { password: 'nieuw-wachtwoord-1' } });
     expect(await verified(s.id)).toBeNull();
   });

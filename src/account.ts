@@ -1,8 +1,8 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import type { AppEnv } from './index';
 import { HttpError } from './errors';
 import { sessionOnly } from './guards';
-import { bumpSessionVersion, bumpSessionVersionStmt, clearCookie, passwordOk, sessionCookie } from './auth';
+import { bumpSessionVersionStmt, clearCookie, passwordOk, sessionCookie } from './auth';
 import { hashPassword } from './password';
 import { getUser } from './users';
 import { deleteAccount } from './users-api';
@@ -15,29 +15,44 @@ accountApi.use('*', sessionOnly);
 
 export const MIN_PASSWORD = 8;
 
-accountApi.post('/password', async (c) => {
-  // Zelfde rem als /login, voor het controleren van het huidige wachtwoord.
+/**
+ * Inloggegevens gewijzigd (wachtwoord gewijzigd of hersteld, elders uitgelogd): alle sessies uit (sessieversie), en
+ * ook de toegang die buiten een sessie om openstaat: verhuiscodes (een volledige export zonder inlog) en ongebruikte
+ * herstellinks. Voor één batch, zodat het alles of niets is.
+ */
+export function revokeAccessStmts(db: D1Database, userId: string): D1PreparedStatement[] {
+  return [
+    bumpSessionVersionStmt(db, userId),
+    db.prepare('DELETE FROM move_codes WHERE user_id = ?').bind(userId),
+    db.prepare("DELETE FROM account_links WHERE user_id = ? AND kind = 'reset' AND used_at IS NULL").bind(userId),
+  ];
+}
+
+/** Zelfde rem als /login, voor elke route die een wachtwoord controleert. */
+async function limitAttempts(c: Context<AppEnv>): Promise<void> {
   const { success } = await c.env.LOGIN_LIMITER.limit({ key: c.req.header('cf-connecting-ip') ?? 'onbekend' });
   if (!success) throw new HttpError(429, 'err.too_many_attempts');
+}
+
+accountApi.post('/password', async (c) => {
+  await limitAttempts(c);
   const body = await c.req.json<{ current?: unknown; next?: unknown }>().catch(() => null);
   if (!body || typeof body.current !== 'string' || typeof body.next !== 'string') throw new HttpError(400, 'err.invalid_json');
   const user = c.get('user');
   if (!(await passwordOk(c.env, user, body.current))) throw new HttpError(403, 'err.wrong_password'); // 403, geen 401: de app stuurt bij 401 naar /login
   if (body.next.length < MIN_PASSWORD) throw new HttpError(400, 'err.password_short', { min: MIN_PASSWORD });
-  // Wachtwoord en sessieversie samen: nooit een nieuw wachtwoord terwijl de oude sessies nog gelden.
+  // Wachtwoord en intrekken samen: nooit een nieuw wachtwoord terwijl oude sessies of verhuiscodes nog gelden.
   const db = c.env.DB;
   await db.batch([
     db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(await hashPassword(body.next), user.id),
-    bumpSessionVersionStmt(db, user.id),
+    ...revokeAccessStmts(db, user.id),
   ]);
   c.header('Set-Cookie', await sessionCookie(c.env, (await getUser(db, user.id))!));
   return c.json({ ok: true });
 });
 
 accountApi.post('/delete', async (c) => {
-  // Zelfde rem als /login: hier wordt een wachtwoord gecontroleerd.
-  const { success } = await c.env.LOGIN_LIMITER.limit({ key: c.req.header('cf-connecting-ip') ?? 'onbekend' });
-  if (!success) throw new HttpError(429, 'err.too_many_attempts');
+  await limitAttempts(c);
   const body = await c.req.json<{ password?: unknown }>().catch(() => null);
   if (!body || typeof body.password !== 'string') throw new HttpError(400, 'err.invalid_json');
   const user = c.get('user');
@@ -55,7 +70,7 @@ accountApi.post('/delete', async (c) => {
 
 accountApi.post('/logout-others', async (c) => {
   const id = c.get('user').id;
-  await bumpSessionVersion(c.env.DB, id);
+  await c.env.DB.batch(revokeAccessStmts(c.env.DB, id));
   c.header('Set-Cookie', await sessionCookie(c.env, (await getUser(c.env.DB, id))!));
   return c.json({ ok: true });
 });
@@ -100,8 +115,17 @@ accountApi.patch('/', async (c) => {
   let reverify = false;
   if (body.email !== undefined) {
     const email = cleanEmail(body.email);
+    const user = c.get('user');
+    const changed = email.toLowerCase() !== (user.email ?? '').toLowerCase();
+    // Een ander adres (niet alleen andere hoofdletters) vraagt het huidige wachtwoord: wie een open sessie in handen
+    // krijgt, mag het account niet via "wachtwoord vergeten" naar een eigen adres overnemen.
+    if (changed) {
+      await limitAttempts(c);
+      const password = typeof body.password === 'string' ? body.password : '';
+      if (!(await passwordOk(c.env, user, password))) throw new HttpError(403, 'err.wrong_password'); // 403: bij 401 gaat de app naar /login
+    }
     sets.push('email = ?'); vals.push(email);
-    if (openSignup(c.env) && email.toLowerCase() !== (c.get('user').email ?? '').toLowerCase()) {
+    if (openSignup(c.env) && changed) {
       sets.push('email_verified_at = NULL');
       reverify = true;
     }

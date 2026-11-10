@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono';
 import type { AppEnv } from './index';
 import { HttpError } from './errors';
-import { cleanEmail, cleanName, MIN_PASSWORD } from './account';
+import { cleanEmail, cleanName, MIN_PASSWORD, revokeAccessStmts } from './account';
 import { sessionCookie } from './auth';
 import { linkPage } from './login';
 import { hashPassword } from './password';
@@ -97,8 +97,11 @@ linkPages.post('/reset/:code', async (c) => {
   const db = c.env.DB;
   const link = await consumeLink(db, 'reset', c.req.param('code'));
   if (!link?.user_id) throw new HttpError(400, 'err.link_invalid');
-  await db.prepare('UPDATE users SET password_hash = ?, session_version = session_version + 1 WHERE id = ?')
-    .bind(await hashPassword(password), link.user_id).run();
+  // Nieuw wachtwoord en intrekken samen: sessies, verhuiscodes en de andere herstellinks vervallen.
+  await db.batch([
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(await hashPassword(password), link.user_id),
+    ...revokeAccessStmts(db, link.user_id),
+  ]);
   // Een link uit "Wachtwoord vergeten?" (/forgot, door het account zelf aangevraagd) is per mail gekomen: wie hem
   // opent, heeft het adres in handen. Dat bevestigt het adres (en zet uitnodigingen om); een link van de beheerder niet.
   if (link.created_by === link.user_id) await markVerified(c.env, link.user_id);
