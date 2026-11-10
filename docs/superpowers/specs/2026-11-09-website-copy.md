@@ -573,7 +573,7 @@ Hosting en ontwikkeling kosten wel wat. Misschien komen er later betaalde extra'
 
 Wat gratis is als je je aanmeldt, wordt niet betaald zonder dat ik het je van tevoren laat weten. Dat staat ook in de voorwaarden.
 
-Liever helemaal zelf? Tick is open source. Je kunt het op je eigen gratis Cloudflare-account zetten, zonder grens aan het aantal mensen.
+Liever helemaal zelf? Tick is open source. Je kunt het op je eigen gratis Cloudflare-account zetten, zonder grens aan het aantal mensen. Wil je dat jouw Tick ook mailt (wachtwoord kwijt, uitnodigingen)? Dan heb je daarnaast een account bij Resend nodig. Dat is gratis tot 100 mails per dag. Met meer mensen op je Tick betaal je Resend al snel een maandbedrag.
 
 ---
 
@@ -1199,7 +1199,7 @@ Hosting and development do cost something. Maybe there will be paid extras later
 
 What's free when you sign up won't become paid without me telling you in advance. That's in the terms too.
 
-Rather do it all yourself? Tick is open source. You can put it on your own free Cloudflare account, with no limit on the number of people.
+Rather do it all yourself? Tick is open source. You can put it on your own free Cloudflare account, with no limit on the number of people. Want your Tick to send email too (forgot password, invitations)? Then you also need an account at Resend. It is free up to 100 emails a day. With more people on your Tick, you will soon pay Resend a monthly fee.
 
 ---
 
