@@ -28,8 +28,12 @@ export const anyCopies = (rows: Access[], userId: string) =>
 
 type MemberRow = {
   id: string; copy_group: string | null; user_id: string; name: string; done: number; done_at: string | null; description: string;
-  repeat_rule: string | null; repeat_at: string | null; kids: string;
+  repeat_rule: string | null; repeat_at: string | null; kids: string; blocked: number;
 };
+
+/** SQL-voorwaarde: `?n` (de kijker) en de kolom `who` blokkeerden elkaar, in een van beide richtingen. */
+const blockedWith = (who: string, n: number) =>
+  `EXISTS (SELECT 1 FROM blocks WHERE (user_id = ?${n} AND blocked_id = ${who}) OR (user_id = ${who} AND blocked_id = ?${n}))`;
 
 /**
  * `copies` per hoofdtaak in `rows`, zoals `userId` hem ziet. De leden zijn de andere niet-verwijderde exemplaren in de
@@ -37,6 +41,8 @@ type MemberRow = {
  * exemplaar van de kijker zelf (een deelnemer die ook een eigen kopie heeft, ziet zichzelf niet als lid). Herhalen
  * beide, dan is een lid klaar als het een ronde verder is (`repeat_at` meer dan 2 uur later), zonder tijdstip. Openstaande
  * kopie-uitnodigingen (`pending`) ziet alleen de eigenaar van de taak. Zonder leden en uitnodigingen staat de taak er niet in.
+ * Een lid met wie de kijker een blokkade heeft (wie ook blokkeerde) valt weg, en ook als afzender in `from`; de groep
+ * zelf blijft, dus opheffen brengt het terug. Geen extra query: de blokkade gaat mee in dezelfde selecties.
  */
 export async function copiesFor(db: D1Database, userId: string, rows: Access[], open = false): Promise<Map<string, Copies>> {
   const main = rows.filter((r) => !r.parent_id);
@@ -47,13 +53,15 @@ export async function copiesFor(db: D1Database, userId: string, rows: Access[], 
     // De groepen plus de taken met een uitnodiging (die hebben misschien nog geen groep, maar wel `self` nodig).
     stmts.push(db.prepare(
       'SELECT t.id, t.copy_group, t.user_id, u.name, t.done, t.done_at, t.description, t.repeat_rule, t.repeat_at, ' +
-      '(SELECT json_group_array(k.done) FROM tasks k WHERE k.parent_id = t.id AND k.deleted_at IS NULL) AS kids ' +
+      '(SELECT json_group_array(k.done) FROM tasks k WHERE k.parent_id = t.id AND k.deleted_at IS NULL) AS kids, ' +
+      // Geblokkeerd (in een van beide richtingen): dat lid ziet de kijker niet, en omgekeerd. De groep zelf blijft.
+      `${blockedWith('t.user_id', 3)} AS blocked ` +
       // CROSS JOIN en INDEXED BY leggen het plan vast: zonder statistieken scant SQLite anders de hele tabel tasks
       // (de gedeeltelijke index op copy_group telt als te duur), en D1 telt elke gelezen rij mee in de dagelijkse limiet.
-      'FROM (SELECT id FROM tasks INDEXED BY idx_tasks_copy_group WHERE copy_group IN (SELECT value FROM json_each(?)) ' +
-      'UNION SELECT value FROM json_each(?)) g CROSS JOIN tasks t ON t.id = g.id CROSS JOIN users u ON u.id = t.user_id ' +
+      'FROM (SELECT id FROM tasks INDEXED BY idx_tasks_copy_group WHERE copy_group IN (SELECT value FROM json_each(?1)) ' +
+      'UNION SELECT value FROM json_each(?2)) g CROSS JOIN tasks t ON t.id = g.id CROSS JOIN users u ON u.id = t.user_id ' +
       'WHERE t.parent_id IS NULL AND t.deleted_at IS NULL',
-    ).bind(JSON.stringify(groups), JSON.stringify(invited)));
+    ).bind(JSON.stringify(groups), JSON.stringify(invited), userId));
   }
   if (invited.length) {
     stmts.push(db.prepare(
@@ -68,7 +76,9 @@ export async function copiesFor(db: D1Database, userId: string, rows: Access[], 
   // Afzenders van de eigen kopieën; alleen de naam gaat naar de app.
   const senders = [...new Set(main.flatMap((r) => (r.copy_group && r.copied_from && r.user_id === userId ? [r.copied_from] : [])))];
   if (senders.length) {
-    stmts.push(db.prepare('SELECT id, name FROM users WHERE id IN (SELECT value FROM json_each(?))').bind(JSON.stringify(senders)));
+    // Een afzender met wie de kijker een blokkade heeft, blijft naamloos (zoals een verwijderde afzender).
+    stmts.push(db.prepare(`SELECT id, name FROM users WHERE id IN (SELECT value FROM json_each(?1)) AND NOT ${blockedWith('users.id', 2)}`)
+      .bind(JSON.stringify(senders), userId));
   }
   const out = new Map<string, Copies>();
   if (!stmts.length) return out;
@@ -79,7 +89,7 @@ export async function copiesFor(db: D1Database, userId: string, rows: Access[], 
   const pending = invited.length ? res[1].results as { task_id: string; name: string }[] : [];
   for (const r of main) {
     const repeats = !!r.repeat_rule;
-    const list = members.filter((m) => r.copy_group && m.copy_group === r.copy_group && m.id !== r.id && m.user_id !== userId).map((m): CopyMember => {
+    const list = members.filter((m) => r.copy_group && m.copy_group === r.copy_group && m.id !== r.id && m.user_id !== userId && !m.blocked).map((m): CopyMember => {
       const progress = progressOf(m.description, kidsOf(m));
       if (repeats && m.repeat_rule) {
         // Pas klaar bij meer dan 2 uur later: eigenaars in andere tijdzones schuiven rond zomertijd een uur uit elkaar.
@@ -101,18 +111,35 @@ export async function copiesFor(db: D1Database, userId: string, rows: Access[], 
  * Push "{name} is klaar ✓" naar de andere leden van de groep van `task` (hoofdtaak): de eigenaars van de andere
  * niet-verwijderde exemplaren en hun geaccepteerde deelnemers, niet wie op het afgevinkte exemplaar zit. Iedereen
  * krijgt de titel van zijn eigen exemplaar. Komt er niets aan, dan de eigen fallback-webhook (zoals bij uitnodigingen).
+ *
+ * Blokkades (in beide richtingen) tellen: wie een blokkade heeft met de eigenaar van het afgevinkte exemplaar of met
+ * wie afvinkte (`actor` met id), krijgt niets. Met alleen een naam is niet bekend wie afvinkte; dan telt een blokkade
+ * met iedereen op het afgevinkte exemplaar. Twee queries in één batch, hoe groot de groep ook is.
  */
-export async function notifyCopyDone(env: Env, task: TaskRow, actorName: string, defaultLocale: Locale, send: Sender = sendToAll): Promise<void> {
+export async function notifyCopyDone(env: Env, task: TaskRow, actor: string | { id: string; name: string }, defaultLocale: Locale,
+  send: Sender = sendToAll): Promise<void> {
   const group = task.copy_group;
   if (!group || task.parent_id) return;
-  const people = "SELECT t.id, t.title, t.user_id AS uid FROM tasks t WHERE t.copy_group = ? AND t.parent_id IS NULL AND t.deleted_at IS NULL " +
+  const actorName = typeof actor === 'string' ? actor : actor.name;
+  const people = "SELECT t.id, t.title, t.user_id AS uid FROM tasks t WHERE t.copy_group = ?1 AND t.parent_id IS NULL AND t.deleted_at IS NULL " +
     "UNION ALL SELECT t.id, t.title, s.to_user FROM tasks t JOIN task_shares s ON s.task_id = t.id AND s.mode = 'shared' AND s.status = 'accepted' " +
-    'WHERE t.copy_group = ? AND t.parent_id IS NULL AND t.deleted_at IS NULL';
-  const { results } = await env.DB.prepare(people).bind(group, group).all<{ id: string; title: string; uid: string }>();
+    'WHERE t.copy_group = ?1 AND t.parent_id IS NULL AND t.deleted_at IS NULL';
+  const [peopleRes, blocksRes] = await env.DB.batch([
+    env.DB.prepare(people).bind(group),
+    // De blokkades binnen de groep (beide kanten zijn iemand uit de groep).
+    env.DB.prepare(`WITH p AS (${people}) SELECT user_id, blocked_id FROM blocks WHERE user_id IN (SELECT uid FROM p) AND blocked_id IN (SELECT uid FROM p)`).bind(group),
+  ]);
+  const results = peopleRes.results as { id: string; title: string; uid: string }[];
   const skip = new Set(results.filter((r) => r.id === task.id).map((r) => r.uid));
+  const actors = typeof actor === 'string' ? skip : new Set([task.user_id, actor.id]);
+  const blocked = new Set<string>();
+  for (const b of blocksRes.results as { user_id: string; blocked_id: string }[]) {
+    if (actors.has(b.user_id)) blocked.add(b.blocked_id);
+    if (actors.has(b.blocked_id)) blocked.add(b.user_id);
+  }
   const seen = new Set<string>();
   for (const r of results) {
-    if (r.id === task.id || skip.has(r.uid) || seen.has(r.uid)) continue;
+    if (r.id === task.id || skip.has(r.uid) || seen.has(r.uid) || blocked.has(r.uid)) continue;
     seen.add(r.uid);
     const make = (locale: string): Payload => ({
       title: translate(locale, 'copy.push_done', { name: actorName }), body: r.title, url: `/?task=${r.id}`, tag: `copy-${group}`, actions: [],

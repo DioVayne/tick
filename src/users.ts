@@ -47,6 +47,23 @@ export async function touchLastSeen(db: D1Database, user: User): Promise<void> {
   }
 }
 
+/**
+ * Meldingen (openbare Tick) blijven bestaan als een account verwijderd wordt, zodat de beheerder ziet dat er een
+ * melding was, de reden, de data en de afhandeling, maar zonder de verwijderde persoon:
+ * - zijn id wordt NULL (de beheerpagina toont "verwijderd account"; naam en adres kwamen altijd uit `users`);
+ * - de toelichting gaat weg, of hij nu de melder was (zijn eigen woorden) of de gemelde (tekst over hem);
+ * - was hij de gemelde, dan gaan ook de titel en de bestandsnaam weg (dat was zijn inhoud), en de verwijzing naar een
+ *   gemelde lijst: die gaat bij het verwijderen over naar een ander lid (transferListsStmts) en is dan van die ander.
+ * De verwijzingen naar taak en bijlage blijven: dat zijn willekeurige ids, en de beheerpagina toont alleen wat er nu nog
+ * bestaat (zijn eigen taken zijn dan weg; wat hij in de lijst van een ander zette, kan de beheerder nog verwijderen).
+ */
+export function anonymiseReportsStmts(db: D1Database, id: string): D1PreparedStatement[] {
+  return [
+    db.prepare("UPDATE reports SET reporter_id = NULL, note = '' WHERE reporter_id = ?").bind(id),
+    db.prepare("UPDATE reports SET reported_id = NULL, note = '', title = '', attachment_name = NULL, list_id = NULL WHERE reported_id = ?").bind(id),
+  ];
+}
+
 /** Alles van één gebruiker wissen, in een volgorde die de verwijzingen respecteert; de aanroeper draait het als batch. */
 export function deleteUserStmts(db: D1Database, id: string): D1PreparedStatement[] {
   return [
@@ -62,9 +79,9 @@ export function deleteUserStmts(db: D1Database, id: string): D1PreparedStatement
     db.prepare('DELETE FROM reminder_sent WHERE user_id = ?1 OR task_id IN (SELECT id FROM tasks WHERE user_id = ?1)').bind(id),
     // Uitnodigingen aan e-mailadressen (openbare Tick) van deze gebruiker.
     db.prepare('DELETE FROM email_invites WHERE from_user = ?').bind(id),
-    // Blokkades en meldingen (openbare Tick) van en over deze gebruiker.
+    // Blokkades (openbare Tick) van en over deze gebruiker.
     db.prepare('DELETE FROM blocks WHERE user_id = ?1 OR blocked_id = ?1').bind(id),
-    db.prepare('DELETE FROM reports WHERE reporter_id = ?1 OR reported_id = ?1').bind(id),
+    ...anonymiseReportsStmts(db, id),
     // Gekoppelde agenda's: eerst de afspraken, dan de feeds.
     db.prepare('DELETE FROM calendar_events WHERE user_id = ?').bind(id),
     db.prepare('DELETE FROM calendar_feeds WHERE user_id = ?').bind(id),
