@@ -55,16 +55,27 @@ const taskButton = (task, ms, cls) =>
   el('button', { class: cls, type: 'button', onclick: () => selectTask(task.id) },
     el('span', { class: 'cal-time' }, timeText(ms)), ' ', el('span', { class: 'cal-name' }, task.title));
 
-/** Afspraken uit gekoppelde agenda's in [from, to), per dag (alleen-lezen, grijs). */
-function busyByDay(from, to) {
+/**
+ * Afspraken uit gekoppelde agenda's in [from, to), per dag (alleen-lezen, grijs). Een afspraak van meer dagen of over
+ * middernacht staat op elke dag van begin tot einde − 1 ms (het einde is exclusief, ook bij een hele dag), binnen
+ * [from, to). Dagen in de tijdzone van de kalender; ms is het begin, of 00:00 op een vervolgdag.
+ * @param {import('./agenda.js').CalBusy[]} events
+ * @param {number} from
+ * @param {number} to
+ */
+export function busyByDay(events, from, to) {
   /** @type {Map<string, { ms: number, ev: import('./agenda.js').CalBusy }[]>} */
   const map = new Map();
-  for (const ev of busyNow() ?? []) {
-    if (ev.end <= from || ev.start >= to) continue;
-    const ms = Math.max(ev.start, from);
-    const key = dayKey(ms);
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)?.push({ ms, ev });
+  for (const ev of events) {
+    const last = Math.min(Math.max(ev.start, ev.end - 1), to - 1); // laatste moment; een afspraak zonder duur telt op zijn begin
+    if (last < from || ev.start >= to) continue;
+    for (let ms = Math.max(ev.start, from); ms <= last;) {
+      const key = dayKey(ms);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)?.push({ ms, ev });
+      const p = zonedParts(ms);
+      ms = startOfDay(p.y, p.m, p.d + 1);
+    }
   }
   return map;
 }
@@ -86,7 +97,7 @@ function monthView() {
   const from = startOfDay(first.y, first.m, first.d);
   const to = startOfDay(last.y, last.m, last.d + 1);
   const byDay = tasksByDay(tasks(), from, to);
-  const busy = busyByDay(from, to);
+  const busy = busyByDay(busyNow() ?? [], from, to);
   const now = today();
   const head = weeks[0].map((c) => el('div', { class: 'cal-wd' }, t(`wd.short.${c.wd}`)));
   const cells = weeks.flat().map((c) => {
@@ -116,7 +127,7 @@ function agendaView() {
   }
   // Taken en afspraken uit de agenda door elkaar, op tijd; ook een dag met alleen afspraken.
   const end = startOfDay(zonedParts(S.from).y, zonedParts(S.from).m, zonedParts(S.from).d + S.days);
-  const busy = busyByDay(S.from, end);
+  const busy = busyByDay(busyNow() ?? [], S.from, end);
   const days = new Map(a.days.map((d) => [d.key, { ms: d.ms, items: /** @type {any[]} */ ([...d.items]) }]));
   for (const [key, list] of busy) {
     if (!days.has(key)) days.set(key, { ms: list[0].ms, items: [] });
