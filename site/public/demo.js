@@ -20,6 +20,7 @@ const G = {
 const DEFAULTS = {
   hint: 'Drag me to the shop',
   walk: 'Walk there',
+  ride: 'Ride there',
   // Same wording as the Android app (android/.../values/strings.xml: loc_arrived, loc_almost, done).
   arrived: '📍 Arrived at the supermarket',
   arrivedBike: '📍 Almost at the supermarket',
@@ -158,7 +159,6 @@ export function mountDemo(root) {
   doneBtn.textContent = t('doneLabel');
   closeBtn.setAttribute('aria-label', t('dismissLabel'));
   closeBtn.title = t('dismissLabel');
-  walkBtn.textContent = t('walk');
   $('.tdemo-bike-text').textContent = t('bike');
   $('.tdemo-reset').textContent = t('reset');
   $('.tdemo-foot').textContent = t('footnote');
@@ -281,21 +281,35 @@ export function mountDemo(root) {
     s.anim = requestAnimationFrame(frame);
   }
 
-  function reset() {
+  // Button and circle follow the mode: "Walk there" on foot, "Ride there" by bike.
+  function applyMode() {
+    root.classList.toggle('is-bike', s.bike);
+    walkBtn.textContent = s.bike ? t('ride') : t('walk');
+    drawFence();
+  }
+
+  // A fresh trip from home: notification gone, milk not yet bought.
+  function newTrip() {
     cancelWalk();
     clearTimeout(checkTimer);
     closeNotif();
     s.done = false;
     s.inside = false;
-    s.bike = false;
     s.facing = 1;
-    bikeInput.checked = false;
     doneBtn.disabled = false;
     notif.classList.remove('is-done', 'is-bump');
-    root.classList.remove('is-bike', 'is-inside', 'has-milk', 'is-dragging');
-    root.classList.add('is-fresh');
-    drawFence();
+    root.classList.remove('is-inside', 'has-milk', 'is-dragging');
+    applyMode();
+    // Jump home facing the shop (place() would otherwise turn it towards home).
+    s.x = G.start.x; s.y = G.start.y;
     place(G.start.x, G.start.y);
+  }
+
+  function reset() {
+    s.bike = false;
+    bikeInput.checked = false;
+    newTrip();
+    root.classList.add('is-fresh');
     setStatus(t('hint'));
   }
 
@@ -386,18 +400,15 @@ export function mountDemo(root) {
   notif.addEventListener('pointerup', endSwipe);
   notif.addEventListener('pointercancel', endSwipe);
 
-  // By bike: bigger circle, so the reminder comes earlier.
+  // By bike: bigger circle, so the reminder comes earlier. Switching mode starts a
+  // new trip from home, so you see the notification arrive (earlier) on the way.
   bikeInput.addEventListener('change', () => {
     s.bike = bikeInput.checked;
-    root.classList.toggle('is-bike', s.bike);
-    drawFence();
-    setStatus(s.bike ? t('bikeNote') : (s.done ? t('afterDone') : t('hint')));
-    // Let the circle finish growing before it "catches" the walker.
-    clearTimeout(checkTimer);
-    checkTimer = setTimeout(check, reduceMotion.matches ? 0 : 450);
+    newTrip();
+    setStatus(s.bike ? t('bikeNote') : t('hint'));
   });
 
-  drawFence();
+  applyMode();
   place(G.start.x, G.start.y);
   setStatus(t('hint'));
 }
