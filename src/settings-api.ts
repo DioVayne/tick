@@ -47,11 +47,22 @@ async function timeZoneShift(db: D1Database, userId: string, from: string, to: s
     id: string; remind_at: string | null; repeat_start: string | null; repeat_at: string | null;
   }>()).results;
   const shift = (v: string | null) => (v === null ? null : shiftWallClock(v, from, to));
-  return rows
+  const changed = rows
     .filter((r) => r.remind_at !== null || r.repeat_start !== null || r.repeat_at !== null)
-    .map((r) => db.prepare('UPDATE tasks SET remind_at = ?, repeat_start = ?, repeat_at = ?, repeat_prev = NULL WHERE id = ?')
-      .bind(shift(r.remind_at), shift(r.repeat_start), shift(r.repeat_at), r.id));
+    .map((r) => [r.id, shift(r.remind_at), shift(r.repeat_start), shift(r.repeat_at)]);
+  // Eén UPDATE per SHIFT_CHUNK taken (de nieuwe waarden als JSON), zodat de batch klein blijft, hoeveel taken er ook zijn.
+  const stmts: D1PreparedStatement[] = [];
+  for (let i = 0; i < changed.length; i += SHIFT_CHUNK) {
+    stmts.push(db.prepare(
+      "UPDATE tasks SET remind_at = json_extract(j.value, '$[1]'), repeat_start = json_extract(j.value, '$[2]'), " +
+      "repeat_at = json_extract(j.value, '$[3]'), repeat_prev = NULL FROM json_each(?2) AS j WHERE tasks.id = json_extract(j.value, '$[0]') AND tasks.user_id = ?1",
+    ).bind(userId, JSON.stringify(changed.slice(i, i + SHIFT_CHUNK))));
+  }
+  return stmts;
 }
+
+/** Zoveel taken per UPDATE bij een andere tijdzone (ruim binnen de grootte van een parameter in D1). */
+const SHIFT_CHUNK = 500;
 
 settingsApi.get('/', (c) => c.json(view(c.get('prefs'))));
 
