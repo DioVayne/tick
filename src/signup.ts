@@ -127,6 +127,8 @@ export function verifyBy(env: Env, user: Pick<User, 'email_verified_at' | 'verif
 
 /** Deel van `MAIL_DAILY_LIMIT` dat bevestigingsmails samen mogen gebruiken. */
 export const VERIFY_DAILY_SHARE = 0.5;
+/** Hooguit zoveel bevestigingsmails per adres per 24 uur (ook over verwijderde accounts heen), zodat opnieuw sturen werkt. */
+export const VERIFY_PER_RECIPIENT = 3;
 
 /** Mailt een bevestigingslink naar een onbevestigd account, binnen de grenzen van `reserveMail`. */
 export async function sendVerifyMail(env: Env, userId: string, origin: string, lang: Locale): Promise<void> {
@@ -135,8 +137,9 @@ export async function sendVerifyMail(env: Env, userId: string, origin: string, l
   const user = await db.prepare('SELECT email FROM users WHERE id = ? AND email IS NOT NULL AND email_verified_at IS NULL')
     .bind(userId).first<{ email: string }>();
   if (!user) return;
-  // Hooguit de helft van de maildaggrens (herstelmails houden ruimte) en één per adres per 24 uur, zoals uitnodigingen.
-  const slot = await reserveMail(db, env, 'verify', userId, Date.now(), { dailyShare: VERIFY_DAILY_SHARE, recipient: user.email });
+  // Hooguit de helft van de maildaggrens (herstelmails houden ruimte) en een paar per adres per 24 uur, ook over een
+  // verwijderd account heen; binnen die grens werkt "opnieuw sturen" gewoon.
+  const slot = await reserveMail(db, env, 'verify', userId, Date.now(), { dailyShare: VERIFY_DAILY_SHARE, recipient: user.email, recipientPerDay: VERIFY_PER_RECIPIENT });
   if (typeof slot !== 'object') return;
   const { code } = await createLink(db, 'verify', userId, userId);
   const t = (key: string) => translate(lang, key);
