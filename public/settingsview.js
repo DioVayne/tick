@@ -7,7 +7,7 @@ import { ask } from './dialog.js';
 import { icon } from './icons.js';
 import { dateLocale, errorText, t } from './i18n.js';
 import { disablePush, enablePush, forgetPush, pushState, resubscribeLocale } from './push.js';
-import { setDefaultTime, setTimeZone, setWeekStart } from './repeat.js';
+import { getTimeZone, setDefaultTime, setTimeZone, setWeekStart } from './repeat.js';
 import { $, el, render, toast } from './render.js';
 import CONFIG, { setLanguage } from './settings.js';
 import { closeDrawer } from './sidebar.js';
@@ -50,7 +50,7 @@ const storeSet = (key, value) => {
   try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* geen opslag */ }
 };
 
-const fmtDate = (iso) => new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
+const fmtDate = (iso) => new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: getTimeZone() });
 const fmtNum = (n) => Number(n).toLocaleString(dateLocale());
 
 /** "3 minuten geleden", "gisteren"; ouder dan een maand: de datum. */
@@ -1038,7 +1038,7 @@ async function importTickTick() {
 async function moveOut() {
   let r;
   try { r = await request('POST', '/api/move/code'); } catch (e) { toast(t('move.failed', { reason: offlineText(e) })); return; }
-  const until = new Date(r.expires_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
+  const until = new Date(r.expires_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', timeZone: getTimeZone() });
   const stop = await modal({
     title: t('move.out_title'),
     body: [el('p', {}, t('move.out_text')), secret(t('move.code'), r.code),
