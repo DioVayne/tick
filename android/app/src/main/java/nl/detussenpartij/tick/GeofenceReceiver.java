@@ -147,7 +147,7 @@ public class GeofenceReceiver extends BroadcastReceiver {
         try {
             String json = Api.call(app, "GET", "/api/tasks", null, Api.SHORT_TIMEOUT_MS, Api.SHORT_TIMEOUT_MS);
             JSONArray arr = new JSONArray(json);
-            Prefs.setCache(app, json);
+            Sync.saveServerList(app, json);
             TaskWidgetProvider.updateAll(app);
             return arr;
         } catch (Exception e) {

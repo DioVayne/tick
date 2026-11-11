@@ -12,6 +12,10 @@
     <string name="sync_failed">Not updated: %s</string>
     <string name="done_failed">Completing failed: %s</string>
     <string name="undo_failed">Undo failed: %s</string>
+    <!-- Knop in een net afgevinkte widgetrij (TaskListService), en de melding als het te laat is (ActionReceiver) -->
+    <string name="undo">Undo</string>
+    <string name="undo_task">Undo completing %s</string>
+    <string name="undo_too_late">Too late to undo</string>
     <string name="shortcut_add">New task</string>
     <string name="loc_channel">Location notifications</string>
     <string name="loc_arrived">📍 Arrived at %s</string>

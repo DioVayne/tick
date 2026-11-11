@@ -40,7 +40,8 @@ public class TaskListService extends RemoteViewsService {
         private final Context ctx;
         private final int widgetId;
         private final List<JSONObject> items = new ArrayList<>();
-        private final List<Boolean> justDone = new ArrayList<>();
+        /** Per rij het moment van de afvinktik (ms), of 0 als de taak open is. */
+        private final List<Long> tickedAt = new ArrayList<>();
         private String view = "";
         private Map<String, Integer> subtasks = new java.util.HashMap<>();
         private Set<String> listNames = new java.util.HashSet<>();
@@ -57,7 +58,7 @@ public class TaskListService extends RemoteViewsService {
         @Override
         public void onDataSetChanged() {
             items.clear();
-            justDone.clear();
+            tickedAt.clear();
             view = Prefs.widgetView(ctx, widgetId);
             JSONObject pending = Prefs.pending(ctx);
             long now = System.currentTimeMillis();
@@ -68,10 +69,11 @@ public class TaskListService extends RemoteViewsService {
                 for (JSONObject o : WidgetFilter.select(arr, view, ZonedDateTime.now())) {
                     String id = o.optString("id");
                     boolean tapped = pending.has(id);
-                    // Net afgevinkt: nog even zichtbaar (doorgestreept). Daarna weg.
-                    if (tapped && now - pending.optLong(id) > Sync.UNDO_WINDOW_MS) continue;
+                    // Net afgevinkt: nog even op zijn plek (doorgestreept, met Ongedaan maken). Daarna weg. Sync houdt
+                    // zo'n taak in die tijd ook in de cache vast (UndoPlan.merge), dus de lijst verschuift niet.
+                    if (tapped && now - pending.optLong(id) > UndoPlan.UNDO_WINDOW_MS) continue;
                     items.add(o);
-                    justDone.add(tapped);
+                    tickedAt.add(tapped ? pending.optLong(id) : 0L);
                 }
             } catch (Exception ignored) {
                 // lege lijst
@@ -106,13 +108,17 @@ public class TaskListService extends RemoteViewsService {
             RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_item);
             if (position >= items.size()) return rv;
             JSONObject t = items.get(position);
-            boolean done = justDone.get(position);
+            long doneAt = tickedAt.get(position);
+            boolean done = doneAt > 0;
             String title = t.optString("title");
 
             // Uiterlijk uit de instellingen: tekstgrootte, bolletje meeschalend, extra ruimte boven en onder elke regel.
             int font = Prefs.fontSp(ctx);
             float density = ctx.getResources().getDisplayMetrics().density;
             float check = Math.max(24f, font * 2.1f);
+            // Zichtbaar bolletje zo groot als vroeger (check min 5 dp rand), maar het tikvlak minstens 48 x 48 dp.
+            float touch = Math.max(MIN_TOUCH_DP, check);
+            int checkPad = Math.round((touch - (check - 10f)) / 2f * density);
             rv.setTextViewTextSize(R.id.title, TypedValue.COMPLEX_UNIT_SP, font);
             int small = Math.max(10, font - 3);
             rv.setTextViewTextSize(R.id.due, TypedValue.COMPLEX_UNIT_SP, small);
@@ -122,12 +128,16 @@ public class TaskListService extends RemoteViewsService {
                 rv.setViewLayoutWidth(iconId, icon, TypedValue.COMPLEX_UNIT_DIP);
                 rv.setViewLayoutHeight(iconId, icon, TypedValue.COMPLEX_UNIT_DIP);
             }
-            rv.setViewLayoutWidth(R.id.check, check, TypedValue.COMPLEX_UNIT_DIP);
-            rv.setViewLayoutHeight(R.id.check, check, TypedValue.COMPLEX_UNIT_DIP);
+            rv.setViewLayoutWidth(R.id.check, touch, TypedValue.COMPLEX_UNIT_DIP);
+            rv.setViewLayoutHeight(R.id.check, touch, TypedValue.COMPLEX_UNIT_DIP);
+            rv.setViewPadding(R.id.check, checkPad, checkPad, checkPad, checkPad);
+            rv.setTextViewTextSize(R.id.undo, TypedValue.COMPLEX_UNIT_SP, Math.max(12, font - 1));
             int padPx = Math.round(Prefs.spacingDp(ctx) * density);
-            // Binnenruimte van het tegeltje: vast 3dp boven en onder, plus de regelafstand uit de instellingen.
+            // Binnenruimte van het tegeltje: vast 3dp boven en onder, plus de regelafstand uit de instellingen. Op het
+            // tekstblok, niet op de rij: dan is een rij van één regel precies zo hoog als het tikvlak van het bolletje.
             int tilePad = Math.round(TILE_PADDING_DP * density) + padPx;
-            rv.setViewPadding(R.id.row, Math.round(2 * density), tilePad, 0, tilePad);
+            rv.setViewPadding(R.id.row, 0, 0, 0, 0);
+            rv.setViewPadding(R.id.text_block, 0, tilePad, 0, tilePad);
 
             if (done) {
                 SpannableString s = new SpannableString(title);
@@ -169,7 +179,7 @@ public class TaskListService extends RemoteViewsService {
 
             // De lijstnaam alleen als de widget meer dan één lijst toont, net als de pil in Alles in de webapp. Altijd
             // rechts op de eerste titelregel, zodat hij steeds op dezelfde plek staat en de rij er niet hoger van wordt.
-            boolean pill = isMixed();
+            boolean pill = isMixed() && !done; // afgevinkt: plaats voor Ongedaan maken
             show(rv, R.id.title_pill, pill);
             if (pill) {
                 String list = WidgetFilter.normName(t.isNull("list") ? null : t.optString("list"));
@@ -180,7 +190,6 @@ public class TaskListService extends RemoteViewsService {
                 String hex = WidgetFilter.listColor(list, listNames, Locale.getDefault());
                 int color = hex == null ? ctx.getColor(R.color.widget_muted)
                         : WidgetFilter.readable(Color.parseColor(hex), ctx.getColor(R.color.widget_pill) & 0xFFFFFF, isDark());
-                if (done) color = (color & 0x00FFFFFF) | 0x80000000; // afgevinkt: half doorzichtig
                 rv.setTextColor(R.id.title_pill, color);
             }
             // Zonder pil (widget op één lijst) dezelfde afstand tot de rand van het tegeltje als de pil heeft. Steeds zetten,
@@ -195,16 +204,27 @@ public class TaskListService extends RemoteViewsService {
                     TypedValue.COMPLEX_UNIT_DIP);
             rv.setViewVisibility(R.id.meta, meta ? View.VISIBLE : View.GONE);
 
+            // Bolletje = afvinken, titel = openen, Ongedaan maken = terugzetten. Elke rij zet alle drie, want de lijst
+            // hergebruikt rijen (en daarmee hun oude klikdoel). Op een net afgevinkte rij doen bolletje en titel niets:
+            // de ontvanger negeert een tweede afvinktik, en terugzetten gaat alleen met de knop.
             String id = t.optString("id");
             rv.setOnClickFillInIntent(R.id.check, new Intent().putExtra(ActionReceiver.EXTRA_ID, id));
             rv.setOnClickFillInIntent(R.id.text_block, new Intent()
                     .putExtra(ActionReceiver.EXTRA_ID, id)
-                    .putExtra(WidgetClickActivity.EXTRA_ACTION, done ? WidgetClickActivity.ACTION_UNDO : WidgetClickActivity.ACTION_OPEN));
+                    .putExtra(WidgetClickActivity.EXTRA_ACTION, done ? WidgetClickActivity.ACTION_NONE : WidgetClickActivity.ACTION_OPEN));
+            show(rv, R.id.undo, done);
+            rv.setOnClickFillInIntent(R.id.undo, new Intent()
+                    .putExtra(ActionReceiver.EXTRA_ID, id)
+                    .putExtra(ActionReceiver.EXTRA_TICKED_AT, doneAt)
+                    .putExtra(WidgetClickActivity.EXTRA_ACTION, WidgetClickActivity.ACTION_UNDO));
+            if (done) rv.setContentDescription(R.id.undo, ctx.getString(R.string.undo_task, title));
             return rv;
         }
 
         /** Tegeltjes: binnenruimte boven en onder, ruimte ertussen, en de grotere ruimte na de vastgezette taken (dp). */
         private static final int TILE_PADDING_DP = 3;
+        /** Kleinste tikvlak (Android-richtlijn). */
+        private static final float MIN_TOUCH_DP = 48;
         private static final float TILE_GAP_DP = 3;
         private static final float GROUP_GAP_DP = 10;
 
@@ -254,7 +274,7 @@ public class TaskListService extends RemoteViewsService {
         @Override
         public void onDestroy() {
             items.clear();
-            justDone.clear();
+            tickedAt.clear();
         }
     }
 }

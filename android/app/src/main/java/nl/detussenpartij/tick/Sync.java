@@ -48,7 +48,7 @@ final class Sync {
             }
             // Eerst weggeveegde meldingen: die zetten location_notified in arr (en de cache) terug op false.
             if (retryRearm(c, arr, pending)) json = arr.toString();
-            Prefs.setCache(c, json);
+            saveServerList(c, json);
             Prefs.setSyncError(c, null);
             Prefs.setLastSync(c, System.currentTimeMillis());
             retryLocationNotified(c, arr, fetchedFrom);
@@ -60,6 +60,22 @@ final class Sync {
             if (!Prefs.token(c).isEmpty()) Prefs.setSyncError(c, c.getString(R.string.sync_failed, errorText(c, e)));
         }
         TaskWidgetProvider.updateAll(c);
+    }
+
+    /**
+     * Bewaart de lijst van de server als cache, maar net afgevinkte taken (nog in het ongedaan-venster) blijven zoals
+     * en waar ze stonden, zodat de widget niet onder je vinger verschuift. Zie UndoPlan.merge.
+     */
+    static void saveServerList(Context c, String json) {
+        try {
+            java.util.Set<String> held = UndoPlan.held(Prefs.pending(c), System.currentTimeMillis());
+            if (!held.isEmpty()) {
+                json = UndoPlan.merge(new JSONArray(Prefs.cache(c)), new JSONArray(json), held).toString();
+            }
+        } catch (Exception e) {
+            Log.w("Tick", "Vasthouden van afgevinkte taken mislukt", e);
+        }
+        Prefs.setCache(c, json);
     }
 
     /**
