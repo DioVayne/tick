@@ -7,11 +7,12 @@ import { inZone, localToUtcIso } from './time';
 import type { User } from './users';
 import { readTickTickText, tickTickRows } from '../public/ticktick.js';
 import { attachStmts, listOf, type ListRef } from './sharedlists';
+import { cleanMoreJson } from './location';
 
 /** Kolommen van `tasks` die in een backup horen; alles daarbuiten wordt genegeerd. */
 export const TASK_COLUMNS: (keyof TaskRow)[] = [
   'id', 'title', 'description', 'list', 'parent_id', 'position', 'remind_at', 'notified', 'done', 'done_at', 'source',
-  'created_at', 'updated_at', 'loc_name', 'loc_lat', 'loc_lng', 'loc_radius', 'loc_trigger', 'loc_notified',
+  'created_at', 'updated_at', 'loc_name', 'loc_lat', 'loc_lng', 'loc_radius', 'loc_trigger', 'loc_more', 'loc_notified',
   'repeat_rule', 'repeat_start', 'repeat_at', 'repeat_prev', 'pinned', 'reviewed_at',
 ];
 export const PLACE_COLUMNS = ['id', 'name', 'lat', 'lng', 'radius', 'created_at', 'updated_at'] as const;
@@ -131,6 +132,8 @@ export async function mergeTasks(db: D1Database, userId: string, tasks: unknown[
       if (row[col] !== undefined && row[col] !== null) row[col] = isoOrNull(row[col]);
     }
     if (isStr(row.remind_at) && Date.parse(row.remind_at as string) <= now) row.notified = 1;
+    // Extra plekken alleen zoals de API ze ook zou aannemen; anders alleen de eerste plek.
+    if (row.loc_more !== undefined) row.loc_more = cleanMoreJson(row.loc_more, row.loc_trigger);
     // Geen ongedaan-maakstand uit een bestand (die is na 15 minuten toch verlopen), en een ritme alleen als het klopt.
     row.repeat_prev = null;
     if (row.repeat_rule !== undefined && row.repeat_rule !== null) {

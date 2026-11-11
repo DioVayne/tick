@@ -1,7 +1,7 @@
 import { Offline } from './api.js';
 import { t } from './i18n.js';
 import { ask } from './dialog.js';
-import { RADIUS, deletePlace, formatRadius, geocode, loadPlaces, renamePlace, savePlace, updatePlace } from './places.js';
+import { MAX_PLACES, PHONE_MAX, RADIUS, deletePlace, formatRadius, geocode, loadPlaces, placesOf, renamePlace, savePlace, updatePlace } from './places.js';
 import { el, toast } from './render.js';
 
 // Schermvullend kaartscherm om een plek voor een taak te kiezen, of (vanuit de instellingen) een favoriete plek toe te
@@ -42,8 +42,11 @@ function placeError(e) {
 
 let isOpen = false;
 
-/** Opent het kaartscherm. Geeft de gekozen plek ({ name, lat, lng, radius, trigger }), of undefined bij Sluiten. */
-export const openMap = (task) => openScreen({ loc: task.location ?? null, place: undefined });
+/**
+ * Opent het kaartscherm. Geeft de gekozen plek(ken) als locatie ({ name, lat, lng, radius, trigger, more? }), of
+ * undefined bij Sluiten. `watched`: hoeveel plekken andere open taken al hebben (voor de waarschuwing over de grens).
+ */
+export const openMap = (task, watched = 0) => openScreen({ loc: task.location ?? null, place: undefined, watched });
 
 /**
  * Kaartscherm voor een favoriete plek: `null` voegt er een toe, een plek wijzigt of verwijdert die.
@@ -81,8 +84,19 @@ async function openScreen(mode) {
 }
 
 /** mode.place: undefined bij een taak; null (nieuw) of een plek bij het beheren van favorieten. */
-function buildScreen(L, { loc, place }, resolve) {
+function buildScreen(L, { loc, place, watched = 0 }, resolve) {
   const managing = place !== undefined;
+  // Meerdere plekken (alleen bij een taak): de pin is de plek die je nu kiest, `others` zijn de andere plekken van de
+  // taak. "Nog een plek" zet de pin bij de andere; daarna telt de pin pas weer mee als je de kaart verschuift.
+  /** @type {{ name: string, lat: number, lng: number, radius: number }[]} */
+  const others = managing ? [] : placesOf(loc).slice(1);
+  /** Waar de pin stond bij "Nog een plek": staat hij daar nog, dan is hij geen nieuwe plek. */
+  let lastAdded = null;
+  /**
+   * De plek die nu onder de pin ligt zoals hij bewaard was (de eerste bij openen, of een aangetikte uit "Ook bij"). Zolang
+   * de kaart niet echt verschoven is, blijven precies die coordinaten staan (het midden van de kaart wijkt een paar meter af).
+   */
+  let held = managing || !loc ? null : { lat: loc.lat, lng: loc.lng };
   let trigger = loc?.trigger ?? 'enter';
   // Een favoriet heeft geen trigger; die krijgt de standaard van aankomst.
   let radius = clampRadius(loc?.radius ?? RADIUS.default[managing ? 'enter' : trigger]);
@@ -113,11 +127,17 @@ function buildScreen(L, { loc, place }, resolve) {
     el('label', {}, t('map.favorite_name'), favName),
     el('button', { type: 'submit' }, t('map.save')),
     el('button', { type: 'button', class: 'ghost', 'aria-label': t('map.cancel'), onclick: () => { favRow.hidden = true; } }, '✕'));
+  const useBtn = el('button', { type: 'button', onclick: use }, t('map.use_place'));
+  const othersBox = el('div', { class: 'chips favs others', role: 'group', 'aria-label': t('map.also_at') });
+  const othersSec = el('section', { class: 'mapsec', hidden: true }, el('h3', { class: 'maph' }, t('map.also_at')), othersBox);
+  const multiNote = el('p', { class: 'mapnote', hidden: true });
+  const limitNote = el('p', { class: 'mapnote warn', hidden: true });
   const actions = managing
     ? [el('button', { type: 'button', onclick: saveManaged }, t('map.save')),
       place ? el('button', { type: 'button', class: 'danger', onclick: deleteManaged }, t('map.delete')) : null,
       el('button', { type: 'button', class: 'ghost', onclick: () => close(undefined) }, t('map.cancel'))]
-    : [el('button', { type: 'button', onclick: use }, t('map.use_place')),
+    : [useBtn,
+      el('button', { type: 'button', class: 'ghost', onclick: addAnother }, t('map.add_place')),
       el('button', { type: 'button', class: 'ghost', onclick: openFavRow }, t('map.save_favorite')),
       el('button', { type: 'button', class: 'ghost', onclick: () => close(undefined) }, t('map.close'))];
   const title = managing ? (place ? t('map.edit_place') : t('map.new_place')) : t('map.choose_place');
@@ -135,10 +155,12 @@ function buildScreen(L, { loc, place }, resolve) {
         managing ? null : el('section', { class: 'mapsec' },
           el('h3', { class: 'maph' }, t('map.when')),
           el('div', { class: 'seg', role: 'group', 'aria-label': t('map.when') }, enterBtn, exitBtn),
-          whenNote),
+          whenNote, multiNote),
+        managing ? null : othersSec,
         el('section', { class: 'mapsec' },
           el('h3', { class: 'maph' }, el('span', {}, t('map.radius')), radiusValue),
-          range, radiusHint)),
+          range, radiusHint),
+        managing ? null : limitNote),
       el('div', { class: 'mapfoot' }, managing ? null : favRow, el('div', { class: 'actions' }, ...actions))),
   );
   document.body.append(screen);
@@ -155,6 +177,8 @@ function buildScreen(L, { loc, place }, resolve) {
   map.on('move', () => circle.setLatLng(map.getCenter()));
   map.on('dragstart zoomstart', () => { userMoved = true; });
   map.on('dragstart', () => markFav(null));
+  // De andere plekken van de taak als lichte cirkels, zodat je ziet welke winkels er al bij staan.
+  const otherLayer = L.layerGroup().addTo(map);
 
   const go = (lat, lng) => {
     if (finished) return; // antwoord van zoeken of GPS kwam pas na het sluiten
@@ -182,6 +206,7 @@ function buildScreen(L, { loc, place }, resolve) {
   // ---------- straal en trigger ----------
   const showHints = () => {
     whenNote.textContent = t(trigger === 'exit' ? 'map.when_exit_note' : 'map.when_enter_note');
+    multiNote.textContent = t(trigger === 'exit' ? 'map.multi_note_exit' : 'map.multi_note_enter');
     radiusHint.textContent = t(!managing && trigger === 'enter' ? 'map.radius_enter_hint' : 'map.radius_exit_hint');
   };
   const setRadius = (r) => {
@@ -327,6 +352,7 @@ function buildScreen(L, { loc, place }, resolve) {
 
   // Bij het beheren van een favoriet horen de knoppen van de andere favorieten er niet bij.
   if (!managing) refreshPlaces();
+  if (!managing) drawOthers();
 
   /** Favoriet opslaan vanuit de instellingen; het scherm blijft open als het niet lukt. */
   async function saveManaged() {
@@ -362,8 +388,71 @@ function buildScreen(L, { loc, place }, resolve) {
     return { lat: round6(c.lat), lng: round6(c.lng) };
   }
 
+  /** Ligt het midden van de kaart binnen 10 m van `p`? */
+  function nearCenter(p) {
+    const c = center();
+    const dy = (c.lat - p.lat) * 111_320;
+    const dx = (c.lng - p.lng) * 111_320 * Math.cos((c.lat * Math.PI) / 180);
+    return Math.hypot(dx, dy) < 10;
+  }
+
+  /** De plek onder de pin, met de naam van de favoriet of het zoekresultaat. */
+  const pinSpot = () => ({ name: chosenFav?.name ?? (autoName || t('map.pinned_place')), ...(held && nearCenter(held) ? held : center()), radius });
+
+  /** Telt de pin als plek? Niet als hij nog staat waar hij bij "Nog een plek" stond. */
+  const pinCounts = () => !lastAdded || !nearCenter(lastAdded);
+
+  /** Lijst "Ook bij", de cirkels op de kaart, de tekst van de knop en de waarschuwing over de grens van de telefoon. */
+  function drawOthers() {
+    othersBox.replaceChildren(...others.map((p, i) => el('span', { class: 'fav' },
+      el('button', { type: 'button', 'aria-label': t('map.show_place_label', { name: p.name }), onclick: () => swapIn(i) }, p.name),
+      el('button', { type: 'button', class: 'edit-fav', title: t('map.remove_place_label', { name: p.name }), 'aria-label': t('map.remove_place_label', { name: p.name }),
+        onclick: () => { others.splice(i, 1); drawOthers(); } }, '✕'))));
+    othersSec.hidden = !others.length;
+    multiNote.hidden = !others.length;
+    useBtn.textContent = t(others.length ? 'map.use_places' : 'map.use_place');
+    otherLayer.clearLayers();
+    for (const p of others) L.circle([p.lat, p.lng], { radius: p.radius, className: 'loc-circle loc-other', interactive: false }).addTo(otherLayer);
+    const total = watched + others.length + 1;
+    limitNote.hidden = total <= PHONE_MAX;
+    limitNote.textContent = t('map.limit_note', { n: String(total), max: String(PHONE_MAX) });
+  }
+
+  /** "Nog een plek": de pin gaat bij de andere plekken; schuif daarna de kaart naar de volgende. */
+  function addAnother() {
+    if (!pinCounts()) { toast(t('map.move_first')); return; }
+    if (others.length + 1 >= MAX_PLACES) { toast(t('map.max_places', { max: String(MAX_PLACES) })); return; }
+    others.push(pinSpot());
+    lastAdded = center();
+    held = null;
+    markFav(null);
+    autoName = '';
+    drawOthers();
+    toast(t('map.add_place_hint'));
+  }
+
+  /** Een plek uit "Ook bij" onder de pin zetten om hem te bekijken of te verschuiven; de pin gaat er dan voor in de plaats. */
+  function swapIn(i) {
+    const p = others[i];
+    if (pinCounts()) others[i] = pinSpot();
+    else others.splice(i, 1);
+    lastAdded = null;
+    held = { lat: p.lat, lng: p.lng };
+    // Zonder animatie: anders kan een zoom tijdens het schuiven de kaart halverwege laten stoppen.
+    userMoved = true;
+    map.setView([p.lat, p.lng], Math.max(map.getZoom(), ZOOM), { animate: false });
+    radiusChosen = true;
+    setRadius(p.radius);
+    autoName = p.name;
+    markFav(null);
+    drawOthers();
+  }
+
   function use() {
-    close({ name: chosenFav?.name ?? (autoName || t('map.pinned_place')), ...center(), radius, trigger });
+    const all = pinCounts() ? [pinSpot(), ...others] : others;
+    if (!all.length) { close(undefined); return; }
+    const [first, ...more] = all;
+    close({ ...first, trigger, ...(more.length ? { more } : {}) });
   }
 
   // Eigen history-item: de terugknop sluit dan de kaart in plaats van de app te verlaten.

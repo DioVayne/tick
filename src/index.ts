@@ -10,7 +10,7 @@ import { assetLinks } from './assetlinks';
 import { contactEmail, deleteAccountPage, loginAssets, loginPage, privacyPage, termsPage } from './login';
 import { badRequest, errorBody, HttpError } from './errors';
 import { normLocale, translate } from '../public/i18n.js';
-import { cleanLocation, cleanPlace, locColumns, locFromRow, type Place } from './location';
+import { cleanLocation, cleanPlace, locColumns, locFromRow, moreSpots, type Place } from './location';
 import { repeatColumns, repeatFromRow, todayDefaultIso } from './repeat';
 import { nextOccurrence } from '../public/repeat.js';
 import { installPrefsFrom, loadInstallPrefs, loadUserPrefs, requestLocale, type InstallPrefs, type Prefs, userSettingRows } from './prefs';
@@ -100,6 +100,8 @@ export type TaskRow = {
   source: string; created_at: string; updated_at: string;
   loc_name: string | null; loc_lat: number | null; loc_lng: number | null; loc_radius: number | null;
   loc_trigger: string | null; loc_notified: number;
+  /** De extra plekken als JSON (`[{name, lat, lng, radius}]`), of null bij één plek of geen. */
+  loc_more: string | null;
   repeat_rule: string | null; repeat_start: string | null; repeat_at: string | null; repeat_prev: string | null;
   deleted_at: string | null; copy_group: string | null; pinned: number;
   /** Wie deze kopie stuurde (alleen op de hoofdtaak van een geaccepteerde kopie); blijft op de server, de app krijgt `copies.from`. */
@@ -305,7 +307,7 @@ app.route('/mcp', mcpApi((req, env, ctx) => Promise.resolve(app.fetch(req, env, 
 const now = () => new Date().toISOString();
 /** Taak als JSON voor de client: 0/1 wordt boolean, de loc_*-kolommen worden één location-object en de repeat_*-kolommen één repeat-object (repeat_prev, copy_group en copied_from blijven op de server). */
 function asBool(t: TaskRow) {
-  const { loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_notified, repeat_rule, repeat_start, repeat_at, repeat_prev, copy_group, copied_from, ...rest } = t;
+  const { loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_more, loc_notified, repeat_rule, repeat_start, repeat_at, repeat_prev, copy_group, copied_from, ...rest } = t;
   return {
     ...rest,
     done: !!t.done,
@@ -789,9 +791,9 @@ async function createTask(env: Env, userId: string, z: Zone, b: Record<string, u
   const owner = parent ? parent.user_id : userId;
   const shared = parent ? null : await listOf(env.DB, userId, list);
   const insert = (tail: string) => env.DB.prepare(
-    'INSERT INTO tasks (id,user_id,title,description,list,parent_id,position,remind_at,source,created_at,updated_at,loc_name,loc_lat,loc_lng,loc_radius,loc_trigger,repeat_rule,repeat_start,repeat_at,repeat_prev) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)' + tail,
+    'INSERT INTO tasks (id,user_id,title,description,list,parent_id,position,remind_at,source,created_at,updated_at,loc_name,loc_lat,loc_lng,loc_radius,loc_trigger,loc_more,repeat_rule,repeat_start,repeat_at,repeat_prev) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)' + tail,
   ).bind(id, owner, title, description, list, parent?.id ?? null, position, remindAt, source, ts, ts,
-    loc.loc_name, loc.loc_lat, loc.loc_lng, loc.loc_radius, loc.loc_trigger,
+    loc.loc_name, loc.loc_lat, loc.loc_lng, loc.loc_radius, loc.loc_trigger, loc.loc_more,
     rep.repeat_rule, rep.repeat_start, rep.repeat_at, rep.repeat_prev);
   if (shared) {
     // In een gedeelde lijst: eerst als eigen taak, dan in dezelfde batch de lijst in (van de eigenaar, met deelrijen).
@@ -920,7 +922,8 @@ async function patchTask(c: Context<AppEnv>, id: string, b: Record<string, unkno
     set('loc_notified', 0);
     resetShares = !t.parent_id;
     // Alleen een echt andere plek (niet een nieuwe naam) is een melding aan de anderen waard.
-    newPlace = cols.loc_lat !== null && ['loc_lat', 'loc_lng', 'loc_radius', 'loc_trigger'].some((col) => (t as Record<string, unknown>)[col] !== cols[col]);
+    newPlace = cols.loc_lat !== null && (['loc_lat', 'loc_lng', 'loc_radius', 'loc_trigger'].some((col) => (t as Record<string, unknown>)[col] !== cols[col])
+      || moreSpots(t.loc_more, t.loc_trigger) !== moreSpots(cols.loc_more, cols.loc_trigger));
   }
   if ('location_notified' in b) {
     if (typeof b.location_notified !== 'boolean') throw new HttpError(400, 'err.must_be_bool', { field: 'location_notified' });

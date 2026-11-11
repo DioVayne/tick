@@ -5,7 +5,7 @@
 import { request } from './api.js';
 import { selectTask } from './detail.js';
 import { startOfDay } from './calendar.js';
-import { createDetector, driveTasks, snoozeValid } from './drive.js';
+import { createDetector, driveTasks, nearestPlace, snoozeValid } from './drive.js';
 import { dateLocale, t } from './i18n.js';
 import { icon } from './icons.js';
 import { $, checkOff, el, fmt, toast } from './render.js';
@@ -127,7 +127,7 @@ function paint() {
       el('button', { type: 'button', class: 'ghost', onclick: notNow }, t('drive.not_now')),
       el('button', { type: 'button', class: 'ghost', onclick: never }, t('drive.never'))));
   $('#drive').replaceChildren(...[
-    section(t('drive.near'), near, (x) => x.location.name),
+    section(t('drive.near'), near, (x) => nearestPlace(S.pos, x.location).place.name),
     section(t('drive.today'), today, (x) => when(x.remind_at)),
     !near.length && !today.length ? el('p', { class: 'drive-empty' }, t('drive.empty')) : null,
     rest > 0 ? el('p', { class: 'drive-rest' }, t('drive.rest', { n: String(rest) })) : null,

@@ -11,7 +11,7 @@ import { describeRule } from './repeat.js';
 import { openRepeatPicker } from './repeatpicker.js';
 import { openMap } from './map.js';
 import { renderMarkdown } from './markdown.js';
-import { formatRadius, wakeAndroidApp } from './places.js';
+import { formatRadius, placeNames, wakeAndroidApp, watchedPlaces } from './places.js';
 import { $, checkOff, el, fmt, fromLocalInput, render, toLocalInput, toast } from './render.js';
 import { reviewPrefsOf } from './review.js';
 import { staleCount } from './sidebar.js';
@@ -411,7 +411,7 @@ function build(t, readOnly) {
     const task = current(id);
     if (!task) return;
     const since = task.updated_at ?? '';
-    const location = await openMap(task);
+    const location = await openMap(task, watchedPlaces(state.open, id));
     if (location) setLocation(location, since);
   };
   const clearLoc = () => setLocation(null, current(id)?.updated_at ?? '');
@@ -674,7 +674,8 @@ function drawRail(t) {
     }),
     done && !loc ? null : step({
       kind: 'place', icon: 'place', on: !!loc, lead: loc ? tr(loc.trigger === 'exit' ? 'add.leave' : 'add.arrive') : tr('add.place'),
-      value: loc?.name ?? null, note: loc ? formatRadius(loc.radius) : null, sub: v.locSub,
+      // Meerdere plekken: alle namen, en het aantal in plaats van de straal (die per plek kan verschillen).
+      value: loc ? placeNames(loc) : null, note: loc ? (loc.more?.length ? tr('places.count', { n: String(loc.more.length + 1) }) : formatRadius(loc.radius)) : null, sub: v.locSub,
       open: opener('place', v.pickPlace), actions: done || !loc ? [] : [clear(v.clearLoc, tr('detail.remove_location'))],
     }),
     // Een subtaak volgt de lijst van de hoofdtaak: gewone tekst, geen knop.
