@@ -31,11 +31,11 @@ const NL_TO_EN: Record<string, string> = {
   privacy: 'privacy', kost: 'cost', vragen: 'faq',
   invoerkaart: 'entry-card', herinneringen: 'reminders', herhalen: 'repeating', vandaag: 'due-today', kalender: 'calendar',
   'agenda-koppelen': 'link-calendar', subtaken: 'subtasks', notities: 'notes', bijlagen: 'attachments', offline: 'offline',
-  themas: 'themes', widget: 'widget', plekken: 'places', rijmodus: 'driving-mode', 'op-tijd-onderweg': 'on-time-on-the-road',
+  themas: 'themes', widget: 'widget', plekken: 'places', 'meerdere-plekken': 'more-places', rijmodus: 'driving-mode', 'op-tijd-onderweg': 'on-time-on-the-road',
   tickmanager: 'tickmanager', delen: 'sharing', 'gedeelde-lijsten': 'shared-lists', 'melden-en-blokkeren': 'reporting-and-blocking',
   ticktick: 'ticktick', 'back-up': 'backup', koppelingen: 'integrations', account: 'account', talen: 'languages',
 };
-for (let i = 1; i <= 17; i++) NL_TO_EN[`faq-${i}`] = `faq-${i}`;
+for (let i = 1; i <= 18; i++) NL_TO_EN[`faq-${i}`] = `faq-${i}`;
 const toEn = (id: string) => NL_TO_EN[id] ?? `(no translation for ${id})`;
 
 describe('website ticktodo.nl', () => {
@@ -52,7 +52,7 @@ describe('website ticktodo.nl', () => {
 
   it('NL and EN have the same feature stories and questions, in the same order', () => {
     const nl = detailsIds(page('index.html'));
-    expect(nl.length).toBe(24 + 17);
+    expect(nl.length).toBe(25 + 18);
     expect(detailsIds(page('en/index.html'))).toEqual(nl.map(toEn));
   });
 
