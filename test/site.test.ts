@@ -27,7 +27,7 @@ const detailsIds = (text: string) => [...text.matchAll(/<details\b[^>]*\bid="([^
 // The anchors are in the page's own language; this is the one-to-one translation between the two pages.
 const NL_TO_EN: Record<string, string> = {
   top: 'top', maker: 'maker', 'op-de-juiste-plek': 'in-the-right-place', 'samen-of-kopie': 'shared-or-copy',
-  'oude-taken': 'old-tasks', functies: 'features', 'wat-werkt-waar': 'what-works-where',
+  'oude-taken': 'old-tasks', functies: 'features', 'wat-werkt-waar': 'what-works-where', vergelijken: 'compare',
   privacy: 'privacy', kost: 'cost', vragen: 'faq',
   invoerkaart: 'entry-card', herinneringen: 'reminders', herhalen: 'repeating', vandaag: 'due-today', kalender: 'calendar',
   'agenda-koppelen': 'link-calendar', subtaken: 'subtasks', notities: 'notes', bijlagen: 'attachments', offline: 'offline',
@@ -35,7 +35,7 @@ const NL_TO_EN: Record<string, string> = {
   tickmanager: 'tickmanager', delen: 'sharing', 'gedeelde-lijsten': 'shared-lists', 'melden-en-blokkeren': 'reporting-and-blocking',
   ticktick: 'ticktick', 'back-up': 'backup', koppelingen: 'integrations', account: 'account', talen: 'languages',
 };
-for (let i = 1; i <= 15; i++) NL_TO_EN[`faq-${i}`] = `faq-${i}`;
+for (let i = 1; i <= 17; i++) NL_TO_EN[`faq-${i}`] = `faq-${i}`;
 const toEn = (id: string) => NL_TO_EN[id] ?? `(no translation for ${id})`;
 
 describe('website ticktodo.nl', () => {
@@ -52,7 +52,7 @@ describe('website ticktodo.nl', () => {
 
   it('NL and EN have the same feature stories and questions, in the same order', () => {
     const nl = detailsIds(page('index.html'));
-    expect(nl.length).toBe(24 + 15);
+    expect(nl.length).toBe(24 + 17);
     expect(detailsIds(page('en/index.html'))).toEqual(nl.map(toEn));
   });
 
