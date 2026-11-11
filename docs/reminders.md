@@ -9,7 +9,7 @@ Times are shown and picked in the time zone set in [Settings](settings.md#langua
 
 In the list the time is shown in grey under the task, so it does not stand out. Once the time has passed it turns red.
 
-A notification has two buttons: **Done** ticks the task off, **In 1 hour** moves the reminder an hour later. If the button can't reach Tick (no connection, or you were logged out), the notification comes back so you can try again. Tapping the notification opens the task.
+A notification has two buttons: **Done** ticks the task off, **In 1 hour** moves the reminder an hour later. If the button doesn't work, the notification comes back and says why: no connection or a server error (the buttons stay, so you can try again), or you're not logged in (no buttons; tap it to open Tick and log in). Tapping the notification opens the task.
 
 Reminders can be up to a minute late, because Tick checks once a minute.
 

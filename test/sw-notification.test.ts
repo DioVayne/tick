@@ -56,6 +56,30 @@ describe('service worker: knoppen in een melding', () => {
     expect(shown).toHaveLength(3);
   });
 
+  // Zelfde titel, tekst en knoppen leek op een dubbele melding: de teruggezette melding zegt nu wat er misging.
+  const failed = { offline: 'Lukte niet: geen verbinding.', auth: 'Lukte niet: log opnieuw in.', server: 'Lukte niet: serverfout {status}.' };
+
+  it('mislukt zonder verbinding: de tekst zegt dat, de knoppen blijven om het opnieuw te proberen', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+    await click('done', { taskId: 't1', failed });
+    expect(shown[0].opts.body).toBe('Lukte niet: geen verbinding.');
+    expect(shown[0].opts.actions.map((a: any) => a.action)).toEqual(['done', 'snooze']);
+    expect(shown[0].opts.data).toMatchObject({ taskId: 't1', failed });
+  });
+
+  it('niet (meer) ingelogd: zeggen dat je opnieuw moet inloggen, zonder knoppen die toch weer mislukken', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 401 }));
+    await click('done', { taskId: 't1', failed });
+    expect(shown[0].opts.body).toBe('Lukte niet: log opnieuw in.');
+    expect(shown[0].opts.actions).toEqual([]);
+  });
+
+  it('serverfout: met de statuscode in de tekst', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 503 }));
+    await click('done', { taskId: 't1', failed });
+    expect(shown[0].opts.body).toBe('Lukte niet: serverfout 503.');
+  });
+
   it('een taak die elders verwijderd is (404) komt niet terug: opnieuw proberen helpt niet', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 404 }));
     await click('done', { taskId: 't1' });
