@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 // The Worker of ticktodo.nl (site/worker): the mini-CMS behind /beheer. Tested with a fake ASSETS and KV.
-import worker, { BEVEILIGING, PAGINAS } from '../site/worker/index.js';
+import worker, { BEVEILIGING, PAGINAS, voorkeurTaal } from '../site/worker/index.js';
 
 declare global {
   interface ImportMeta {
@@ -138,6 +138,49 @@ describe('website CMS worker', () => {
     const env = makeEnv('geheim');
     for (let i = 0; i < 10; i++) expect((await login(env, 'fout')).res.status).toBe(401);
     expect((await login(env, 'geheim')).res.status).toBe(429);
+  });
+
+  it('reads the preferred language from Accept-Language', () => {
+    expect(voorkeurTaal(null)).toBeNull();
+    expect(voorkeurTaal('*')).toBeNull();
+    expect(voorkeurTaal('nl-NL,nl;q=0.9,en;q=0.8')).toBe('nl');
+    expect(voorkeurTaal('nl-BE')).toBe('nl');
+    expect(voorkeurTaal('en-US,en;q=0.9')).toBe('en');
+    expect(voorkeurTaal('de-DE,de;q=0.9,nl;q=0.5')).toBe('en');
+    expect(voorkeurTaal('en;q=0.5,nl;q=0.8')).toBe('nl');
+  });
+
+  it('sends a foreign browser from the home page to /en/, unless a choice or own link says otherwise', async () => {
+    const env = makeEnv('geheim');
+    const en = { 'accept-language': 'en-US,en;q=0.9' };
+    const naar = async (path: string, headers: Record<string, string> = {}) => {
+      const res = await call(env, path, { headers, redirect: 'manual' });
+      return res.status === 302 ? res.headers.get('location') : res.status;
+    };
+    expect(await naar('/', en)).toBe('/en/');
+    expect(await naar('/index.html', en)).toBe('/en/');
+    expect(await naar('/', { 'accept-language': 'nl-NL,nl;q=0.9,en;q=0.8' })).toBe(200);
+    expect(await naar('/')).toBe(200); // crawlers send no Accept-Language
+    expect(await naar('/en/', { 'accept-language': 'nl' })).toBe(200); // /en/ never moves by itself
+    expect(await naar('/', { ...en, referer: ORIGIN + '/privacy' })).toBe(200); // link on our own site
+    expect(await naar('/', { ...en, cookie: 'taal=nl' })).toBe(200);
+    expect(await naar('/', { 'accept-language': 'nl', cookie: 'cms=1; taal=en' })).toBe('/en/');
+
+    const kies = await call(env, '/?taal=nl', { headers: en, redirect: 'manual' });
+    expect(kies.status).toBe(302);
+    expect(kies.headers.get('location')).toBe('/');
+    expect(kies.headers.get('set-cookie')).toMatch(/^taal=nl; Path=\/; Max-Age=\d+; SameSite=Lax; Secure$/);
+    expect(kies.headers.get('content-security-policy')).toBe(BEVEILIGING['Content-Security-Policy']);
+    const kiesEn = await call(env, '/en/?taal=en', { redirect: 'manual' });
+    expect(kiesEn.headers.get('location')).toBe('/en/');
+    expect(kiesEn.headers.get('set-cookie')).toMatch(/^taal=en;/);
+
+    expect((await call(env, '/')).headers.get('vary')).toBe('Accept-Language, Cookie');
+  });
+
+  it('language links on the pages remember the choice', () => {
+    expect(NL).toContain('<a class="lang" href="/en/?taal=en"');
+    expect(EN).toContain('<a class="lang" href="/?taal=nl"');
   });
 
   it('leaves other paths to the assets', async () => {

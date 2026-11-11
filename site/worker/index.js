@@ -71,6 +71,7 @@ async function pagina(request, env) {
   headers.delete('etag');
   headers.delete('last-modified');
   headers.set('cache-control', 'no-store');
+  headers.set('vary', 'Accept-Language, Cookie');
   return new Response(uit.body, { status: uit.status, headers });
 }
 
@@ -125,11 +126,63 @@ async function api(request, env, pad) {
   return json({ fout: 'Niet gevonden.' }, 404);
 }
 
+// Language: the browser's first choice ('nl' or 'en'; any other language counts as 'en'), or null without a usable header.
+export function voorkeurTaal(header) {
+  let beste = null;
+  let besteQ = 0;
+  for (const deel of (header || '').split(',')) {
+    const [tag, ...params] = deel.trim().split(';');
+    const taal = tag.trim().toLowerCase().split('-')[0];
+    if (!taal || taal === '*') continue;
+    let q = 1;
+    for (const p of params) {
+      const m = p.trim().match(/^q=([\d.]+)$/i);
+      if (m) q = Number(m[1]);
+    }
+    if (q > besteQ) [beste, besteQ] = [taal, q];
+  }
+  return beste === null ? null : beste === 'nl' ? 'nl' : 'en';
+}
+
+const TAAL_JAAR = 60 * 60 * 24 * 365;
+
+function doorsturen(doel, extra = {}) {
+  return new Response(null, {
+    status: 302,
+    headers: { location: doel, 'cache-control': 'no-store', vary: 'Accept-Language, Cookie', ...extra },
+  });
+}
+
+// The language switch links carry ?taal=nl|en: remember that choice in a cookie.
+// On the Dutch home page: a remembered choice wins; a click from our own site stays Dutch;
+// otherwise a browser that prefers another language than Dutch goes to /en/.
+function taalRoute(request, url) {
+  const keuze = url.searchParams.get('taal');
+  if (keuze === 'nl' || keuze === 'en') {
+    const cookie = `taal=${keuze}; Path=/; Max-Age=${TAAL_JAAR}; SameSite=Lax; Secure`;
+    return doorsturen(keuze === 'en' ? '/en/' : '/', { 'set-cookie': cookie });
+  }
+  if (url.pathname !== '/' && url.pathname !== '/index.html') return null;
+  const onthouden = (request.headers.get('cookie') || '').match(/(?:^|;\s*)taal=(nl|en)(?:;|$)/)?.[1];
+  if (onthouden) return onthouden === 'en' ? doorsturen('/en/') : null;
+  try {
+    if (new URL(request.headers.get('referer') || '').origin === url.origin) return null;
+  } catch {
+    // no or invalid referer: decide on the browser language
+  }
+  return voorkeurTaal(request.headers.get('accept-language')) === 'en' ? doorsturen('/en/') : null;
+}
+
 export default {
   async fetch(request, env) {
-    const pad = new URL(request.url).pathname;
+    const url = new URL(request.url);
+    const pad = url.pathname;
     if (pad.startsWith('/api/')) return metBeveiliging(await api(request, env, pad));
-    if (request.method === 'GET' && PAGINAS.includes(pad)) return metBeveiliging(await pagina(request, env));
+    if (request.method === 'GET' && PAGINAS.includes(pad)) {
+      const taal = taalRoute(request, url);
+      if (taal) return metBeveiliging(taal);
+      return metBeveiliging(await pagina(request, env));
+    }
     return env.ASSETS.fetch(request);
   },
 };
