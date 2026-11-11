@@ -64,12 +64,12 @@ final class Prefs {
         sp(c).edit().putString("userId", id == null ? "" : id).apply();
     }
 
-    /** Wist de gegevens van de vorige gebruiker: cache, wachtrijen, getoonde locatiemeldingen en geofence-handtekening. */
+    /** Wist de gegevens van de vorige gebruiker: cache, wachtrijen, concept, getoonde locatiemeldingen en geofence-handtekening. */
     static synchronized void wipeAccountData(Context c) {
         sp(c).edit().putString("cache", "[]").remove("pending").remove("pendingRemind")
                 .remove("locFired").remove("locSynced").remove("locRearm").remove("geoSig").remove("geoIds")
                 .remove("roadMode").remove("roadModeAt").remove("roadRadii")
-                .remove("outbox").remove("outboxNote").remove("outboxNoteAt").commit();
+                .remove("outbox").remove("outboxNote").remove("outboxNoteAt").remove("quickDraft").commit();
     }
 
     static String cache(Context c) {
@@ -301,6 +301,16 @@ final class Prefs {
         sp(c).edit().putBoolean("quickKeepOpen", on).apply();
     }
 
+    /** Concept van de snelle-taak-popup (QuickAddPlan.Draft als JSON), of leeg. */
+    static String quickDraft(Context c) {
+        return sp(c).getString("quickDraft", "");
+    }
+
+    static void setQuickDraft(Context c, String json) {
+        if (json == null || json.isEmpty()) sp(c).edit().remove("quickDraft").apply();
+        else sp(c).edit().putString("quickDraft", json).apply();
+    }
+
     /** "Op tijd melden onderweg" staat aan (de knop in "Tick op deze telefoon"). */
     static boolean roadOn(Context c) {
         return sp(c).getBoolean("roadOn", false);
@@ -330,8 +340,7 @@ final class Prefs {
     }
 
     static synchronized void clearRoad(Context c) {
-        sp(c).edit().remove("roadMode").remove("roadModeAt").remove("roadRadii")
-                .remove("outbox").remove("outboxNote").remove("outboxNoteAt").commit();
+        sp(c).edit().remove("roadMode").remove("roadModeAt").remove("roadRadii").commit();
     }
 
     /** GeoPlan.signature van de geofences die nu geregistreerd zijn, of leeg als er niets (bekend) staat. */

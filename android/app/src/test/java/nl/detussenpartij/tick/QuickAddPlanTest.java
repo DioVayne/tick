@@ -1,6 +1,7 @@
 package nl.detussenpartij.tick;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -27,6 +28,126 @@ public class QuickAddPlanTest {
     @Test
     public void todayAfterElevenIsGone() {
         assertNull(QuickAddPlan.today(LocalDateTime.of(2026, 11, 3, 23, 10)));
+    }
+
+    @Test
+    public void startReminderOnlyFromToday() {
+        assertNull(QuickAddPlan.startReminder(false, NOW));
+        assertEquals(LocalDateTime.of(2026, 11, 3, 15, 0), QuickAddPlan.startReminder(true, NOW));
+        // Na 23:00 is er geen heel uur meer vandaag: dan meteen (zonder seconden).
+        LocalDateTime late = LocalDateTime.of(2026, 11, 3, 23, 10, 42);
+        assertEquals(LocalDateTime.of(2026, 11, 3, 23, 10), QuickAddPlan.startReminder(true, late));
+    }
+
+    @Test
+    public void reminderLineNamesTheDay() {
+        assertEquals(QuickAddPlan.Day.TODAY, QuickAddPlan.day(NOW, LocalDateTime.of(2026, 11, 3, 15, 0)));
+        assertEquals(QuickAddPlan.Day.TOMORROW, QuickAddPlan.day(NOW, LocalDateTime.of(2026, 11, 4, 9, 0)));
+        assertEquals(QuickAddPlan.Day.OTHER, QuickAddPlan.day(NOW, LocalDateTime.of(2026, 11, 9, 9, 0)));
+        assertEquals(QuickAddPlan.Day.OTHER, QuickAddPlan.day(NOW, LocalDateTime.of(2026, 11, 2, 9, 0)));
+    }
+
+    private static QuickAddPlan.Draft draft() {
+        QuickAddPlan.Draft d = new QuickAddPlan.Draft();
+        d.title = "Brood";
+        d.list = "Boodschappen";
+        d.savedAt = 1_000_000L;
+        return d;
+    }
+
+    @Test
+    public void draftNeedsText() {
+        QuickAddPlan.Draft d = new QuickAddPlan.Draft();
+        d.repeat = QuickAddPlan.Repeat.DAILY;
+        assertFalse(d.worthKeeping());
+        d.notes = " x ";
+        assertTrue(d.worthKeeping());
+        assertTrue(draft().worthKeeping());
+    }
+
+    @Test
+    public void draftListOnlyWinsWhenYouChoseIt() {
+        QuickAddPlan.Draft d = draft();
+        // Uit de widget "Boodschappen", niet veranderd: in de widget "Werk" komt hij in Werk.
+        assertEquals("Werk", d.listFor("Werk"));
+        d.listChanged = true;
+        assertEquals("Boodschappen", d.listFor("Werk"));
+        d.list = " ";
+        assertEquals("Werk", d.listFor("Werk"));
+    }
+
+    @Test
+    public void draftReminderOnlyWinsWhenYouChoseIt() {
+        QuickAddPlan.Draft d = draft();
+        LocalDateTime start = LocalDateTime.of(2026, 11, 3, 15, 0);
+        d.remindAt = LocalDateTime.of(2026, 11, 3, 12, 0); // de beginwaarde van toen
+        assertEquals(start, d.remindFor(start, NOW));
+        assertNull(d.remindFor(null, NOW));
+        assertFalse(d.keepsReminder(NOW));
+        // Zelf gekozen en nog niet voorbij: blijft.
+        d.remindChanged = true;
+        d.remindAt = LocalDateTime.of(2026, 11, 5, 9, 0);
+        assertEquals(d.remindAt, d.remindFor(start, NOW));
+        assertTrue(d.keepsReminder(NOW));
+        // Zelf weggehaald: blijft weg, ook vanuit Vandaag.
+        d.remindAt = null;
+        assertNull(d.remindFor(start, NOW));
+        assertTrue(d.keepsReminder(NOW));
+        // Zelf gekozen maar al voorbij: de beginwaarde van nu.
+        d.remindAt = LocalDateTime.of(2026, 11, 3, 10, 0);
+        assertEquals(start, d.remindFor(start, NOW));
+        assertNull(d.remindFor(null, NOW));
+        assertFalse(d.keepsReminder(NOW));
+    }
+
+    @Test
+    public void draftExtrasAndAge() {
+        QuickAddPlan.Draft d = draft();
+        assertFalse(d.usesExtras());
+        d.repeat = QuickAddPlan.Repeat.WEEKLY;
+        assertTrue(d.usesExtras());
+        d.repeat = QuickAddPlan.Repeat.NONE;
+        d.place = new QuickAddPlan.Place("AH", 52.1, 5.1, null);
+        assertTrue(d.usesExtras());
+        assertFalse(d.expired(d.savedAt + QuickAddPlan.DRAFT_MAX_AGE_MS));
+        assertTrue(d.expired(d.savedAt + QuickAddPlan.DRAFT_MAX_AGE_MS + 1));
+    }
+
+    @Test
+    public void draftRoundTrip() throws Exception {
+        QuickAddPlan.Draft d = draft();
+        d.notes = "Volkoren";
+        d.listChanged = true;
+        d.remindAt = LocalDateTime.of(2026, 11, 5, 9, 30);
+        d.remindChanged = true;
+        d.repeat = QuickAddPlan.Repeat.BIWEEKLY;
+        d.place = new QuickAddPlan.Place("Thuis", 52.1, 5.2, 300);
+        d.placeOnExit = true;
+        QuickAddPlan.Draft r = QuickAddPlan.Draft.fromJson(d.toJson().toString());
+        assertEquals("Brood", r.title);
+        assertEquals("Volkoren", r.notes);
+        assertEquals("Boodschappen", r.list);
+        assertTrue(r.listChanged);
+        assertEquals(d.remindAt, r.remindAt);
+        assertTrue(r.remindChanged);
+        assertEquals(QuickAddPlan.Repeat.BIWEEKLY, r.repeat);
+        assertEquals("Thuis", r.place.name);
+        assertEquals(Integer.valueOf(300), r.place.radius);
+        assertTrue(r.placeOnExit);
+        assertEquals(1_000_000L, r.savedAt);
+        // Zonder plekstraal, herinnering en lijst.
+        QuickAddPlan.Draft bare = new QuickAddPlan.Draft();
+        bare.title = "Kort";
+        bare.place = new QuickAddPlan.Place("Hier", 52.0, 5.0, null);
+        QuickAddPlan.Draft b = QuickAddPlan.Draft.fromJson(bare.toJson().toString());
+        assertNull(b.list);
+        assertNull(b.remindAt);
+        assertNull(b.place.radius);
+        assertEquals(QuickAddPlan.Repeat.NONE, b.repeat);
+        // Leeg of kapot: geen concept.
+        assertNull(QuickAddPlan.Draft.fromJson(""));
+        assertNull(QuickAddPlan.Draft.fromJson(null));
+        assertNull(QuickAddPlan.Draft.fromJson("{kapot"));
     }
 
     @Test

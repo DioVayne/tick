@@ -159,6 +159,15 @@
     <string name="quick_place_locating">Finding your location…</string>
     <string name="quick_place_no_location">Could not find your location. Is location on?</string>
     <string name="quick_place_no_permission">Tick may not use your location all the time yet, so this place will not notify you. Allow it in Tick on this phone.</string>
+    <string name="quick_more">More options</string>
+    <string name="quick_less">Fewer options</string>
+    <string name="quick_remind_today">Reminder today at %s</string>
+    <string name="quick_remind_tomorrow">Reminder tomorrow at %s</string>
+    <string name="quick_remind_on">Reminder %1$s at %2$s</string>
+    <string name="quick_remind_none_today">No reminder, so this task will not show in Today</string>
+    <string name="quick_remind_clear">Remove reminder</string>
+    <string name="quick_draft_restored">Draft restored</string>
+    <string name="quick_draft_discard">Discard</string>
     <string name="battery_settings_hint">Choose Battery, then Unrestricted.</string>
     <plurals name="outbox_waiting">
         <item quantity="one">%d change waiting for connection</item>
