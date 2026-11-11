@@ -10,8 +10,6 @@
     <string name="error_offline">geen verbinding</string>
     <string name="error_server">serverfout %s</string>
     <string name="sync_failed">Niet bijgewerkt: %s</string>
-    <string name="done_failed">Afvinken mislukt: %s</string>
-    <string name="undo_failed">Terugzetten mislukt: %s</string>
     <!-- Knop in een net afgevinkte widgetrij (TaskListService), en de melding als het te laat is (ActionReceiver) -->
     <string name="undo">Ongedaan maken</string>
     <string name="undo_task">Afvinken van %s ongedaan maken</string>
@@ -162,4 +160,10 @@
     <string name="quick_place_no_location">Je locatie is niet gevonden. Staat locatie aan?</string>
     <string name="quick_place_no_permission">Tick mag je locatie nog niet altijd gebruiken, dus deze plek meldt niets. Sta het toe in Tick op deze telefoon.</string>
     <string name="battery_settings_hint">Kies Batterij en dan Onbeperkt.</string>
+    <plurals name="outbox_waiting">
+        <item quantity="one">%d wijziging wacht op verbinding</item>
+        <item quantity="other">%d wijzigingen wachten op verbinding</item>
+    </plurals>
+    <string name="outbox_dropped">Niet opgeslagen: ‘%1$s’ (%2$s)</string>
+    <string name="outbox_gone">taak niet meer beschikbaar voor jou</string>
 </resources>

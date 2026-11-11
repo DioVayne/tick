@@ -78,7 +78,7 @@ public class TaskWidgetProvider extends AppWidgetProvider {
             // Binnen de tik verversen (de app is dan actief), met als bevestiging de nieuwe tijd in de statusregel van
             // de lijst. Duurt het te lang, dan neemt een expedited job het over (een draad uit goAsync() kan bevriezen).
             final Context app = context.getApplicationContext();
-            Thread sync = new Thread(() -> Sync.refresh(app));
+            Thread sync = new Thread(() -> Sync.refresh(app, true, true));
             sync.start();
             try {
                 sync.join(MANUAL_WAIT_MS);

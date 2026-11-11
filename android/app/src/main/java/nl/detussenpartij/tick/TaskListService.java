@@ -88,8 +88,17 @@ public class TaskListService extends RemoteViewsService {
             RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_status);
             String error = Prefs.syncError(ctx);
             String text;
+            long now = System.currentTimeMillis();
+            String note = Prefs.outboxNote(ctx);
+            int waiting = Outbox.waiting(Prefs.outbox(ctx), now);
             if (Prefs.token(ctx).isEmpty()) text = ctx.getString(R.string.widget_no_token);
-            else if (!error.isEmpty()) text = error;
+            // De server wees net een wijziging af (taak weg, niet meer gedeeld): even zeggen.
+            else if (!note.isEmpty() && now - Prefs.outboxNoteAt(ctx) <= Outbox.NOTE_MS) text = error = note;
+            // Wijzigingen in de wachtrij: rustig melden, in plaats van een rode foutmelding. Ze gaan vanzelf weg.
+            else if (waiting > 0) {
+                text = ctx.getResources().getQuantityString(R.plurals.outbox_waiting, waiting, waiting);
+                error = "";
+            } else if (!error.isEmpty()) text = error;
             else {
                 long last = Prefs.lastSync(ctx);
                 String synced = last > 0 ? ctx.getString(R.string.widget_synced_at, TaskWidgetProvider.syncTime(ctx, last)) : "";

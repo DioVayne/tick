@@ -35,6 +35,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -47,6 +48,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.TreeSet;
+import java.util.UUID;
 
 public class QuickAddActivity extends Activity {
     /** Weergave van de widget waar de + op zat: een lijstnaam, WidgetFilter.TODAY of leeg. */
@@ -76,7 +78,6 @@ public class QuickAddActivity extends Activity {
     /** Favoriete plekken uit /api/places; leeg tot ze binnen zijn (of offline). */
     private List<JSONObject> favorites = Collections.emptyList();
     private static final int REQ_LOCATION = 1;
-    private boolean busy;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -486,57 +487,61 @@ public class QuickAddActivity extends Activity {
     }
 
     private void refreshSend() {
-        send.setEnabled(!busy && !title.getText().toString().trim().isEmpty());
+        send.setEnabled(!title.getText().toString().trim().isEmpty());
     }
 
+    /**
+     * Toevoegen: eerst lokaal (de wachtrij, Outbox, met een eigen id), zodat de taak meteen in de widget staat, ook
+     * zonder verbinding; daarna op de achtergrond naar de server. Dat id blijft: de server neemt het over.
+     */
     private void submit() {
         String text = title.getText().toString().trim();
-        if (text.isEmpty() || busy) return;
-        busy = true;
-        refreshSend();
+        if (text.isEmpty()) return;
+        if (Prefs.token(this).isEmpty()) {
+            // Zonder sleutel kan het nooit aankomen: zeggen, en de tekst laten staan.
+            showStatus(getString(R.string.quick_failed, getString(R.string.error_no_key)), R.color.overdue);
+            return;
+        }
         status.setVisibility(View.GONE);
         final String description = notes.getText().toString().trim();
         final LocalDateTime when = remindAt;
         final String rule = QuickAddPlan.rule(repeat, repeatStart());
         final String inList = WidgetFilter.INBOX.equals(list) ? null : list;
-        final QuickAddPlan.Place where = place;
-        final boolean onExit = placeOnExit;
-        new Thread(() -> {
-            Exception failed = null;
-            try {
-                JSONObject body = new JSONObject().put("title", text);
-                if (!description.isEmpty()) body.put("description", description);
-                if (inList != null) body.put("list", inList);
-                if (when != null) body.put("remind_at", when.atZone(ZoneId.systemDefault()).toInstant().toString());
-                if (rule != null) body.put("repeat", rule);
-                if (where != null) body.put("location", where.toJson(onExit));
-                Api.call(this, "POST", "/api/tasks", body.toString());
-                Sync.refresh(this);
-            } catch (Exception e) {
-                failed = e;
+        try {
+            String id = UUID.randomUUID().toString();
+            JSONObject body = new JSONObject().put("id", id).put("title", text);
+            if (!description.isEmpty()) body.put("description", description);
+            if (inList != null) body.put("list", inList);
+            if (when != null) body.put("remind_at", when.atZone(ZoneId.systemDefault()).toInstant().toString());
+            if (rule != null) body.put("repeat", rule);
+            if (place != null) body.put("location", place.toJson(placeOnExit));
+            long now = System.currentTimeMillis();
+            JSONObject task = QuickAddPlan.localTask(body, Instant.ofEpochMilli(now).toString());
+            Sync.enqueue(this, Outbox.op(Outbox.CREATE, id, body.toString(), now, now, text, task));
+            synchronized (Prefs.class) {
+                Prefs.setCache(this, Outbox.withLocal(new JSONArray(Prefs.cache(this)), Prefs.outbox(this)).toString());
             }
-            final Exception error = failed;
-            runOnUiThread(() -> {
-                busy = false;
-                if (error != null) {
-                    // In het paneel, niet als korte melding: de tekst blijft staan, zodat je het opnieuw kunt proberen.
-                    showStatus(getString(R.string.quick_failed, why(error)), R.color.overdue);
-                    refreshSend();
-                } else if (Prefs.quickKeepOpen(this)) {
-                    showStatus(getString(R.string.quick_added_named, text), R.color.widget_muted);
-                    title.setText("");
-                    notes.setText("");
-                    repeat = QuickAddPlan.Repeat.NONE;
-                    place = null;
-                    refreshPlace();
-                    resetWhen();
-                    title.requestFocus();
-                } else {
-                    Toast.makeText(this, R.string.quick_added, Toast.LENGTH_SHORT).show();
-                    finishAndRemoveTask();
-                }
-            });
-        }).start();
+        } catch (Exception e) {
+            showStatus(getString(R.string.quick_failed, why(e)), R.color.overdue);
+            return;
+        }
+        TaskWidgetProvider.updateAll(this);
+        // Versturen en verversen buiten de popup om: hij mag meteen dicht. Lukt het niet, dan probeert een job het later.
+        final android.content.Context app = getApplicationContext();
+        new Thread(() -> Sync.refresh(app, true, true)).start();
+        if (Prefs.quickKeepOpen(this)) {
+            showStatus(getString(R.string.quick_added_named, text), R.color.widget_muted);
+            title.setText("");
+            notes.setText("");
+            repeat = QuickAddPlan.Repeat.NONE;
+            place = null;
+            refreshPlace();
+            resetWhen();
+            title.requestFocus();
+        } else {
+            Toast.makeText(this, R.string.quick_added, Toast.LENGTH_SHORT).show();
+            finishAndRemoveTask();
+        }
     }
 
     /** Waarom een verzoek mislukte; zonder sleutel zegt dat meer dan "geen verbinding". */

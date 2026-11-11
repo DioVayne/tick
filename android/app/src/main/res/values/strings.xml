@@ -10,8 +10,6 @@
     <string name="error_offline">no connection</string>
     <string name="error_server">server error %s</string>
     <string name="sync_failed">Not updated: %s</string>
-    <string name="done_failed">Completing failed: %s</string>
-    <string name="undo_failed">Undo failed: %s</string>
     <!-- Knop in een net afgevinkte widgetrij (TaskListService), en de melding als het te laat is (ActionReceiver) -->
     <string name="undo">Undo</string>
     <string name="undo_task">Undo completing %s</string>
@@ -162,4 +160,10 @@
     <string name="quick_place_no_location">Could not find your location. Is location on?</string>
     <string name="quick_place_no_permission">Tick may not use your location all the time yet, so this place will not notify you. Allow it in Tick on this phone.</string>
     <string name="battery_settings_hint">Choose Battery, then Unrestricted.</string>
+    <plurals name="outbox_waiting">
+        <item quantity="one">%d change waiting for connection</item>
+        <item quantity="other">%d changes waiting for connection</item>
+    </plurals>
+    <string name="outbox_dropped">Not saved: “%1$s” (%2$s)</string>
+    <string name="outbox_gone">task no longer available to you</string>
 </resources>

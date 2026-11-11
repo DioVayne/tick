@@ -115,5 +115,27 @@ final class QuickAddPlan {
         return out;
     }
 
+    /**
+     * De taak zoals de widget hem toont tot de server hem kent, uit de body van POST /api/tasks (met het eigen id van de
+     * app). Een herinnering met ritme toont de server soms op een iets andere eerste keer; dat ziet de widget na de sync.
+     */
+    static JSONObject localTask(JSONObject body, String nowIso) throws JSONException {
+        JSONObject t = new JSONObject();
+        t.put("id", body.getString("id"));
+        t.put("title", body.optString("title"));
+        t.put("description", body.optString("description", ""));
+        t.put("list", body.has("list") ? body.optString("list") : JSONObject.NULL);
+        t.put("parent_id", JSONObject.NULL);
+        t.put("remind_at", body.has("remind_at") ? body.optString("remind_at") : JSONObject.NULL);
+        t.put("repeat", body.has("repeat") ? new JSONObject().put("rule", body.optString("repeat")) : JSONObject.NULL);
+        t.put("location", body.has("location") ? body.getJSONObject("location") : JSONObject.NULL);
+        t.put("pinned", false);
+        t.put("done", false);
+        t.put("created_at", nowIso);
+        t.put("updated_at", nowIso);
+        t.put("local", true);
+        return t;
+    }
+
     private QuickAddPlan() {}
 }

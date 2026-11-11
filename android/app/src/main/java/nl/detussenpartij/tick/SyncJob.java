@@ -16,11 +16,13 @@ import org.json.JSONObject;
  * Verversen op de achtergrond, zodat nieuwe of gewijzigde plekken ook zonder widget of herstart een geofence krijgen.
  * Job 1: elke 15 minuten (met netwerk). Job 2: zo snel mogelijk, bijvoorbeeld na een plek in de PWA (tick://sync).
  * Job 3: direct (expedited), na een tik op de verversknop van de widget.
+ * Job 4: de wachtrij (Outbox) opnieuw versturen zodra er netwerk is en de wachttijd om is; blijft staan na een herstart.
  */
 public class SyncJob extends JobService {
     static final int PERIODIC = 1;
     static final int SOON = 2;
     static final int MANUAL = 3;
+    static final int FLUSH = 4;
     /** Zoveel keer opnieuw (elke 10 s) als de server de wijziging uit de PWA nog niet heeft: samen ongeveer een minuut. */
     private static final int MAX_ATTEMPTS = 5;
 
@@ -66,12 +68,44 @@ public class SyncJob extends JobService {
         if (r != JobScheduler.RESULT_SUCCESS) syncSoon(c, null, null, 0);
     }
 
+    /**
+     * De wachtrij versturen zodra er netwerk is, op zijn vroegst na delayMs. Vervangt een eerder geplande keer. Niet
+     * aanroepen vanuit job 4 zelf (dat zou hem stoppen); die plant zichzelf opnieuw na jobFinished.
+     */
+    static void flushLater(Context c, long delayMs) {
+        try {
+            c.getSystemService(JobScheduler.class).schedule(new JobInfo.Builder(FLUSH, new ComponentName(c, SyncJob.class))
+                    .setMinimumLatency(Math.max(0, delayMs))
+                    .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                    .setPersisted(true)
+                    .build());
+        } catch (RuntimeException e) {
+            Log.w("Tick", "Wachtrij-job plannen mislukt", e); // de 5-minutenverversing probeert het ook
+        }
+    }
+
+    /** De wachtrij is leeg: de geplande keer is niet meer nodig. */
+    static void cancelFlush(Context c) {
+        JobScheduler js = c.getSystemService(JobScheduler.class);
+        if (js.getPendingJob(FLUSH) != null) js.cancel(FLUSH);
+    }
+
     @Override
     public boolean onStartJob(JobParameters params) {
         final Context app = getApplicationContext();
+        if (params.getJobId() == FLUSH) {
+            new Thread(() -> {
+                Log.i("Tick", "SyncJob 4: wachtrij versturen");
+                if (!Prefs.token(app).isEmpty()) Sync.refresh(app, false, false);
+                jobFinished(params, false);
+                // Pas na jobFinished: een nieuwe job met hetzelfde id zou deze anders stoppen.
+                Sync.scheduleFlush(app);
+            }).start();
+            return true;
+        }
         new Thread(() -> {
             Log.i("Tick", "SyncJob " + params.getJobId() + ": verversen");
-            if (!Prefs.token(app).isEmpty()) Sync.refresh(app);
+            if (!Prefs.token(app).isEmpty()) Sync.refresh(app, params.getJobId() == MANUAL, true);
             Updates.checkIfDue(app);
             if (params.getJobId() == MANUAL) {
                 TaskWidgetProvider.manualRefreshFinished(app);
