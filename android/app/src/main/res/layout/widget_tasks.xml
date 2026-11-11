@@ -28,20 +28,21 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <!-- Knoppen: tikvlak 48 x 48 dp, het icoon zelf even groot als vroeger (de rest is binnenruimte). -->
         <ImageView
             android:id="@+id/btn_refresh"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:contentDescription="@string/refresh"
-            android:padding="9dp"
+            android:padding="15dp"
             android:src="@drawable/ic_refresh" />
 
         <ImageView
             android:id="@+id/btn_add"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:contentDescription="@string/add"
-            android:padding="6dp"
+            android:padding="12dp"
             android:src="@drawable/ic_add" />
     </LinearLayout>
 

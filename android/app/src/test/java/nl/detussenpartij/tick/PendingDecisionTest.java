@@ -1,5 +1,6 @@
 package nl.detussenpartij.tick;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -11,12 +12,24 @@ public class PendingDecisionTest {
 
     @Test
     public void wegVanDeServer() {
-        assertTrue(PendingDecision.clear(false, 1000, EERST, null));
+        assertTrue(PendingDecision.clear(false, PendingDecision.UNDO_WINDOW_MS + 1, EERST, null));
+    }
+
+    @Test
+    public void wegVanDeServerMaarNogInHetVenster() {
+        // De rij blijft staan (doorgestreept, met Ongedaan maken), zodat de lijst niet verschuift.
+        assertFalse(PendingDecision.clear(false, 1000, EERST, null));
+        assertFalse(PendingDecision.clear(false, PendingDecision.UNDO_WINDOW_MS, EERST, null));
+    }
+
+    @Test
+    public void hetVensterIsZesSeconden() {
+        assertEquals(6000, PendingDecision.UNDO_WINDOW_MS);
     }
 
     @Test
     public void binnenHetOngedaanVensterBlijftHij() {
-        // Ook als de server de herhalende taak al heeft doorgeschoven: binnen 3 s kun je nog terugzetten.
+        // Ook als de server de herhalende taak al heeft doorgeschoven: binnen het venster kun je nog terugzetten.
         assertFalse(PendingDecision.clear(true, PendingDecision.UNDO_WINDOW_MS, EERST, DAARNA));
         assertFalse(PendingDecision.clear(true, 1000, EERST, EERST));
     }

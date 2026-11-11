@@ -16,14 +16,17 @@
         android:background="@drawable/tile_bg"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="2dp">
+        android:paddingStart="0dp">
 
+        <!-- Het bolletje: zichtbaar klein, maar het tikvlak is minstens 48 x 48 dp (de rest is binnenruimte). Grootte
+             en binnenruimte zet TaskListService, die het bolletje laat meeschalen met de tekstgrootte. -->
         <ImageView
             android:id="@+id/check"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:contentDescription="@string/done"
-            android:padding="5dp"
+            android:padding="13dp"
+            android:scaleType="fitCenter"
             android:src="@drawable/ic_circle" />
 
         <LinearLayout
@@ -156,5 +159,23 @@
                     android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
+
+        <!-- Net afgevinkt: Ongedaan maken, rechts in de rij (minstens 48 dp hoog en breed). Alleen zichtbaar binnen het
+             venster van UndoPlan; dan zijn de lijstpil en de metaregel weg. -->
+        <TextView
+            android:id="@+id/undo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:maxLines="1"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:text="@string/undo"
+            android:textColor="@color/accent"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
     </LinearLayout>
 </LinearLayout>

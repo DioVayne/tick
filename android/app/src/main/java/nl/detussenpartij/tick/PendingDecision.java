@@ -2,8 +2,8 @@ package nl.detussenpartij.tick;
 
 /** Mag een taak die net in de widget is afgevinkt weer gewoon getoond worden? Puur Java, zodat het zonder toestel te testen is. */
 final class PendingDecision {
-    /** Zo lang blijft een afgevinkte taak zichtbaar (doorgestreept) en kun je hem nog terugzetten. */
-    static final long UNDO_WINDOW_MS = 3000;
+    /** Zo lang blijft een afgevinkte taak zichtbaar (doorgestreept, met Ongedaan maken) op zijn plek staan. */
+    static final long UNDO_WINDOW_MS = 6000;
     /** Staat een afgevinkte taak na zo lang nog open op de server, dan is het afvinken mislukt. */
     static final long FAILED_AFTER_MS = 30_000;
 
@@ -13,12 +13,14 @@ final class PendingDecision {
      * remindAtNow: remind_at nu op de server ("" als er geen is).
      */
     static boolean clear(boolean open, long ageMs, String remindAtThen, String remindAtNow) {
+        // Binnen het venster blijft de rij staan (doorgestreept, met Ongedaan maken), ook als de server al klaar is.
+        if (ageMs <= UNDO_WINDOW_MS) return false;
         // Afgerond en weg van de server.
         if (!open) return true;
         // Na 30 seconden nog open: mislukt, dus weer tonen.
         if (ageMs > FAILED_AFTER_MS) return true;
         // Herhalende taak: de server heeft hem doorgeschoven naar de volgende keer, dus hij blijft open met een nieuwe remind_at.
-        return ageMs > UNDO_WINDOW_MS && remindAtThen != null && !remindAtThen.equals(remindAtNow);
+        return remindAtThen != null && !remindAtThen.equals(remindAtNow);
     }
 
     private PendingDecision() {}
