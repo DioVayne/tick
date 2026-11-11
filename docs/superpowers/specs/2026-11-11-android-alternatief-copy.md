@@ -1,6 +1,6 @@
 # Concept: Tick als Android-alternatief voor Apple Herinneringen
 
-Status: **goedgekeurd door Dio en op de site gezet (2026-11-11)**, met "Het Android-alternatief". Op de site is de tabel iets compacter dan hieronder: de rij "Gratis te gebruiken" is vervallen (alle apps zijn gratis te proberen, dat staat in de intro) en de voetnoten staan als korte tekst in de vakjes. De plek-voetnoot ("Op de juiste plek") kreeg dezelfde iPhone-zin als de hero. Bij het makersverhaal staat nu een foto van Dio (`site/public/img/dio.webp`).
+Status: **goedgekeurd door Dio en op de site gezet (2026-11-11)**, met "Het Android-alternatief". Op de site is de tabel iets compacter dan hieronder: de rij "Gratis te gebruiken" is vervallen (alle apps zijn gratis te proberen, dat staat in de intro) en de voetnoten staan als korte tekst in de vakjes. De plek-voetnoot ("Op de juiste plek") kreeg dezelfde iPhone-zin als de hero. Bij het makersverhaal staat nu een foto van Dio (`site/public/img/dio-buiten.webp`).
 
 Gegevens over andere apps gecontroleerd op 11 november 2026 (bronnen onderaan). Prijzen en functies van andere apps veranderen; controleer ze opnieuw vlak voor publicatie.
 
