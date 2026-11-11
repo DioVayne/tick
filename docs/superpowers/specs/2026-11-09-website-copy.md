@@ -1332,3 +1332,6 @@ Wat er na de eerste versie op de site veranderd is. De tekst hierboven is het or
 
 Hero (bovenregel, intro, voetnoot), plek-voetnoot, twee nieuwe vragen (16 en 17), de sectie *Tick naast andere apps* (#vergelijken / #compare), de foto bij het makersverhaal en de meta-omschrijving: zie [2026-11-11-android-alternatief-copy.md](2026-11-11-android-alternatief-copy.md).
 
+
+Ook 2026-11-11: tegel en verhaal *Meerdere plekken* (#meerdere-plekken / #more-places, met schermafbeelding nl-/en-places.webp), rij *Meerdere plekken per taak* in Wat werkt waar, en vraag 18 *Kan Tick me waarschuwen bij elke supermarkt?*. Teksten staan in de HTML; ontwerp in [2026-11-11-meerdere-plekken.md](2026-11-11-meerdere-plekken.md).
+
