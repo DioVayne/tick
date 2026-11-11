@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kop van de widget (widget_tasks), ook gebruikt door het voorbeeld in SettingsActivity. De tekstgrootte van de
+     titel zet TaskWidgetProvider (WidgetLook.headerSp). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/header_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:paddingStart="10dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:text="@string/app_name"
+        android:textColor="@color/widget_text"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <!-- Knoppen: tikvlak 48 x 48 dp, het icoon zelf even groot als vroeger (de rest is binnenruimte). -->
+    <ImageView
+        android:id="@+id/btn_refresh"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:contentDescription="@string/refresh"
+        android:padding="15dp"
+        android:src="@drawable/ic_refresh" />
+
+    <ImageView
+        android:id="@+id/btn_add"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:contentDescription="@string/add"
+        android:padding="12dp"
+        android:src="@drawable/ic_add" />
+</LinearLayout>

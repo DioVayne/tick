@@ -80,16 +80,47 @@ final class Prefs {
         sp(c).edit().putString("cache", json).apply();
     }
 
-    static int fontSp(Context c) {
-        return sp(c).getInt("fontSp", SettingsActivity.FONT_DEFAULT);
+    /*
+     * Uiterlijk per widget (WidgetLook): tekstgrootte, regelafstand en weergave (Automatisch, Compact, Ruim), onder
+     * widget_<id>_font, _spacing en _mode. Tot deze versie golden tekstgrootte en regelafstand voor alle widgets samen
+     * (fontSp, spacingDp); bij het eerste lezen krijgt elke bestaande widget die waarden (migrateLook).
+     */
+    static int widgetFont(Context c, int widgetId) {
+        migrateLook(c);
+        return WidgetLook.clamp(sp(c).getInt(WidgetLook.fontKey(widgetId), WidgetLook.FONT_DEFAULT),
+                WidgetLook.FONT_MIN, WidgetLook.FONT_MAX);
     }
 
-    static int spacingDp(Context c) {
-        return sp(c).getInt("spacingDp", SettingsActivity.SPACING_DEFAULT);
+    static int widgetSpacing(Context c, int widgetId) {
+        migrateLook(c);
+        return WidgetLook.clamp(sp(c).getInt(WidgetLook.spacingKey(widgetId), WidgetLook.SPACING_DEFAULT),
+                WidgetLook.SPACING_MIN, WidgetLook.SPACING_MAX);
     }
 
-    static void setLook(Context c, int fontSp, int spacingDp) {
-        sp(c).edit().putInt("fontSp", fontSp).putInt("spacingDp", spacingDp).apply();
+    static int widgetMode(Context c, int widgetId) {
+        return WidgetLook.mode(sp(c).getInt(WidgetLook.modeKey(widgetId), WidgetLook.AUTO));
+    }
+
+    static void setWidgetLook(Context c, int widgetId, int font, int spacing, int mode) {
+        migrateLook(c);
+        sp(c).edit().putInt(WidgetLook.fontKey(widgetId), font).putInt(WidgetLook.spacingKey(widgetId), spacing)
+                .putInt(WidgetLook.modeKey(widgetId), WidgetLook.mode(mode)).apply();
+    }
+
+    /** Eenmalig: de oude algemene tekstgrootte en regelafstand naar elke bestaande widget, daarna weg. */
+    static synchronized void migrateLook(Context c) {
+        SharedPreferences p = sp(c);
+        if (!p.contains(WidgetLook.LEGACY_FONT) && !p.contains(WidgetLook.LEGACY_SPACING)) return;
+        Integer font = p.contains(WidgetLook.LEGACY_FONT) ? p.getInt(WidgetLook.LEGACY_FONT, WidgetLook.FONT_DEFAULT) : null;
+        Integer spacing = p.contains(WidgetLook.LEGACY_SPACING)
+                ? p.getInt(WidgetLook.LEGACY_SPACING, WidgetLook.SPACING_DEFAULT) : null;
+        int[] ids = android.appwidget.AppWidgetManager.getInstance(c).getAppWidgetIds(
+                new android.content.ComponentName(c, TaskWidgetProvider.class));
+        SharedPreferences.Editor e = p.edit();
+        for (Map.Entry<String, Integer> kv : WidgetLook.migrate(font, spacing, ids, p.getAll().keySet()).entrySet()) {
+            e.putInt(kv.getKey(), kv.getValue());
+        }
+        e.remove(WidgetLook.LEGACY_FONT).remove(WidgetLook.LEGACY_SPACING).commit();
     }
 
     /** Wat een widget toont: "" (Alles), WidgetFilter.TODAY of een lijstnaam. Per widget-id. */
@@ -101,8 +132,10 @@ final class Prefs {
         sp(c).edit().putString("widget_" + widgetId + "_view", view == null ? "" : view).apply();
     }
 
+    /** Een widget is weg: zijn keuze en zijn uiterlijk ook. */
     static void forgetWidget(Context c, int widgetId) {
-        sp(c).edit().remove("widget_" + widgetId + "_view").apply();
+        sp(c).edit().remove("widget_" + widgetId + "_view").remove(WidgetLook.fontKey(widgetId))
+                .remove(WidgetLook.spacingKey(widgetId)).remove(WidgetLook.modeKey(widgetId)).apply();
     }
 
     /** Foutmelding van de laatste mislukte sync voor in de widget, of leeg als die gelukt is. */

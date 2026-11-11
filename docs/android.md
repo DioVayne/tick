@@ -15,11 +15,16 @@ After you log in, the app links itself to your account with a one-time code and 
 For place reminders, allow location **all the time**. *Tick on this phone* (the shortcut **Phone settings**, or **⚙ Settings → Devices**) shows whether notifications and location work, and **⚙ Settings → Devices** shows it for each of your phones.
 
 ## The widget
-Add the Tick widget to your home screen. In its settings you choose:
+Add the Tick widget to your home screen. Each widget has its own settings (they open when you add it, or long-press the widget and choose its settings; **Widget settings** in *Tick on this phone* asks which widget first). You choose:
 - what it shows: all tasks, *Today and overdue*, or one list;
+- the layout: **Automatic**, **Compact** or **Roomy**;
 - text size and line spacing.
 
-Tick tasks off right there: tap the circle. The task stays in its place for 6 seconds, struck through, with an **Undo** button; tap it to put the task back (a repeating task goes back to the date it had). After that the task disappears. Because the list doesn't move during those seconds, you can tick off several tasks in a row without hitting the wrong one. Tap a task's title to open it in the app, tap the header to open the app on that list, and add a task with **➕** (it goes into the widget's list). Each row shows the reminder, list, pin, repeat, place, sharing (blue people: one shared task; grey sheets: a copy, everyone has their own) and open subtasks. The widget can be resized.
+So a small shopping list and a big day overview can sit side by side, each looking its own way. A preview at the top of the settings shows the widget with a few example tasks and changes as you move the sliders.
+
+**Compact** shows one line per task with only the reminder time, without tiles or icons, so a lot fits in a small widget. **Roomy** shows titles on two lines, every icon, a little more space and headings between groups: *Overdue* and *Today* in a *Today and overdue* widget, *Pinned* and *Other tasks* in other widgets (only when there are pinned tasks). The order of the tasks is the same in both. **Automatic** picks by size: Roomy from about 4 columns wide and 3 rows high, Compact when the widget is smaller; resize the widget and it switches by itself. The circle, **Undo** and the buttons stay easy to tap (at least 48 dp) in both layouts.
+
+Tick tasks off right there: tap the circle. The task stays in its place for 6 seconds, struck through, with an **Undo** button; tap it to put the task back (a repeating task goes back to the date it had). After that the task disappears. Because the list doesn't move during those seconds, you can tick off several tasks in a row without hitting the wrong one. Tap a task's title to open it in the app, tap the header to open the app on that list, and add a task with **➕** (it goes into the widget's list). In the Roomy layout each row shows the reminder, list, pin, repeat, place, sharing (blue people: one shared task; grey sheets: a copy, everyone has their own) and open subtasks; Compact shows the reminder and the list. The widget can be resized.
 
 ### Without a connection
 The widget keeps working offline. It shows the tasks from the last update; ticking off, **Undo** and adding a task with **➕** are saved on the phone first and sent as soon as there is a connection again. A task you ticked off stays hidden and a task you added shows up at once, also before Tick has them. While changes are waiting, the line at the top of the widget says so, for example "2 changes waiting for connection". If you tick something off and undo it before it was sent, Tick sends nothing at all.

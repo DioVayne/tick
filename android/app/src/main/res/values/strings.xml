@@ -70,11 +70,6 @@
     <string name="settings_done">Done</string>
     <string name="settings_font">Text size: %d sp</string>
     <string name="settings_spacing">Line spacing: %d dp extra</string>
-    <string-array name="settings_examples">
-        <item>Example: call the doctor</item>
-        <item>Buy bread</item>
-        <item>Edit the video</item>
-    </string-array>
     <string name="error_no_key">no API key set</string>
     <string name="widget_refreshed">Up to date ✓</string>
     <string name="widget_synced_at">Updated %s</string>
@@ -175,4 +170,24 @@
     </plurals>
     <string name="outbox_dropped">Not saved: “%1$s” (%2$s)</string>
     <string name="outbox_gone">task no longer available to you</string>
+    <!-- Uiterlijk per widget (SettingsActivity, WidgetRows) -->
+    <string name="widget_section_overdue">Overdue</string>
+    <string name="widget_section_today">Today</string>
+    <string name="widget_section_pinned">Pinned</string>
+    <string name="widget_section_other">Other tasks</string>
+    <string name="settings_layout_label">Layout</string>
+    <string name="settings_layout_auto">Automatic, by size (now %s)</string>
+    <string name="settings_layout_compact">Compact</string>
+    <string name="settings_layout_roomy">Roomy</string>
+    <string name="settings_layout_hint">Compact: one line per task with only the time. Roomy: two lines, all icons and headings between groups.</string>
+    <string name="settings_preview">Preview</string>
+    <string name="settings_pick_widget">Which widget?</string>
+    <string name="settings_widget_item">%1$s (%2$s)</string>
+    <string name="settings_no_widgets">There is no Tick widget on your home screen yet. Long-press the home screen, choose Widgets and then Tick.</string>
+    <string name="preview_task_long">Call the dentist to move the appointment to next week</string>
+    <string name="preview_task_short">Buy bread</string>
+    <string name="preview_task_work">Finish the slides for Thursday’s team meeting with the new figures</string>
+    <string name="preview_list_home">Home</string>
+    <string name="preview_list_groceries">Groceries</string>
+    <string name="preview_list_work">Work</string>
 </resources>

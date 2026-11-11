@@ -70,11 +70,6 @@
     <string name="settings_done">Klaar</string>
     <string name="settings_font">Tekstgrootte: %d sp</string>
     <string name="settings_spacing">Regelafstand: %d dp extra</string>
-    <string-array name="settings_examples">
-        <item>Voorbeeld: bel de huisarts</item>
-        <item>Brood halen</item>
-        <item>Filmpje editen</item>
-    </string-array>
     <string name="error_no_key">Geen sleutel ingesteld</string>
     <string name="widget_refreshed">Bijgewerkt ✓</string>
     <string name="widget_synced_at">Bijgewerkt %s</string>
@@ -175,4 +170,24 @@
     </plurals>
     <string name="outbox_dropped">Niet opgeslagen: ‘%1$s’ (%2$s)</string>
     <string name="outbox_gone">taak niet meer beschikbaar voor jou</string>
+    <!-- Uiterlijk per widget (SettingsActivity, WidgetRows) -->
+    <string name="widget_section_overdue">Te laat</string>
+    <string name="widget_section_today">Vandaag</string>
+    <string name="widget_section_pinned">Vastgezet</string>
+    <string name="widget_section_other">Overige taken</string>
+    <string name="settings_layout_label">Weergave</string>
+    <string name="settings_layout_auto">Automatisch, naar de grootte (nu %s)</string>
+    <string name="settings_layout_compact">Compact</string>
+    <string name="settings_layout_roomy">Ruim</string>
+    <string name="settings_layout_hint">Compact: één regel per taak met alleen de tijd. Ruim: twee regels, alle icoontjes en kopjes tussen de groepen.</string>
+    <string name="settings_preview">Voorbeeld</string>
+    <string name="settings_pick_widget">Welke widget?</string>
+    <string name="settings_widget_item">%1$s (%2$s)</string>
+    <string name="settings_no_widgets">Er staat nog geen Tick-widget op je startscherm. Houd het startscherm ingedrukt, kies Widgets en dan Tick.</string>
+    <string name="preview_task_long">Tandarts bellen om de afspraak naar volgende week te verzetten</string>
+    <string name="preview_task_short">Brood kopen</string>
+    <string name="preview_task_work">Presentatie voor het teamoverleg van donderdag afmaken met de nieuwe cijfers</string>
+    <string name="preview_list_home">Thuis</string>
+    <string name="preview_list_groceries">Boodschappen</string>
+    <string name="preview_list_work">Werk</string>
 </resources>
