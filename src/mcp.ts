@@ -137,7 +137,10 @@ function pick(a: Args, keys: string[]): Args {
 function compact(t: Args): Args {
   const desc = typeof t.description === 'string' ? t.description : '';
   const share = t.share as { owner: { name: string }; mine: boolean } | null;
-  const loc = t.location as { name: string; trigger: string } | null;
+  const loc = t.location as { name: string; trigger: string; more?: { name: string }[] } | null;
+  // Meerdere plekken: "arriving at A, B or C" (de eerste waar je komt telt).
+  const names = loc ? [loc.name, ...(loc.more ?? []).map((m) => m.name)] : [];
+  const where = names.length > 1 ? `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}` : names[0];
   return {
     id: t.id, title: t.title, list: t.list, parent_id: t.parent_id ?? undefined,
     description: desc ? (desc.length > MAX_DESC ? desc.slice(0, MAX_DESC) + '…' : desc) : undefined,
@@ -145,7 +148,7 @@ function compact(t: Args): Args {
     repeat: (t.repeat as { rule: string } | null)?.rule,
     pinned: t.pinned || undefined,
     done: t.done || undefined, done_at: t.done_at ?? undefined,
-    location: loc ? `${loc.trigger === 'exit' ? 'leaving' : 'arriving at'} ${loc.name}` : undefined,
+    location: loc ? `${loc.trigger === 'exit' ? 'leaving' : 'arriving at'} ${where}` : undefined,
     shared_by: share && !share.mine ? share.owner.name : undefined,
   };
 }

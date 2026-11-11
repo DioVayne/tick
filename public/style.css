@@ -310,6 +310,8 @@ body.map-open { overflow: hidden; }
 .mapwrap .map { position: absolute; inset: 0; z-index: 0; }
 .mapscreen .leaflet-container { background: var(--bg); font: inherit; font-size: .75rem; }
 .loc-circle { stroke: var(--accent); fill: var(--accent); fill-opacity: .15; stroke-width: 2; }
+/* De andere plekken van dezelfde taak: lichter en gestippeld, de pin is de plek die je nu kiest. */
+.loc-circle.loc-other { fill-opacity: .07; stroke-dasharray: 6 5; stroke-width: 1.5; }
 /* De pin staat vast in het midden; de punt van de pin valt op het middelpunt van de kaart */
 .pin { position: absolute; left: 50%; top: 50%; z-index: 1; translate: -50% -100%; font-size: 2rem; line-height: 1; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
 /* Specifieker dan button.ghost, anders is hij doorzichtig en in donkere modus onleesbaar op de lichte tegels */
@@ -322,6 +324,7 @@ body.map-open { overflow: hidden; }
 .maph { display: flex; justify-content: space-between; gap: 8px; margin: 0; font-size: .75rem; font-weight: 600; color: var(--muted); }
 .maph strong { color: var(--text); font-size: .875rem; }
 .mapnote { margin: 2px 0 0; font-size: .75rem; line-height: 1.45; color: var(--muted); }
+.mapnote.warn { color: var(--danger); }
 .mappanel label { font-size: .75rem; color: var(--muted); display: grid; gap: 3px; }
 .mappanel input[type="range"] { padding: 0; border: 0; background: transparent; accent-color: var(--accent); }
 .mappanel .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

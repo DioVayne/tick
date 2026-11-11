@@ -229,7 +229,8 @@ function taskItem(t, children) {
     const past = new Date(t.remind_at) < new Date();
     meta.push(el('span', { class: 'bell' + (past ? ' past' : '') }, icon('bell', 'sm'), fmt(t.remind_at), t.repeat ? icon('repeat', 'sm') : null));
   }
-  if (t.location && !t.location_notified && !done) meta.push(el('span', { class: 'loc' }, icon('place', 'sm'), t.location.name));
+  if (t.location && !t.location_notified && !done) meta.push(el('span', { class: 'loc' }, icon('place', 'sm'),
+    t.location.more?.length ? tr('places.and_more', { name: t.location.name, n: String(t.location.more.length) }) : t.location.name));
   // In een gedeelde lijst is elke taak gedeeld met de leden; dat staat al bij de lijst.
   if (t.share && !t.shared_list) {
     const label = shareLabel(t);

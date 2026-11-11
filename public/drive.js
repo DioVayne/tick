@@ -71,6 +71,20 @@ export function createDetector() {
 export const snoozeValid = (lastDriving, now) => typeof lastDriving === 'number' && now - lastDriving < EXIT_MS;
 
 /**
+ * De dichtstbijzijnde plek van een taaklocatie (de eerste of een uit `more`) met de afstand in meters.
+ * @param {{ lat: number, lng: number }} pos
+ * @param {{ name: string, lat: number, lng: number, more?: { name: string, lat: number, lng: number }[] }} loc
+ */
+export function nearestPlace(pos, loc) {
+  let best = { place: loc, d: distance(pos, loc) };
+  for (const p of loc.more ?? []) {
+    const d = distance(pos, p);
+    if (d < best.d) best = { place: p, d };
+  }
+  return best;
+}
+
+/**
  * De taken voor het scherm in de rijmodus: open hoofdtaken met een plek vlakbij (dichtstbij eerst) en die van
  * vandaag of te laat (vroegste eerst). `rest` telt de andere open hoofdtaken.
  * @param {any[]} tasks
@@ -83,7 +97,7 @@ export function driveTasks(tasks, nowMs, pos) {
   const open = tasks.filter((t) => !t.done && !t.deleted_at && !t.parent_id);
   const near = pos
     ? open.filter((t) => t.location && !t.location_notified)
-      .map((t) => ({ t, d: distance(pos, t.location) }))
+      .map((t) => ({ t, d: nearestPlace(pos, t.location).d }))
       .filter((x) => x.d <= NEAR_M)
       .sort((a, b) => a.d - b.d)
       .map((x) => x.t)

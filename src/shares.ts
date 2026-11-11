@@ -180,12 +180,12 @@ function copyStmts(db: D1Database, src: TaskRow, kids: TaskRow[], userId: string
   const past = (iso: string | null) => (iso && Date.parse(iso) <= Date.now() ? 1 : 0);
   const insert = db.prepare(
     'INSERT INTO tasks (id, user_id, title, description, list, parent_id, position, remind_at, notified, done, done_at, pinned, source, created_at, updated_at, ' +
-    'loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_notified, repeat_rule, repeat_start, repeat_at, copy_group, copied_from) ' +
-    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'share', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT copy_group FROM tasks WHERE id = ?), ?)");
+    'loc_name, loc_lat, loc_lng, loc_radius, loc_trigger, loc_more, loc_notified, repeat_rule, repeat_start, repeat_at, copy_group, copied_from) ' +
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'share', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT copy_group FROM tasks WHERE id = ?), ?)");
   const row = (t: TaskRow, id: string, parent: string | null, pos: number) => insert.bind(
     id, userId, t.title, t.description, place.list, parent, pos, t.remind_at, past(t.remind_at),
     place.keepDone ? t.done : 0, place.keepDone ? t.done_at : null, parent ? 0 : place.pinned, ts, ts,
-    t.loc_name, t.loc_lat, t.loc_lng, t.loc_radius, t.loc_trigger, parent ? 0 : place.locNotified, t.repeat_rule, t.repeat_start, t.repeat_at,
+    t.loc_name, t.loc_lat, t.loc_lng, t.loc_radius, t.loc_trigger, t.loc_more, parent ? 0 : place.locNotified, t.repeat_rule, t.repeat_start, t.repeat_at,
     parent ? null : src.id, // alleen de hoofdtaak krijgt de groep, gelezen op het moment van invoegen
     parent ? null : fromUser); // en wie hem stuurde ("Kopie van …")
   const id = crypto.randomUUID();

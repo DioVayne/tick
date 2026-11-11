@@ -4,6 +4,7 @@ import { $, el, fmt, fromLocalInput, toast } from './render.js';
 import { openRepeatPicker } from './repeatpicker.js';
 import { openListPicker } from './listpicker.js';
 import { openMap } from './map.js';
+import { placeShort, watchedPlaces } from './places.js';
 import { describeRule } from './repeat.js';
 import { closeStepMenu, menuOpen, openMenu, openWhenMenu, step as railStep } from './steps.js';
 import { addFiles, attachmentsOn } from './attachments.js';
@@ -148,7 +149,7 @@ function draw() {
   const steps = [
     step('when', 'bell', !!v.remind, t(v.remind ? 'add.when_set' : 'add.when'), v.remind ? fmt(remindIso()) : null, pickWhen, () => { v.remind = ''; }),
     step('repeat', 'repeat', !!v.repeat, v.repeat ? '' : t('add.repeat'), v.repeat ? describeRule(v.repeat, remindIso() ?? new Date().toISOString()) : null, pickRepeat, () => { v.repeat = null; }),
-    step('place', 'place', !!loc, loc ? t(loc.trigger === 'exit' ? 'add.leave' : 'add.arrive') : t('add.place'), loc?.name ?? null, pickPlace, () => { v.location = null; }),
+    step('place', 'place', !!loc, loc ? t(loc.trigger === 'exit' ? 'add.leave' : 'add.arrive') : t('add.place'), loc ? placeShort(loc) : null, pickPlace, () => { v.location = null; }),
     step('list', 'folder', list !== defaultList(), t('add.in'), list, pickList, v.list ? () => { v.list = null; } : null),
     // In een gedeelde lijst doet iedereen in de lijst al mee.
     sharedOf(list) ? null : step('share', 'users', !!v.share, t(v.share ? 'add.share_set' : 'add.share'), v.share?.name ?? null, pickShare, () => { v.share = null; }),
@@ -220,7 +221,7 @@ function pickRepeat(anchor) {
 }
 
 async function pickPlace() {
-  const loc = await openMap({ location: v.location });
+  const loc = await openMap({ location: v.location }, watchedPlaces(state.open));
   if (loc) v.location = loc;
   done();
 }

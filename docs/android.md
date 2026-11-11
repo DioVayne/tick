@@ -28,7 +28,7 @@ Android notices a place a few minutes late, so by car or bike you would be past 
 **➕** on the widget, the **New task** shortcut on the app icon, and *Share* from another app all open a panel at the bottom of the screen. Type the title and tap **↑** (or Send on the keyboard). Under the title you can:
 - **choose the list** with the button at the top (it starts on the widget's list, or Inbox);
 - **set a reminder** with *Today* (the next whole hour), *Tomorrow* or *Next week* (09:00), or *Pick…* for any date and time. Tap the chosen button again to remove the reminder. From a *Today and overdue* widget the panel starts on *Today*, so the new task shows up in that widget;
-- **add a place** with *Place*: one of your favorites, a place you used recently, your current location, or an address you search for. Then choose **On arrival** or **On leaving**. The radius is the favorite's, or 500 m on arrival and 200 m on leaving; a recent place keeps the radius and choice you used then. To move the pin or change the radius, open the task in the app afterwards. More about places: [Places](places.md);
+- **add a place** with *Place*: one of your favorites, a place you used recently, your current location, or an address you search for. Then choose **On arrival** or **On leaving**. The radius is the favorite's, or 500 m on arrival and 200 m on leaving; a recent place keeps the radius and choice you used then. To move the pin, change the radius or add more places, open the task in the app afterwards. More about places: [Places](places.md);
 - **repeat** the task every day, every week or every other week on that weekday, every month on that day, or every year;
 - **add a description** with *Description*.
 
