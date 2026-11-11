@@ -68,7 +68,8 @@ final class Prefs {
     static synchronized void wipeAccountData(Context c) {
         sp(c).edit().putString("cache", "[]").remove("pending").remove("pendingRemind")
                 .remove("locFired").remove("locSynced").remove("locRearm").remove("geoSig").remove("geoIds")
-                .remove("roadMode").remove("roadModeAt").remove("roadRadii").commit();
+                .remove("roadMode").remove("roadModeAt").remove("roadRadii")
+                .remove("outbox").remove("outboxNote").remove("outboxNoteAt").commit();
     }
 
     static String cache(Context c) {
@@ -133,6 +134,35 @@ final class Prefs {
 
     static synchronized void setPending(Context c, JSONObject pending) {
         sp(c).edit().putString("pending", pending.toString()).commit();
+    }
+
+    /**
+     * Wachtrij van wijzigingen die de server nog moet krijgen (afvinken, ongedaan maken, toevoegen), in volgorde; zie
+     * Outbox. Lezen, aanpassen en terugschrijven gebeurt binnen synchronized (Prefs.class), zodat niets verloren gaat.
+     */
+    static synchronized JSONArray outbox(Context c) {
+        try {
+            return new JSONArray(sp(c).getString("outbox", "[]"));
+        } catch (Exception e) {
+            return new JSONArray();
+        }
+    }
+
+    static synchronized void setOutbox(Context c, JSONArray ops) {
+        sp(c).edit().putString("outbox", ops.toString()).commit();
+    }
+
+    /** Laatste wijziging die de server afwees (tekst voor de widget), en wanneer (ms); leeg/0 als er geen is. */
+    static synchronized String outboxNote(Context c) {
+        return sp(c).getString("outboxNote", "");
+    }
+
+    static synchronized long outboxNoteAt(Context c) {
+        return sp(c).getLong("outboxNoteAt", 0);
+    }
+
+    static synchronized void setOutboxNote(Context c, String text, long at) {
+        sp(c).edit().putString("outboxNote", text).putLong("outboxNoteAt", at).commit();
     }
 
     /**
@@ -300,7 +330,8 @@ final class Prefs {
     }
 
     static synchronized void clearRoad(Context c) {
-        sp(c).edit().remove("roadMode").remove("roadModeAt").remove("roadRadii").commit();
+        sp(c).edit().remove("roadMode").remove("roadModeAt").remove("roadRadii")
+                .remove("outbox").remove("outboxNote").remove("outboxNoteAt").commit();
     }
 
     /** GeoPlan.signature van de geofences die nu geregistreerd zijn, of leeg als er niets (bekend) staat. */

@@ -2,6 +2,7 @@ package nl.detussenpartij.tick;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -93,5 +94,32 @@ public class QuickAddPlanTest {
         assertEquals("exit", r.get(0).getString("trigger"));
         assertEquals("Albert Heijn", r.get(1).getString("name"));
         assertEquals(1, QuickAddPlan.recentPlaces(tasks, Collections.emptyList(), 1).size());
+    }
+
+    @Test
+    public void lokaleTaakUitDeBody() throws Exception {
+        JSONObject body = new JSONObject().put("id", "0b6f8a8e-1111-4222-8333-944445555666").put("title", "Brood")
+                .put("list", "Boodschappen").put("remind_at", "2026-11-12T08:00:00Z").put("repeat", "FREQ=DAILY")
+                .put("location", new JSONObject().put("name", "AH").put("lat", 52.1).put("lng", 5.1));
+        JSONObject t = QuickAddPlan.localTask(body, "2026-11-11T10:00:00Z");
+        assertEquals("0b6f8a8e-1111-4222-8333-944445555666", t.getString("id"));
+        assertEquals("Brood", t.getString("title"));
+        assertEquals("Boodschappen", t.getString("list"));
+        assertTrue(t.isNull("parent_id")); // een hoofdtaak, dus zichtbaar in de widget
+        assertEquals("2026-11-12T08:00:00Z", t.getString("remind_at"));
+        assertEquals("FREQ=DAILY", t.getJSONObject("repeat").getString("rule"));
+        assertEquals("AH", t.getJSONObject("location").getString("name"));
+        assertTrue(t.getBoolean("local"));
+        // Zonder ritme geen occurrence bij afvinken (de server kent de eerste keer).
+        assertEquals("{\"action\":\"android-1\"}", TickBody.done(t, 1));
+    }
+
+    @Test
+    public void lokaleTaakZonderExtras() throws Exception {
+        JSONObject t = QuickAddPlan.localTask(new JSONObject().put("id", "x").put("title", "Kort"), "2026-11-11T10:00:00Z");
+        assertTrue(t.isNull("list"));
+        assertTrue(t.isNull("remind_at"));
+        assertTrue(t.isNull("repeat"));
+        assertTrue(t.isNull("location"));
     }
 }

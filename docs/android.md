@@ -21,6 +21,11 @@ Add the Tick widget to your home screen. In its settings you choose:
 
 Tick tasks off right there: tap the circle. The task stays in its place for 6 seconds, struck through, with an **Undo** button; tap it to put the task back (a repeating task goes back to the date it had). After that the task disappears. Because the list doesn't move during those seconds, you can tick off several tasks in a row without hitting the wrong one. Tap a task's title to open it in the app, tap the header to open the app on that list, and add a task with **➕** (it goes into the widget's list). Each row shows the reminder, list, pin, repeat, place, sharing (blue people: one shared task; grey sheets: a copy, everyone has their own) and open subtasks. The widget can be resized.
 
+### Without a connection
+The widget keeps working offline. It shows the tasks from the last update; ticking off, **Undo** and adding a task with **➕** are saved on the phone first and sent as soon as there is a connection again. A task you ticked off stays hidden and a task you added shows up at once, also before Tick has them. While changes are waiting, the line at the top of the widget says so, for example "2 changes waiting for connection". If you tick something off and undo it before it was sent, Tick sends nothing at all.
+
+Sometimes Tick can't save a change later, for example when the task was deleted in the meantime or is no longer shared with you. Then the widget shows the task as it is in Tick again and says for a few minutes what was not saved. A repeating task you ticked off offline moves to its next date once the change is sent.
+
 ## On time on the road
 Android notices a place a few minutes late, so by car or bike you would be past it. Turn on **On time on the road** in *Tick on this phone* and Tick makes arrival circles bigger while you drive or cycle. How it works: [Places, On the road](places.md#on-the-road). Not in the Google Play version.
 
@@ -32,7 +37,7 @@ Android notices a place a few minutes late, so by car or bike you would be past 
 - **repeat** the task every day, every week or every other week on that weekday, every month on that day, or every year;
 - **add a description** with *Description*.
 
-Tick *Add another one after this* to keep the panel open, so you can type several tasks in a row; Tick remembers this choice. If adding fails (for example without a connection), the panel stays open with your text and says why, so you can try again.
+Tick *Add another one after this* to keep the panel open, so you can type several tasks in a row; Tick remembers this choice. Adding also works without a connection: the task shows up in the widget at once and goes to Tick when the phone is online again (see [Without a connection](#without-a-connection)).
 
 A date here uses 09:00, not your own reminder time.
 

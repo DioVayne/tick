@@ -31,15 +31,10 @@ public class ActionReceiver extends BroadcastReceiver {
     static final String EXTRA_FROM_NOTIFICATION = "fromNotification";
 
     /**
-     * Afvinken en ongedaan maken gaan een voor een naar de server, zodat Ongedaan maken nooit voor het afvinken
-     * aankomt (dan zou de server het terugzetten negeren en daarna alsnog afronden).
-     */
-    private static final Object NET = new Object();
-
-    /**
-     * Tik op het bolletje: de taak wordt direct doorgestreept getoond, met Ongedaan maken, en meteen op de server
-     * afgerond. De rij blijft UndoPlan.UNDO_WINDOW_MS op zijn plek; daarna verdwijnt hij. Een tweede tik op het bolletje
-     * doet niets: terugzetten gaat alleen met de knop.
+     * Tik op het bolletje: de taak wordt direct doorgestreept getoond, met Ongedaan maken, en gaat in de wachtrij
+     * (Outbox), die meteen verstuurd wordt. Zonder verbinding blijft hij daar staan tot er weer netwerk is; de widget
+     * houdt de taak zolang verborgen. De rij blijft UndoPlan.UNDO_WINDOW_MS op zijn plek; daarna verdwijnt hij. Een
+     * tweede tik op het bolletje doet niets: terugzetten gaat alleen met de knop.
      */
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -68,47 +63,30 @@ public class ActionReceiver extends BroadcastReceiver {
         Prefs.setPending(app, pending);
         // remind_at bij de tik onthouden: een herhalende taak blijft open op de server, maar met een nieuwe remind_at.
         JSONObject remind = Prefs.pendingRemind(app);
-        String tickBody = "{}";
+        String body = "{}";
+        String title = "";
         try {
             JSONObject task = NotifyDecision.find(new JSONArray(Prefs.cache(app)), id);
             if (task != null) remind.put(id, Sync.remindAt(task));
             else remind.remove(id);
+            if (task != null) title = task.optString("title");
             // De keer die de widget toonde gaat mee: is de taak elders al doorgeschoven, dan doet de server niets.
-            tickBody = TickBody.done(task, now);
+            body = TickBody.done(task, now);
         } catch (Exception e) {
             remind.remove(id);
         }
         Prefs.setPendingRemind(app, remind);
-        final String body = tickBody;
+        Sync.enqueue(app, Outbox.op(Outbox.DONE, id, body, now, now, title, null));
+        // Bewaard, dus de locatiemelding mag weg (ook bij afvinken in de widget). Wijst de server het later af, dan
+        // komt er een melding dat het mislukt is (Notify.doneFailed via Sync).
+        Notify.cancel(app, id);
         TaskWidgetProvider.updateAll(app); // direct zichtbaar, zonder netwerk
 
         final long started = SystemClock.elapsedRealtime();
         final PendingResult result = goAsync();
         new Thread(() -> {
             try {
-                boolean sent = false;
-                synchronized (NET) {
-                    // Al ongedaan gemaakt voordat het verzoek weg was: dan hoeft de server niets te horen.
-                    if (Prefs.pending(app).optLong(id) == now) {
-                        Api.call(app, "POST", "/api/tasks/" + Uri.encode(id) + "/done", body);
-                        sent = true;
-                    }
-                }
-                // Pas nu de locatiemelding weghalen (ook bij afvinken in de widget): de taak is echt af.
-                if (sent && Prefs.pending(app).optLong(id) == now) Notify.cancel(app, id);
-            } catch (Exception e) {
-                Log.w("Tick", "Afvinken mislukt", e);
-                // Direct weer tonen zoals hij op de server staat, in plaats van pas na 30 seconden.
-                JSONObject p = Prefs.pending(app);
-                if (p.optLong(id) == now) {
-                    p.remove(id);
-                    Prefs.setPending(app, p);
-                    // De locatiemelding blijft staan en zegt dat het mislukt is; "Afvinken" probeert het opnieuw.
-                    Notify.doneFailed(app, id, Sync.errorText(app, e));
-                    toast(app, app.getString(R.string.done_failed, Sync.errorText(app, e)));
-                }
-            }
-            try {
+                Sync.flush(app, true);
                 // Na het venster de rij weghalen: TaskListService laat hem pas vallen als de lijst opnieuw gebouwd wordt.
                 long wait = now + UndoPlan.UNDO_WINDOW_MS - System.currentTimeMillis();
                 if (wait > 0) Thread.sleep(wait + 100);
@@ -123,8 +101,9 @@ public class ActionReceiver extends BroadcastReceiver {
     }
 
     /**
-     * Ongedaan maken: de rij staat meteen weer open, en de server draait precies die afvinkactie terug (bij een
-     * herhalende taak: terug naar de keer van voor het doorschuiven). Werkt ook als het afvinken al op de server is.
+     * Ongedaan maken: de rij staat meteen weer open. Stond het afvinken nog in de wachtrij, dan gaan beide eruit en
+     * hoort de server niets. Anders gaat er een terugzetverzoek achteraan, en draait de server precies die afvinkactie
+     * terug (bij een herhalende taak: terug naar de keer van voor het doorschuiven).
      */
     private void undo(Context context, Intent intent) {
         final String id = intent.getStringExtra(EXTRA_ID);
@@ -145,19 +124,31 @@ public class ActionReceiver extends BroadcastReceiver {
         JSONObject remind = Prefs.pendingRemind(app);
         remind.remove(id);
         Prefs.setPendingRemind(app, remind);
+        boolean cancelled;
+        synchronized (Prefs.class) {
+            JSONArray ops = Prefs.outbox(app);
+            cancelled = Outbox.cancelDone(ops, id, tickedAt);
+            if (cancelled) Prefs.setOutbox(app, ops);
+        }
+        if (!cancelled) {
+            JSONObject task = null;
+            try {
+                task = NotifyDecision.find(new JSONArray(Prefs.cache(app)), id);
+            } catch (Exception ignored) {
+                // geen titel; alleen voor een eventuele melding
+            }
+            Sync.enqueue(app, Outbox.op(Outbox.REOPEN, id, TickBody.reopen(tickedAt), tickedAt, now,
+                    task == null ? "" : task.optString("title"), null));
+        }
         TaskWidgetProvider.updateAll(app); // direct weer open, zonder netwerk
+        if (cancelled) return; // de server wist nog van niets
 
         final long started = SystemClock.elapsedRealtime();
         final PendingResult result = goAsync();
         new Thread(() -> {
             try {
-                // Na een eventueel lopend afvinkverzoek; was dat nog niet weg, dan doet dit op de server niets.
-                synchronized (NET) {
-                    Api.call(app, "POST", "/api/tasks/" + Uri.encode(id) + "/reopen", TickBody.reopen(tickedAt));
-                }
-            } catch (Exception e) {
-                Log.w("Tick", "Ongedaan maken mislukt", e);
-                toast(app, app.getString(R.string.undo_failed, Sync.errorText(app, e)));
+                // Na een eventueel lopend afvinkverzoek (Sync.NET); was dat nog niet weg, dan doet dit op de server niets.
+                Sync.flush(app, true);
             } finally {
                 refreshWithin(app, started);
                 result.finish();
