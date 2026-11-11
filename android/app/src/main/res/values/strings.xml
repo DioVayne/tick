@@ -22,6 +22,10 @@
     <string name="loc_button">Turn on location notifications</string>
     <string name="loc_status_on">Location notifications: on</string>
     <string name="loc_status_missing">Location notifications: still needed: %s</string>
+    <plurals name="loc_status_too_many">
+        <item quantity="one">%1$d task with a place is not being watched: a phone watches at most %2$d places at once. Tasks higher in the list go first.</item>
+        <item quantity="other">%1$d tasks with a place are not being watched: a phone watches at most %2$d places at once. Tasks higher in the list go first.</item>
+    </plurals>
     <string name="loc_stats_inside">Arrival notifications came %2$d m inside the circle on average (last %1$d).</string>
     <string name="loc_stats_before">Arrival notifications came %2$d m before the circle on average (last %1$d).</string>
     <string name="loc_stats_mode_inside">%1$s: %2$d m inside the circle on average.</string>

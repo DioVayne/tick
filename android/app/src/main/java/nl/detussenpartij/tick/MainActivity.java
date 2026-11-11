@@ -301,10 +301,24 @@ public class MainActivity extends Activity {
         if (!granted(Manifest.permission.ACCESS_FINE_LOCATION)) missing.add(getString(R.string.loc_missing_location));
         if (!granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) missing.add(getString(R.string.loc_missing_background));
         if (!systemLocationOn()) missing.add(getString(R.string.loc_missing_system_location));
-        locStatus.setText(missing.isEmpty() ? getString(R.string.loc_status_on)
-                : getString(R.string.loc_status_missing, String.join(", ", missing)));
+        String status = missing.isEmpty() ? getString(R.string.loc_status_on)
+                : getString(R.string.loc_status_missing, String.join(", ", missing));
+        // Meer plekken dan Android tegelijk bewaakt: zeggen hoeveel taken nu geen melding kunnen geven.
+        int skipped = skippedPlaces();
+        if (skipped > 0) status += "\n" + getResources().getQuantityString(R.plurals.loc_status_too_many, skipped, skipped, GeoPlan.MAX);
+        locStatus.setText(status);
         updateLocStats();
         updateRoadStatus();
+    }
+
+    /** Taken met een plek die niet meer pasten in de ongeveer 100 plekken die Android per app bewaakt (uit de cache). */
+    private int skippedPlaces() {
+        try {
+            return GeoPlan.plan(new JSONArray(Prefs.cache(this)), Prefs.locFired(this), GeoPlan.MAX,
+                    java.util.Collections.emptyMap(), "").skipped;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private void updateLocStats() {
