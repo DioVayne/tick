@@ -16,7 +16,18 @@ export type Payload = {
   tag?: string;
   /** Knoppen in de melding, al vertaald: de service worker kent de taal niet. */
   actions?: { action: 'done' | 'snooze' | 'tomorrow' | 'accept' | 'decline'; title: string }[];
+  /** Tekst voor als een knop mislukt (de service worker zet de melding dan terug); `{status}` vult hij zelf in. */
+  failed?: { offline: string; auth: string; server: string };
 };
+
+/** De vertaalde teksten voor een mislukte knop. */
+export function failedTexts(locale?: string): NonNullable<Payload['failed']> {
+  return {
+    offline: translate(locale, 'push.failed_offline'),
+    auth: translate(locale, 'push.failed_auth'),
+    server: translate(locale, 'push.failed_server', { status: '{status}' }),
+  };
+}
 
 /**
  * De VAPID-sleutel (JWK) uit het geheim. Een BOM of witruimte aan begin of eind gaat eraf: een geheim dat vanuit
@@ -47,7 +58,10 @@ export async function sendToAll(env: Env, userId: string, make: (locale: Locale)
   }
   let ok = 0;
   for (const s of subs) {
-    const payload = make(s.locale === 'nl' || s.locale === 'en' ? s.locale : defaultLocale);
+    const locale = s.locale === 'nl' || s.locale === 'en' ? s.locale : defaultLocale;
+    const made = make(locale);
+    // Met knoppen ook de tekst voor als zo'n knop mislukt, in dezelfde taal.
+    const payload = made.actions?.length ? { ...made, failed: failedTexts(locale) } : made;
     try {
       const { endpoint, headers, body } = await buildPushHTTPRequest({
         privateJWK,

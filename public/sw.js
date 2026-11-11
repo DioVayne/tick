@@ -2,7 +2,7 @@
 
 // App-shell voor offline gebruik. Network-first: online krijg je altijd de nieuwste versie (geen mix van oude en
 // nieuwe modules na een deploy), offline de laatst bewaarde. Verhoog de versie als de lijst hieronder verandert.
-const CACHE = 'tick-shell-v84';
+const CACHE = 'tick-shell-v85';
 const SHELL = [
   '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/review.js', '/planner.js', '/agenda.js', '/ics.js', '/manager.js', '/push.js', '/style.css', '/sortable.min.js',
   '/markdown.js', '/lists.js', '/editor.js', '/sidebar.js', '/detail.js', '/listpicker.js', '/listmenu.js', '/dialog.js',
@@ -81,17 +81,25 @@ self.addEventListener('notificationclick', (event) => {
   const n = event.notification;
   const { taskId, url, occurrence, shareId, listInviteId } = n.data || {};
   n.close();
-  // Mislukt de actie (geen verbinding, sessie verlopen, serverfout), dan komt dezelfde melding met dezelfde knoppen
-  // terug: anders denk je dat de taak is afgevinkt of verzet terwijl er niets gebeurde. Een andere 4xx (taak of
-  // uitnodiging weg, op naam van een ander) lukt ook later niet: dan niet terug, zoals sync() in store.js.
-  const showAgain = () => self.registration.showNotification(n.title, {
-    body: n.body, icon: n.icon, badge: n.badge, tag: n.tag, data: n.data, actions: n.actions ?? [],
-  }).catch(() => {});
+  // Mislukt de actie (geen verbinding, sessie verlopen, serverfout), dan komt de melding terug: anders denk je dat de
+  // taak is afgevinkt of verzet terwijl er niets gebeurde. De tekst zegt wat er misging (`failed`, vertaald door de
+  // server), anders lijkt het een dubbele melding. Zonder inlog geen knoppen: die mislukken toch; tikken opent Tick.
+  // Een andere 4xx (taak of uitnodiging weg, op naam van een ander) lukt ook later niet: dan niet terug, zoals sync().
+  const showAgain = (kind, status = '') => {
+    const text = (n.data || {}).failed?.[kind];
+    return self.registration.showNotification(n.title, {
+      body: text ? text.replace('{status}', String(status)) : n.body, icon: n.icon, badge: n.badge, tag: n.tag, data: n.data,
+      actions: kind === 'auth' ? [] : n.actions ?? [],
+    }).catch(() => {});
+  };
   // Na de actie een open Tick laten verversen: het meldingenpaneel maakt de app niet onzichtbaar, dus zonder
   // dit bericht ziet hij de wijziging pas bij de volgende keer laden.
   const call = (path, method, body) =>
     fetch(path, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-      .then((res) => { if (res.redirected || res.status === 401 || res.status >= 500) return showAgain(); }, showAgain)
+      .then((res) => {
+        if (res.redirected || res.status === 401) return showAgain('auth');
+        if (res.status >= 500) return showAgain('server', res.status);
+      }, () => showAgain('offline'))
       .finally(() => self.clients.matchAll({ type: 'window' })
         .then((wins) => wins.forEach((w) => w.postMessage({ type: 'refresh' }))));
   // Uitnodiging om een taak te delen: Accepteren of Weigeren zonder de app te openen.
