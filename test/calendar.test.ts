@@ -54,6 +54,19 @@ describe('taskMoments / tasksByDay', () => {
     const t = task('r', '2026-10-11T08:00:00Z', { repeat: { rule: 'FREQ=WEEKLY;BYDAY=SU', start: '2026-10-04T08:00:00Z', at: '2026-10-11T08:00:00Z' } });
     expect([...tasksByDay([t], from, to).keys()]).toEqual(['2026-10-11', '2026-10-18', '2026-10-25']);
   });
+  it('herhaling verzet naar woensdag: de woensdag staat erin, daarna de zondagen na de keer van het ritme', () => {
+    // Zondag 11-10 verzet naar woensdag 14-10: afvinken schuift door naar 18-10, dus 11-10 zelf komt niet meer.
+    const rule = { rule: 'FREQ=WEEKLY;BYDAY=SU', start: '2026-10-04T08:00:00Z', at: '2026-10-11T08:00:00Z' };
+    const t = task('w', '2026-10-14T08:00:00Z', { repeat: rule });
+    expect([...tasksByDay([t], from, to).keys()]).toEqual(['2026-10-14', '2026-10-18', '2026-10-25']);
+    // Naar voren verzet (donderdag 8-10): die dag, dan pas de zondag na de keer van het ritme.
+    const v = task('v', '2026-10-08T08:00:00Z', { repeat: rule });
+    expect([...tasksByDay([v], from, to).keys()]).toEqual(['2026-10-08', '2026-10-18', '2026-10-25']);
+  });
+  it('herhaling uitgesteld op dezelfde dag: het uitgestelde tijdstip, niet ook nog het oude', () => {
+    const t = task('s', '2026-10-11T10:00:00Z', { repeat: { rule: 'FREQ=WEEKLY;BYDAY=SU', start: '2026-10-04T08:00:00Z', at: '2026-10-11T08:00:00Z' } });
+    expect(taskMoments(t, from, to)).toEqual([ms('2026-10-11T10:00:00Z'), ms('2026-10-18T08:00:00Z'), ms('2026-10-25T09:00:00Z')]); // 25-10: wintertijd
+  });
   it('een herhaling zonder volgende keer valt terug op één keer', () => {
     const t = task('x', '2026-10-05T08:00:00Z', { repeat: { rule: 'ONZIN', start: '2026-10-05T08:00:00Z', at: '2026-10-05T08:00:00Z' } });
     expect(taskMoments(t, from, to)).toEqual([ms('2026-10-05T08:00:00Z')]);

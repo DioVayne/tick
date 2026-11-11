@@ -85,7 +85,7 @@ export function deleteUserStmts(db: D1Database, id: string): D1PreparedStatement
     // Gekoppelde agenda's: eerst de afspraken, dan de feeds.
     db.prepare('DELETE FROM calendar_events WHERE user_id = ?').bind(id),
     db.prepare('DELETE FROM calendar_feeds WHERE user_id = ?').bind(id),
-    ...['api_keys', 'pair_codes', 'move_codes', 'push_subscriptions', 'tasks', 'places', 'user_settings', 'lists', 'review_skip_lists', 'list_ids']
+    ...['api_keys', 'pair_codes', 'move_codes', 'push_subscriptions', 'tasks', 'places', 'user_settings', 'lists', 'review_skip_lists', 'list_ids', 'op_seen']
       .map((t) => db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(id)),
     // Ook links die deze gebruiker zelf aanmaakte (created_by verwijst naar users).
     db.prepare('DELETE FROM account_links WHERE user_id = ? OR created_by = ?').bind(id, id),

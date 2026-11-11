@@ -42,7 +42,7 @@ describe('store: herhalende taken', () => {
     state.justDone.clear();
   };
 
-  it('afvinken van een herhalende taak schuift lokaal door en zet occurrence in de outbox', async () => {
+  it('afvinken van een herhalende taak schuift lokaal door en zet occurrence en een actie-id in de outbox', async () => {
     const oudeAt = '2030-01-07T09:00:00.000Z';
     setup(oudeAt);
     for (const op of await db.outboxAll()) await db.outboxDelete(op.seq);
@@ -52,7 +52,9 @@ describe('store: herhalende taken', () => {
     expect(t.remind_at).toBe('2030-01-14T09:00:00.000Z');
     expect(t.repeat.at).toBe('2030-01-14T09:00:00.000Z');
     expect(t.notified).toBe(false);
-    expect((await db.outboxAll())[0].body).toEqual({ done: true, occurrence: oudeAt });
+    const body = (await db.outboxAll())[0].body;
+    expect(body).toEqual({ done: true, occurrence: oudeAt, action: expect.any(String) });
+    expect(state.justDone.get('r1')!.action).toBe(body.action);
   });
 
   it('nogmaals tikken binnen het venster zet de oude stand terug', async () => {
@@ -66,7 +68,7 @@ describe('store: herhalende taken', () => {
     expect(t.notified).toBe(true);
   });
 
-  it('twee keer doorschuiven en dan ongedaan maken zet de laatste stap terug, met occurrence in de outbox', async () => {
+  it('twee keer doorschuiven en dan ongedaan maken zet de laatste stap terug, met het actie-id van die stap in de outbox', async () => {
     const oudeAt = '2030-01-07T09:00:00.000Z';
     setup(oudeAt, 'r5');
     await toggleDone(state.open[0]);
@@ -77,10 +79,11 @@ describe('store: herhalende taken', () => {
     const t = state.open[0] as any;
     expect(t.repeat.at).toBe('2030-01-21T09:00:00.000Z');
     for (const op of await db.outboxAll()) await db.outboxDelete(op.seq);
+    const action = state.justDone.get('r5')!.action;
     await toggleDone(state.open[0]);
     expect(t.repeat.at).toBe('2030-01-14T09:00:00.000Z');
     expect(t.remind_at).toBe('2030-01-14T09:00:00.000Z');
-    expect((await db.outboxAll())[0].body).toEqual({ done: false, occurrence: '2030-01-21T09:00:00.000Z' });
+    expect((await db.outboxAll())[0].body).toEqual({ done: false, undo: action });
   });
 
   it('remind_at null wist het ritme, ook als er tegelijk een repeat-regel staat', async () => {

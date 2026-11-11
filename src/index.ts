@@ -507,7 +507,27 @@ type RepeatPrev = {
   notified: number; loc_notified: number;
   /** Deelrijen die de plek al gemeld hadden; ontbreekt in een stand van vóór migratie 0015. */
   shares_loc?: string[];
+  /** Id van de afvinkactie die deze stap zette (van de client); ongedaan maken met `undo` moet hetzelfde id noemen. */
+  action?: string;
 };
+
+/** Een actie-id van de client (`action`/`undo`): een korte string, anders undefined. */
+const actionId = (v: unknown): string | undefined => (typeof v === 'string' && v.length > 0 && v.length <= 100 ? v : undefined);
+
+/**
+ * Mag een afvink- of heropenverzoek een herhalende taak laten doorschuiven of terugdraaien? `occurrence` (indien
+ * meegestuurd) moet de huidige keer zijn: zo schuift een herhaald of verouderd afvinken (een oud widgetitem) niet nog
+ * een keer door. Heropenen met `undo` draait alleen de stap van die afvinkactie terug, welke datum de server daarbij
+ * ook berekende; zonder `undo` geldt `occurrence`, zoals bij oudere clients.
+ */
+function rollAllowed(t: TaskRow, b: Record<string, unknown>, done: boolean): boolean {
+  const sameAt = !('occurrence' in b) || Date.parse(String(b.occurrence)) === Date.parse(t.repeat_at!);
+  if (done) return sameAt;
+  const prev = undoable(t);
+  if (!prev) return false;
+  if ('undo' in b) return !!prev.action && prev.action === actionId(b.undo);
+  return sameAt;
+}
 
 /** Open hoofdtaak met ritme: afvinken schuift door in plaats van af te ronden. */
 const rolls = (t: TaskRow) => !!t.repeat_rule && !t.parent_id && !t.done;
@@ -524,7 +544,7 @@ function undoable(t: TaskRow): RepeatPrev | null {
  * Heropenen draait dat terug zolang undoable() het toestaat. Beide in één batch; de WHERE op repeat_at/repeat_prev
  * zorgt dat een gelijktijdig verzoek niets half of dubbel doet.
  */
-async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone, actorId: string): Promise<boolean> {
+async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone, actorId: string, action?: string): Promise<boolean> {
   const ts = now();
   if (done) {
     const next = inZone(z, () => nextOccurrence(t.repeat_rule!, t.repeat_start!, Math.max(Date.now(), Date.parse(t.repeat_at!))));
@@ -535,7 +555,7 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone, ac
     // Elke stap overschrijft de stand: ongedaan maken draait altijd de laatste stap terug.
     const prev = JSON.stringify({
       remind_at: t.remind_at, repeat_at: t.repeat_at!, next, kids, at: ts, notified: t.notified, loc_notified: t.loc_notified,
-      shares_loc: sharesLoc.map((r) => r.id),
+      shares_loc: sharesLoc.map((r) => r.id), ...(action ? { action } : {}),
     } satisfies RepeatPrev);
     const [res] = await db.batch([
       db.prepare('UPDATE tasks SET remind_at = ?, repeat_at = ?, notified = 0, loc_notified = CASE WHEN loc_lat IS NULL THEN loc_notified ELSE 0 END, ' +
@@ -569,8 +589,8 @@ async function rollRepeat(db: D1Database, t: TaskRow, done: boolean, z: Zone, ac
  * Een open herhalende hoofdtaak gaat via rollRepeat. Geeft true als de taak hierdoor echt van open naar klaar ging
  * (bij herhalen: echt doorschoof); heropenen geeft altijd false. `actorId` is wie afvinkt (`done_by`).
  */
-async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone, actorId: string): Promise<boolean> {
-  return rolls(t) ? rollRepeat(db, t, done, z, actorId) : plainDone(db, t, done, actorId);
+async function setDone(db: D1Database, t: TaskRow, done: boolean, z: Zone, actorId: string, action?: string): Promise<boolean> {
+  return rolls(t) ? rollRepeat(db, t, done, z, actorId, action) : plainDone(db, t, done, actorId);
 }
 
 async function plainDone(db: D1Database, t: TaskRow, done: boolean, actorId: string): Promise<boolean> {
@@ -813,7 +833,33 @@ async function createTask(env: Env, userId: string, z: Zone, b: Record<string, u
   return presentOne(env, userId, id, created);
 }
 
-app.patch('/api/tasks/:id', async (c) => patchTask(c, c.req.param('id'), await body(c)));
+app.patch('/api/tasks/:id', async (c) => {
+  const id = c.req.param('id');
+  const b = await body(c);
+  if (await staleOp(c, id)) {
+    // Verouderd: niets wijzigen, wel de taak zoals hij nu is (de outbox gaat gewoon door).
+    const t = await getTask(c.env.DB, c.get('auth').userId, id);
+    if (!t) throw new HttpError(404, 'err.not_found');
+    return c.json(await presentOne(c.env, c.get('auth').userId, id, t));
+  }
+  return patchTask(c, id, b);
+});
+
+/**
+ * Wijzigingen uit de outbox van de webapp dragen `x-tick-op: <apparaat>:<volgnummer>`; binnen één browser loopt dat
+ * volgnummer op. Kwam er voor deze taak al een hoger volgnummer van hetzelfde apparaat binnen, dan is dit een vertraagd
+ * ouder verzoek (bijvoorbeeld uit een tweede tabblad) en geeft dit true: het mag de nieuwere wijziging niet overschrijven.
+ * Hetzelfde volgnummer nog eens (opnieuw geprobeerd na een fout) telt niet als verouderd. Zonder header: altijd false.
+ */
+async function staleOp(c: Context<AppEnv>, taskId: string): Promise<boolean> {
+  const m = /^([A-Za-z0-9-]{8,64}):(\d{1,15})$/.exec(c.req.header('x-tick-op') ?? '');
+  if (!m) return false;
+  const res = await c.env.DB.prepare(
+    'INSERT INTO op_seen (user_id, device, task_id, seq, at) VALUES (?, ?, ?, ?, ?) ' +
+    'ON CONFLICT (user_id, device, task_id) DO UPDATE SET seq = excluded.seq, at = excluded.at WHERE excluded.seq >= op_seen.seq',
+  ).bind(c.get('auth').userId, m[1], taskId, Number(m[2]), now()).run();
+  return res.meta.changes === 0;
+}
 
 /**
  * Wat een nieuwe `list` met het lidmaatschap van een hoofdtaak in een gedeelde lijst doet: null als dat niet
@@ -980,12 +1026,9 @@ async function patchTask(c: Context<AppEnv>, id: string, b: Record<string, unkno
   if ('done' in b) {
     // Opnieuw lezen: dezelfde PATCH kan net remind_at of repeat gezet hebben.
     const cur = sets.length ? (await getTask(db, userId, id))! : t;
-    // Een herhalende taak staat altijd open. `occurrence` (indien meegestuurd) moet de huidige keer zijn: bij done:true
-    // schuift een herhaald verzoek uit de outbox zo niet nog een keer door, bij done:false draait een vertraagd
-    // ongedaan maken (dat een eerdere stap bedoelde) de nieuwste stap niet terug.
-    const sameAt = !('occurrence' in b) || Date.parse(String(b.occurrence)) === Date.parse(cur.repeat_at!);
-    const act = rolls(cur) ? sameAt && (!!b.done || !!undoable(cur)) : !!b.done !== !!cur.done;
-    if (act && await setDone(db, cur, !!b.done, await ownerZone(c, cur), userId)) await copyDone(c, cur);
+    // Een herhalende taak staat altijd open; rollAllowed beslist of dit verzoek over de huidige stap gaat.
+    const act = rolls(cur) ? rollAllowed(cur, b, !!b.done) : !!b.done !== !!cur.done;
+    if (act && await setDone(db, cur, !!b.done, await ownerZone(c, cur), userId, actionId(b.action))) await copyDone(c, cur);
   }
   const updated = await getTask(db, userId, id);
   if (newPlace && updated) await placeShared(c, updated);
@@ -1211,14 +1254,18 @@ app.post('/api/lists/clear-done', async (c) => {
   return c.json({ deleted: rows.length });
 });
 
-// Simpele variant voor clients zonder PATCH (Android-widget); werkt net als PATCH {done}.
-for (const [action, done] of [['done', true], ['reopen', false]] as const) {
-  app.post(`/api/tasks/:id/${action}`, async (c) => {
+// Simpele variant voor clients zonder PATCH (Android-widget); werkt net als PATCH {done}, ook met `occurrence`,
+// `action` en `undo` in de (optionele) body.
+for (const [path, done] of [['done', true], ['reopen', false]] as const) {
+  app.post(`/api/tasks/:id/${path}`, async (c) => {
+    const raw = await c.req.json<unknown>().catch(() => ({}));
+    const b = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
     const t = await getTask(c.env.DB, c.get('auth').userId, c.req.param('id'));
     if (!t) throw new HttpError(404, 'err.not_found');
     await assertMayTick(c.env.DB, t, c.get('auth').userId);
-    // Een herhalende taak staat altijd open: /done schuift altijd door, /reopen draait terug als dat nog mag (setDone beslist).
-    if ((rolls(t) || !!t.done !== done) && await setDone(c.env.DB, t, done, await ownerZone(c, t), c.get('auth').userId)) await copyDone(c, t);
+    // Een herhalende taak staat altijd open: rollAllowed beslist of dit verzoek over de huidige stap gaat.
+    const act = rolls(t) ? rollAllowed(t, b, done) : !!t.done !== done;
+    if (act && await setDone(c.env.DB, t, done, await ownerZone(c, t), c.get('auth').userId, actionId(b.action))) await copyDone(c, t);
     return c.json({ ok: true });
   });
 }

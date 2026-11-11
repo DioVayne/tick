@@ -47,6 +47,9 @@ public class ActionReceiver extends BroadcastReceiver {
         final boolean undo = known && now - pending.optLong(id) <= Sync.UNDO_WINDOW_MS;
         if (known && !undo) return; // taak is al weg (of op weg); een late tik doet niets
         if (undo && fromNotification) return; // dubbele tik op "Afvinken" in de melding: hij is al onderweg
+        // Het moment van de afvinktik: daaruit volgt het actie-id dat ongedaan maken weer noemt.
+        final long tickedAt = undo ? pending.optLong(id) : now;
+        String tickBody = "{}";
 
         try {
             if (undo) pending.remove(id);
@@ -61,17 +64,20 @@ public class ActionReceiver extends BroadcastReceiver {
             JSONObject task = undo ? null : NotifyDecision.find(new JSONArray(Prefs.cache(app)), id);
             if (task != null) remind.put(id, Sync.remindAt(task));
             else remind.remove(id);
+            if (!undo) tickBody = TickBody.done(task, tickedAt);
         } catch (Exception e) {
             remind.remove(id);
         }
         Prefs.setPendingRemind(app, remind);
+        // De keer die de widget toonde gaat mee: is de taak elders al doorgeschoven, dan doet de server niets.
+        final String body = undo ? TickBody.reopen(tickedAt) : tickBody;
         TaskWidgetProvider.updateAll(app); // direct zichtbaar, zonder netwerk
 
         final PendingResult result = goAsync();
         new Thread(() -> {
             try {
                 String path = "/api/tasks/" + Uri.encode(id) + (undo ? "/reopen" : "/done");
-                Api.call(app, "POST", path, "{}");
+                Api.call(app, "POST", path, body);
                 if (!undo) {
                     // Pas nu de locatiemelding weghalen (ook bij afvinken in de widget): de taak is echt af.
                     Notify.cancel(app, id);
