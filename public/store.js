@@ -141,7 +141,7 @@ function applyLocal(op) {
   }
   const t = find(op.id);
   if (!t) return;
-  const { done, occurrence, claimed, ...fields } = op.body;
+  const { done, occurrence, claimed, action, undo, ...fields } = op.body;
   const { repeat, ...plain } = fields;
   Object.assign(t, plain);
   if (claimed !== undefined) t.claimed_by = claimed ? meRef() : null;
@@ -163,7 +163,7 @@ function applyLocal(op) {
     // Elke stap overschrijft de stand: ongedaan maken draait de laatste stap terug (zoals op de server).
     undoRepeat.set(t.id, {
       next, at: t.repeat.at, remind_at: t.remind_at, notified: t.notified, location_notified: t.location_notified,
-      kids: kids.map((x) => ({ id: x.id, done_at: x.done_at, done_by: x.done_by })), ms: now,
+      kids: kids.map((x) => ({ id: x.id, done_at: x.done_at, done_by: x.done_by })), ms: now, action,
     });
     t.remind_at = next;
     t.repeat = { ...t.repeat, at: next };
@@ -177,9 +177,10 @@ function applyLocal(op) {
     }
     state.done = state.done.filter((x) => x.done);
   } else if (done === false && !t.done && t.repeat) {
-    // Alleen als het verzoek over de huidige keer gaat: een oud ongedaan maken draait een nieuwere stap niet terug.
-    if (occurrence !== undefined && occurrence !== t.repeat.at) return;
+    // Alleen de stap van die afvinkactie (undo), of zonder undo de huidige keer: een oud ongedaan maken draait een
+    // nieuwere stap niet terug.
     const prev = undoRepeat.get(t.id);
+    if (undo !== undefined ? prev?.action !== undo : occurrence !== undefined && occurrence !== t.repeat.at) return;
     undoRepeat.delete(t.id);
     if (prev && prev.next === t.repeat.at && Date.parse(op.at) - prev.ms < REPEAT_UNDO_MS) {
       t.remind_at = prev.remind_at;
@@ -271,8 +272,37 @@ function setAsideText(op) {
 }
 
 let syncing = null;
+
 /**
- * Speelt de outbox op volgorde af. Geeft false als er nog iets wacht (offline of serverfout).
+ * Alle tabbladen delen één outbox (IndexedDB). Het slot zorgt dat er steeds maar één tegelijk verstuurt, anders kan een
+ * vertraagd oud verzoek uit het ene tabblad een nieuwere wijziging uit het andere overschrijven. Zonder Web Locks
+ * (oude browser) gaat het zonder slot; de server herkent verouderde verzoeken dan nog aan x-tick-op.
+ */
+const outboxLock = (fn) => (globalThis.navigator?.locks ? navigator.locks.request('tick-outbox', fn) : fn());
+
+/**
+ * Id van deze browser voor x-tick-op: de outbox-volgnummers (seq) lopen per browser op. Staat bij de lokale kopie, dus
+ * na wissen (andere gebruiker) een nieuw id, ook als IndexedDB de nummers daarna opnieuw uitdeelt.
+ */
+async function deviceId() {
+  let id = await db.kvGet('device').catch(() => null);
+  if (!id) {
+    id = crypto.randomUUID();
+    await db.kvSet('device', id).catch(() => {});
+  }
+  return id;
+}
+
+/** Het verzoek voor een wijziging uit de outbox; een PATCH draagt x-tick-op, zodat de server verouderde herkent. */
+function sendOp(op, device) {
+  const [method, path, body] = toHttp(op);
+  return method === 'PATCH' && op.seq !== undefined
+    ? request(method, path, body, { 'x-tick-op': `${device}:${op.seq}` })
+    : request(method, path, body);
+}
+
+/**
+ * Speelt de outbox op volgorde af, onder het slot van outboxLock. Geeft false als er nog iets wacht (offline of serverfout).
  * Wacht eerst op de eigenaarscontrole van init; mislukte die, dan speelt hij niets af (de outbox kan van een ander zijn).
  * Een wijziging die steeds een 5xx krijgt (SET_ASIDE_ATTEMPTS keer, en de eerste fout SET_ASIDE_AFTER_MS geleden), gaat
  * met een melding uit de outbox, maar alleen als de server na die eerste fout nog wel iets anders gewoon beantwoordde
@@ -280,53 +310,59 @@ let syncing = null;
  * telt niet als poging; bij een server die helemaal plat is, wacht alles.
  */
 export function sync() {
-  let setAside = false;
+  const flags = { setAside: false };
   syncing ??= (async () => {
     try {
       if (!(await ownerReady)) return false;
-      for (let ops = await db.outboxAll(); ops.length; ops = await db.outboxAll()) {
-        for (const op of ops) {
-          try {
-            await request(...toHttp(op));
-            serverOkAt = Date.now();
-          } catch (e) {
-            if (e instanceof Offline) {
-              state.offline = true;
-              return false;
-            }
-            if (e.status >= 500) {
-              const now = Date.now();
-              op.attempts = (op.attempts ?? 0) + 1;
-              op.firstFailAt ??= now;
-              const serverWorks = serverOkAt > op.firstFailAt;
-              if (op.attempts < SET_ASIDE_ATTEMPTS || now - op.firstFailAt < SET_ASIDE_AFTER_MS || !serverWorks) {
-                await db.outboxPut(op).catch(() => {});
-                return false; // later opnieuw
-              }
-              if (!dependsOnAbandoned(op)) report(setAsideText(op));
-              forget(op);
-              setAside = true;
-            } else if (!e.status || e.status === 401) return false; // later opnieuw
-            else {
-              // 404: de taak is elders al verwijderd, dan vervalt de wijziging stil. Andere 4xx lukken nooit meer.
-              if (e.status !== 404 && !dependsOnAbandoned(op)) report(tr('store.change_refused', { reason: e.message }));
-              // 409 op een nieuwe taak (err.id_taken): die taak staat al op de server, dus niets hangt ervan af.
-              if (!(op.type === 'create' && e.status === 409)) forget(op);
-            }
-          }
-          await db.outboxDelete(op.seq);
-        }
-      }
-      state.offline = false;
-      return true;
+      return await outboxLock(() => drainOutbox(flags));
     } finally {
       syncing = null;
       state.pending = (await ownerReady) ? (await db.outboxAll().catch(() => [])).length : 0;
       // Binnen een load() haalt die ronde de serverstand al op; anders hier een ronde starten.
-      if (setAside && !loading) load().catch(() => {});
+      if (flags.setAside && !loading) load().catch(() => {});
     }
   })();
   return syncing;
+}
+
+/** Het afspelen zelf (zie sync); zet `flags.setAside` als er een wijziging opzij ging. */
+async function drainOutbox(flags) {
+  const device = await deviceId();
+  for (let ops = await db.outboxAll(); ops.length; ops = await db.outboxAll()) {
+    for (const op of ops) {
+      try {
+        await sendOp(op, device);
+        serverOkAt = Date.now();
+      } catch (e) {
+        if (e instanceof Offline) {
+          state.offline = true;
+          return false;
+        }
+        if (e.status >= 500) {
+          const now = Date.now();
+          op.attempts = (op.attempts ?? 0) + 1;
+          op.firstFailAt ??= now;
+          const serverWorks = serverOkAt > op.firstFailAt;
+          if (op.attempts < SET_ASIDE_ATTEMPTS || now - op.firstFailAt < SET_ASIDE_AFTER_MS || !serverWorks) {
+            await db.outboxPut(op).catch(() => {});
+            return false; // later opnieuw
+          }
+          if (!dependsOnAbandoned(op)) report(setAsideText(op));
+          forget(op);
+          flags.setAside = true;
+        } else if (!e.status || e.status === 401) return false; // later opnieuw
+        else {
+          // 404: de taak is elders al verwijderd, dan vervalt de wijziging stil. Andere 4xx lukken nooit meer.
+          if (e.status !== 404 && !dependsOnAbandoned(op)) report(tr('store.change_refused', { reason: e.message }));
+          // 409 op een nieuwe taak (err.id_taken): die taak staat al op de server, dus niets hangt ervan af.
+          if (!(op.type === 'create' && e.status === 409)) forget(op);
+        }
+      }
+      await db.outboxDelete(op.seq);
+    }
+  }
+  state.offline = false;
+  return true;
 }
 
 let loading = null; // de ronde die nu loopt
@@ -576,16 +612,18 @@ export function toggleDone(t) {
     // Intussen ververst: de afgevinkte taak staat niet meer in state.open (en Afgerond is niet geladen). Eerst terugzetten,
     // anders vindt applyLocal hem niet en verdwijnt de rij tot de volgende load.
     if (!find(t.id)) state.open.push(pending.task ?? t);
-    // Herhalende taak: de keer waar hij nu (na het lokale doorschuiven) op staat, zodat de server de juiste stap terugdraait.
-    return update(t.id, t.repeat && !t.parent_id ? { done: false, occurrence: t.repeat.at } : { done: false });
+    // Herhalende taak: het id van de afvinkactie, zodat de server precies die stap terugdraait, ook als hij (na offline)
+    // een andere volgende keer berekende dan wij hier.
+    return update(t.id, pending.action ? { done: false, undo: pending.action } : { done: false });
   }
   if (t.done) return update(t.id, { done: false }); // tab "Afgerond": direct heropenen
   const timer = setTimeout(() => {
     state.justDone.delete(t.id);
     changed();
   }, UNDO_MS);
-  state.justDone.set(t.id, { timer, task: t, at: Date.now() }); // at: voor het aftelbalkje in de lijst
-  return update(t.id, t.repeat && !t.parent_id ? { done: true, occurrence: t.repeat.at } : { done: true });
+  const action = t.repeat && !t.parent_id ? crypto.randomUUID() : undefined;
+  state.justDone.set(t.id, { timer, task: t, at: Date.now(), action }); // at: voor het aftelbalkje in de lijst
+  return update(t.id, action ? { done: true, occurrence: t.repeat.at, action } : { done: true });
 }
 
 // ---------- prullenbak (alleen online) ----------

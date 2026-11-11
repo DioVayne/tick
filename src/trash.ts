@@ -20,5 +20,7 @@ export function wipeStmts(db: D1Database, where: string, binds: unknown[]): D1Pr
 export async function purgeTrash(db: D1Database, now: number): Promise<number> {
   const cutoff = new Date(now - TRASH_DAYS * 86_400_000).toISOString();
   const res = await db.batch(wipeStmts(db, 'deleted_at IS NOT NULL AND deleted_at < ?', [cutoff]));
+  // In dezelfde ronde: volgnummers van outbox-wijzigingen (op_seen) zijn na een dag niet meer nodig.
+  await db.prepare('DELETE FROM op_seen WHERE at < ?').bind(new Date(now - 86_400_000).toISOString()).run();
   return res[2].meta.changes + res[3].meta.changes;
 }

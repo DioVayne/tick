@@ -79,7 +79,9 @@ export function monthGrid(year, month, weekStart) {
 
 /**
  * De momenten waarop een taak in [fromMs, toMs) valt. Een herhalende taak telt vanaf zijn huidige keer mee
- * (eerdere keren zijn niet bewaard).
+ * (eerdere keren zijn niet bewaard): eerst de herinnering zelf, ook als die verzet is naar een dag buiten het ritme,
+ * dan de volgende keren van het ritme na de herinnering én na de keer waar het ritme staat (repeat.at), zoals afvinken
+ * hem ook laat doorschuiven.
  * @param {any} task
  * @param {number} fromMs
  * @param {number} toMs
@@ -92,7 +94,10 @@ export function taskMoments(task, fromMs, toMs) {
   if (!task.repeat) return at >= fromMs && at < toMs ? [at] : [];
   try {
     parseRule(task.repeat.rule); // een onbekende regel valt terug op de ene keer
-    return occurrencesBetween(task.repeat.rule, task.repeat.start, Math.max(fromMs, at), toMs);
+    const current = at >= fromMs && at < toMs ? [at] : [];
+    const rhythm = Date.parse(task.repeat.at);
+    const after = Math.max(at, isNaN(rhythm) ? at : rhythm);
+    return current.concat(occurrencesBetween(task.repeat.rule, task.repeat.start, Math.max(fromMs, after + 1), toMs));
   } catch { return at >= fromMs && at < toMs ? [at] : []; }
 }
 
