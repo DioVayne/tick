@@ -77,9 +77,12 @@ public class TaskWidgetProvider extends AppWidgetProvider {
 
     /** De knop: dezelfde actie, maar met EXTRA_MANUAL (eigen request code, anders deelt hij de PendingIntent met het alarm). */
     private static PendingIntent manualRefreshIntent(Context c) {
-        return PendingIntent.getBroadcast(c, 4,
-                new Intent(c, TaskWidgetProvider.class).setAction(ACTION_REFRESH).putExtra(EXTRA_MANUAL, true),
-                PendingIntent.FLAG_IMMUTABLE);
+        return PendingIntent.getBroadcast(c, 4, manualRefresh(c), PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    /** Verversen zoals na een tik op de knop; ook voor "opnieuw proberen" in de melding bovenaan (WidgetClickActivity). */
+    static Intent manualRefresh(Context c) {
+        return new Intent(c, TaskWidgetProvider.class).setAction(ACTION_REFRESH).putExtra(EXTRA_MANUAL, true);
     }
 
     @Override
@@ -178,7 +181,7 @@ public class TaskWidgetProvider extends AppWidgetProvider {
         svc.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
         svc.setData(Uri.parse(svc.toUri(Intent.URI_INTENT_SCHEME)));
         rv.setRemoteAdapter(R.id.list, svc);
-        // Status (bijgewerkt, fout, niets te doen) staat als eerste regel in de lijst; zie TaskListService.statusRow.
+        // Een melding (geen verbinding, koppelen, leeg, ...) staat als eerste regel in de lijst; zie TaskListService.statusRow.
 
         // Sjabloon voor klikken op een rij; id en actie (afvinken/openen) komen via de fill-in intent van elke rij.
         rv.setPendingIntentTemplate(R.id.list, PendingIntent.getActivity(c, 0,
@@ -197,6 +200,11 @@ public class TaskWidgetProvider extends AppWidgetProvider {
         rv.setOnClickPendingIntent(R.id.btn_add, PendingIntent.getActivity(c, 1000 + widgetId, add,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
         rv.setOnClickPendingIntent(R.id.btn_refresh, manualRefreshIntent(c));
+        // De tijd van de laatste verversing staat niet meer in beeld (alleen als hij oud is, zie WidgetStatus), maar
+        // een schermlezer hoort hem bij de knop.
+        long last = Prefs.lastSync(c);
+        rv.setContentDescription(R.id.btn_refresh, last > 0
+                ? c.getString(R.string.refresh_synced, syncTime(c, last)) : c.getString(R.string.refresh));
         return rv;
     }
 }

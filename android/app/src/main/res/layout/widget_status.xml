@@ -1,14 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bovenste regel van de takenlijst: wanneer bijgewerkt, of de fout. Staat in de lijst omdat sommige launchers
-     updates van de rest van de widget niet tonen (Android 16+, "update deferred"); de lijst halen ze wel op. -->
+<!-- Melding bovenaan de takenlijst als er iets te doen is (WidgetStatus): niet gekoppeld, geen verbinding, wijzigingen
+     die wachten, een lege lijst. De hele regel is het tikvlak (minstens 48 dp hoog); wat een tik doet, zet
+     TaskListService als fill-in intent. Hij staat in de lijst en niet in de kop, omdat sommige launchers updates van de
+     rest van de widget niet tonen (Android 16+, "update deferred"); de lijst halen ze wel op. -->
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/status_text"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:gravity="end"
-    android:paddingStart="10dp"
-    android:paddingTop="0dp"
-    android:paddingEnd="10dp"
+    android:layout_marginStart="4dp"
+    android:layout_marginEnd="4dp"
+    android:layout_marginBottom="4dp"
+    android:background="@drawable/tile_bg"
+    android:ellipsize="end"
+    android:gravity="center_vertical|start"
+    android:maxLines="2"
+    android:minHeight="48dp"
+    android:paddingStart="12dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="12dp"
     android:paddingBottom="4dp"
     android:textColor="@color/widget_muted"
-    android:textSize="12sp" />
+    android:textSize="13sp" />

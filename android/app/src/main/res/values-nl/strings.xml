@@ -5,7 +5,7 @@
     <string name="add">Nieuwe taak</string>
     <string name="done">Afvinken</string>
     <string name="widget_empty">Niets te doen</string>
-    <string name="widget_no_token">Open Tick om deze telefoon te koppelen</string>
+    <string name="status_pair">Koppel Tick om je taken te zien</string>
     <string name="main_help">Normaal koppelt de app zichzelf als je in Tick inlogt. Alleen als dat niet lukt: plak hieronder een sleutel met volledige toegang (in Tick: Instellingen, Geavanceerd, Sleutels).</string>
     <string name="error_offline">geen verbinding</string>
     <string name="error_server">serverfout %s</string>
@@ -114,12 +114,10 @@
     <string name="widget_view_all">Alle taken</string>
     <string name="widget_view_today">Vandaag</string>
     <string name="widget_view_today_long">Vandaag en te laat</string>
-    <string name="widget_empty_today">Niets meer voor vandaag</string>
+    <string name="widget_empty_today">Niets gepland voor vandaag</string>
     <string name="meta_repeat">Herhaalt</string>
     <string name="meta_place">Locatie</string>
     <string name="meta_shared">Gedeeld</string>
-    <string name="meta_copy">Kopie</string>
-    <string name="meta_subtasks">Subtaken</string>
     <!-- Snelle taak (QuickAddActivity) -->
     <string name="quick_notes_hint">Omschrijving</string>
     <string name="quick_today">Vandaag</string>
@@ -170,6 +168,22 @@
     </plurals>
     <string name="outbox_dropped">Niet opgeslagen: ‘%1$s’ (%2$s)</string>
     <string name="outbox_gone">taak niet meer beschikbaar voor jou</string>
+    <!-- Melding bovenaan de widget (WidgetStatus) en de metaregel van een taak (RowMeta) -->
+    <string name="status_offline">Geen verbinding</string>
+    <string name="status_retry">opnieuw proberen</string>
+    <string name="status_add">Taak toevoegen</string>
+    <string name="widget_empty_list">Niets in deze lijst</string>
+    <string name="refresh_synced">Verversen (bijgewerkt %s)</string>
+    <string name="meta_doer">%s doet dit</string>
+    <string name="meta_shared_with">Gedeeld met %s</string>
+    <plurals name="meta_shared_with_more">
+        <item quantity="one">Gedeeld met %1$s en %2$d ander</item>
+        <item quantity="other">Gedeeld met %1$s en %2$d anderen</item>
+    </plurals>
+    <plurals name="meta_subtasks_open">
+        <item quantity="one">%d subtaak open</item>
+        <item quantity="other">%d subtaken open</item>
+    </plurals>
     <!-- Uiterlijk per widget (SettingsActivity, WidgetRows) -->
     <string name="widget_section_overdue">Te laat</string>
     <string name="widget_section_today">Vandaag</string>
@@ -190,4 +204,5 @@
     <string name="preview_list_home">Thuis</string>
     <string name="preview_list_groceries">Boodschappen</string>
     <string name="preview_list_work">Werk</string>
+    <string name="preview_person">Sanne</string>
 </resources>

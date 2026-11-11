@@ -38,8 +38,9 @@
             android:paddingTop="1dp"
             android:paddingBottom="1dp">
 
-            <!-- Titelregel: titel en, in Alle taken en Vandaag, altijd rechts de lijstpil. Zo staat de lijstnaam steeds op
-                 dezelfde plek. De uitlijning op de basislijn (standaard) zet de pil op de eerste regel van de titel. -->
+            <!-- Titelregel: titel en, in Alle taken en Vandaag op een brede widget, rechts de lijstpil. Zo staat de
+                 lijstnaam steeds op dezelfde plek. Op een smalle widget staat de lijstnaam in de metaregel (RowMeta). De
+                 uitlijning op de basislijn (standaard) zet de pil op de eerste regel van de titel. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -74,7 +75,9 @@
                     android:visibility="gone" />
             </LinearLayout>
 
-            <!-- Metaregel, links onder de titel: alleen als er een herinnering, herhaling, locatie, delen, een kopie of subtaken is. -->
+            <!-- Metaregel, links onder de titel: alleen als er iets is dat helpt kiezen (RowMeta). Eerst het belletje, dan
+                 de tekst (tijd · lijst · wie het doet · subtaken · gedeeld), dan herhaling en plaats als icoontje. Is de
+                 tekst te lang, dan valt eerst het eind weg (de icoontjes), zo blijft het belangrijkste staan. -->
             <LinearLayout
                 android:id="@+id/meta"
                 android:layout_width="match_parent"
@@ -94,10 +97,11 @@
                     android:visibility="gone" />
 
                 <TextView
-                    android:id="@+id/due"
+                    android:id="@+id/meta_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="6dp"
+                    android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="@color/widget_muted"
                     android:textSize="12sp"
@@ -119,43 +123,6 @@
                     android:layout_marginEnd="6dp"
                     android:contentDescription="@string/meta_place"
                     android:src="@drawable/ic_place"
-                    android:visibility="gone" />
-
-                <ImageView
-                    android:id="@+id/people"
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:layout_marginEnd="6dp"
-                    android:contentDescription="@string/meta_shared"
-                    android:src="@drawable/ic_people"
-                    android:visibility="gone" />
-
-                <!-- Kopie: een eigen exemplaar (grijs); gedeeld (people) kleurt in de accentkleur, zoals in de webapp. -->
-                <ImageView
-                    android:id="@+id/copy"
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:layout_marginEnd="6dp"
-                    android:contentDescription="@string/meta_copy"
-                    android:src="@drawable/ic_copy"
-                    android:visibility="gone" />
-
-                <ImageView
-                    android:id="@+id/subtasks"
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:layout_marginEnd="2dp"
-                    android:contentDescription="@string/meta_subtasks"
-                    android:src="@drawable/ic_subtasks"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/subtask_count"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:maxLines="1"
-                    android:textColor="@color/widget_muted"
-                    android:textSize="12sp"
                     android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>

@@ -28,11 +28,22 @@ final class WidgetLook {
     final int font;
     final int spacing;
     final boolean roomy;
+    /** Smaller dan ROOMY_MIN_WIDTH_DP: de lijstnaam gaat dan van naast de titel naar de metaregel. */
+    final boolean narrow;
+    /** Lager dan ROOMY_MIN_HEIGHT_DP: dan telt elke regel. */
+    final boolean low;
 
     WidgetLook(int font, int spacing, boolean roomy) {
+        this(font, spacing, roomy, 0, 0);
+    }
+
+    /** Met de maat van de widget staand (dp; 0 als onbekend, dan niet smal en niet laag). */
+    WidgetLook(int font, int spacing, boolean roomy, int widthDp, int heightDp) {
         this.font = clamp(font, FONT_MIN, FONT_MAX);
         this.spacing = clamp(spacing, SPACING_MIN, SPACING_MAX);
         this.roomy = roomy;
+        this.narrow = widthDp > 0 && widthDp < ROOMY_MIN_WIDTH_DP;
+        this.low = heightDp > 0 && heightDp < ROOMY_MIN_HEIGHT_DP;
     }
 
     static int clamp(int v, int min, int max) {
@@ -63,9 +74,13 @@ final class WidgetLook {
         return font;
     }
 
-    /** Hoeveel regels de titel mag gebruiken. */
+    /**
+     * Hoeveel regels de titel mag gebruiken. Ruim: 2. Compact: 1, behalve op een smalle widget die hoog genoeg is (daar
+     * is ruimte in de hoogte maar niet in de breedte, dus breekt een titel anders na een paar woorden af).
+     */
     int titleLines() {
-        return roomy ? 2 : 1;
+        if (roomy) return 2;
+        return narrow && !low ? 2 : 1;
     }
 
     /** Kleine tekst: tijd, aantal subtaken. */
@@ -133,10 +148,6 @@ final class WidgetLook {
         return roomy;
     }
 
-    /** Herhaling, plaats, delen, kopie en subtaken in de metaregel; Compact toont alleen de herinnering. */
-    boolean extraIcons() {
-        return roomy;
-    }
 
     /** Kopjes tussen groepen (Te laat / Vandaag, Vastgezet / Overige). */
     boolean sections() {

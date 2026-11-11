@@ -22,12 +22,28 @@ Add the Tick widget to your home screen. Each widget has its own settings (they 
 
 So a small shopping list and a big day overview can sit side by side, each looking its own way. A preview at the top of the settings shows the widget with a few example tasks and changes as you move the sliders.
 
-**Compact** shows one line per task with only the reminder time, without tiles or icons, so a lot fits in a small widget. **Roomy** shows titles on two lines, every icon, a little more space and headings between groups: *Overdue* and *Today* in a *Today and overdue* widget, *Pinned* and *Other tasks* in other widgets (only when there are pinned tasks). The order of the tasks is the same in both. **Automatic** picks by size: Roomy from about 4 columns wide and 3 rows high, Compact when the widget is smaller; resize the widget and it switches by itself. The circle, **Undo** and the buttons stay easy to tap (at least 48 dp) in both layouts.
+**Compact** shows one title line per task (two on a narrow but tall widget, such as 3 columns by 3 rows), without tiles or icons, so a lot fits in a small widget. **Roomy** shows titles on two lines, more details under the title, a little more space and headings between groups: *Overdue* and *Today* in a *Today and overdue* widget, *Pinned* and *Other tasks* in other widgets (only when there are pinned tasks). The order of the tasks is the same in both. **Automatic** picks by size: Roomy from about 4 columns wide and 3 rows high, Compact when the widget is smaller; resize the widget and it switches by itself. The circle, **Undo** and the buttons stay easy to tap (at least 48 dp) in both layouts.
 
-Tick tasks off right there: tap the circle. The task stays in its place for 6 seconds, struck through, with an **Undo** button; tap it to put the task back (a repeating task goes back to the date it had). After that the task disappears. Because the list doesn't move during those seconds, you can tick off several tasks in a row without hitting the wrong one. Tap a task's title to open it in the app, tap the header to open the app on that list, and add a task with **➕** (it goes into the widget's list). In the Roomy layout each row shows the reminder, list, pin, repeat, place, sharing (blue people: one shared task; grey sheets: a copy, everyone has their own) and open subtasks; Compact shows the reminder and the list. The widget can be resized.
+Tick tasks off right there: tap the circle. The task stays in its place for 6 seconds, struck through, with an **Undo** button; tap it to put the task back (a repeating task goes back to the date it had). After that the task disappears. Because the list doesn't move during those seconds, you can tick off several tasks in a row without hitting the wrong one. Tap a task's title to open it in the app, tap the header to open the app on that list, and add a task with **➕** (it goes into the widget's list). The widget can be resized.
+
+**What a row shows.** The title comes first. Under it, the widget only shows what helps you decide what to do next; open the task for everything else:
+- the reminder time (red when it is overdue);
+- the list, in widgets with *All tasks* or *Today and overdue*. On a wide widget it sits as a small label next to the title; on a narrow widget it moves to the line under the title, so the title keeps its room;
+- who is doing it, for a task in a shared list that someone else took on, for example *Sam is doing this*;
+- in Roomy also: how many subtasks are still open (*3 subtasks open*), who a shared task is shared with (*Shared with Sam*, or *Shared with Sam and 2 others*), and on a wide widget small icons for repeat and place.
+
+When the line under the title is too long, the end is cut off first, so the time and the list stay visible.
+
+**Messages at the top.** Normally the widget shows only your tasks. A line at the top appears only when something needs you, and you can tap it:
+- *Link Tick to see your tasks* (the phone isn't linked): opens Tick to link it;
+- *No connection · try again* or *Not updated: server error … · try again*: tap to refresh right away;
+- *2 changes waiting for connection · try again* (see below);
+- *Nothing planned for today · Add a task* (or *Nothing to do* / *Nothing in this list*): opens quick add.
+
+When the list hasn't been updated for more than an hour, a small *Updated 14:05* shows at the top. The time of the last update is also read out with the refresh button (for screen readers).
 
 ### Without a connection
-The widget keeps working offline. It shows the tasks from the last update; ticking off, **Undo** and adding a task with **➕** are saved on the phone first and sent as soon as there is a connection again. A task you ticked off stays hidden and a task you added shows up at once, also before Tick has them. While changes are waiting, the line at the top of the widget says so, for example "2 changes waiting for connection". If you tick something off and undo it before it was sent, Tick sends nothing at all.
+The widget keeps working offline. It shows the tasks from the last update; ticking off, **Undo** and adding a task with **➕** are saved on the phone first and sent as soon as there is a connection again. A task you ticked off stays hidden and a task you added shows up at once, also before Tick has them. While changes are waiting, the line at the top of the widget says so, for example "2 changes waiting for connection · try again"; tap it to send them right away. If you tick something off and undo it before it was sent, Tick sends nothing at all.
 
 Sometimes Tick can't save a change later, for example when the task was deleted in the meantime or is no longer shared with you. Then the widget shows the task as it is in Tick again and says for a few minutes what was not saved. A repeating task you ticked off offline moves to its next date once the change is sent.
 

@@ -66,14 +66,36 @@ public class WidgetLookTest {
         assertEquals(1, compact.titleLines());
         assertEquals(2, roomy.titleLines());
         assertFalse(compact.tiles());
-        assertFalse(compact.extraIcons());
         assertFalse(compact.sections());
         assertTrue(roomy.tiles());
-        assertTrue(roomy.extraIcons());
         assertTrue(roomy.sections());
         assertTrue(roomy.textPadDp() > compact.textPadDp());
         assertTrue(roomy.gapDp() > compact.gapDp());
         assertTrue(roomy.headerSp() > compact.headerSp());
+    }
+
+    @Test
+    public void smalEnLaagNaarDeMaat() {
+        // 3 kolommen breed, 3 rijen hoog: smal, niet laag. Compact krijgt dan toch twee titelregels.
+        WidgetLook narrowTall = new WidgetLook(15, 0, false, 203, 203);
+        assertTrue(narrowTall.narrow);
+        assertFalse(narrowTall.low);
+        assertEquals(2, narrowTall.titleLines());
+        // 4 x 2: breed maar laag. Compact houdt één regel, zodat er genoeg taken in passen.
+        WidgetLook wideLow = new WidgetLook(15, 0, false, 276, 130);
+        assertFalse(wideLow.narrow);
+        assertTrue(wideLow.low);
+        assertEquals(1, wideLow.titleLines());
+        // 2 x 2: smal en laag: één regel.
+        assertEquals(1, new WidgetLook(15, 0, false, 130, 130).titleLines());
+        // Zelf Compact gekozen op een grote widget: één regel. Ruim: altijd twee, ook smal.
+        assertEquals(1, new WidgetLook(15, 0, false, 276, 203).titleLines());
+        assertEquals(2, new WidgetLook(15, 0, true, 203, 130).titleLines());
+        assertTrue(new WidgetLook(15, 0, true, 203, 130).narrow);
+        // Onbekende maat (0): niet smal, niet laag.
+        WidgetLook unknown = new WidgetLook(15, 0, true, 0, 0);
+        assertFalse(unknown.narrow);
+        assertFalse(unknown.low);
     }
 
     @Test

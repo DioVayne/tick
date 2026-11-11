@@ -80,7 +80,7 @@ final class Sync {
         } catch (Exception e) {
             Log.w("Tick", "Verversen mislukt", e);
             // Zonder sleutel toont de widget daar al een melding over.
-            if (!Prefs.token(c).isEmpty()) Prefs.setSyncError(c, c.getString(R.string.sync_failed, errorText(c, e)));
+            if (!Prefs.token(c).isEmpty()) Prefs.setSyncError(c, c.getString(R.string.sync_failed, errorText(c, e)), isOffline(e));
         }
         TaskWidgetProvider.updateAll(c);
     }
@@ -305,9 +305,14 @@ final class Sync {
 
     /** Korte, leesbare reden voor in de widget of een Toast. */
     static String errorText(Context c, Exception e) {
-        String msg = e.getMessage();
-        if (e instanceof IOException && msg != null && msg.startsWith("HTTP ")) return c.getString(R.string.error_server, msg.substring(5));
+        if (!isOffline(e)) return c.getString(R.string.error_server, e.getMessage().substring(5));
         return c.getString(R.string.error_offline);
+    }
+
+    /** Geen verbinding (of geen leesbaar antwoord), tegenover een HTTP-fout van de server ("HTTP 503"). */
+    static boolean isOffline(Exception e) {
+        String msg = e.getMessage();
+        return !(e instanceof IOException && msg != null && msg.startsWith("HTTP "));
     }
 
     private Sync() {}
