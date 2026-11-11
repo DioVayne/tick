@@ -8,7 +8,9 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -28,6 +30,16 @@ public class TaskWidgetProvider extends AppWidgetProvider {
         scheduleRefresh(context);
         SyncJob.schedulePeriodic(context);
         syncInBackground(context);
+    }
+
+    /**
+     * De widget is groter of kleiner gemaakt: opnieuw opbouwen, want de maat kiest (bij Automatisch) tussen Compact en
+     * Ruim (WidgetLook.isRoomy).
+     */
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options) {
+        manager.updateAppWidget(id, build(context, id));
+        manager.notifyAppWidgetViewDataChanged(new int[] {id}, R.id.list);
     }
 
     @Override
@@ -160,6 +172,7 @@ public class TaskWidgetProvider extends AppWidgetProvider {
         RemoteViews rv = new RemoteViews(c.getPackageName(), R.layout.widget_tasks);
         String view = Prefs.widgetView(c, widgetId);
         rv.setTextViewText(R.id.header_title, title(c, view));
+        rv.setTextViewTextSize(R.id.header_title, TypedValue.COMPLEX_UNIT_SP, WidgetRows.lookOf(c, widgetId).headerSp());
 
         Intent svc = new Intent(c, TaskListService.class);
         svc.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
