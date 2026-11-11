@@ -245,4 +245,148 @@ public class GeoPlanTest {
         assertEquals(1, fences.size());
         assertEquals("b", fences.get(0).id);
     }
+
+    // ---------- meerdere plekken per taak ----------
+
+    private static JSONObject meer(JSONObject eerste, double[][] extra) throws Exception {
+        JSONArray more = new JSONArray();
+        for (int i = 0; i < extra.length; i++) {
+            more.put(new JSONObject().put("name", "Extra " + i).put("lat", extra[i][0]).put("lng", extra[i][1]).put("radius", extra[i][2]));
+        }
+        return eerste.put("more", more);
+    }
+
+    @Test
+    public void elkePlekEenEigenGeofenceMetDezelfdeKey() throws Exception {
+        JSONObject loc = meer(plek(52.09, 5.12, 500, "enter"), new double[][] {{52.11, 5.12, 300}, {52.07, 5.13, 400}});
+        List<GeoPlan.Fence> fences = GeoPlan.select(new JSONArray().put(taak("a", loc, false, false)), new JSONObject(), GeoPlan.MAX);
+
+        assertEquals(3, fences.size());
+        assertEquals("Test", fences.get(0).name);
+        assertEquals("Extra 0", fences.get(1).name);
+        assertEquals(52.07, fences.get(2).lat, 1e-9);
+        assertEquals(400f, fences.get(2).radius, 1e-6);
+        Set<String> rids = new HashSet<>();
+        for (GeoPlan.Fence f : fences) {
+            assertEquals("a", f.id);
+            assertEquals(GeoPlan.key(loc), f.key);
+            String rid = GeoPlan.requestId(f);
+            rids.add(rid);
+            assertEquals("a", GeoPlan.taskId(rid));
+            assertEquals(GeoPlan.key(loc), GeoPlan.fenceKey(rid));
+            assertEquals(f.idx, GeoPlan.placeIndex(rid));
+            assertTrue(rid.length() <= 100);
+        }
+        assertEquals(3, rids.size());
+        // De eerste plek houdt het oude formaat (taak-id#key).
+        assertEquals("a#" + GeoPlan.key(loc), GeoPlan.requestId(fences.get(0)));
+        assertEquals(3, GeoPlan.signature(fences).split(";").length);
+    }
+
+    @Test
+    public void keyMetEenPlekOnveranderdEnMetMeerPlekkenGevoelig() throws Exception {
+        assertEquals("51.0|6.0|200.0|enter", GeoPlan.key(plek(51.0, 6.0, 200, "enter")));
+        assertEquals("51.0|6.0|200.0|enter", GeoPlan.key(plek(51.0, 6.0, 200, "enter").put("more", new JSONArray())));
+        String k = GeoPlan.key(meer(plek(51.0, 6.0, 200, "enter"), new double[][] {{52.0, 5.0, 300}}));
+        assertTrue(k.startsWith("m"));
+        assertEquals(17, k.length());
+        assertFalse(k.contains("#") || k.contains("@") || k.contains("/"));
+        assertEquals(k, GeoPlan.key(meer(plek(51.0, 6.0, 200, "enter"), new double[][] {{52.0, 5.0, 300}})));
+        assertNotEquals(k, GeoPlan.key(meer(plek(51.0, 6.0, 200, "enter"), new double[][] {{52.0, 5.0, 350}})));
+        assertNotEquals(k, GeoPlan.key(meer(plek(51.0, 6.0, 200, "exit"), new double[][] {{52.0, 5.0, 300}})));
+        assertNotEquals(k, GeoPlan.key(meer(plek(51.0, 6.0, 200, "enter"), new double[][] {{52.0, 5.0, 300}, {53.0, 5.0, 300}})));
+    }
+
+    @Test
+    public void requestIdMetVeleDecimalenEnOnderwegBlijftOnder100() throws Exception {
+        JSONObject loc = meer(plek(52.123456789012345, 5.123456789012345, 2000, "enter"),
+                new double[][] {{52.1, 5.1, 2000}, {52.2, 5.2, 2000}, {52.3, 5.3, 2000}, {52.4, 5.4, 2000}, {52.5, 5.5, 2000},
+                        {52.6, 5.6, 2000}, {52.7, 5.7, 2000}, {52.8, 5.8, 2000}, {52.9, 5.9, 2000}});
+        String id = "0f8fad5b-d9cb-469f-a165-70867728950e";
+        Map<String, Float> road = new HashMap<>();
+        road.put(id + "/9", 2345.6789f);
+        List<GeoPlan.Fence> fences = GeoPlan.select(new JSONArray().put(taak(id, loc, false, false)), new JSONObject(), GeoPlan.MAX, road, "bike");
+        assertEquals(10, fences.size());
+        String rid = GeoPlan.requestId(fences.get(9));
+        assertTrue(rid, rid.length() <= 100);
+        assertEquals(9, GeoPlan.placeIndex(rid));
+        assertEquals("bike", GeoPlan.roadMode(rid));
+        assertEquals(2345.6789f, GeoPlan.roadRadius(rid), 1e-3);
+        assertEquals(id, GeoPlan.taskId(rid));
+        assertEquals(GeoPlan.key(loc), GeoPlan.fenceKey(rid));
+    }
+
+    @Test
+    public void onderwegPerPlekVergroot() throws Exception {
+        JSONObject loc = meer(plek(51.0, 6.0, 300, "enter"), new double[][] {{52.0, 5.0, 300}});
+        Map<String, Float> road = new HashMap<>();
+        road.put("a/1", 900f);
+        List<GeoPlan.Fence> fences = GeoPlan.select(new JSONArray().put(taak("a", loc, false, false)), new JSONObject(), GeoPlan.MAX, road, "car");
+        assertEquals(300f, fences.get(0).radius, 1e-6);
+        assertEquals("", fences.get(0).mode);
+        assertEquals(900f, fences.get(1).radius, 1e-6);
+        assertEquals("car", fences.get(1).mode);
+    }
+
+    @Test
+    public void eenTaakKrijgtAlZijnPlekkenOfGeen() throws Exception {
+        JSONArray tasks = new JSONArray();
+        for (int i = 0; i < 95; i++) tasks.put(taak("t" + i, plek(51.0, 6.0, 200, "enter"), false, false));
+        // 10 plekken: past niet meer (95 + 10 > 100), dus helemaal niet; de taken erna met een plek wel.
+        tasks.put(taak("groot", meer(plek(51.0, 6.0, 200, "enter"), new double[][] {
+                {52.1, 5.1, 300}, {52.2, 5.2, 300}, {52.3, 5.3, 300}, {52.4, 5.4, 300}, {52.5, 5.5, 300},
+                {52.6, 5.6, 300}, {52.7, 5.7, 300}, {52.8, 5.8, 300}, {52.9, 5.9, 300}}), false, false));
+        for (int i = 0; i < 10; i++) tasks.put(taak("n" + i, plek(51.0, 6.0, 200, "enter"), false, false));
+
+        GeoPlan.Plan p = GeoPlan.plan(tasks, new JSONObject(), GeoPlan.MAX, Collections.emptyMap(), "");
+        assertEquals(100, p.fences.size());
+        for (GeoPlan.Fence f : p.fences) assertNotEquals("groot", f.id);
+        assertEquals("n4", p.fences.get(99).id);
+        // Overgeslagen: de grote taak en n5..n9.
+        assertEquals(6, p.skipped);
+        assertEquals(0, GeoPlan.plan(new JSONArray().put(tasks.get(0)), new JSONObject(), GeoPlan.MAX, Collections.emptyMap(), "").skipped);
+    }
+
+    @Test
+    public void naEenMeldingGaanAlleGeofencesVanDieTaakWeg() throws Exception {
+        JSONObject loc = meer(plek(51.0, 6.0, 300, "enter"), new double[][] {{52.0, 5.0, 300}, {53.0, 4.0, 300}});
+        JSONArray tasks = new JSONArray().put(taak("a", loc, false, false)).put(taak("b", plek(50.0, 4.0, 300, "enter"), false, false));
+        List<GeoPlan.Fence> fences = GeoPlan.select(tasks, new JSONObject(), GeoPlan.MAX);
+        Set<String> registered = new HashSet<>();
+        for (GeoPlan.Fence f : fences) registered.add(GeoPlan.requestId(f));
+
+        List<String> weg = GeoPlan.ofTasks(registered, Collections.singleton("a"));
+        assertEquals(3, weg.size());
+        for (String rid : weg) assertEquals("a", GeoPlan.taskId(rid));
+
+        String zonder = GeoPlan.signatureWithout(GeoPlan.signature(fences), Collections.singleton("a"));
+        assertEquals(GeoPlan.signature(GeoPlan.select(new JSONArray().put(tasks.get(1)), new JSONObject(), GeoPlan.MAX)), zonder);
+        // Afgegaan (locFired heeft de key van de hele taak): geen enkele plek van die taak meer.
+        assertEquals(1, GeoPlan.select(tasks, new JSONObject().put("a", GeoPlan.key(loc)), GeoPlan.MAX).size());
+    }
+
+    @Test
+    public void plaatsUitRequestIdEnKapotteExtraPlek() throws Exception {
+        JSONObject loc = meer(plek(51.0, 6.0, 300, "enter"), new double[][] {{52.0, 5.0, 300}});
+        loc.getJSONArray("more").put(new JSONObject().put("name", "kapot"));
+        assertEquals(2, GeoPlan.places(loc).size());
+        assertEquals("Extra 0", GeoPlan.place(loc, 1).optString("name"));
+        assertEquals("Test", GeoPlan.place(loc, 7).optString("name"));
+        assertEquals(0, GeoPlan.placeIndex("a#51.0|6.0|300.0|enter"));
+        assertEquals(0, GeoPlan.placeIndex("a"));
+        assertNull(GeoPlan.fenceKey("a"));
+    }
+
+    @Test
+    public void notifyDecisionMetMeerPlekken() throws Exception {
+        JSONObject loc = meer(plek(51.0, 6.0, 300, "enter"), new double[][] {{52.0, 5.0, 300}});
+        JSONArray tasks = new JSONArray().put(taak("a", loc, false, false));
+        String rid = GeoPlan.requestId(GeoPlan.select(tasks, new JSONObject(), GeoPlan.MAX).get(1));
+        assertEquals(NotifyDecision.Result.MELDEN,
+                NotifyDecision.decide(tasks, "a", GeoPlan.fenceKey(rid), false, new JSONObject(), new JSONObject()));
+        // Een plek erbij of eraf: de oude geofence hoort bij een andere set plekken.
+        JSONObject anders = meer(plek(51.0, 6.0, 300, "enter"), new double[][] {{52.0, 5.0, 300}, {53.0, 5.0, 300}});
+        assertEquals(NotifyDecision.Result.ANDERE_PLEK, NotifyDecision.decide(new JSONArray().put(taak("a", anders, false, false)),
+                "a", GeoPlan.fenceKey(rid), false, new JSONObject(), new JSONObject()));
+    }
 }

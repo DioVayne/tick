@@ -17,8 +17,10 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Een geofence ging af: toon de melding (één keer per plek) en meld het aan de server. */
 public class GeofenceReceiver extends BroadcastReceiver {
@@ -67,6 +69,11 @@ public class GeofenceReceiver extends BroadcastReceiver {
         List<String> done = new ArrayList<>();
         for (String rid : requestIds) {
             String id = GeoPlan.taskId(rid);
+            // Twee plekken van dezelfde taak tegelijk (cirkels die overlappen): één melding is genoeg.
+            if (notified.containsKey(id)) {
+                done.add(rid);
+                continue;
+            }
             NotifyDecision.Result r = NotifyDecision.decide(tasks, id, GeoPlan.fenceKey(rid), exit, fired, pending);
             if (r != NotifyDecision.Result.MELDEN) {
                 Log.i("Tick", "Geen locatiemelding voor " + id + ": " + r);
@@ -74,10 +81,12 @@ public class GeofenceReceiver extends BroadcastReceiver {
             }
             JSONObject task = NotifyDecision.find(tasks, id);
             JSONObject loc = task.optJSONObject("location");
+            // De plek die afging (bij meerdere plekken een van de extra); de key is die van de hele taak.
+            JSONObject place = GeoPlan.place(loc, GeoPlan.placeIndex(rid));
             // Onderweg vergrote cirkel: je bent er nog niet, maar bijna.
             boolean road = !exit && !GeoPlan.roadMode(rid).isEmpty();
             boolean shown = Notify.location(app, id, GeoPlan.key(loc), task.optString("title"),
-                    app.getString(exit ? R.string.loc_left : road ? R.string.loc_almost : R.string.loc_arrived, loc.optString("name")));
+                    app.getString(exit ? R.string.loc_left : road ? R.string.loc_almost : R.string.loc_arrived, place.optString("name")));
             if (!shown) {
                 // Meldingen staan uit: de herinnering niet stilletjes opmaken.
                 Log.w("Tick", "Locatiemelding niet getoond: meldingen staan uit");
@@ -85,12 +94,15 @@ public class GeofenceReceiver extends BroadcastReceiver {
             }
             notified.put(id, GeoPlan.key(loc));
             done.add(rid);
-            measure(app, exit, rid, loc, fix);
+            measure(app, exit, rid, place, fix);
         }
         if (notified.isEmpty()) return;
         Prefs.markLocFired(app, notified);
-        // Alleen deze geofences zijn klaar; de rest blijft gewoon staan.
-        Geo.removeFired(app, done);
+        // Alleen deze taken zijn klaar, met al hun plekken; de rest blijft gewoon staan.
+        Set<String> gone = new LinkedHashSet<>(done);
+        Set<String> registered = Prefs.geoIds(app);
+        if (registered != null) gone.addAll(GeoPlan.ofTasks(registered, notified.keySet()));
+        Geo.removeFired(app, new ArrayList<>(gone));
 
         for (String id : notified.keySet()) {
             if (SystemClock.elapsedRealtime() - start > PATCH_BUDGET_MS) break;
@@ -105,7 +117,10 @@ public class GeofenceReceiver extends BroadcastReceiver {
         }
     }
 
-    /** Legt vast hoe ver je van het midden was. Een fout hierin mag de melding en de PATCH nooit tegenhouden. */
+    /**
+     * Legt vast hoe ver je van het midden was (van de plek die afging). Een fout hierin mag de melding en de PATCH
+     * nooit tegenhouden.
+     */
     private static void measure(Context app, boolean exit, String rid, JSONObject loc, Location fix) {
         try {
             double radius = loc.optDouble("radius");

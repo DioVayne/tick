@@ -101,7 +101,7 @@ final class Road {
         return on(c) && RoadPlan.isActive(mode, Prefs.roadModeAt(c), System.currentTimeMillis()) ? mode : "";
     }
 
-    /** De onderwegstralen (taak-id -> straal) zolang de stand geldt, anders leeg. */
+    /** De onderwegstralen (Fence.fid: taak-id, of taak-id/plek -> straal) zolang de stand geldt, anders leeg. */
     static Map<String, Float> radii(Context c) {
         if (activeMode(c).isEmpty()) return Collections.emptyMap();
         Map<String, Float> out = new HashMap<>();
@@ -137,7 +137,7 @@ final class Road {
             Double d = here == null ? null : ArrivalStats.distanceM(f.lat, f.lng, here.getLatitude(), here.getLongitude());
             float r = RoadPlan.roadRadius(f.radius, margin, d);
             try {
-                if (r > f.radius) radii.put(f.id, (double) r);
+                if (r > f.radius) radii.put(f.fid(), (double) r); // per plek: een taak kan er meer hebben
             } catch (Exception ignored) {
             }
         }

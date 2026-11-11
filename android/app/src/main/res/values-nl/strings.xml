@@ -22,6 +22,10 @@
     <string name="loc_button">Locatiemeldingen aanzetten</string>
     <string name="loc_status_on">Locatiemeldingen: aan</string>
     <string name="loc_status_missing">Locatiemeldingen: nog nodig: %s</string>
+    <plurals name="loc_status_too_many">
+        <item quantity="one">%1$d taak met een plek wordt niet bewaakt: een telefoon let op hooguit %2$d plekken tegelijk. Taken hoger in de lijst gaan voor.</item>
+        <item quantity="other">%1$d taken met een plek worden niet bewaakt: een telefoon let op hooguit %2$d plekken tegelijk. Taken hoger in de lijst gaan voor.</item>
+    </plurals>
     <string name="loc_stats_inside">Aankomstmeldingen kwamen gemiddeld %2$d m binnen de cirkel (laatste %1$d).</string>
     <string name="loc_stats_before">Aankomstmeldingen kwamen gemiddeld %2$d m vóór de cirkel (laatste %1$d).</string>
     <string name="loc_stats_mode_inside">%1$s: gemiddeld %2$d m binnen de cirkel.</string>
