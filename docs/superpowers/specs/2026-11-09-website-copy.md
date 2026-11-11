@@ -1325,3 +1325,10 @@ Wat er na de eerste versie op de site veranderd is. De tekst hierboven is het or
 - Zelf gehost: kolomkop *gratis Cloudflare-account, wat installeerwerk* / *free Cloudflare account, some setup*, een blok onder de tabel met een link naar SETUP.md, en eerlijk over delen: **Delen gaat alleen met mensen op dezelfde Tick-server** / **You can only share with people on the same Tick server**. Ook in *Kost het iets?* en FAQ 12. <!-- Nog te onderzoeken; als dat anders blijkt, pas het aan in de tabel (cel Taken en lijsten delen), het blok onder de tabel, Kost het iets? en FAQ 12. -->
 - FAQ 13: *Wat als je ermee stopt, Dio?* / *What if you stop, Dio?*, antwoord in de ik-vorm. Kantlijn bij de FAQ: *Stoppen met Tick? Ben ik niet van plan. Ik gebruik het zelf elke dag.* / *Stop making Tick? Not planning to. I use it every day.*
 - NL: *Instellingen › Data* heet in de app *Instellingen › Gegevens*; overal aangepast. Typfout *dat het telefoon zegt* → *dat je telefoon zegt*.
+
+---
+
+# Revisie 2026-11-11
+
+Hero (bovenregel, intro, voetnoot), plek-voetnoot, twee nieuwe vragen (16 en 17), de sectie *Tick naast andere apps* (#vergelijken / #compare), de foto bij het makersverhaal en de meta-omschrijving: zie [2026-11-11-android-alternatief-copy.md](2026-11-11-android-alternatief-copy.md).
+

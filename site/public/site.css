@@ -153,6 +153,12 @@ h2, .h2 { font-size: 46px; line-height: 1.08; font-weight: 700; letter-spacing: 
 .growth li:last-child { color: var(--t); font-weight: 600; }
 .maker-right .note-wrap { margin: 0 0 0 40px; align-items: flex-start; }
 .maker-right .note { max-width: 300px; }
+/* Photo of the maker, a small tilted print above the story (the phone shot tilts the other way). */
+.maker-face { display: block; width: 220px; height: auto; border-radius: 22px; transform: rotate(2.5deg); box-shadow: 0 0 0 1px var(--s-line), 0 14px 32px rgba(15, 23, 42, .22); }
+/* Comparison table: brand-name column heads, and the small print under "Where Tick falls short". */
+.vgl thead th:not(:first-child) { font-size: 14px; }
+.selfhost-note ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.selfhost-note .fine { font-size: 13px; }
 
 /* ---------- Bullet lists ---------- */
 .dots { padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 28px; font-size: 15px; line-height: 1.5; }
@@ -464,6 +470,7 @@ table.www { width: 100%; border-collapse: collapse; font-size: 15px; line-height
   .maker-left { gap: 32px; }
   .maker-shot { width: 200px; margin: 0 auto; }
   .maker-right { font-size: 17px; }
+  .maker-face { width: 180px; }
   .quote { font-size: 22px; }
   .maker-right .note-wrap { margin-left: 24px; }
   .dots { grid-template-columns: minmax(0, 1fr); }
