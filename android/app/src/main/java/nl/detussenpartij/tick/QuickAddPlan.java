@@ -29,6 +29,27 @@ final class QuickAddPlan {
         return at.toLocalDate().equals(now.toLocalDate()) ? at : null;
     }
 
+    /**
+     * De herinnering waarmee de popup begint. Vanuit de widget Vandaag het eerstvolgende hele uur (anders staat de taak
+     * niet in die widget), na 23:00 meteen; anders geen. De popup toont hem altijd als regel, zodat hij niet verrast.
+     */
+    static LocalDateTime startReminder(boolean fromToday, LocalDateTime now) {
+        if (!fromToday) return null;
+        LocalDateTime t = today(now);
+        return t != null ? t : now.withSecond(0).withNano(0);
+    }
+
+    /** Hoe de herinneringsregel de dag noemt: "vandaag", "morgen" of de datum. */
+    enum Day { TODAY, TOMORROW, OTHER }
+
+    static Day day(LocalDateTime now, LocalDateTime at) {
+        LocalDate d = at.toLocalDate();
+        LocalDate n = now.toLocalDate();
+        if (d.equals(n)) return Day.TODAY;
+        if (d.equals(n.plusDays(1))) return Day.TOMORROW;
+        return Day.OTHER;
+    }
+
     static LocalDateTime tomorrow(LocalDateTime now) {
         return now.toLocalDate().plusDays(1).atTime(DEFAULT_TIME);
     }
@@ -135,6 +156,104 @@ final class QuickAddPlan {
         t.put("updated_at", nowIso);
         t.put("local", true);
         return t;
+    }
+
+    /** Hoe lang een concept blijft staan; een ouder concept is vergeten werk, geen per ongeluk gesloten popup. */
+    static final long DRAFT_MAX_AGE_MS = 7L * 24 * 60 * 60 * 1000;
+
+    /**
+     * Wat er in de popup stond toen hij zonder toevoegen dichtging (terug, naast het paneel getikt, andere app). De
+     * volgende keer komt het terug. Lijst en herinnering alleen als je die zelf koos: anders gelden die van de widget
+     * waar je nu op tikt, zodat een concept uit de widget "Werk" niet stilletjes in "Boodschappen" belandt.
+     */
+    static final class Draft {
+        String title = "";
+        String notes = "";
+        String list;
+        /** De lijst is anders dan die waarmee de popup opende: dan wint hij ook in een andere widget. */
+        boolean listChanged;
+        LocalDateTime remindAt;
+        /** Je koos of wiste de herinnering zelf (en liet niet de beginwaarde van de widget staan). */
+        boolean remindChanged;
+        Repeat repeat = Repeat.NONE;
+        Place place;
+        boolean placeOnExit;
+        long savedAt;
+
+        /** Alleen met tekst is er iets om te bewaren; losse keuzes zonder titel niet. */
+        boolean worthKeeping() {
+            return !title.trim().isEmpty() || !notes.trim().isEmpty();
+        }
+
+        /** Gebruikt het concept iets onder "Meer opties"? Dan gaat dat deel open. */
+        boolean usesExtras() {
+            return !notes.trim().isEmpty() || repeat != Repeat.NONE || place != null;
+        }
+
+        boolean expired(long nowMs) {
+            return nowMs - savedAt > DRAFT_MAX_AGE_MS;
+        }
+
+        /** De lijst bij het terugzetten: de zelf gekozen lijst, anders die van de widget waar je nu op tikte. */
+        String listFor(String openedWith) {
+            return listChanged && list != null && !list.trim().isEmpty() ? list : openedWith;
+        }
+
+        /** De zelf gekozen herinnering blijft, tenzij hij inmiddels voorbij is; anders de beginwaarde van nu. */
+        LocalDateTime remindFor(LocalDateTime openedWith, LocalDateTime now) {
+            if (!remindChanged) return openedWith;
+            if (remindAt == null) return null;
+            return remindAt.isAfter(now) ? remindAt : openedWith;
+        }
+
+        /** Blijft de herinnering van het concept staan (dan telt hij weer als zelf gekozen)? */
+        boolean keepsReminder(LocalDateTime now) {
+            return remindChanged && (remindAt == null || remindAt.isAfter(now));
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONObject j = new JSONObject().put("title", title).put("notes", notes)
+                    .put("listChanged", listChanged).put("remindChanged", remindChanged)
+                    .put("repeat", repeat.name()).put("placeOnExit", placeOnExit).put("savedAt", savedAt);
+            if (list != null) j.put("list", list);
+            if (remindAt != null) j.put("remindAt", remindAt.toString());
+            if (place != null) {
+                JSONObject p = new JSONObject().put("name", place.name).put("lat", place.lat).put("lng", place.lng);
+                if (place.radius != null) p.put("radius", place.radius);
+                j.put("place", p);
+            }
+            return j;
+        }
+
+        /** Een concept uit de voorkeuren; null als het leeg of onleesbaar is. */
+        static Draft fromJson(String json) {
+            if (json == null || json.isEmpty()) return null;
+            try {
+                JSONObject j = new JSONObject(json);
+                Draft d = new Draft();
+                d.title = j.optString("title", "");
+                d.notes = j.optString("notes", "");
+                d.list = j.has("list") ? j.optString("list") : null;
+                d.listChanged = j.optBoolean("listChanged");
+                d.remindAt = j.has("remindAt") ? LocalDateTime.parse(j.getString("remindAt")) : null;
+                d.remindChanged = j.optBoolean("remindChanged");
+                try {
+                    d.repeat = Repeat.valueOf(j.optString("repeat", "NONE"));
+                } catch (IllegalArgumentException e) {
+                    d.repeat = Repeat.NONE;
+                }
+                JSONObject p = j.optJSONObject("place");
+                if (p != null && p.has("lat") && p.has("lng")) {
+                    d.place = new Place(p.optString("name"), p.getDouble("lat"), p.getDouble("lng"),
+                            p.has("radius") ? p.getInt("radius") : null);
+                }
+                d.placeOnExit = j.optBoolean("placeOnExit");
+                d.savedAt = j.optLong("savedAt");
+                return d;
+            } catch (Exception e) {
+                return null;
+            }
+        }
     }
 
     private QuickAddPlan() {}

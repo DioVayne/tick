@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Snelle taak (QuickAddActivity): een paneel onderaan over een donkere waas. Tik op de waas om te sluiten. -->
+<!--
+  Snelle taak (QuickAddActivity): een paneel onderaan over een donkere waas. Tik op de waas om te sluiten.
+  Eerst alleen lijst, titel en Toevoegen (plus de herinnering als die er is); de rest onder "Meer opties".
+-->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/scrim"
     android:layout_width="match_parent"
@@ -34,153 +37,104 @@
             android:background="@drawable/pill_bg"
             android:drawablePadding="8dp"
             android:drawableEnd="@drawable/ic_expand"
+            android:ellipsize="end"
+            android:maxWidth="280dp"
             android:paddingStart="12dp"
             android:paddingEnd="8dp"
             android:textStyle="bold" />
 
-        <LinearLayout
+        <EditText
+            android:id="@+id/title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:gravity="bottom"
-            android:orientation="horizontal">
-
-            <EditText
-                android:id="@+id/title"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="@drawable/field_bg"
-                android:hint="@string/quick_hint"
-                android:imeOptions="actionSend"
-                android:importantForAutofill="no"
-                android:inputType="textCapSentences"
-                android:maxLines="4"
-                android:minHeight="48dp"
-                android:paddingStart="14dp"
-                android:paddingTop="10dp"
-                android:paddingEnd="14dp"
-                android:paddingBottom="10dp"
-                android:textColor="@color/widget_text"
-                android:textColorHint="@color/widget_muted"
-                android:textSize="17sp" />
-
-            <ImageButton
-                android:id="@+id/send"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/send_bg"
-                android:contentDescription="@string/quick_add"
-                android:src="@drawable/ic_send" />
-        </LinearLayout>
-
-        <EditText
-            android:id="@+id/notes"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:background="@drawable/field_bg"
-            android:gravity="top"
-            android:hint="@string/quick_notes_hint"
+            android:hint="@string/quick_hint"
+            android:imeOptions="actionSend"
             android:importantForAutofill="no"
-            android:inputType="textCapSentences|textMultiLine"
-            android:maxLines="6"
-            android:minLines="2"
+            android:inputType="textCapSentences"
+            android:maxLines="4"
+            android:minHeight="48dp"
             android:paddingStart="14dp"
             android:paddingTop="10dp"
             android:paddingEnd="14dp"
             android:paddingBottom="10dp"
             android:textColor="@color/widget_text"
             android:textColorHint="@color/widget_muted"
-            android:textSize="15sp"
-            android:visibility="gone" />
+            android:textSize="17sp" />
 
-        <!-- Wanneer: snelknoppen; de gekozen is blauw. -->
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_marginEnd="8dp"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_bell" />
-
-                <TextView android:id="@+id/when_today" style="@style/QuickChip" android:text="@string/quick_today" />
-                <TextView android:id="@+id/when_tomorrow" style="@style/QuickChip" android:text="@string/quick_tomorrow" />
-                <TextView android:id="@+id/when_week" style="@style/QuickChip" android:text="@string/quick_next_week" />
-                <TextView
-                    android:id="@+id/when_pick"
-                    style="@style/QuickChip"
-                    android:drawableStart="@drawable/ic_calendar"
-                    android:text="@string/quick_pick" />
-            </LinearLayout>
-        </HorizontalScrollView>
-
-        <!-- Plek, herhalen en omschrijving. -->
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/place"
-                    style="@style/QuickChip"
-                    android:drawableStart="@drawable/ic_place"
-                    android:ellipsize="end"
-                    android:maxWidth="240dp"
-                    android:text="@string/quick_place" />
-
-                <TextView
-                    android:id="@+id/repeat"
-                    style="@style/QuickChip"
-                    android:drawableStart="@drawable/ic_repeat"
-                    android:text="@string/quick_repeat" />
-
-                <TextView
-                    android:id="@+id/notes_toggle"
-                    style="@style/QuickChip"
-                    android:drawableStart="@drawable/ic_notes"
-                    android:text="@string/quick_notes" />
-            </LinearLayout>
-        </HorizontalScrollView>
-
-        <!-- Alleen met een plek: melden bij aankomst of bij vertrek. -->
+        <!--
+          De herinnering in woorden ("Herinnering vandaag om 15:00"), zodat een melding nooit verrast. Tik om te
+          wijzigen, kruisje om weg te halen. Vanuit Vandaag zonder herinnering: zegt dat de taak dan niet in Vandaag staat.
+        -->
         <LinearLayout
-            android:id="@+id/place_row"
+            android:id="@+id/remind_row"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:minHeight="40dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_bell" />
+
+            <TextView
+                android:id="@+id/remind_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="?android:attr/selectableItemBackground"
+                android:minHeight="40dp"
+                android:gravity="center_vertical"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:textColor="@color/widget_text"
+                android:textSize="15sp" />
+
+            <ImageButton
+                android:id="@+id/remind_clear"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/quick_remind_clear"
+                android:src="@drawable/ic_close" />
+        </LinearLayout>
+
+        <!-- Na het terugzetten van een concept: dat zeggen, met Weggooien. -->
+        <LinearLayout
+            android:id="@+id/draft_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:visibility="gone">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="@string/quick_place_when"
+                android:layout_weight="1"
+                android:text="@string/quick_draft_restored"
                 android:textColor="@color/widget_muted"
                 android:textSize="14sp" />
 
-            <TextView android:id="@+id/place_enter" style="@style/QuickChip" android:text="@string/quick_place_enter" />
-            <TextView android:id="@+id/place_exit" style="@style/QuickChip" android:text="@string/quick_place_exit" />
+            <TextView
+                android:id="@+id/draft_discard"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:gravity="center_vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="4dp"
+                android:text="@string/quick_draft_discard"
+                android:textColor="@color/accent"
+                android:textSize="14sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <!-- Fout (rood) of "Toegevoegd" als de popup openblijft. -->
@@ -188,18 +142,173 @@
             android:id="@+id/status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="8dp"
             android:textSize="14sp"
             android:visibility="gone" />
 
-        <CheckBox
-            android:id="@+id/keep_open"
-            android:layout_width="wrap_content"
+        <!-- Meer opties: dicht bij het openen (open als een teruggezet concept ze gebruikt). -->
+        <LinearLayout
+            android:id="@+id/more"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:buttonTint="@color/accent"
-            android:text="@string/quick_keep_open"
-            android:textColor="@color/widget_muted"
-            android:textSize="14sp" />
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <EditText
+                android:id="@+id/notes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/field_bg"
+                android:gravity="top"
+                android:hint="@string/quick_notes_hint"
+                android:importantForAutofill="no"
+                android:inputType="textCapSentences|textMultiLine"
+                android:maxLines="6"
+                android:minLines="2"
+                android:paddingStart="14dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="10dp"
+                android:textColor="@color/widget_text"
+                android:textColorHint="@color/widget_muted"
+                android:textSize="15sp"
+                android:visibility="gone" />
+
+            <!-- Wanneer: snelknoppen; de gekozen is blauw. -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginEnd="8dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_bell" />
+
+                    <TextView android:id="@+id/when_today" style="@style/QuickChip" android:text="@string/quick_today" />
+                    <TextView android:id="@+id/when_tomorrow" style="@style/QuickChip" android:text="@string/quick_tomorrow" />
+                    <TextView android:id="@+id/when_week" style="@style/QuickChip" android:text="@string/quick_next_week" />
+                    <TextView
+                        android:id="@+id/when_pick"
+                        style="@style/QuickChip"
+                        android:drawableStart="@drawable/ic_calendar"
+                        android:text="@string/quick_pick" />
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <!-- Plek, herhalen en omschrijving. -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/place"
+                        style="@style/QuickChip"
+                        android:drawableStart="@drawable/ic_place"
+                        android:ellipsize="end"
+                        android:maxWidth="240dp"
+                        android:text="@string/quick_place" />
+
+                    <TextView
+                        android:id="@+id/repeat"
+                        style="@style/QuickChip"
+                        android:drawableStart="@drawable/ic_repeat"
+                        android:text="@string/quick_repeat" />
+
+                    <TextView
+                        android:id="@+id/notes_toggle"
+                        style="@style/QuickChip"
+                        android:drawableStart="@drawable/ic_notes"
+                        android:text="@string/quick_notes" />
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <!-- Alleen met een plek: melden bij aankomst of bij vertrek. -->
+            <LinearLayout
+                android:id="@+id/place_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/quick_place_when"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="14sp" />
+
+                <TextView android:id="@+id/place_enter" style="@style/QuickChip" android:text="@string/quick_place_enter" />
+                <TextView android:id="@+id/place_exit" style="@style/QuickChip" android:text="@string/quick_place_exit" />
+            </LinearLayout>
+
+            <CheckBox
+                android:id="@+id/keep_open"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:buttonTint="@color/accent"
+                android:text="@string/quick_keep_open"
+                android:textColor="@color/widget_muted"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Onderaan: Meer opties links (blauw als er dichtgeklapt iets gekozen is), Toevoegen rechts. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/more_toggle"
+                style="@style/QuickChip"
+                android:drawableEnd="@drawable/ic_expand"
+                android:text="@string/quick_more" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/send"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:background="@drawable/add_bg"
+                android:drawableStart="@drawable/ic_send"
+                android:drawablePadding="6dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="20dp"
+                android:stateListAnimator="@null"
+                android:text="@string/quick_add"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

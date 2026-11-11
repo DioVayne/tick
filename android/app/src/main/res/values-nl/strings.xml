@@ -159,6 +159,15 @@
     <string name="quick_place_locating">Je locatie opzoeken…</string>
     <string name="quick_place_no_location">Je locatie is niet gevonden. Staat locatie aan?</string>
     <string name="quick_place_no_permission">Tick mag je locatie nog niet altijd gebruiken, dus deze plek meldt niets. Sta het toe in Tick op deze telefoon.</string>
+    <string name="quick_more">Meer opties</string>
+    <string name="quick_less">Minder opties</string>
+    <string name="quick_remind_today">Herinnering vandaag om %s</string>
+    <string name="quick_remind_tomorrow">Herinnering morgen om %s</string>
+    <string name="quick_remind_on">Herinnering %1$s om %2$s</string>
+    <string name="quick_remind_none_today">Geen herinnering, dus deze taak staat niet in Vandaag</string>
+    <string name="quick_remind_clear">Herinnering weghalen</string>
+    <string name="quick_draft_restored">Concept teruggezet</string>
+    <string name="quick_draft_discard">Weggooien</string>
     <string name="battery_settings_hint">Kies Batterij en dan Onbeperkt.</string>
     <plurals name="outbox_waiting">
         <item quantity="one">%d wijziging wacht op verbinding</item>

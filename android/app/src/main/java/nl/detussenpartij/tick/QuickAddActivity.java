@@ -24,7 +24,6 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -56,17 +55,26 @@ public class QuickAddActivity extends Activity {
 
     private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("EEE d MMM HH:mm", Locale.getDefault());
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault());
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault());
 
     private EditText title;
     private EditText notes;
-    private ImageButton send;
+    private TextView send;
     private TextView listChip, today, tomorrow, week, pick, repeatChip, notesToggle, status;
-    private TextView placeChip, placeEnter, placeExit;
-    private View placeRow;
+    private TextView placeChip, placeEnter, placeExit, moreToggle, remindText;
+    private View placeRow, more, remindRow, remindClear, draftRow;
 
     /** Waar de popup mee begint (en na "nog een" weer op terugvalt). */
     private boolean fromToday;
+    /** De lijst van de widget waarop je tikte (of Inbox): een concept houdt alleen een zelf gekozen andere lijst. */
+    private String openedList;
     private LocalDateTime remindAt;
+    /** Je koos of wiste de herinnering zelf; anders is het de beginwaarde (van de widget Vandaag). */
+    private boolean remindChanged;
+    /** Na toevoegen dicht: niets als concept bewaren. */
+    private boolean finished;
+    /** Via "Delen": geen concept terugzetten of overschrijven (de tekst staat nog in de andere app). */
+    private boolean draftsOn = true;
     private QuickAddPlan.Repeat repeat = QuickAddPlan.Repeat.NONE;
     /** De lijst voor de nieuwe taak; Inbox stuurt de app niet mee (dan kiest de server Inbox). */
     private String list = WidgetFilter.INBOX;
@@ -101,6 +109,12 @@ public class QuickAddActivity extends Activity {
         placeEnter = findViewById(R.id.place_enter);
         placeExit = findViewById(R.id.place_exit);
         placeRow = findViewById(R.id.place_row);
+        more = findViewById(R.id.more);
+        moreToggle = findViewById(R.id.more_toggle);
+        remindRow = findViewById(R.id.remind_row);
+        remindText = findViewById(R.id.remind_text);
+        remindClear = findViewById(R.id.remind_clear);
+        draftRow = findViewById(R.id.draft_row);
         CheckBox keepOpen = findViewById(R.id.keep_open);
 
         // De app tekent tot onder de systeembalken (edge-to-edge): het paneel schuift zelf boven het toetsenbord.
@@ -116,6 +130,7 @@ public class QuickAddActivity extends Activity {
         // Vanuit Vandaag: anders zou de nieuwe taak niet in die widget staan.
         fromToday = WidgetFilter.TODAY.equals(view);
         if (!fromToday && view != null && !view.isEmpty()) list = WidgetFilter.normName(view);
+        openedList = list;
         lists.add(WidgetFilter.INBOX);
         lists.add(list);
         try {
@@ -129,6 +144,7 @@ public class QuickAddActivity extends Activity {
 
         String shared = getIntent().getStringExtra(Intent.EXTRA_TEXT);
         if (shared != null) title.setText(shared.trim());
+        draftsOn = shared == null;
         // Eén regel voor de toets Versturen op het toetsenbord, maar lange titels lopen door over meer regels.
         title.setHorizontallyScrolling(false);
         title.setMaxLines(4);
@@ -162,6 +178,27 @@ public class QuickAddActivity extends Activity {
         });
         keepOpen.setChecked(Prefs.quickKeepOpen(this));
         keepOpen.setOnCheckedChangeListener((b, on) -> Prefs.setQuickKeepOpen(this, on));
+        moreToggle.setOnClickListener(v -> setMore(more.getVisibility() != View.VISIBLE));
+        // De herinneringsregel: tik om te wijzigen; zonder herinnering (vanuit Vandaag) zet tikken de beginwaarde terug.
+        remindText.setOnClickListener(v -> {
+            if (remindAt != null) pickDateTime();
+            else resetWhen();
+        });
+        remindClear.setOnClickListener(v -> {
+            remindAt = null;
+            remindChanged = true;
+            refreshWhen();
+        });
+        draftRow.findViewById(R.id.draft_discard).setOnClickListener(v -> discardDraft());
+
+        // Per ongeluk gesloten? Dan staat het concept er weer (niet bij "Delen": dan begint hij met de gedeelde tekst).
+        QuickAddPlan.Draft draft = draftsOn ? QuickAddPlan.Draft.fromJson(Prefs.quickDraft(this)) : null;
+        if (draft != null && (draft.expired(System.currentTimeMillis()) || !draft.worthKeeping())) {
+            Prefs.setQuickDraft(this, null);
+            draft = null;
+        }
+        // Na draaien of terugkomen na een opgeruimd proces is het geen nieuws: dan zonder de melding.
+        if (draft != null) applyDraft(draft, state == null);
 
         refreshList();
         refreshRepeat();
@@ -175,15 +212,121 @@ public class QuickAddActivity extends Activity {
 
     /** Herinnering zoals de popup begint: vanuit de widget Vandaag het eerstvolgende hele uur, anders geen. */
     private void resetWhen() {
-        remindAt = fromToday ? QuickAddPlan.today(LocalDateTime.now()) : null;
-        if (fromToday && remindAt == null) remindAt = LocalDateTime.now().withSecond(0).withNano(0);
+        remindAt = QuickAddPlan.startReminder(fromToday, LocalDateTime.now());
+        remindChanged = false;
         refreshWhen();
     }
 
     /** Een snelknop kiezen; nog eens tikken op de gekozen knop wist de herinnering. */
     private void choose(LocalDateTime at) {
         remindAt = at == null || at.equals(remindAt) ? null : at;
+        remindChanged = true;
         refreshWhen();
+    }
+
+    /**
+     * De herinnering in woorden onder de titel, zodat een melding nooit verrast (vanuit Vandaag staat er al een). Zonder
+     * herinnering alleen vanuit Vandaag: dan zegt de regel dat de taak niet in die widget komt.
+     */
+    private void refreshRemindLine() {
+        remindRow.setVisibility(remindAt != null || fromToday ? View.VISIBLE : View.GONE);
+        remindClear.setVisibility(remindAt != null ? View.VISIBLE : View.GONE);
+        if (remindAt == null) {
+            remindText.setText(R.string.quick_remind_none_today);
+            remindText.setTextColor(getColor(R.color.widget_muted));
+            return;
+        }
+        String time = TIME.format(remindAt);
+        switch (QuickAddPlan.day(LocalDateTime.now(), remindAt)) {
+            case TODAY: remindText.setText(getString(R.string.quick_remind_today, time)); break;
+            case TOMORROW: remindText.setText(getString(R.string.quick_remind_tomorrow, time)); break;
+            default: remindText.setText(getString(R.string.quick_remind_on, DAY.format(remindAt), time));
+        }
+        remindText.setTextColor(getColor(R.color.widget_text));
+    }
+
+    /** "Meer opties" open of dicht. */
+    private void setMore(boolean open) {
+        more.setVisibility(open ? View.VISIBLE : View.GONE);
+        refreshMoreToggle();
+    }
+
+    /** Dichtgeklapt maar met een plek, ritme of omschrijving: dan is de knop blauw, zodat je ziet dat er iets staat. */
+    private void refreshMoreToggle() {
+        boolean open = more.getVisibility() == View.VISIBLE;
+        boolean extras = repeat != QuickAddPlan.Repeat.NONE || place != null
+                || !notes.getText().toString().trim().isEmpty();
+        moreToggle.setText(open ? R.string.quick_less : R.string.quick_more);
+        moreToggle.setSelected(!open && extras);
+    }
+
+    /** Een concept terugzetten. Lijst en herinnering alleen als je die zelf koos (zie QuickAddPlan.Draft). */
+    private void applyDraft(QuickAddPlan.Draft d, boolean announce) {
+        LocalDateTime now = LocalDateTime.now();
+        title.setText(d.title);
+        notes.setText(d.notes);
+        boolean hasNotes = !d.notes.trim().isEmpty();
+        notes.setVisibility(hasNotes ? View.VISIBLE : View.GONE);
+        notesToggle.setSelected(hasNotes);
+        list = d.listFor(openedList);
+        lists.add(list);
+        remindAt = d.remindFor(QuickAddPlan.startReminder(fromToday, now), now);
+        remindChanged = d.keepsReminder(now);
+        repeat = d.repeat;
+        place = d.place;
+        placeOnExit = d.placeOnExit;
+        setMore(d.usesExtras());
+        draftRow.setVisibility(announce ? View.VISIBLE : View.GONE);
+        refreshWhen();
+    }
+
+    /** Weggooien: het concept wissen en opnieuw beginnen zoals de popup opende. */
+    private void discardDraft() {
+        Prefs.setQuickDraft(this, null);
+        title.setText("");
+        notes.setText("");
+        notes.setVisibility(View.GONE);
+        notesToggle.setSelected(false);
+        list = openedList;
+        repeat = QuickAddPlan.Repeat.NONE;
+        place = null;
+        placeOnExit = false;
+        draftRow.setVisibility(View.GONE);
+        status.setVisibility(View.GONE);
+        refreshList();
+        refreshPlace();
+        resetWhen();
+        setMore(false);
+        title.requestFocus();
+    }
+
+    /** Wat er nu in de popup staat, als concept voor de volgende keer. */
+    private QuickAddPlan.Draft currentDraft() {
+        QuickAddPlan.Draft d = new QuickAddPlan.Draft();
+        d.title = title.getText().toString();
+        d.notes = notes.getText().toString();
+        d.list = list;
+        d.listChanged = !list.equalsIgnoreCase(openedList);
+        d.remindAt = remindAt;
+        d.remindChanged = remindChanged;
+        d.repeat = repeat;
+        d.place = place;
+        d.placeOnExit = placeOnExit;
+        d.savedAt = System.currentTimeMillis();
+        return d;
+    }
+
+    /** Dicht zonder toevoegen (terug, naast het paneel getikt, andere app): bewaren; met een lege titel weg ermee. */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (finished || !draftsOn) return;
+        try {
+            QuickAddPlan.Draft d = currentDraft();
+            Prefs.setQuickDraft(this, d.worthKeeping() ? d.toJson().toString() : null);
+        } catch (Exception ignored) {
+            // Een concept is een gemak; lukt het niet, dan gewoon niet.
+        }
     }
 
     private void refreshWhen() {
@@ -204,6 +347,7 @@ public class QuickAddActivity extends Activity {
         week.setText(withTime(R.string.quick_next_week, onWeek));
         pick.setText(custom ? SHOWN.format(remindAt) : getString(R.string.quick_pick));
         refreshRepeat(); // wekelijks en maandelijks noemen de dag van de herinnering
+        refreshRemindLine();
     }
 
     private String withTime(int label, boolean on) {
@@ -220,6 +364,7 @@ public class QuickAddActivity extends Activity {
         DatePickerDialog d = new DatePickerDialog(this, (dv, y, m, day) ->
                 new TimePickerDialog(this, (tv, h, min) -> {
                     remindAt = LocalDateTime.of(y, m + 1, day, h, min);
+                    remindChanged = true;
                     refreshWhen();
                 }, start.getHour(), start.getMinute(), DateFormat.is24HourFormat(this)).show(),
                 start.getYear(), start.getMonthValue() - 1, start.getDayOfMonth());
@@ -264,6 +409,7 @@ public class QuickAddActivity extends Activity {
         boolean on = repeat != QuickAddPlan.Repeat.NONE;
         repeatChip.setSelected(on);
         repeatChip.setText(on ? repeatLabel(repeat) : getString(R.string.quick_repeat));
+        refreshMoreToggle();
     }
 
     private void pickList() {
@@ -384,6 +530,7 @@ public class QuickAddActivity extends Activity {
         placeRow.setVisibility(on ? View.VISIBLE : View.GONE);
         placeEnter.setSelected(on && !placeOnExit);
         placeExit.setSelected(on && placeOnExit);
+        refreshMoreToggle();
     }
 
     /** Waar je nu bent. Vraagt zo nodig eerst toestemming voor je locatie. */
@@ -529,16 +676,23 @@ public class QuickAddActivity extends Activity {
         // Versturen en verversen buiten de popup om: hij mag meteen dicht. Lukt het niet, dan probeert een job het later.
         final android.content.Context app = getApplicationContext();
         new Thread(() -> Sync.refresh(app, true, true)).start();
+        // Toegevoegd: een concept is er dan niet meer.
+        Prefs.setQuickDraft(this, null);
+        draftRow.setVisibility(View.GONE);
         if (Prefs.quickKeepOpen(this)) {
+            // Nog een: de gekozen lijst blijft, de rest begint opnieuw en het toetsenbord blijft open.
             showStatus(getString(R.string.quick_added_named, text), R.color.widget_muted);
             title.setText("");
             notes.setText("");
             repeat = QuickAddPlan.Repeat.NONE;
             place = null;
+            placeOnExit = false;
             refreshPlace();
             resetWhen();
             title.requestFocus();
+            getSystemService(InputMethodManager.class).showSoftInput(title, InputMethodManager.SHOW_IMPLICIT);
         } else {
+            finished = true;
             Toast.makeText(this, R.string.quick_added, Toast.LENGTH_SHORT).show();
             finishAndRemoveTask();
         }

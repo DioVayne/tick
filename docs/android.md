@@ -30,14 +30,27 @@ Sometimes Tick can't save a change later, for example when the task was deleted 
 Android notices a place a few minutes late, so by car or bike you would be past it. Turn on **On time on the road** in *Tick on this phone* and Tick makes arrival circles bigger while you drive or cycle. How it works: [Places, On the road](places.md#on-the-road). Not in the Google Play version.
 
 ## Quick add and sharing to Tick
-**➕** on the widget, the **New task** shortcut on the app icon, and *Share* from another app all open a panel at the bottom of the screen. Type the title and tap **↑** (or Send on the keyboard). Under the title you can:
-- **choose the list** with the button at the top (it starts on the widget's list, or Inbox);
-- **set a reminder** with *Today* (the next whole hour), *Tomorrow* or *Next week* (09:00), or *Pick…* for any date and time. Tap the chosen button again to remove the reminder. From a *Today and overdue* widget the panel starts on *Today*, so the new task shows up in that widget;
+**➕** on the widget, the **New task** shortcut on the app icon, and *Share* from another app all open a panel at the bottom of the screen. It starts small: the list, the title and **Add**. Type the title and tap **Add** (or Send on the keyboard).
+
+- **Choose the list** with the button at the top. It starts on the widget's list (Inbox for *All*, *Today and overdue* and the shortcut).
+- **The reminder is always spelled out** under the title, for example *Reminder today at 15:00*, in 24-hour time on your phone's clock. From a *Today and overdue* widget the panel starts with a reminder at the next whole hour (after 23:00: right away), because otherwise the new task would not show up in that widget. Tap the line to pick another date and time, or **✕** to remove the reminder; the line then says the task will not show in *Today* (tap it to put the reminder back).
+
+**More options** opens the rest:
+- **set a reminder** with *Today* (the next whole hour), *Tomorrow* or *Next week* (09:00), or *Pick…* for any date and time. Tap the chosen button again to remove the reminder;
 - **add a place** with *Place*: one of your favorites, a place you used recently, your current location, or an address you search for. Then choose **On arrival** or **On leaving**. The radius is the favorite's, or 500 m on arrival and 200 m on leaving; a recent place keeps the radius and choice you used then. To move the pin, change the radius or add more places, open the task in the app afterwards. More about places: [Places](places.md);
 - **repeat** the task every day, every week or every other week on that weekday, every month on that day, or every year;
-- **add a description** with *Description*.
+- **add a description** with *Description*;
+- tick **Add another one after this** to keep the panel open, so you can type several tasks in a row. The list you chose stays and the keyboard stays open; the reminder, place, repeat and description start over. Tick remembers this choice.
 
-Tick *Add another one after this* to keep the panel open, so you can type several tasks in a row; Tick remembers this choice. Adding also works without a connection: the task shows up in the widget at once and goes to Tick when the phone is online again (see [Without a connection](#without-a-connection)).
+When *More options* is closed but you set a place, repeat or description, the button turns blue so you can see something is set.
+
+**Closed by accident?** If you close the panel without adding (back, tapping outside it, switching apps), Tick keeps what you typed as a draft. The next time you open quick add, the title, description, place, repeat and reminder are back, with *Draft restored* and **Discard**; *More options* opens by itself when the draft uses them. Adding the task or tapping **Discard** removes the draft; so does clearing the title and description. Two rules keep a draft from ending up in the wrong place:
+- the draft only keeps its **list** if you picked that list yourself. Otherwise it goes to the list of the widget you tapped now. So a draft started in the *Work* widget and reopened from the *Groceries* widget goes to *Groceries*, unless you had picked another list (say *Home*) by hand: then it stays in *Home*;
+- the draft only keeps its **reminder** if you set or removed it yourself, and only if that time has not passed. Otherwise the panel starts with its usual reminder (from *Today*: the next whole hour).
+
+A draft is kept for a week. *Share* from another app always starts with the shared text and leaves an earlier draft alone. Logging in as someone else removes the draft.
+
+Adding also works without a connection: the task shows up in the widget at once and goes to Tick when the phone is online again (see [Without a connection](#without-a-connection)).
 
 A date here uses 09:00, not your own reminder time.
 
