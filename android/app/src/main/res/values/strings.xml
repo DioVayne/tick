@@ -5,7 +5,7 @@
     <string name="add">New task</string>
     <string name="done">Complete</string>
     <string name="widget_empty">Nothing to do</string>
-    <string name="widget_no_token">Open Tick to link this phone</string>
+    <string name="status_pair">Link Tick to see your tasks</string>
     <string name="main_help">Normally the app links itself when you sign in to Tick. Only if that does not work: paste a key with full access below (in Tick: Settings, Advanced, Keys).</string>
     <string name="error_offline">no connection</string>
     <string name="error_server">server error %s</string>
@@ -114,12 +114,10 @@
     <string name="widget_view_all">All tasks</string>
     <string name="widget_view_today">Today</string>
     <string name="widget_view_today_long">Today and overdue</string>
-    <string name="widget_empty_today">Nothing left for today</string>
+    <string name="widget_empty_today">Nothing planned for today</string>
     <string name="meta_repeat">Repeats</string>
     <string name="meta_place">Location</string>
     <string name="meta_shared">Shared</string>
-    <string name="meta_copy">Copy</string>
-    <string name="meta_subtasks">Subtasks</string>
     <!-- Snelle taak (QuickAddActivity) -->
     <string name="quick_notes_hint">Description</string>
     <string name="quick_today">Today</string>
@@ -170,6 +168,22 @@
     </plurals>
     <string name="outbox_dropped">Not saved: “%1$s” (%2$s)</string>
     <string name="outbox_gone">task no longer available to you</string>
+    <!-- Melding bovenaan de widget (WidgetStatus) en de metaregel van een taak (RowMeta) -->
+    <string name="status_offline">No connection</string>
+    <string name="status_retry">try again</string>
+    <string name="status_add">Add a task</string>
+    <string name="widget_empty_list">Nothing in this list</string>
+    <string name="refresh_synced">Refresh (updated %s)</string>
+    <string name="meta_doer">%s is doing this</string>
+    <string name="meta_shared_with">Shared with %s</string>
+    <plurals name="meta_shared_with_more">
+        <item quantity="one">Shared with %1$s and %2$d other</item>
+        <item quantity="other">Shared with %1$s and %2$d others</item>
+    </plurals>
+    <plurals name="meta_subtasks_open">
+        <item quantity="one">%d subtask open</item>
+        <item quantity="other">%d subtasks open</item>
+    </plurals>
     <!-- Uiterlijk per widget (SettingsActivity, WidgetRows) -->
     <string name="widget_section_overdue">Overdue</string>
     <string name="widget_section_today">Today</string>
@@ -190,4 +204,5 @@
     <string name="preview_list_home">Home</string>
     <string name="preview_list_groceries">Groceries</string>
     <string name="preview_list_work">Work</string>
+    <string name="preview_person">Sam</string>
 </resources>

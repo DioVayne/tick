@@ -176,7 +176,7 @@ public class SettingsActivity extends Activity {
         hint.setTextSize(13);
         root.addView(hint);
 
-        // Voorbeeld: de widget zelf, met kop, statusregel en voorbeeldtaken (lange titels, lijsten, tijden).
+        // Voorbeeld: de widget zelf, met kop en voorbeeldtaken (lange titels, lijsten, tijden, wie het doet).
         label(root, R.string.settings_preview);
         preview = new LinearLayout(this);
         preview.setOrientation(LinearLayout.VERTICAL);
@@ -188,9 +188,7 @@ public class SettingsActivity extends Activity {
         header.findViewById(R.id.btn_refresh).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         header.findViewById(R.id.btn_add).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         preview.addView(header);
-        TextView status = (TextView) LayoutInflater.from(this).inflate(R.layout.widget_status, preview, false);
-        status.setText(getString(R.string.widget_synced_at, TaskWidgetProvider.syncTime(this, System.currentTimeMillis())));
-        preview.addView(status);
+        // Geen melding bovenaan: die staat er alleen bij een probleem of een lege lijst (WidgetStatus).
         previewRows = new LinearLayout(this);
         previewRows.setOrientation(LinearLayout.VERTICAL);
         preview.addView(previewRows);
@@ -342,7 +340,7 @@ public class SettingsActivity extends Activity {
         int[] size = WidgetRows.sizeDp(this, widgetId);
         boolean roomyBySize = WidgetLook.isRoomy(WidgetLook.AUTO, size[0], size[1]);
         autoButton.setText(getString(R.string.settings_layout_auto, layoutName(roomyBySize)));
-        WidgetLook look = new WidgetLook(font, spacing, WidgetLook.isRoomy(mode, size[0], size[1]));
+        WidgetLook look = new WidgetLook(font, spacing, WidgetLook.isRoomy(mode, size[0], size[1]), size[0], size[1]);
 
         String view = Prefs.widgetView(this, widgetId);
         previewTitle.setText(TaskWidgetProvider.title(this, view));
@@ -354,7 +352,7 @@ public class SettingsActivity extends Activity {
         subs.put("preview-3", 3);
         Set<String> lists = new HashSet<>();
         for (JSONObject t : tasks) lists.add(t.optString("list"));
-        WidgetRows rows = new WidgetRows(this, look, view, subs, lists, now);
+        WidgetRows rows = new WidgetRows(this, look, view, subs, lists, now, PREVIEW_ME);
         previewRows.removeAllViews();
         for (WidgetSections.Entry e : WidgetSections.plan(tasks, view, now, look.sections())) {
             android.widget.RemoteViews rv = e.header ? rows.section(e.section) : rows.task(tasks.get(e.task), 0, e.groupEnd);
@@ -363,9 +361,13 @@ public class SettingsActivity extends Activity {
         }
     }
 
+    /** Wie "ik" ben in de voorbeeldtaken. */
+    private static final String PREVIEW_ME = "preview-me";
+
     /**
-     * Voorbeeldtaken: een lange titel die afbreekt (te laat, herhaalt, vastgezet), een korte (vandaag, met een plaats)
-     * en een lange gedeelde met subtaken. In een widget op één lijst staan ze allemaal in die lijst (geen lijstpil).
+     * Voorbeeldtaken: een lange titel die afbreekt (te laat, herhaalt, vastgezet), een korte (vandaag, met een plaats,
+     * iemand anders doet hem) en een lange gedeelde met subtaken. In een widget op één lijst staan ze allemaal in die
+     * lijst (geen lijstnaam).
      */
     private List<JSONObject> sampleTasks(String view) {
         ZonedDateTime now = ZonedDateTime.now();
@@ -383,11 +385,16 @@ public class SettingsActivity extends Activity {
             out.add(new JSONObject().put("id", "preview-2").put("title", getString(R.string.preview_task_short))
                     .put("list", oneList ? view : getString(R.string.preview_list_groceries))
                     .put("remind_at", later.toInstant().toString()).put("location", new JSONObject())
+                    .put("claimed_by", new JSONObject().put("id", "preview-person").put("name", getString(R.string.preview_person)))
                     .put("pinned", false).put("parent_id", JSONObject.NULL));
             out.add(new JSONObject().put("id", "preview-3").put("title", getString(R.string.preview_task_work))
                     .put("list", oneList ? view : getString(R.string.preview_list_work))
                     .put("remind_at", WidgetFilter.TODAY.equals(view) ? later.toInstant().toString() : JSONObject.NULL)
-                    .put("share", new JSONObject()).put("pinned", false).put("parent_id", JSONObject.NULL));
+                    .put("share", new JSONObject().put("mine", true)
+                            .put("owner", new JSONObject().put("id", PREVIEW_ME).put("name", ""))
+                            .put("members", new JSONArray().put(new JSONObject().put("user_id", "preview-person")
+                                    .put("name", getString(R.string.preview_person)).put("status", "accepted"))))
+                    .put("pinned", false).put("parent_id", JSONObject.NULL));
         } catch (Exception ignored) {
             // JSONObject.put met een gewone sleutel faalt niet
         }

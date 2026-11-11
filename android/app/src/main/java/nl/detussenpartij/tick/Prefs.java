@@ -153,7 +153,17 @@ final class Prefs {
     }
 
     static void setSyncError(Context c, String msg) {
-        sp(c).edit().putString("syncError", msg == null ? "" : msg).apply();
+        setSyncError(c, msg, false);
+    }
+
+    /** Zelfde, met of de fout geen verbinding was (de widget zegt dan "Geen verbinding"; anders de foutmelding). */
+    static void setSyncError(Context c, String msg, boolean offline) {
+        sp(c).edit().putString("syncError", msg == null ? "" : msg).putBoolean("syncOffline", offline).apply();
+    }
+
+    /** Was de laatste mislukte verversing een gebrek aan verbinding (en geen fout van de server)? */
+    static boolean syncOffline(Context c) {
+        return sp(c).getBoolean("syncOffline", false);
     }
 
     /** Taken die net zijn afgevinkt in de widget: id -> tijdstip van de tik (ms). */

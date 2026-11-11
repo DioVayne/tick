@@ -5,7 +5,9 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.text.style.StrikethroughSpan;
 import android.util.TypedValue;
 import android.view.View;
@@ -29,8 +31,7 @@ import java.util.Set;
 final class WidgetRows {
     private static final DateTimeFormatter FMT =
             DateTimeFormatter.ofPattern("EEE d MMM HH:mm", Locale.getDefault()).withZone(ZoneId.systemDefault());
-    private static final int[] META_ICONS = {R.id.bell, R.id.repeat, R.id.place, R.id.people, R.id.copy, R.id.subtasks};
-    private static final int[] EXTRA_ICONS = {R.id.repeat, R.id.place, R.id.people, R.id.copy, R.id.subtasks, R.id.subtask_count};
+    private static final int[] META_ICONS = {R.id.bell, R.id.repeat, R.id.place};
 
     private final Context ctx;
     private final WidgetLook look;
@@ -38,14 +39,18 @@ final class WidgetRows {
     private final Map<String, Integer> subtasks;
     private final Set<String> listNames;
     private final Instant now;
+    /** Mijn user_id ("" als onbekend), om "Sanne doet dit" en "Gedeeld met" niet over mezelf te zeggen. */
+    private final String me;
 
-    WidgetRows(Context ctx, WidgetLook look, String view, Map<String, Integer> subtasks, Set<String> listNames, Instant now) {
+    WidgetRows(Context ctx, WidgetLook look, String view, Map<String, Integer> subtasks, Set<String> listNames, Instant now,
+               String me) {
         this.ctx = ctx;
         this.look = look;
         this.view = view == null ? "" : view;
         this.subtasks = subtasks;
         this.listNames = listNames;
         this.now = now;
+        this.me = me == null ? "" : me;
     }
 
     /** Kopje boven een groep (alleen in de weergave Ruim). Te laat in de kleur van te laat. */
@@ -70,9 +75,11 @@ final class WidgetRows {
         boolean done = doneAt > 0;
         applyLook(rv, groupEnd);
         bindTitle(rv, t, done);
-        boolean meta = bindMeta(rv, t, done);
-        rv.setViewVisibility(R.id.meta, meta ? View.VISIBLE : View.GONE);
-        bindPill(rv, t, done);
+        Instant at = remindAt(t);
+        Integer subs = subtasks.get(t.optString("id"));
+        RowMeta plan = RowMeta.plan(t, done, isMixed(), look.roomy, look.narrow, me, subs == null ? 0 : subs, at != null);
+        bindMeta(rv, t, plan, at);
+        bindPill(rv, t, plan.pill);
         bindClicks(rv, t, doneAt);
         return rv;
     }
@@ -85,8 +92,7 @@ final class WidgetRows {
         float density = ctx.getResources().getDisplayMetrics().density;
         rv.setTextViewTextSize(R.id.title, TypedValue.COMPLEX_UNIT_SP, look.titleSp());
         rv.setInt(R.id.title, "setMaxLines", look.titleLines());
-        rv.setTextViewTextSize(R.id.due, TypedValue.COMPLEX_UNIT_SP, look.smallSp());
-        rv.setTextViewTextSize(R.id.subtask_count, TypedValue.COMPLEX_UNIT_SP, look.smallSp());
+        rv.setTextViewTextSize(R.id.meta_text, TypedValue.COMPLEX_UNIT_SP, look.smallSp());
         for (int iconId : META_ICONS) {
             rv.setViewLayoutWidth(iconId, look.iconDp(), TypedValue.COMPLEX_UNIT_DIP);
             rv.setViewLayoutHeight(iconId, look.iconDp(), TypedValue.COMPLEX_UNIT_DIP);
@@ -121,64 +127,87 @@ final class WidgetRows {
         }
     }
 
-    /**
-     * Metaregel (links onder de titel), alleen voor open taken en alleen als er iets te melden is. Compact toont alleen
-     * de herinnering; Ruim ook herhaling, plaats, delen, kopie en subtaken. Geeft terug of er iets in staat.
-     */
-    private boolean bindMeta(RemoteViews rv, JSONObject t, boolean done) {
-        boolean meta = false;
+    private static Instant remindAt(JSONObject t) {
         String remind = Sync.remindAt(t);
-        if (!remind.isEmpty() && !done) {
-            try {
-                Instant at = Instant.parse(remind);
-                // Te laat: belletje en tijd samen rood, zodat het als één geheel leest.
-                int when = ctx.getColor(at.isBefore(now) ? R.color.overdue : R.color.widget_muted);
-                rv.setTextViewText(R.id.due, FMT.format(at));
-                rv.setTextColor(R.id.due, when);
-                rv.setInt(R.id.bell, "setColorFilter", when);
-                meta = true;
-            } catch (Exception ignored) {
-                // geen leesbare tijd: geen herinnering tonen
-            }
+        if (remind.isEmpty()) return null;
+        try {
+            return Instant.parse(remind);
+        } catch (Exception e) {
+            return null; // geen leesbare tijd: geen herinnering tonen
         }
-        show(rv, R.id.bell, meta);
-        show(rv, R.id.due, meta);
-        if (!look.extraIcons()) {
-            for (int id : EXTRA_ICONS) show(rv, id, false);
-            return meta;
-        }
-        meta |= show(rv, R.id.repeat, !done && !t.isNull("repeat") && t.optJSONObject("repeat") != null);
-        meta |= show(rv, R.id.place, !done && !t.isNull("location") && t.optJSONObject("location") != null);
-        // Gedeeld (één taak samen) in de accentkleur, kopie (ieder een eigen exemplaar) grijs, net als in de webapp.
-        meta |= show(rv, R.id.people, !done && WidgetFilter.isShared(t));
-        rv.setInt(R.id.people, "setColorFilter", ctx.getColor(R.color.accent));
-        meta |= show(rv, R.id.copy, !done && WidgetFilter.isCopy(t));
-        Integer subs = subtasks.get(t.optString("id"));
-        boolean hasSubs = !done && subs != null && subs > 0;
-        if (hasSubs) rv.setTextViewText(R.id.subtask_count, String.valueOf(subs));
-        show(rv, R.id.subtask_count, hasSubs);
-        meta |= show(rv, R.id.subtasks, hasSubs);
-        return meta;
     }
 
     /**
-     * De lijstnaam alleen als de widget meer dan één lijst toont, net als de pil in Alles in de webapp. Altijd rechts op
+     * Metaregel (links onder de titel), alleen als er iets in staat; wat erin komt, kiest RowMeta. Eén tekst met
+     * " · " ertussen: tijd (te laat: belletje en tijd samen rood), lijst (in de lijstkleur), wie het doet, open subtaken,
+     * met wie gedeeld. Daarna herhaling en plaats als icoontje.
+     */
+    private void bindMeta(RemoteViews rv, JSONObject t, RowMeta plan, Instant at) {
+        SpannableStringBuilder sb = new SpannableStringBuilder();
+        if (plan.time) {
+            int when = ctx.getColor(at.isBefore(now) ? R.color.overdue : R.color.widget_muted);
+            rv.setInt(R.id.bell, "setColorFilter", when);
+            append(sb, FMT.format(at), when);
+        }
+        show(rv, R.id.bell, plan.time);
+        if (plan.listInMeta) {
+            String list = listName(t);
+            append(sb, list, listColor(list, look.tiles() ? R.color.widget_tile : R.color.widget_bg));
+        }
+        if (plan.doer != null) append(sb, ctx.getString(R.string.meta_doer, plan.doer), 0);
+        if (plan.subtasks > 0) {
+            append(sb, ctx.getResources().getQuantityString(R.plurals.meta_subtasks_open, plan.subtasks, plan.subtasks), 0);
+        }
+        if (plan.sharedWith != null) {
+            append(sb, plan.sharedOthers > 0
+                    ? ctx.getResources().getQuantityString(R.plurals.meta_shared_with_more, plan.sharedOthers,
+                            plan.sharedWith, plan.sharedOthers)
+                    : ctx.getString(R.string.meta_shared_with, plan.sharedWith), 0);
+        } else if (plan.sharedPlain) {
+            append(sb, ctx.getString(R.string.meta_shared), 0);
+        }
+        rv.setTextViewText(R.id.meta_text, sb);
+        show(rv, R.id.meta_text, sb.length() > 0);
+        show(rv, R.id.repeat, plan.repeat);
+        show(rv, R.id.place, plan.place);
+        show(rv, R.id.meta, plan.any());
+    }
+
+    /** Een stukje van de metaregel, met " · " ervoor als er al iets staat; color 0 is de gewone grijze kleur. */
+    private static void append(SpannableStringBuilder sb, String part, int color) {
+        if (sb.length() > 0) sb.append(" · ");
+        int from = sb.length();
+        sb.append(part);
+        if (color != 0) sb.setSpan(new ForegroundColorSpan(color), from, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    }
+
+    private static String listName(JSONObject t) {
+        return WidgetFilter.normName(t.isNull("list") ? null : t.optString("list"));
+    }
+
+    /**
+     * De lijstnaam in de lijstkleur (zo nodig iets lichter of donkerder, zodat hij op bg leesbaar is); Inbox grijs, net
+     * als de pil in Alles in de webapp.
+     */
+    private int listColor(String list, int bg) {
+        String hex = WidgetFilter.listColor(list, listNames, Locale.getDefault());
+        return hex == null ? ctx.getColor(R.color.widget_muted)
+                : WidgetFilter.readable(Color.parseColor(hex), ctx.getColor(bg) & 0xFFFFFF, isDark());
+    }
+
+    /**
+     * De lijstnaam als pil, alleen als de widget meer dan één lijst toont en breed genoeg is (RowMeta). Altijd rechts op
      * de eerste titelregel, zodat hij steeds op dezelfde plek staat en de rij er niet hoger van wordt.
      */
-    private void bindPill(RemoteViews rv, JSONObject t, boolean done) {
-        boolean pill = isMixed() && !done; // afgevinkt: plaats voor Ongedaan maken
+    private void bindPill(RemoteViews rv, JSONObject t, boolean pill) {
         show(rv, R.id.title_pill, pill);
         if (pill) {
-            String list = WidgetFilter.normName(t.isNull("list") ? null : t.optString("list"));
+            String list = listName(t);
             rv.setTextViewText(R.id.title_pill, list);
             rv.setTextViewTextSize(R.id.title_pill, TypedValue.COMPLEX_UNIT_SP, look.pillSp());
-            // De naam in de lijstkleur (zo nodig iets lichter of donkerder, zodat hij leesbaar is); Inbox blijft grijs.
-            String hex = WidgetFilter.listColor(list, listNames, Locale.getDefault());
-            int color = hex == null ? ctx.getColor(R.color.widget_muted)
-                    : WidgetFilter.readable(Color.parseColor(hex), ctx.getColor(R.color.widget_pill) & 0xFFFFFF, isDark());
-            rv.setTextColor(R.id.title_pill, color);
+            rv.setTextColor(R.id.title_pill, listColor(list, R.color.widget_pill));
         }
-        // Zonder pil (widget op één lijst) dezelfde afstand tot de rand van het tegeltje als de pil heeft.
+        // Zonder pil dezelfde afstand tot de rand van het tegeltje als de pil heeft.
         rv.setViewLayoutMargin(R.id.title, RemoteViews.MARGIN_END, pill ? 0 : 8, TypedValue.COMPLEX_UNIT_DIP);
     }
 
@@ -227,10 +256,13 @@ final class WidgetRows {
                 o.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)};
     }
 
-    /** Het uiterlijk van een widget: zijn eigen instellingen, en Compact of Ruim naar keuze of naar zijn maat. */
+    /**
+     * Het uiterlijk van een widget: zijn eigen instellingen, Compact of Ruim naar keuze of naar zijn maat, en of hij
+     * smal of laag is (titelregels, lijstnaam naast de titel of eronder).
+     */
     static WidgetLook lookOf(Context c, int widgetId) {
         int[] size = sizeDp(c, widgetId);
         boolean roomy = WidgetLook.isRoomy(Prefs.widgetMode(c, widgetId), size[0], size[1]);
-        return new WidgetLook(Prefs.widgetFont(c, widgetId), Prefs.widgetSpacing(c, widgetId), roomy);
+        return new WidgetLook(Prefs.widgetFont(c, widgetId), Prefs.widgetSpacing(c, widgetId), roomy, size[0], size[1]);
     }
 }

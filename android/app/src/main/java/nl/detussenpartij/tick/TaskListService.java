@@ -3,6 +3,11 @@ package nl.detussenpartij.tick;
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Typeface;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.widget.RemoteViews;
 import android.widget.RemoteViewsService;
 
@@ -32,7 +37,7 @@ public class TaskListService extends RemoteViewsService {
         private String view = "";
         private Map<String, Integer> subtasks = new java.util.HashMap<>();
         private Set<String> listNames = new java.util.HashSet<>();
-        /** De rijen na de statusregel: taken en (Ruim) kopjes; zie WidgetSections. */
+        /** De rijen na de melding: taken en (Ruim) kopjes; zie WidgetSections. */
         private List<WidgetSections.Entry> entries = new ArrayList<>();
         private WidgetRows rows;
 
@@ -72,43 +77,89 @@ public class TaskListService extends RemoteViewsService {
             WidgetLook look = WidgetRows.lookOf(ctx, widgetId);
             Instant at = Instant.ofEpochMilli(now);
             entries = WidgetSections.plan(items, view, at, look.sections());
-            rows = new WidgetRows(ctx, look, view, subtasks, listNames, at);
+            rows = new WidgetRows(ctx, look, view, subtasks, listNames, at, Prefs.userId(ctx));
+            decideStatus();
         }
 
         /**
-         * Positie 0 is de statusregel (bijgewerkt om, of de fout); daarna de taken. Hij staat in de lijst omdat
-         * sommige launchers de rest van de widget niet meer bijwerken (Android 16+, "update deferred"), de lijst wel.
+         * De melding bovenaan (WidgetStatus), of null als er niets te melden is; dan begint de lijst meteen met de
+         * taken. Hij staat in de lijst (en niet in de kop) omdat sommige launchers de rest van de widget niet meer
+         * bijwerken (Android 16+, "update deferred"), de lijst wel. Daarom gaat ook de tik erop via het sjabloon van
+         * de lijst (WidgetClickActivity).
          */
-        private RemoteViews statusRow() {
-            RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_status);
-            String error = Prefs.syncError(ctx);
-            String text;
+        private WidgetStatus status = WidgetStatus.decide(true, false, 0, false, false, false, 0, 0);
+
+        private void decideStatus() {
             long now = System.currentTimeMillis();
             String note = Prefs.outboxNote(ctx);
-            int waiting = Outbox.waiting(Prefs.outbox(ctx), now);
-            if (Prefs.token(ctx).isEmpty()) text = ctx.getString(R.string.widget_no_token);
-            // De server wees net een wijziging af (taak weg, niet meer gedeeld): even zeggen.
-            else if (!note.isEmpty() && now - Prefs.outboxNoteAt(ctx) <= Outbox.NOTE_MS) text = error = note;
-            // Wijzigingen in de wachtrij: rustig melden, in plaats van een rode foutmelding. Ze gaan vanzelf weg.
-            else if (waiting > 0) {
-                text = ctx.getResources().getQuantityString(R.plurals.outbox_waiting, waiting, waiting);
-                error = "";
-            } else if (!error.isEmpty()) text = error;
-            else {
-                long last = Prefs.lastSync(ctx);
-                String synced = last > 0 ? ctx.getString(R.string.widget_synced_at, TaskWidgetProvider.syncTime(ctx, last)) : "";
-                String empty = ctx.getString(WidgetFilter.TODAY.equals(view) ? R.string.widget_empty_today : R.string.widget_empty);
-                text = items.isEmpty() ? empty + (synced.isEmpty() ? "" : " · " + synced) : synced;
+            boolean noteActive = !note.isEmpty() && now - Prefs.outboxNoteAt(ctx) <= Outbox.NOTE_MS;
+            status = WidgetStatus.decide(!Prefs.token(ctx).isEmpty(), noteActive, Outbox.waiting(Prefs.outbox(ctx), now),
+                    !Prefs.syncError(ctx).isEmpty(), Prefs.syncOffline(ctx), items.isEmpty(), Prefs.lastSync(ctx), now);
+        }
+
+        private int head() {
+            return status.visible() ? 1 : 0;
+        }
+
+        private RemoteViews statusRow() {
+            if (status.kind == WidgetStatus.Kind.STALE) {
+                RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_status_hint);
+                rv.setTextViewText(R.id.status_hint,
+                        ctx.getString(R.string.widget_synced_at, TaskWidgetProvider.syncTime(ctx, Prefs.lastSync(ctx))));
+                return rv;
             }
-            rv.setTextViewText(R.id.status_text, text);
-            rv.setTextColor(R.id.status_text, ctx.getColor(error.isEmpty() ? R.color.widget_muted : R.color.overdue));
+            RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_status);
+            String text;
+            String action = null;
+            switch (status.kind) {
+                case PAIR: text = ctx.getString(R.string.status_pair); break;
+                case NOTE: text = Prefs.outboxNote(ctx); break;
+                case WAITING: {
+                    int n = Outbox.waiting(Prefs.outbox(ctx), System.currentTimeMillis());
+                    text = ctx.getResources().getQuantityString(R.plurals.outbox_waiting, n, n);
+                    action = ctx.getString(R.string.status_retry);
+                    break;
+                }
+                case OFFLINE: text = ctx.getString(R.string.status_offline); action = ctx.getString(R.string.status_retry); break;
+                case SERVER: text = Prefs.syncError(ctx); action = ctx.getString(R.string.status_retry); break;
+                default: { // EMPTY
+                    int empty = WidgetFilter.TODAY.equals(view) ? R.string.widget_empty_today
+                            : view.isEmpty() ? R.string.widget_empty : R.string.widget_empty_list;
+                    text = ctx.getString(empty);
+                    action = ctx.getString(R.string.status_add);
+                }
+            }
+            int tone = ctx.getColor(status.alert() ? R.color.overdue
+                    : status.kind == WidgetStatus.Kind.PAIR ? R.color.accent : R.color.widget_muted);
+            SpannableStringBuilder sb = new SpannableStringBuilder(text);
+            sb.setSpan(new ForegroundColorSpan(tone), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            if (action != null) {
+                sb.append(" · ");
+                int from = sb.length();
+                sb.append(action);
+                sb.setSpan(new ForegroundColorSpan(ctx.getColor(R.color.accent)), from, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                sb.setSpan(new StyleSpan(Typeface.BOLD), from, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            rv.setTextViewText(R.id.status_text, sb);
+            rv.setContentDescription(R.id.status_text, sb.toString());
+            String click;
+            switch (status.action) {
+                case RETRY: click = WidgetClickActivity.ACTION_RETRY; break;
+                case PAIR: click = WidgetClickActivity.ACTION_PAIR; break;
+                case ADD: click = WidgetClickActivity.ACTION_ADD; break;
+                default: click = WidgetClickActivity.ACTION_NONE;
+            }
+            // Altijd een fill-in intent (de lijst hergebruikt rijen); zonder actie doet de tik niets.
+            rv.setOnClickFillInIntent(R.id.status_text, new Intent()
+                    .putExtra(WidgetClickActivity.EXTRA_ACTION, click)
+                    .putExtra(QuickAddActivity.EXTRA_VIEW, view));
             return rv;
         }
 
         @Override
         public RemoteViews getViewAt(int position) {
-            if (position == 0) return statusRow();
-            position--;
+            if (position < head()) return statusRow();
+            position -= head();
             if (rows == null || position >= entries.size()) return new RemoteViews(ctx.getPackageName(), R.layout.widget_item);
             WidgetSections.Entry e = entries.get(position);
             if (e.header) return rows.section(e.section);
@@ -117,7 +168,7 @@ public class TaskListService extends RemoteViewsService {
 
         @Override
         public int getCount() {
-            return entries.size() + 1; // + statusregel
+            return entries.size() + head();
         }
 
         @Override
@@ -127,14 +178,15 @@ public class TaskListService extends RemoteViewsService {
 
         @Override
         public int getViewTypeCount() {
-            return 3; // statusregel, taak en kopje
+            return 4; // melding, kleine tijd, taak en kopje
         }
 
         @Override
         public long getItemId(int position) {
-            if (position == 0) return Long.MIN_VALUE; // statusregel
-            if (position - 1 >= entries.size()) return position;
-            WidgetSections.Entry e = entries.get(position - 1);
+            if (position < head()) return Long.MIN_VALUE; // melding
+            position -= head();
+            if (position >= entries.size()) return position;
+            WidgetSections.Entry e = entries.get(position);
             if (e.header) return Long.MIN_VALUE + 1 + e.section; // kopje: vast per groep
             return items.get(e.task).optString("id").hashCode();
         }
