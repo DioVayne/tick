@@ -39,8 +39,7 @@ import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxAccount, maxUpload, sweepAttachments } from './attachments';
 import { mcpApi } from './mcp';
 import { calendarApi, calendarOn, refreshStaleFeeds } from './calendar';
-import { testFeature, testFeatures } from './features';
-import { freeTimeApi, runFreeTime } from './freetime';
+import { testFeatures } from './features';
 import { taskIcs } from '../public/ics.js';
 
 export type Env = {
@@ -287,7 +286,6 @@ app.use('*', async (c, next) => {
 
 app.route('/api/settings', settingsApi);
 app.route('/api/review', reviewApi);
-app.route('/api/freetime', freeTimeApi);
 app.route('/api/keys', keysApi);
 app.route('/api/pair', pairApi);
 app.route('/api/account', accountApi);
@@ -1457,8 +1455,6 @@ export function cronSteps(env: Env, install: InstallPrefs, at: number): [string,
   ];
   // Gekoppelde agenda's: elke 5 minuten een paar feeds die langer dan een uur niet opgehaald zijn.
   if (calendarOn(env) && new Date(at).getUTCMinutes() % 5 === 0) steps.push(['agenda', () => refreshStaleFeeds(env, Date.now())]);
-  // Testfeature "Tijd voor een taak?": per persoon eens per uur (zie src/freetime.ts).
-  if (calendarOn(env) && testFeature(env, 'freetime')) steps.push(['tijd voor een taak', () => runFreeTime(env, install)]);
   if (new Date(at).getUTCMinutes() === 0) {
     steps.push(
       ['prullenbak', () => purgeTrash(env.DB, Date.now())],
