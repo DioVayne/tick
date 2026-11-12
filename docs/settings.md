@@ -3,6 +3,7 @@
 Everything is under **⚙ Settings** in the sidebar. Your name at the top of the sidebar is a shortcut to **Account**: tap it and Settings opens with that part already open. Some settings belong to **this device** only, some to **you** (all your devices), and a few to the **whole Tick** (administrator only). Offline, the settings page opens but shows the last known values for what can only change online.
 
 ## Display (this device)
+- **Language:** automatic, English or Nederlands; one tap switches. Error messages and the login page on this device follow it too. Notifications come in the language of the device they go to.
 - **Theme:** automatic, light or dark.
 - **Color theme:** default or *Retro 70s*, each in light and dark.
 - **Text size** and **space between tasks.** An example task changes along.
@@ -21,8 +22,7 @@ Shown when linked calendars are switched on for your Tick. See [Linking your cal
 - **Daily reminder for overdue tasks** (you, on all your devices): on or off, and its time. See [Reminders](reminders.md#overdue-tasks).
 - **Counter on the icon** (this device): the number of tasks due today, overdue included; red when something is overdue.
 
-## Language and time
-- **Language** (this device): automatic, English or Nederlands. Error messages and the login page on this device follow it too. Notifications come in the language of the device they go to.
+## Time
 - **Time zone** (you), with a button to take the zone of this device. Changing it keeps your reminders at the same clock time in the new zone. All times in Tick are shown and picked in this zone, also when your device is set to another one (when you travel, for instance): *Today*, *Tomorrow*, overdue and the calendar follow it too. Travelling for a while? Change the zone here, or use the button.
 - **Reminder without a time** (you): used when you only pick a date. 09:00 by default.
 - **Week starts on** Monday or Sunday (you).
