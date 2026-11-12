@@ -82,6 +82,28 @@ export function busyAt(at, busy, len = BLOCK_MS) {
 }
 
 /**
+ * Het eerste vrije halfuur vanaf `at` op dezelfde dag (in de ingestelde zone), uiterlijk tot 22:00; null als die dag
+ * vol zit. Valt `at` op een afspraak, dan schuift hij naar het einde ervan (op een kwartier naar boven).
+ * Voor de snelkeuzes van het herinneringsmenu: een voorstel valt nooit op een afspraak.
+ * @param {number} at
+ * @param {Busy[] | null | undefined} busy
+ * @returns {number | null}
+ */
+export function freeFrom(at, busy) {
+  const day = (/** @type {number} */ ms) => { const p = zonedParts(ms); return `${p.y}-${p.m}-${p.d}`; };
+  const start = day(at);
+  const latest = Math.max(DAY_END - 30, 0);
+  for (let guard = 0; guard < 96; guard++) {
+    const hit = busyAt(at, busy);
+    if (!hit) return at;
+    at = Math.ceil(hit.end / (15 * 60_000)) * 15 * 60_000;
+    const p = zonedParts(at);
+    if (day(at) !== start || p.h * 60 + p.mi > latest) return null;
+  }
+  return null;
+}
+
+/**
  * "vandaag 14:30", "morgen 09:00" of "za 14 nov. 10:00", in de ingestelde zone.
  * @param {number} ms
  * @param {number} now

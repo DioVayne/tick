@@ -602,6 +602,15 @@ a.menu-item { display: block; text-decoration: none; }
 .menu-when small { color: var(--muted); font-size: .8125rem; }
 .menu-when.busy { white-space: normal; }
 .menu-when.busy small { color: var(--bell); text-align: right; }
+.when-pick { display: flex; align-items: center; gap: 8px; margin: 2px 2px 4px; padding: 8px 12px; background: var(--accent); color: var(--accent-text); font-weight: 600; }
+.when-pick:hover, .when-pick:focus-visible { background: color-mix(in srgb, var(--accent) 88%, var(--text)); }
+.when-pick svg { flex: none; width: 18px; height: 18px; }
+.when-head { padding: 6px 10px 2px; color: var(--muted); font-size: .8125rem; }
+.when-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 6px 6px; }
+.when-chip { min-height: 30px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; }
+.when-chip.on { border-color: var(--accent); }
+.when-note { padding: 4px 10px 6px; color: var(--muted); font-size: .75rem; }
+.menu.sheet .when-chip { min-height: 44px; }
 .menu-head { padding: 6px 10px 2px; color: var(--muted); font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
 .menu-cancel { justify-content: center; text-align: center; color: var(--muted); }
 .menu-input { margin: 2px 0; padding: 6px 8px; font-size: .875rem; }

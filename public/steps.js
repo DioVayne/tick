@@ -1,9 +1,9 @@
-import { dateLocale, t } from './i18n.js';
+import { t } from './i18n.js';
 import { icon } from './icons.js';
 import { el, fromLocalInput, toLocalInput } from './render.js';
 import { openDatePicker } from './datepicker.js';
 import { showMenu } from './popover.js';
-import { busyAt, calendarSlots, quickWhen, whenText } from './planner.js';
+import { freeFrom, quickWhen, whenText } from './planner.js';
 import { busyNow } from './agenda.js';
 
 // De tijdlijn van de invoerkaart (composer.js) en het detailpaneel (detail.js): per eigenschap een zin met een gekleurde
@@ -83,8 +83,9 @@ export const closeStepMenu = () => closeMenu?.();
 
 
 /**
- * Herinnering kiezen: eerst een kort menu (Vandaag, Morgen, Volgende week, Andere dag en tijd…), net als de
- * Android-popup. Pas "Andere dag en tijd…" opent de volledige datumkiezer, dan zonder de snelknoppen die hier al staan.
+ * Herinnering kiezen: bovenaan "Kies dag en tijd" (opent de volledige datumkiezer, zonder de snelknoppen die hier al
+ * staan), daaronder als hulp hooguit drie snelkeuzes (vandaag, morgen, volgende week). Met een gekoppelde agenda vallen
+ * die nooit op een afspraak en staat eronder dat ze op je agenda gebaseerd zijn.
  * `current` en de waarde voor `set` zijn 'YYYY-MM-DDTHH:MM' zoals de datumkiezer; leeg (of null) is wissen.
  * @param {HTMLElement} anchor
  * @param {string} current
@@ -93,43 +94,31 @@ export const closeStepMenu = () => closeMenu?.();
  */
 export function openWhenMenu(anchor, current, set, { note, onDismiss } = {}) {
   // Alles in de ingestelde zone (wandklok), niet met de klok van het apparaat.
-  const quick = quickWhen(Date.now());
-  const def = quick.def;
-  // De dag van volgende week is een kale datum: als UTC-middernacht, getoond in UTC.
-  const weekday = new Intl.DateTimeFormat(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-  const [y, m, d] = quick.nextWeek.slice(0, 10).split('-').map(Number);
-  const options = [
-    // Vandaag: het volgende hele uur, zolang dat nog vandaag is.
-    quick.today ? [t('dp.today'), quick.today.slice(11, 16), quick.today] : null,
-    [t('dp.tomorrow'), def, quick.tomorrow],
-    [t('dp.next_week'), `${weekday.format(new Date(Date.UTC(y, m - 1, d)))} · ${def}`, quick.nextWeek],
-  ].filter(Boolean);
-  // Met een gekoppelde agenda: wat er op een voorstel al staat, en daaronder de eerstvolgende vrije momenten.
+  const now = Date.now();
+  const quick = quickWhen(now);
+  // Met een gekoppelde agenda schuift elke snelkeuze naar het eerste vrije moment die dag (of valt weg als de dag vol
+  // zit): een voorstel valt nooit op een afspraak. Zonder agenda: de vaste tijden.
   const busy = busyNow();
-  const busyOn = (value) => {
-    const at = fromLocalInput(value);
-    const hit = busy && at ? busyAt(Date.parse(at), busy) : null;
-    return hit ? t('planner.busy', { title: hit.title || t('cal.busy') }) : null;
-  };
-  const free = busy ? calendarSlots(busy, Date.now()).map((s) => {
-    const when = whenText(Date.parse(s.at), Date.now());
-    return [when.charAt(0).toUpperCase() + when.slice(1), '', toLocalInput(s.at)];
-  }) : [];
-  const item = (choose) => ([label, hint, value]) => {
-    const taken = busyOn(value);
-    return el('button', {
-      class: 'menu-item menu-when' + (current === value ? ' on' : '') + (taken ? ' busy' : ''), type: 'button', role: 'menuitem',
-      onclick: () => choose(() => set(value)),
-    }, el('span', {}, label), el('small', {}, taken ? (hint ? `${hint} · ${taken}` : taken) : hint));
+  const values = [quick.today, quick.tomorrow, quick.nextWeek].map((value) => {
+    const iso = value ? fromLocalInput(value) : null;
+    if (!iso || !busy) return value;
+    const at = freeFrom(Date.parse(iso), busy);
+    return at == null ? null : toLocalInput(new Date(at).toISOString());
+  }).filter((v) => !!v);
+  const label = (value) => {
+    const when = whenText(Date.parse(/** @type {string} */ (fromLocalInput(value))), now);
+    return when.charAt(0).toUpperCase() + when.slice(1);
   };
   openMenu(anchor, t('add.when'), (choose) => [
-    ...options.map(item(choose)),
-    free.length ? el('div', { class: 'menu-head', role: 'presentation' }, t('dp.free_title')) : null,
-    ...free.map(item(choose)),
-    el('div', { class: 'menu-sep' }),
     el('button', {
-      class: 'menu-item', type: 'button', role: 'menuitem',
+      class: 'menu-item when-pick', type: 'button', role: 'menuitem',
       onclick: () => choose(null, () => openDatePicker(anchor, current, (value) => set(value ?? ''), { quick: false, note })),
-    }, t('add.when_other')),
+    }, icon('calendar'), el('span', {}, t('when.pick'))),
+    values.length ? el('div', { class: 'when-head', role: 'presentation' }, t('when.quick')) : null,
+    values.length ? el('div', { class: 'when-chips', role: 'presentation' }, ...values.map((value) => el('button', {
+      class: 'menu-item when-chip' + (current === value ? ' on' : ''), type: 'button', role: 'menuitem',
+      onclick: () => choose(() => set(value)),
+    }, label(value)))) : null,
+    busy ? el('div', { class: 'when-note', role: 'presentation' }, t('when.from_calendar')) : null,
   ], onDismiss);
 }
