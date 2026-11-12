@@ -15,7 +15,9 @@ export type Payload = {
   /** Vervangt de tag van de melding (zelfde tag = vervangt de vorige); zonder tag de taak of uitnodiging. */
   tag?: string;
   /** Knoppen in de melding, al vertaald: de service worker kent de taal niet. */
-  actions?: { action: 'done' | 'snooze' | 'tomorrow' | 'accept' | 'decline'; title: string }[];
+  actions?: { action: 'done' | 'snooze' | 'tomorrow' | 'accept' | 'decline' | 'yes' | 'no'; title: string }[];
+  /** Een scherm van de app (testfeature freetime): tikken of Ja opent /#/<page>, Nee sluit alleen de melding. */
+  page?: 'freetime';
   /** Tekst voor als een knop mislukt (de service worker zet de melding dan terug); `{status}` vult hij zelf in. */
   failed?: { offline: string; auth: string; server: string };
 };

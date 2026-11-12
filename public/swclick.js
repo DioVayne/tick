@@ -6,7 +6,9 @@
 // Een url als /?task=<id> (zoals bij "is klaar ✓") werkt in een open venster net als taskId; &geo=1 (een plek die een
 // ander op een gedeelde taak zette) gaat mee, zodat de app kan aanbieden de Android-app te wekken.
 self.tickClickTarget = (data, wins) => {
-  const { taskId, url } = data || {};
+  const { taskId, url, page } = data || {};
+  // Een scherm van de app (page, zoals 'freetime'): een open venster gaat erheen, anders opent /#/<page>.
+  if (page && !taskId) return wins[0] ? { focus: wins[0], message: { type: 'open-page', page } } : { open: `/#/${page}` };
   if (wins[0]) {
     let id = taskId;
     let geo = false;
