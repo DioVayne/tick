@@ -485,7 +485,7 @@ Wil je je taken houden? Download eerst een back-up.
 - **Anker:** `#talen`
 - **Tegel:** Nederlands en Engels · Per apparaat, met je eigen tijdzone.
 - **Lees meer:**
-Tick is er in het Nederlands en het Engels. Standaard volgt het de taal van je apparaat, of je kiest zelf onder **Instellingen › Taal en tijd**. Foutmeldingen en het inlogscherm volgen mee.
+Tick is er in het Nederlands en het Engels. Standaard volgt het de taal van je apparaat, of je kiest zelf onder **Instellingen › Weergave**, met één tik. Foutmeldingen en het inlogscherm volgen mee.
 
 De taal hoort bij het apparaat. Je telefoon kan Nederlands zijn en je werklaptop Engels. Meldingen komen in de taal van het apparaat waar ze heen gaan.
 
@@ -1115,7 +1115,7 @@ Want to keep your tasks? Download a backup first.
 - **Anchor:** `#languages`
 - **Tile:** English and Dutch · Per device, in your own time zone.
 - **Read more:**
-Tick comes in English and Dutch. By default it follows your device's language, or you choose under **Settings › Language and time**. Error messages and the login screen follow along.
+Tick comes in English and Dutch. By default it follows your device's language, or you choose under **Settings › Display**, with one tap. Error messages and the login screen follow along.
 
 The language belongs to the device. Your phone can be in Dutch and your work laptop in English. Notifications come in the language of the device they go to.
 

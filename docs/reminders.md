@@ -23,7 +23,7 @@ Under **Repeat** at a reminder you choose how often: daily, weekly, monthly or y
 - Times follow the clock of your time zone, so 10:00 stays 10:00 when daylight saving time changes. "On the 31st" falls on the last day of shorter months.
 
 ## Overdue tasks
-Once a day (09:00 by default) Tick sends a notification for each task whose reminder was before today and that is still open, at most 10, oldest first. Each has **Done** and **Tomorrow**. Change the time or switch it off under **⚙ Settings → Language and time**.
+Once a day (09:00 by default) Tick sends a notification for each task whose reminder was before today and that is still open, at most 10, oldest first. Each has **Done** and **Tomorrow**. Change the time or switch it off under **⚙ Settings → Notifications**.
 
 ## The calendar
 **📅 Calendar** in the sidebar shows your open tasks with a date, as a month grid and as an agenda. Repeating tasks show their coming times too. The week starts on Monday or Sunday, as set in Settings. Appointments from a [linked calendar](calendar.md) show as grey blocks with their titles.

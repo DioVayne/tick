@@ -367,6 +367,8 @@ function backgroundRow() {
 function paintDisplay() {
   const ds = document.documentElement.dataset;
   paint('display',
+    row(t('set.language'), seg(t('set.language'), [['auto', t('set.lang_auto')], ['en', t('set.lang_en')], ['nl', t('set.lang_nl')]],
+      storeGet('tick.lang') ?? 'auto', changeLanguage)),
     row(t('set.theme'), seg(t('set.theme'), [['auto', t('set.theme_auto')], ['light', t('set.theme_light')], ['dark', t('set.theme_dark')]],
       ds.theme ?? 'auto', (v) => setDisplay('theme', v))),
     row(t('set.palette'), seg(t('set.palette'), [['default', t('set.palette_default')], ['retro', t('set.palette_retro')]],
@@ -506,7 +508,7 @@ async function paintCalendar() {
       el('p', {}, t('set.cal_google')), el('p', {}, t('set.cal_outlook')), el('p', {}, t('set.cal_icloud'))));
 }
 
-// ---------- 🌍 Taal en tijd ----------
+// ---------- 🌍 Tijd (de taalkeuze staat bij Weergave) ----------
 
 async function changeLanguage(value) {
   setLanguage(value === 'auto' ? null : value);
@@ -528,7 +530,6 @@ const current = () => S.settings ?? cachedSettings();
 function paintLangTime() {
   const s = current();
   const off = !S.online;
-  const lang = storeGet('tick.lang');
   // Eén wissel tegelijk: tijdens het opslaan staan de keuze en de knop uit, anders kan de server de taken dubbel verschuiven.
   const tz = select(t('set.timezone'), zones(s.timeZone).map((z) => [z, z]), s.timeZone, async (v) => {
     tz.disabled = fromDevice.disabled = true;
@@ -557,8 +558,6 @@ function paintLangTime() {
     if (await save({ weekStart: v }, revert)) setWeekStart(v);
   }, off);
   paint('langtime',
-    row(t('set.language'), select(t('set.language'), [['auto', t('set.lang_auto')], ['en', t('set.lang_en')], ['nl', t('set.lang_nl')]], lang ?? 'auto', changeLanguage),
-      t('set.this_device')),
     row(t('set.timezone'), [tz, fromDevice], homeNote()),
     row(t('set.reminder_time'), time, homeNote(t('set.reminder_time_note'))),
     row(t('set.week_start'), week, homeNote()));
@@ -1315,7 +1314,7 @@ function build() {
       block('bell', t('set.notifications'), 'push'),
       // Testfeature "Tijd voor een taak?" (freetimeview.js): alleen als deze Tick hem aanheeft.
       freeTimeOn() ? block('calendar', t('ftt.title'), 'freetime') : null,
-      block('globe', t('set.langtime'), 'langtime'),
+      block('globe', t('set.time_block'), 'langtime'),
       block('user', t('set.account'), 'account'),
       block('phone', t('set.devices'), 'devices')),
     group(t('set.group_admin'),
