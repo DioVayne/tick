@@ -38,34 +38,49 @@ $('#fab').addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
+/**
+ * Van de ene pagina (Instellingen, Kalender, Help, Tickmanager) naar een andere: de nieuwe neemt de stap van de oude
+ * over, anders komt terug of een lijst kiezen weer op de oude pagina uit. Geeft terug of er een nieuwe stap moet komen.
+ * @param {'settings' | 'calendar' | 'help' | 'manager'} key
+ */
+function pageStep(key) {
+  const hs = history.state;
+  if (!(hs?.settings || hs?.calendar || hs?.help || hs?.manager)) return true;
+  if (!hs[key]) history.replaceState({ [key]: true }, '');
+  return false;
+}
+
 // Instellingen: een eigen pagina in de middenkolom (meldingen, thema en uitloggen staan daar).
-$('#btn-settings').addEventListener('click', () => { hideCalendar(); hideHelp(); hideManager(); openSettings({ push: true }); });
+$('#btn-settings').addEventListener('click', () => { const push = pageStep('settings'); hideCalendar(); hideHelp(); hideManager(); openSettings({ push }); });
 // Je naam bovenaan de zijbalk: opent Instellingen met het blok Account open.
 paintMe(CONFIG.userName);
-$('#btn-account').addEventListener('click', () => { hideCalendar(); hideHelp(); hideManager(); openSettings({ push: true, section: 'account' }); });
+$('#btn-account').addEventListener('click', () => { const push = pageStep('settings'); hideCalendar(); hideHelp(); hideManager(); openSettings({ push, section: 'account' }); });
 // Kalender: maandraster en agenda van taken met een datum.
 $('#btn-calendar').addEventListener('click', () => {
   if (isCalendarOpen()) { closeDrawer(); return; }
+  const push = pageStep('calendar');
   hideSettings();
   hideHelp();
   hideManager();
-  openCalendar({ push: true });
+  openCalendar({ push });
 });
 // Help: wat de knoppen doen.
 $('#btn-help').addEventListener('click', () => {
   if (isHelpOpen()) { closeDrawer(); return; }
+  const push = pageStep('help');
   hideSettings();
   hideCalendar();
   hideManager();
-  openHelp({ push: true });
+  openHelp({ push });
 });
 // Tickmanager: de oranje knop (mobiel), het item onder Inbox in de zijbalk en Opruimen starten in het lege paneel.
 // openManager verbergt de andere pagina's niet zelf (zoals help.js), dus dat eerst.
 function showManager(start = false) {
+  const push = pageStep('manager');
   hideSettings();
   hideCalendar();
   hideHelp();
-  openManager({ push: true, start }); // al open: geen nieuwe stap in de geschiedenis
+  openManager({ push, start }); // al open: geen nieuwe stap in de geschiedenis
 }
 $('#mgr-fab').addEventListener('click', () => showManager());
 $('#side-lists').addEventListener('click', (e) => {
