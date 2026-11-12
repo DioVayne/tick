@@ -4,20 +4,29 @@
 // Los van sw.js, zodat de test het kan uitvoeren zonder service worker.
 // data: de gegevens van de melding; wins: de open vensters van Tick.
 // Een url als /?task=<id> (zoals bij "is klaar ✓") werkt in een open venster net als taskId; &geo=1 (een plek die een
-// ander op een gedeelde taak zette) gaat mee, zodat de app kan aanbieden de Android-app te wekken.
+// ander op een gedeelde taak zette) gaat mee, zodat de app kan aanbieden de Android-app te wekken; &when=1 ook, zodat
+// de app de herinneringskiezer van de taak opent.
 self.tickClickTarget = (data, wins) => {
   const { taskId, url } = data || {};
-  if (wins[0]) {
-    let id = taskId;
-    let geo = false;
-    if (!id && url) {
-      try {
-        const params = new URL(url, 'https://tick.invalid').searchParams;
+  let id = taskId;
+  let geo = false;
+  let when = false; // &when=1 (botsing met de agenda): de taak openen met de herinneringskiezer open
+  if (url) {
+    try {
+      const params = new URL(url, 'https://tick.invalid').searchParams;
+      if (!id) {
         id = params.get('task');
         geo = params.get('geo') === '1';
-      } catch { /* geen geldige url */ }
-    }
-    return id ? { focus: wins[0], message: geo ? { type: 'open-task', id, geo } : { type: 'open-task', id } } : { focus: wins[0] };
+      }
+      when = params.get('when') === '1';
+    } catch { /* geen geldige url */ }
   }
-  return { open: taskId ? `/?task=${encodeURIComponent(taskId)}` : url || '/' };
+  if (wins[0]) {
+    if (!id) return { focus: wins[0] };
+    const message = { type: 'open-task', id };
+    if (geo) message.geo = true;
+    if (when) message.when = true;
+    return { focus: wins[0], message };
+  }
+  return { open: taskId ? `/?task=${encodeURIComponent(taskId)}${when ? '&when=1' : ''}` : url || '/' };
 };

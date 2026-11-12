@@ -15,7 +15,9 @@ export type Payload = {
   /** Vervangt de tag van de melding (zelfde tag = vervangt de vorige); zonder tag de taak of uitnodiging. */
   tag?: string;
   /** Knoppen in de melding, al vertaald: de service worker kent de taal niet. */
-  actions?: { action: 'done' | 'snooze' | 'tomorrow' | 'accept' | 'decline'; title: string }[];
+  actions?: { action: 'done' | 'snooze' | 'tomorrow' | 'accept' | 'decline' | 'reschedule' | 'free'; title: string }[];
+  /** Na "Naar vrij moment" (botsing met de agenda): de tekst met `{when}`, en de taal en zone om de tijd te tonen. */
+  moved?: { text: string; locale: string; timeZone: string };
   /** Tekst voor als een knop mislukt (de service worker zet de melding dan terug); `{status}` vult hij zelf in. */
   failed?: { offline: string; auth: string; server: string };
 };

@@ -43,6 +43,7 @@ let saved = false;
 let view = null; // het opgebouwde paneel: { id, readOnly, ...elementen, editor }
 /** @type {any} */
 let snapshot = null; // de laatst getoonde taak: een afgevinkte taak blijft open, ook als hij uit de lijsten verdwijnt
+let whenFor = null; // taak-id: de herinneringskiezer openen zodra die taak getoond wordt (melding bij een botsing met de agenda)
 let ready = false; // vóór de eerste load kan een taak (uit ?task=) nog ontbreken in de lokale kopie
 
 /** Na de eerste load: pas dan betekent "niet gevonden" echt "elders verwijderd". */
@@ -332,6 +333,25 @@ export function renderDetail() {
   const readOnly = !!(t.done || state.justDone.has(t.id));
   if (!view || view.id !== t.id || view.readOnly !== readOnly) build(t, readOnly);
   fill(t);
+  if (whenFor === t.id) openWhenNow();
+}
+
+/** De herinneringskiezer van de getoonde taak openen (na het tekenen, zodat het menu aan de knop hangt). */
+function openWhenNow() {
+  const v = view;
+  whenFor = null;
+  if (!v || v.readOnly) return;
+  setTimeout(() => /** @type {HTMLElement | null} */ (v.rail.querySelector('.step-when button.step-head'))?.click(), 0);
+}
+
+/**
+ * Opent de herinneringskiezer van taak `id` zodra die getoond wordt (of meteen, als hij al open is). Voor de melding
+ * "Botst met je agenda": tikken of Opnieuw inplannen.
+ * @param {string} id
+ */
+export function openWhenSoon(id) {
+  whenFor = id;
+  if (view?.id === id) openWhenNow();
 }
 
 function build(t, readOnly) {

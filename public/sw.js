@@ -124,12 +124,33 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(call(`/api/tasks/${taskId}/snooze`, 'POST', { minutes: 60 }));
     return;
   }
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
-      const go = self.tickClickTarget({ taskId, url }, wins);
-      if (!go.focus) return self.clients.openWindow(go.open);
-      if (go.message) go.focus.postMessage(go.message);
-      return go.focus.focus();
-    }),
-  );
+  // Tikken (of Opnieuw inplannen): Tick openen op de taak, of op de url.
+  const open = () => self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+    const go = self.tickClickTarget({ taskId, url }, wins);
+    if (!go.focus) return self.clients.openWindow(go.open);
+    if (go.message) go.focus.postMessage(go.message);
+    return go.focus.focus();
+  });
+  // Botsing met de agenda: Naar vrij moment. Daarna een stille melding met de nieuwe tijd; geen vrij moment (409): de
+  // app openen om zelf te kiezen.
+  if (taskId && event.action === 'free') {
+    const moved = (n.data || {}).moved;
+    event.waitUntil(fetch(`/api/tasks/${taskId}/free`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+      .then(async (res) => {
+        if (res.redirected || res.status === 401) return showAgain('auth');
+        if (res.status >= 500) return showAgain('server', res.status);
+        if (res.status === 409) return open();
+        if (!res.ok || !moved) return;
+        const { remind_at: at } = await res.json();
+        const when = new Date(at).toLocaleString(moved.locale, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: moved.timeZone });
+        return self.registration.showNotification(n.title, {
+          body: moved.text.replace('{when}', when), icon: n.icon, badge: n.badge, tag: n.tag, silent: true, data: { taskId }, actions: [],
+        });
+      }, () => showAgain('offline'))
+      .catch(() => {})
+      .finally(() => self.clients.matchAll({ type: 'window' })
+        .then((wins) => wins.forEach((w) => w.postMessage({ type: 'refresh' })))));
+    return;
+  }
+  event.waitUntil(open());
 });

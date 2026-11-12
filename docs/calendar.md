@@ -37,6 +37,19 @@ Where you see them:
 - **Tickmanager › Schedule:** the free moments come first; *Tomorrow* and *Next week* show **Busy: …** when they clash.
 - **📅 Calendar:** your appointments appear as grey, slanted rows (in the agenda, with their times) and grey bars (in the month view), next to your tasks. An appointment that runs over several days, or past midnight, shows on every day it covers. You can't open them in Tick.
 
+## When a new appointment clashes with a task
+When a **new** appointment shows up in a linked calendar at the moment of one of your reminders, Tick sends a notification: *Calendar clash: <task>*, with the appointment and its time. It has two buttons:
+- **Reschedule** (or tap the notification): opens the task with the reminder menu already open, so you pick a new moment yourself.
+- **Next free time**: moves the reminder to the first free half hour in your calendars after the old time (between 08:00 and 22:00), without opening Tick. A quiet notification tells you the new time. When there is no free half hour in the next two weeks, Tick opens the task so you can choose.
+
+What counts:
+- Only appointments that are new since Tick last fetched your calendars. Linking a calendar does not notify about appointments that were already there, and a task you put on top of an existing appointment yourself is not reported.
+- Only reminders still to come, for your own tasks and tasks shared with you. A reminder exactly at the end of an appointment, and all-day appointments, don't count.
+- One notification per task and reminder time: if the appointment disappears and comes back, you don't get it again. Change the reminder and a new clash notifies again.
+- It arrives when Tick fetches your calendar (about once an hour, or when you open the app), so not the second you add the appointment.
+
+For repeating tasks, *Next free time* moves only this time, like snoozing.
+
 ## Add to calendar
 A task with a reminder has **Add to calendar** in its panel, below the reminder. It makes an appointment of 30 minutes at the reminder time:
 - **Google Calendar** opens Google Calendar with the title and time filled in; you save it there.

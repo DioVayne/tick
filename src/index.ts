@@ -39,6 +39,7 @@ import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxAccount, maxUpload, sweepAttachments } from './attachments';
 import { mcpApi } from './mcp';
 import { calendarApi, calendarOn, refreshStaleFeeds } from './calendar';
+import { firstFree, futureBusy } from './clash';
 import { testFeatures } from './features';
 import { taskIcs } from '../public/ics.js';
 
@@ -1292,6 +1293,21 @@ app.post('/api/tasks/:id/snooze', async (c) => {
   // Bij een gedeelde taak verzet het de herinnering voor iedereen.
   const t = await getTask(c.env.DB, c.get('auth').userId, c.req.param('id'));
   if (!t) throw new HttpError(404, 'err.not_found');
+  await c.env.DB.prepare('UPDATE tasks SET remind_at = ?, notified = 0, repeat_prev = NULL, updated_at = ? WHERE id = ?').bind(at, now(), t.id).run();
+  return c.json({ ok: true, remind_at: at });
+});
+
+// Naar vrij moment (knop in de melding als een nieuwe afspraak in je agenda op de taak valt, src/clash.ts): het eerste
+// vrije halfuur in de agenda's van wie tikt, vanaf de herinnering. Net als snoozen blijft het ritme staan.
+app.post('/api/tasks/:id/free', async (c) => {
+  if (!calendarOn(c.env)) throw new HttpError(404, 'err.not_found');
+  const userId = c.get('auth').userId;
+  const t = await getTask(c.env.DB, userId, c.req.param('id'));
+  if (!t) throw new HttpError(404, 'err.not_found');
+  const ms = Date.now();
+  const free = firstFree(await futureBusy(c.env.DB, userId, ms), t.remind_at ? Date.parse(t.remind_at) : ms, ms, c.get('prefs'));
+  if (free === null) throw new HttpError(409, 'err.calendar_no_free');
+  const at = new Date(free).toISOString();
   await c.env.DB.prepare('UPDATE tasks SET remind_at = ?, notified = 0, repeat_prev = NULL, updated_at = ? WHERE id = ?').bind(at, now(), t.id).run();
   return c.json({ ok: true, remind_at: at });
 });
