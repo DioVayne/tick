@@ -237,6 +237,7 @@ The widget and quick add save first and send later, so they work offline (`Outbo
 | Lists | Fixed sidebar on the left: All, Inbox, other lists with open counts, New list, Completed, Trash; at the bottom ⓘ Help (`help.js`: one sentence per button, the new-task field hidden) and ⚙ Settings | ☰ opens a drawer with the same content |
 | Settings | One long page in the middle column (where the task list is), a view of its own with `history.pushState` | One column; Android's back button closes it |
 | Tasks | Middle, with search, input and drag to sort | One column |
+| Completed, Trash | In the middle column, a step of its own (`{ view: true }` with `history.pushState`, in `app.js`): back returns to the list you came from | Same; Android's back button returns to that list instead of closing the app |
 | Task | Detail panel on the right with a resize handle (380px by default, 300 to 700px, kept in `localStorage`) | Full-screen task screen with "‹ list"; Android's back button works through `history.pushState`/`popstate` |
 
 Title and description are saved 800 ms after the last keystroke and right away on blur, task switch, close and `visibilitychange`; everything else at once. `?task=<id>` (from a notification) opens the task.

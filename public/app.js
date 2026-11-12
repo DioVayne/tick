@@ -205,15 +205,38 @@ function goTo(route, { push = false } = {}) {
   else if (route.page === 'task') selectTask(route.id, { push });
 }
 
+// Afgerond en de prullenbak als eigen stap in de geschiedenis (zie de klik op #side hieronder).
+let viewStep = false; // er staat een stap { view: true } voor Afgerond of de prullenbak
+let viewFrom = /** @type {string | null} */ (null); // de lijst waar terug naartoe gaat
+let leavingView = false; // de volgende popstate komt van onze eigen history.go bij het kiezen van een lijst
+let afterPop = /** @type {(() => void) | null} */ (null); // wacht op de popstate van een pagina die net dichtging
+
 // ---------- detailpaneel ----------
 // Terug (ook de Android-terugknop) sluit het taakscherm; vooruit opent de taak weer.
 // De instellingen hebben ook een eigen history-item: terug sluit ze, vooruit opent ze weer (zonder de taak te raken).
 window.addEventListener('popstate', (e) => {
   // De kaart en een kiezer-sheet hebben een eigen history-item (zie backCloses in popover.js); die stap is van hen.
   if (document.body.classList.contains('map-open') || document.body.classList.contains('sheet-open')) return;
+  // Een pagina ging dicht door een klik in de zijbalk; nu de stap van Afgerond of de prullenbak (zie hieronder).
+  if (afterPop) {
+    const run = afterPop;
+    afterPop = null;
+    hideSettings(); hideCalendar(); hideHelp(); hideManager(); // hun close-functie liet het verbergen aan deze popstate
+    run();
+    return;
+  }
+  if (leavingView) { leavingView = false; render(); return; } // van Afgerond of de prullenbak naar een lijst gekozen
   // Een bladwijzer of getypt adres in de open app: een nieuwe stap met een adres dat render.js niet schreef.
   const route = location.hash && e.state?.hash !== location.hash ? parseHash(location.hash) : null;
-  if (route) { goTo(route); return; }
+  if (route) { viewStep = false; goTo(route); return; }
+  // Terug vanuit Afgerond of de prullenbak: naar de lijst waar je vandaan kwam.
+  if (viewStep && !e.state?.view && !e.state?.task) {
+    viewStep = false;
+    hideSettings(); hideCalendar(); hideHelp(); hideManager();
+    selectTask(null, { push: false });
+    selectList(viewFrom === 'Inbox' || lists().some((l) => l.name === viewFrom) ? viewFrom : null);
+    return;
+  }
   if (e.state?.settings) { hideCalendar(); hideHelp(); hideManager(); openSettings({ push: false }); return; }
   if (e.state?.help) {
     hideSettings();
@@ -257,15 +280,39 @@ document.addEventListener('keydown', (e) => {
 // Een andere lijst (of Afgerond) kiezen sluit het paneel en de instellingen. Capture: vóór de zijbalk zelf rendert.
 $('#side').addEventListener('click', (e) => {
   if (!(e.target instanceof Element)) return;
-  if (isSettingsOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeSettings();
-  if (isCalendarOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeCalendar();
-  if (isHelpOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeHelp();
-  if (isManagerOpen() && e.target.closest('button[data-list], #btn-done, #btn-trash')) closeManager();
-  if (!state.selected) return;
   const b = e.target.closest('button[data-list], #btn-done, #btn-trash');
   if (!b) return;
+  // Een open pagina met een eigen stap gaat hieronder met terug dicht; wat de weergave met de geschiedenis doet, wacht daarop.
+  const hs = history.state;
+  const popping = !!(hs?.settings || hs?.calendar || hs?.help || hs?.manager);
+  if (isSettingsOpen()) closeSettings();
+  if (isCalendarOpen()) closeCalendar();
+  if (isHelpOpen()) closeHelp();
+  if (isManagerOpen()) closeManager();
+  const toView = b.id === 'btn-trash' || b.id === 'btn-done';
+  // Afgerond en de prullenbak zijn een eigen stap: terug (ook de Android-terugknop) gaat naar de lijst ervoor, niet de app uit.
+  if (toView && !viewStep) {
+    viewFrom = state.list;
+    viewStep = true;
+    const onTask = !popping && !!history.state?.task; // mobiel taakscherm: die stap wordt de stap van de weergave
+    if (state.selected) selectTask(null, { push: false });
+    const push = () => { history.pushState({ view: true }, ''); render(); };
+    if (popping) afterPop = push;
+    else if (onTask) history.replaceState({ view: true }, '');
+    else push();
+    return;
+  }
+  if (!toView && viewStep) {
+    viewStep = false;
+    if (state.selected) selectTask(null, { push: false });
+    const steps = !popping && history.state?.task ? 2 : 1;
+    const leave = () => { leavingView = true; history.go(-steps); };
+    if (popping) afterPop = leave;
+    else leave();
+    return;
+  }
   const other = b.id === 'btn-trash' || (b.id === 'btn-done' ? !state.showDone : state.showDone || (b.dataset.list || null) !== state.list);
-  if (other) closeTask();
+  if (state.selected && other) closeTask();
 }, true);
 $('#newlist-input').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !e.target.value.trim()) return;
