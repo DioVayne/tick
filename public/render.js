@@ -166,6 +166,24 @@ function openTask(e, id) {
   f.setSelectionRange(at, at);
 }
 
+// Wat in een taakrij zelf iets doet (vinkje, titel, Annuleren, losmaken, meenemen, het titelveld…): daar geen "taak openen".
+const ROW_OWN = 'button, a, input, textarea, select, label, [contenteditable], .grip';
+
+/**
+ * Een klik ergens anders op de taak (de metaregel met bel en tijd, de omschrijving, het lijstpilletje, de lege ruimte)
+ * opent hem ook, net als een klik op de titel. Niet in een subtaak: die heeft haar eigen li.
+ * @param {HTMLElement} li @param {string} id
+ */
+export function openFromRow(li, id) {
+  li.classList.add('opens');
+  li.addEventListener('click', (e) => {
+    if (!(e.target instanceof Element) || e.target.closest('li.task') !== li || e.target.closest(ROW_OWN)) return;
+    if (!getSelection()?.isCollapsed) return; // tekst geselecteerd, geen klik
+    selectTask(id);
+  });
+  return li;
+}
+
 /**
  * "2/4" bij een hoofdtaak met subtaken: afgerond van alle. De server telt de afgeronde (`sub_done`, die staan niet in de
  * lijst); de open subtaken, ook de net lokaal afgevinkte, tellen we uit wat we hebben, zodat het ook offline klopt.
@@ -185,6 +203,7 @@ function taskItem(t, children) {
   const pending = state.justDone.get(t.id);
   const done = t.done || !!pending;
   const li = el('li', { class: 'task' + (done ? ' done' : '') + (pending ? ' pending' : '') + (selected ? ' sel' : ''), 'data-id': t.id });
+  openFromRow(li, t.id);
   // Op naam van een ander (in een gedeelde lijst): alleen die vinkt hem af.
   const locked = claimedByOther(t);
   const lockedBy = locked ? (t.claimed_by ?? state.open.find((p) => p.id === t.parent_id)?.claimed_by) : null;

@@ -21,4 +21,4 @@ How to use Tick, one page per topic. Installing Tick is in [SETUP.md](../SETUP.m
 | [Privacy](privacy.md) | What Tick keeps about you, your location, the services it uses, and how to see, download or delete your data |
 | [Integrations](integrations.md) | Claude (MCP), the inbox API for automations, Home Assistant, the fallback webhook |
 
-The app itself has a short **ⓘ Help** page in the sidebar with one sentence per button.
+The app itself has a short **ⓘ Help** page in the sidebar: one sentence per button, grouped into Basics, Organising, Time and Getting it back, the keyboard shortcuts (on a computer), and a link to this guide.

@@ -108,10 +108,14 @@ const getReg = () => ('serviceWorker' in navigator
 
 const note = (text) => el('small', { class: 'set-note' }, text);
 
-/** Een regel: links de omschrijving (met eventueel een toelichting), rechts de bediening. */
-const row = (label, control, sub) => el('div', { class: 'set-row' },
+/**
+ * Een regel: links de omschrijving (met eventueel een toelichting), rechts de bediening; `below` komt over de hele
+ * breedte eronder en hoort bij de regel (bv. het voorbeeld bij Ruimte tussen taken).
+ */
+const row = (label, control, sub, below) => el('div', { class: 'set-row' },
   el('div', { class: 'set-label' }, label || null, sub ? note(sub) : null),
-  control ? el('div', { class: 'set-control' }, control) : null);
+  control ? el('div', { class: 'set-control' }, control) : null,
+  below ?? null);
 
 const btn = (label, onclick, { kind = 'ghost', disabled = false } = {}) =>
   el('button', { type: 'button', class: `set-btn ${kind}`, disabled, onclick }, label);
@@ -376,8 +380,7 @@ function paintDisplay() {
     row(t('set.font'), seg(t('set.font'), [['s', t('set.font_s')], ['m', t('set.font_m')], ['l', t('set.font_l')], ['xl', t('set.font_xl')]],
       ds.font ?? 'm', (v) => setDisplay('font', v))),
     row(t('set.density'), seg(t('set.density'), [['compact', t('set.density_compact')], ['normal', t('set.density_normal')], ['roomy', t('set.density_roomy')]],
-      ds.density ?? 'normal', (v) => setDisplay('density', v))),
-    displayPreview(),
+      ds.density ?? 'normal', (v) => setDisplay('density', v)), null, displayPreview()),
     driveRow(),
     managerRow());
 }
@@ -407,9 +410,12 @@ function managerRow() {
   return row(t('set.tickmanager'), sw, t('set.tickmanager_note'));
 }
 
-const displayPreview = () => el('ul', { class: 'tasks set-preview', 'aria-hidden': 'true' },
-  ...['set.preview_task', 'set.preview_task2'].map((k) => el('li', { class: 'task' },
-    el('div', { class: 'row' }, el('span', { class: 'check' }), el('span', { class: 'title' }, t(k))))));
+/** Een omlijst vakje "Voorbeeld" onder Ruimte tussen taken, met twee taken in de opmaak van de lijst. */
+const displayPreview = () => el('div', { class: 'set-preview-box', 'aria-hidden': 'true' },
+  el('span', { class: 'set-preview-label' }, t('set.preview')),
+  el('ul', { class: 'tasks set-preview' },
+    ...['set.preview_task', 'set.preview_task2'].map((k) => el('li', { class: 'task' },
+      el('div', { class: 'row' }, el('span', { class: 'check' }), el('span', { class: 'title' }, t(k)))))));
 
 function displayBlock() {
   const sec = block('palette', t('set.display'), 'display', t('set.this_device'));

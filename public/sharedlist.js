@@ -3,7 +3,7 @@ import { selectTask } from './detail.js';
 import { ask } from './dialog.js';
 import { icon } from './icons.js';
 import { dateLocale, t } from './i18n.js';
-import { el, fmt, toast } from './render.js';
+import { el, fmt, openFromRow, toast } from './render.js';
 import { openReportDialog, reportsOn } from './report.js';
 import CONFIG from './settings.js';
 import {
@@ -212,7 +212,7 @@ function doneRow(task) {
   const locked = claimedByOther(task);
   const when = task.done_at ? fmt(task.done_at) : '';
   const who = task.done_by ? nameOf(task.done_by) : '';
-  return el('li', { class: 'task done', 'data-id': task.id },
+  return openFromRow(el('li', { class: 'task done', 'data-id': task.id },
     el('div', { class: 'row' },
       el('button', {
         class: 'check', role: 'checkbox', 'aria-checked': 'true', disabled: locked,
@@ -220,5 +220,5 @@ function doneRow(task) {
         onclick: () => toggleDone(task),
       }),
       el('button', { class: 'title', 'aria-current': state.selected === task.id ? 'true' : false, onclick: () => selectTask(task.id) }, task.title)),
-    el('div', { class: 'meta' }, el('span', {}, who && when ? t('slist.done_by', { name: who, when }) : who || when)));
+    el('div', { class: 'meta' }, el('span', {}, who && when ? t('slist.done_by', { name: who, when }) : who || when))), task.id);
 }

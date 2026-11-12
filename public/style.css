@@ -168,6 +168,8 @@ ul.sub .title { min-height: 28px; font-size: .8125rem; }
 ul.sub li.task:not(.done) .title { color: color-mix(in srgb, var(--text) 82%, var(--muted)); }
 ul.sub textarea.title-edit { padding: 4.9px 2px; }
 li.task:has(> .row:hover) { background: color-mix(in srgb, var(--fill), var(--text) 5%); }
+/* De hele taak opent hem (render.js, openFromRow), ook de metaregel; vinkje, titelveld en greepje houden hun eigen cursor */
+li.task.opens { cursor: pointer; }
 /* De gekozen taak: een dun accentrandje met een zachte gloed */
 li.task.sel, li.task.sel:has(> .row:hover) { background: color-mix(in srgb, var(--fill), var(--accent) 8%);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 22%, transparent); }
@@ -697,13 +699,43 @@ button.small { min-height: 30px; padding: 2px 10px; font-size: .8125rem; }
 .toast.ok { background: var(--text); color: var(--bg); }
 body.settings-open #main > :not(#settings):not(#net) { display: none; }
 
-/* ---------- Help (help.js): per knop een kopje en een zin ---------- */
+/* ---------- Help (help.js): groepen met een klein kopje (zoals Instellingen), per groep een kaart met regels:
+   icoon in een getint rondje, kopje en een zin. Daarna de sneltoetsen (alleen met muis) en de link naar de handleiding.
+   --c is de kleur van het icoon: standaard het accent, een paar in hun eigen app-kleur (gemengd met --text, dus leesbaar
+   in licht, donker en retro). ---------- */
 body.help-open #main > :not(#help):not(#net) { display: none; }
-#help { padding: 2px 0 24px; max-width: 40rem; }
-.help-intro { margin: 0 0 12px; color: var(--muted); }
-.help-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.help-list h3 { margin: 0 0 2px; font-size: .9375rem; font-weight: 600; }
-.help-list p { margin: 0; line-height: 1.45; }
+#help { --c: var(--accent); display: grid; gap: 4px; padding: 2px 0 24px; max-width: 40rem; }
+.help-intro { margin: 0 4px 2px; color: var(--muted); }
+.help-group { display: grid; min-width: 0; }
+.help-group-h { justify-self: start; margin: 14px 4px 6px; color: var(--muted); font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+html[data-bg] .help-group-h, html[data-bg] .help-intro { padding: 2px 10px; border-radius: 999px; background-color: color-mix(in srgb, var(--bg) 93%, transparent); }
+.help-card { list-style: none; margin: 0; padding: 0; min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.help-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; }
+.help-item + .help-item, .help-key + .help-key { border-top: 1px solid var(--line); }
+.help-ico { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  background: color-mix(in srgb, var(--c) 15%, var(--card)); color: color-mix(in srgb, var(--c) 80%, var(--text)); }
+.help-ico .ico { width: 18px; height: 18px; vertical-align: 0; }
+.help-text { min-width: 0; padding-top: 1px; }
+.help-text h3 { margin: 0 0 2px; font-size: .9375rem; font-weight: 600; }
+.help-text p { margin: 0; color: var(--muted); font-size: .875rem; line-height: 1.45; }
+.help-remind { --c: var(--bell); }
+.help-repeat { --c: #7f77dd; } /* zoals .step-repeat */
+.help-manager { --c: var(--manager); }
+.help-trash { --c: var(--danger); }
+.help-done { --c: var(--ok); }
+/* Sneltoetsen: alleen waar een muis is (op een telefoon is er meestal geen toetsenbord). */
+.help-key { display: flex; align-items: center; gap: 14px; min-height: 44px; padding: 6px 14px; font-size: .9375rem; }
+.help-kbds { display: inline-flex; align-items: center; gap: 4px; flex: none; min-width: min(9rem, 40%); }
+.help-key kbd { display: inline-block; min-width: 1.9em; padding: 2px 7px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; background: var(--fill); color: var(--text); font: 600 .8125rem/1.3 ui-monospace, "Cascadia Mono", Consolas, monospace; text-align: center; }
+.help-plus { color: var(--muted); font-size: .8125rem; }
+@media (hover: none) { .help-keys { display: none; } }
+/* Handleiding: een kaart als link, met hetzelfde icoonrondje. */
+.help-guide { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); text-decoration: none; }
+.help-guide:hover { background: var(--hover); }
+.help-guide:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.help-guide strong { display: block; color: var(--link); font-size: .9375rem; }
+.help-guide small { display: block; color: var(--muted); font-size: .8125rem; }
+.help-guide::after { content: ""; flex: none; width: 7px; height: 7px; margin: 0 4px 0 auto; border: solid var(--muted); border-width: 1.8px 1.8px 0 0; rotate: 45deg; }
 
 /* Tickmanager */
 /* manager.js: de pagina (aantal, termijnen, lijsten), de kaart van de ronde en de samenvatting. --manager en
@@ -774,17 +806,20 @@ body.calendar-open #main > :not(#calendar):not(#net) { display: none; }
 .cal-nav:focus-visible, .cal-mode:focus-visible, .cal-chip:focus-visible, .cal-num:focus-visible, .cal-item:focus-visible, .cal-more:focus-visible, .cal-morebtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 @media (max-width: 600px) { .cal-cell { min-height: 4rem; } .cal-chip .cal-name { display: none; } .cal-chip { height: 6px; min-height: 0; padding: 0; background: var(--accent); } .cal-chip .cal-time { display: none; } .cal-chip.cal-busy { border: 0; background: var(--muted); opacity: .45; } }
 /* Groepen (klein kopje) met daaronder één lijst van uitklapbare blokken; een open blok krijgt een lichte tint. */
+/* Smal gehouden (max-width), zodat omschrijving en bediening dicht bij elkaar staan. --div: scheidingslijnen, --edge: randen
+   van knoppen en keuzes; allebei uit --muted, zodat ze ook in donker en retro zichtbaar zijn (--line valt daar weg). */
 .settings { --tint: color-mix(in srgb, var(--accent) 14%, var(--card)); --open: color-mix(in srgb, var(--accent) 4%, var(--card));
-  display: grid; gap: 4px; padding: 2px 0 24px; }
+  --div: color-mix(in srgb, var(--muted) 24%, transparent); --edge: color-mix(in srgb, var(--muted) 45%, transparent);
+  display: grid; gap: 4px; max-width: 45rem; padding: 2px 0 24px; }
 .settings [hidden] { display: none !important; }
 .set-back { justify-self: start; min-height: 34px; margin-bottom: 4px; padding: 4px 14px 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--text); font-size: .875rem; }
 .set-back:hover { background: var(--hover); }
 .set-group { display: grid; min-width: 0; }
 .set-group-h { justify-self: start; margin: 14px 4px 6px; color: var(--muted); font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 html[data-bg] .set-group-h { padding: 2px 10px; border-radius: 999px; background-color: color-mix(in srgb, var(--bg) 93%, transparent); }
-.set-list { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.set-list { min-width: 0; overflow: hidden; border: 1px solid var(--div); border-radius: 12px; background: var(--card); }
 .set-block { min-width: 0; scroll-margin-top: 72px; } /* openen vanaf je naam: het kopje niet onder de vaste kopbalk */
-.set-block + .set-block { border-top: 1px solid var(--line); }
+.set-block + .set-block { border-top: 1px solid var(--div); }
 .set-block[open] { background: var(--open); }
 .set-block > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 48px; padding: 8px 14px; cursor: pointer; list-style: none; font-size: 1rem; font-weight: 600; }
 .set-block > summary::-webkit-details-marker { display: none; }
@@ -802,12 +837,12 @@ html[data-bg] .set-group-h { padding: 2px 10px; border-radius: 999px; background
 .set-sub { color: var(--muted); font-size: .8125rem; font-weight: 400; }
 .set-sub:empty { display: none; }
 .set-foot { padding: 8px 0 2px; }
-.set-h3 { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: .8125rem; font-weight: 600; }
-.set-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+.set-h3 { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--div); color: var(--muted); font-size: .8125rem; font-weight: 600; }
+.set-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; min-height: 56px; padding: 10px 0; border-top: 1px solid var(--div); }
 .set-body > .set-row:first-child, .set-keys > .set-row:first-child, .set-keys > div:first-child > .set-row, .set-h3 + .set-row { border-top: 0; }
 .set-label { flex: 1 1 200px; min-width: 0; font-size: .9375rem; overflow-wrap: anywhere; }
 .set-label:empty { display: none; }
-.set-note { display: block; margin-top: 2px; color: var(--muted); font-size: .8125rem; line-height: 1.4; }
+.set-note { display: block; max-width: 52ch; margin-top: 2px; color: var(--muted); font-size: .8125rem; line-height: 1.4; }
 .set-note:empty { display: none; }
 .set-note code, .set-secret code { overflow-wrap: anywhere; border-radius: 4px; background: var(--fill); font-size: .75rem; }
 .set-note code { padding: 1px 4px; }
@@ -815,6 +850,8 @@ p.set-note { margin: 0 0 8px; }
 .set-control { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; margin-left: auto; max-width: 100%; min-width: 0; }
 /* Knoppen in volgorde van gewicht: primary (gevuld, hooguit één per blok), tint, ghost (rand), danger (alleen rode tekst). */
 .set-btn { min-height: 36px; padding: 4px 12px; font-size: .875rem; }
+.set-btn.ghost { border-color: var(--edge); background: var(--card); font-weight: 500; }
+.set-btn.ghost:hover { background: var(--hover); }
 .set-btn.tint { background: var(--tint); color: var(--link); }
 .set-btn.tint:hover { background: color-mix(in srgb, var(--accent) 22%, var(--card)); }
 .set-btn.danger { border-color: transparent; padding-inline: 8px; }
@@ -822,20 +859,29 @@ p.set-note { margin: 0 0 8px; }
 .set-btn:disabled, .set-seg button:disabled, .set-select:disabled, .set-control input:disabled, .set-url:disabled { opacity: .55; cursor: default; }
 /* Knoppenrij: één keuze gemarkeerd, de rest neutraal; breekt op smalle schermen netjes af */
 .set-actions { display: inline-flex; flex-wrap: wrap; gap: 8px; }
-.set-seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; }
-.set-seg button { min-height: 36px; padding: 4px 10px; border: 0; border-radius: 0; background: transparent; color: var(--text); font-size: .875rem; }
-.set-seg button + button { border-left: 1px solid var(--line); }
-.set-seg button[aria-pressed="true"] { background: var(--tint); color: var(--link); font-weight: 600; }
-.set-select { max-width: 100%; min-height: 36px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); font-size: .875rem; }
+/* Eén vak met een rand en een vulling; de keuzes zijn knoppen daarin, de gekozen is gevuld in de accentkleur. */
+.set-seg { display: inline-flex; flex-wrap: wrap; gap: 2px; max-width: 100%; padding: 3px; border: 1px solid var(--edge); border-radius: 10px; background: var(--fill); }
+.set-seg button { flex: 1 1 auto; min-height: 32px; padding: 4px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--text); font-size: .875rem; white-space: nowrap; }
+.set-seg button:not([aria-pressed="true"]):not(:disabled):hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.set-seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); font-weight: 600; box-shadow: 0 1px 2px var(--shadow); }
+.set-select { max-width: 100%; min-height: 36px; padding: 6px 8px; border: 1px solid var(--edge); border-radius: 8px; background: var(--card); color: var(--text); font-size: .875rem; }
+/* Telefoon: een keuzerij, keuzelijst of knoppen onder de omschrijving, over de hele breedte; een schakelaar blijft ernaast. */
+@media (max-width: 599.98px) {
+  .set-control:not(:has(> .set-switch)) { flex-basis: 100%; justify-content: flex-start; margin-left: 0; }
+  .set-control > .set-seg { display: flex; width: 100%; }
+}
+.settings input:not([type="checkbox"]):not([type="file"]) { border-color: var(--edge); }
 /* Schakelaar (checkbox met role=switch) */
-.set-switch { appearance: none; position: relative; flex: none; width: 46px; min-width: 46px; height: 28px; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 999px; background: var(--fill); cursor: pointer; transition: background .15s; }
+.set-switch { appearance: none; position: relative; flex: none; width: 46px; min-width: 46px; height: 28px; margin: 0; padding: 0; border: 1px solid var(--edge); border-radius: 999px; background: var(--fill); cursor: pointer; transition: background .15s; }
 .set-switch::before { content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: translate .15s; }
 .set-switch:checked { border-color: var(--accent); background: var(--accent); }
 .set-switch:checked::before { translate: 18px 0; }
 .set-switch:disabled { opacity: .5; cursor: default; }
 .settings .hint { margin: 0 0 8px; }
 /* Voorbeeldtaak: dezelfde opmaak als de lijst, dus lettergrootte en ruimte veranderen direct mee */
-.set-preview { margin: 4px 0 8px; padding: 0 4px; border: 1px dashed var(--line); border-radius: 8px; pointer-events: none; }
+.set-preview-box { flex: 1 0 100%; display: grid; gap: 6px; padding: 8px 10px 10px; border: 1px solid var(--div); border-radius: 10px; background: var(--bg); pointer-events: none; }
+.set-preview-label { color: var(--muted); font-size: .75rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.set-preview { pointer-events: none; }
 .set-preview li.task:last-child { border-bottom: 0; }
 .set-preview .check { display: inline-block; }
 .set-form { display: grid; gap: 8px; padding: 0 0 10px; }
