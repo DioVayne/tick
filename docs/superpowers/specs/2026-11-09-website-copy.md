@@ -179,7 +179,7 @@ Een taak toevoegen begint met typen in het veld bovenaan je lijst. Druk op Enter
 
 Onder de zinnen staat **Omschrijving, subtaken of bijlage**. Daar schrijf je notities, zet je subtaken neer, of voeg je een foto of bestand toe. Een plaatje plakken of een bestand op de kaart slepen kan ook.
 
-Tick haalt geen datum uit wat je typt. Je kiest de tijd zelf, met *Vandaag*, *Morgen*, *Volgende week* of **Andere dag en tijd…**. Zo weet je altijd precies wat er staat.
+Tick haalt geen datum uit wat je typt. Je kiest de tijd zelf, met **Kies dag en tijd** of een snelle keuze voor vandaag, morgen of volgende week. Zo weet je altijd precies wat er staat.
 
 Met een toetsenbord: **N** opent het veld, **Shift+Enter** voegt de taak toe en opent hem meteen, **Esc** maakt de kaart leeg. Open je de taak later, dan zie je dezelfde zinnen terug. Wat je hebt ingevuld staat in kleur.
 
@@ -187,7 +187,7 @@ Met een toetsenbord: **N** opent het veld, **Shift+Enter** voegt de taak toe en 
 - **Anker:** `#herinneringen`
 - **Tegel:** Herinneringen · Vandaag, morgen of volgende week, met één tik.
 - **Lees meer:**
-Tik bij een taak op **Herinner me…** en kies *Vandaag*, *Morgen* of *Volgende week*. Voor een ander moment is er **Andere dag en tijd…**. Een nieuwe herinnering begint op het volgende hele uur. Kies je alleen een datum, dan gebruikt Tick je standaardtijd: 09:00, tenzij je dat veranderde.
+Tik bij een taak op **Herinner me…**. Bovenaan staat **Kies dag en tijd**. Daaronder staan snelle keuzes voor vandaag, morgen en volgende week. Een nieuwe herinnering begint op het volgende hele uur. Kies je alleen een datum, dan gebruikt Tick je standaardtijd: 09:00, tenzij je dat veranderde.
 
 Op dat moment krijg je een melding op elk apparaat waar je meldingen aanzette. De melding heeft twee knoppen: **Klaar** vinkt de taak af, **Over 1 uur** schuift hem een uur op. Tik je op de melding zelf, dan opent de taak.
 
@@ -809,7 +809,7 @@ Adding a task starts with typing in the field at the top of your list. Press Ent
 
 Under the sentences is **Description, subtasks or attachment**. There you write notes, add subtasks, or attach a photo or file. You can also paste a picture or drop a file on the card.
 
-Tick doesn't pull a date out of what you type. You choose the time yourself, with *Today*, *Tomorrow*, *Next week* or **Other day and time…**. So you always know exactly what's set.
+Tick doesn't pull a date out of what you type. You choose the time yourself, with **Pick day and time** or a quick choice for today, tomorrow or next week. So you always know exactly what's set.
 
 With a keyboard: **N** opens the field, **Shift+Enter** adds the task and opens it right away, **Esc** empties the card. Open the task later and you see the same sentences. What you filled in shows in colour.
 
@@ -817,7 +817,7 @@ With a keyboard: **N** opens the field, **Shift+Enter** adds the task and opens 
 - **Anchor:** `#reminders`
 - **Tile:** Reminders · Today, tomorrow or next week, in one tap.
 - **Read more:**
-Tap **Remind me…** on a task and choose *Today*, *Tomorrow* or *Next week*. For another moment there's **Other day and time…**. A new reminder starts at the next whole hour. Pick only a date, and Tick uses your default time: 09:00, unless you changed it.
+Tap **Remind me…** on a task. At the top is **Pick day and time**. Below it are quick choices for today, tomorrow and next week. A new reminder starts at the next whole hour. Pick only a date, and Tick uses your default time: 09:00, unless you changed it.
 
 At that moment you get a notification on every device where you turned notifications on. It has two buttons: **Done** ticks the task off, **In 1 hour** moves it an hour later. Tap the notification itself to open the task.
 
