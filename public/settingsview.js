@@ -22,7 +22,6 @@ import { timeButton } from './timepicker.js';
 import { badgeOff, setBadgeOff } from './badge.js';
 import { setDriveMode } from './driveview.js';
 import { reloadBusy } from './agenda.js';
-import { freeTimeOn, paintFreeTimeSettings } from './freetimeview.js'; // testfeature
 
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
@@ -1312,8 +1311,6 @@ function build() {
       CONFIG.calendarFeeds ? block('calendar', t('set.calendar'), 'calendar') : null),
     group(t('set.group_you'),
       block('bell', t('set.notifications'), 'push'),
-      // Testfeature "Tijd voor een taak?" (freetimeview.js): alleen als deze Tick hem aanheeft.
-      freeTimeOn() ? block('calendar', t('ftt.title'), 'freetime') : null,
       block('globe', t('set.time_block'), 'langtime'),
       block('user', t('set.account'), 'account'),
       block('phone', t('set.devices'), 'devices')),
@@ -1366,7 +1363,6 @@ export function openSettings({ push = true, section } = {}) {
   paintHome(); // eerst met de laatst bekende waarden, uitgeschakeld
   if (section) reveal(section);
   paint('devices', note(t('set.loading')));
-  if (S.parts.freetime) paintFreeTimeSettings(S.parts.freetime);
   const reg = getReg().then((r) => { S.reg = r; if (S.open) paintPush(); });
   Promise.all([reg, fetchSettings(), fetchAccount()]).then(() => { if (S.open) { paintHome(); paintDevices(); } });
 }

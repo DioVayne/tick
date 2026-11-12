@@ -219,15 +219,11 @@ describe('cron-schema', () => {
   it('herinneringen elke minuut, opruimen alleen in de eerste minuut van het uur', async () => {
     const { cronSteps } = await import('../src/index');
     const { installPrefsFrom } = await import('../src/prefs');
-    // Zonder testfeatures; "Tijd voor een taak?" (elke minuut, zelf eens per uur per persoon) komt er alleen bij als hij aanstaat.
-    const plain = { ...env, TEST_FEATURES: '' };
-    const names = (iso: string) => cronSteps(plain, installPrefsFrom(plain), Date.parse(iso)).map(([n]) => n);
+    const names = (iso: string) => cronSteps(env, installPrefsFrom(env), Date.parse(iso)).map(([n]) => n);
     expect(names('2030-01-01T10:00:30Z')).toEqual(['reminders', 'verlopen', 'agenda', 'prullenbak', 'onbevestigd', 'bijlagen']);
     // Gekoppelde agenda's elke 5 minuten (een paar feeds per keer).
     expect(names('2030-01-01T10:05:00Z')).toEqual(['reminders', 'verlopen', 'agenda']);
     expect(names('2030-01-01T10:03:00Z')).toEqual(['reminders', 'verlopen']);
-    expect(cronSteps(env, installPrefsFrom(env), Date.parse('2030-01-01T10:03:00Z')).map(([n]) => n))
-      .toEqual(['reminders', 'verlopen', 'tijd voor een taak']);
   });
 });
 

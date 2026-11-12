@@ -65,7 +65,7 @@ export function renderSidebar() {
   if ($('#side-lists .rename-input')) { updateHeader(); return; }
   const all = lists();
   // Met de instellingen open is geen lijst gekozen in de zijbalk; ⚙ Instellingen is dan gemarkeerd.
-  const current = (name) => !settingsOpen() && !calendarOpen() && !helpOpen() && !managerOpen() && !freeTimeOpen() && !state.showDone && !state.showTrash && state.list === name;
+  const current = (name) => !settingsOpen() && !calendarOpen() && !helpOpen() && !managerOpen() && !state.showDone && !state.showTrash && state.list === name;
   const item = (name, label, count, lead, shared = false) =>
     el('button', {
       class: 'item' + (current(name) ? ' on' : ''),
@@ -123,21 +123,18 @@ const settingsOpen = () => document.body.classList.contains('settings-open');
 const calendarOpen = () => document.body.classList.contains('calendar-open');
 const helpOpen = () => document.body.classList.contains('help-open');
 const managerOpen = () => document.body.classList.contains('manager-open');
-/** Testfeature "Tijd voor een taak?" (freetimeview.js). */
-const freeTimeOpen = () => document.body.classList.contains('freetime-open');
 
 function updateHeader() {
   const open = settingsOpen();
   const cal = calendarOpen();
   const help = helpOpen();
-  // Testfeature "Tijd voor een taak?": telt hier als een pagina zoals de help.
-  const mgr = managerOpen() || freeTimeOpen();
+  const mgr = managerOpen();
   $('#btn-done').setAttribute('aria-pressed', String(state.showDone && !open && !cal && !help && !mgr));
   $('#btn-trash').setAttribute('aria-pressed', String(state.showTrash && !open && !cal && !help && !mgr));
   $('#btn-calendar').setAttribute('aria-pressed', String(cal));
   $('#btn-help')?.setAttribute('aria-pressed', String(help));
   $('#btn-settings')?.setAttribute('aria-pressed', String(open));
-  $('#title').textContent = open ? t('set.title') : cal ? t('cal.title') : help ? t('help.title') : managerOpen() ? t('mgr.title') : freeTimeOpen() ? t('ftt.title')
+  $('#title').textContent = open ? t('set.title') : cal ? t('cal.title') : help ? t('help.title') : mgr ? t('mgr.title')
     : state.showTrash ? t('ui.trash') : state.showDone ? t('ui.completed') : state.list ?? t('ui.all');
   // Alleen een eigen lijst heeft een menu achter de titel; Alle, Inbox en de andere weergaven niet.
   /** @type {HTMLButtonElement} */ ($('#title')).disabled = open || cal || help || mgr || state.showTrash || state.showDone || !state.list || state.list === 'Inbox';
