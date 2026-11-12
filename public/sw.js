@@ -2,12 +2,12 @@
 
 // App-shell voor offline gebruik. Network-first: online krijg je altijd de nieuwste versie (geen mix van oude en
 // nieuwe modules na een deploy), offline de laatst bewaarde. Verhoog de versie als de lijst hieronder verandert.
-const CACHE = 'tick-shell-v87';
+const CACHE = 'tick-shell-v88';
 const SHELL = [
   '/', '/app.js', '/api.js', '/db.js', '/store.js', '/render.js', '/review.js', '/planner.js', '/agenda.js', '/ics.js', '/manager.js', '/push.js', '/style.css', '/sortable.min.js',
   '/markdown.js', '/lists.js', '/editor.js', '/sidebar.js', '/detail.js', '/listpicker.js', '/listmenu.js', '/dialog.js',
   '/repeat.js', '/i18n.js', '/config.js', '/settings.js', '/repeatpicker.js', '/places.js', '/map.js', '/leaflet.js', '/leaflet.css',
-  '/theme.js', '/settingsview.js', '/androidapp.js', '/applink.js', '/swclick.js', '/next.js', '/trash.js', '/share.js', '/sharedlist.js', '/copies.js', '/confetti.js', '/attachments.js', '/calendar.js', '/calendarview.js', '/help.js', '/datepicker.js', '/timepicker.js', '/icons.js', '/popover.js', '/swipe.js', '/badge.js', '/duestrip.js', '/route.js', '/drive.js', '/driveview.js', '/composer.js', '/steps.js', '/verifybar.js', '/report.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/badge-96.png',
+  '/theme.js', '/settingsview.js', '/androidapp.js', '/applink.js', '/swclick.js', '/next.js', '/trash.js', '/share.js', '/sharedlist.js', '/copies.js', '/confetti.js', '/attachments.js', '/calendar.js', '/calendarview.js', '/help.js', '/datepicker.js', '/timepicker.js', '/icons.js', '/popover.js', '/swipe.js', '/badge.js', '/duestrip.js', '/route.js', '/drive.js', '/driveview.js', '/composer.js', '/steps.js', '/verifybar.js', '/report.js', '/freetime.js', '/freetimeview.js', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/badge-96.png',
 ];
 importScripts('/swclick.js'); // zet self.tickClickTarget
 const NETWORK_TIMEOUT_MS = 4000;
@@ -72,15 +72,18 @@ self.addEventListener('push', (event) => {
       renotify: !!data.tag, // een groepsmelding vervangt de vorige onder dezelfde tag, maar moet wel opnieuw afgaan
       data,
       // De server stuurt de knoppen vertaald mee; zonder taak geen knoppen.
-      actions: data.taskId || data.shareId || data.listInviteId ? (data.actions ?? (data.taskId ? [{ action: 'done', title: '✓' }, { action: 'snooze', title: 'In 1 hour' }] : [])) : [],
+      actions: data.taskId || data.shareId || data.listInviteId ? (data.actions ?? (data.taskId ? [{ action: 'done', title: '✓' }, { action: 'snooze', title: 'In 1 hour' }] : []))
+        : data.page ? data.actions ?? [] : [],
     }),
   ]));
 });
 
 self.addEventListener('notificationclick', (event) => {
   const n = event.notification;
-  const { taskId, url, occurrence, shareId, listInviteId } = n.data || {};
+  const { taskId, url, occurrence, shareId, listInviteId, page } = n.data || {};
   n.close();
+  // Een scherm van de app (testfeature "Tijd voor een taak?"): Nee sluit alleen de melding; Ja of tikken opent het.
+  if (page && event.action === 'no') return;
   // Mislukt de actie (geen verbinding, sessie verlopen, serverfout), dan komt de melding terug: anders denk je dat de
   // taak is afgevinkt of verzet terwijl er niets gebeurde. De tekst zegt wat er misging (`failed`, vertaald door de
   // server), anders lijkt het een dubbele melding. Zonder inlog geen knoppen: die mislukken toch; tikken opent Tick.
@@ -126,7 +129,7 @@ self.addEventListener('notificationclick', (event) => {
   }
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
-      const go = self.tickClickTarget({ taskId, url }, wins);
+      const go = self.tickClickTarget({ taskId, url, page }, wins);
       if (!go.focus) return self.clients.openWindow(go.open);
       if (go.message) go.focus.postMessage(go.message);
       return go.focus.focus();

@@ -40,6 +40,8 @@ export default defineConfig({
           MAIL_FROM: '',
           MAIL_DAILY_LIMIT: '',
           CALENDAR_FEEDS: 'true',
+          // De testfeatures staan in de tests aan (src/features.ts).
+          TEST_FEATURES: 'freetime',
           TEST_MIGRATIONS: migrations,
         },
       },

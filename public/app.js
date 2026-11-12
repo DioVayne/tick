@@ -9,6 +9,7 @@ import { closeCalendar, hideCalendar, isCalendarOpen, openCalendar, refreshCalen
 import { closeSettings, hideSettings, isSettingsOpen, openSettings, paintMe } from './settingsview.js';
 import { closeHelp, hideHelp, isHelpOpen, openHelp } from './help.js';
 import { closeManager, hideManager, isManagerOpen, openManager, refreshManager } from './manager.js';
+import { closeFreeTime, hideFreeTime, isFreeTimeOpen, onFreeTimeShow, openFreeTime, refreshFreeTime } from './freetimeview.js';
 import { closeDrawer, onListContext, selectDone, selectList, selectTrash, setupSidebar } from './sidebar.js';
 import { init, lists, load, on, refreshInvites, state } from './store.js';
 import { parseHash } from './route.js';
@@ -32,6 +33,23 @@ initComposer();
 on('change', refreshComposer);
 // Tickmanager: de pagina telt mee met elke wijziging (niet een lopende kaart, zie refreshManager).
 on('change', refreshManager);
+// Testfeature "Tijd voor een taak?" (freetimeview.js): de pagina volgt de taken; een andere pagina of lijst sluit hem.
+on('change', refreshFreeTime);
+/** Naar het scherm met taken (Ja in de melding met Tick al open, of Bekijk het scherm in Instellingen). */
+function showFreeTime() {
+  if (isSettingsOpen()) hideSettings();
+  hideCalendar();
+  hideHelp();
+  hideManager();
+  selectTask(null, { push: false });
+  openFreeTime();
+}
+onFreeTimeShow(showFreeTime);
+document.addEventListener('click', (e) => {
+  if (!isFreeTimeOpen() || !(e.target instanceof Element)) return;
+  if (e.target.closest('#btn-settings, #btn-account, #btn-calendar, #btn-help, #btn-manager, #mgr-fab')) hideFreeTime();
+  else if (e.target.closest('#side button[data-list], #btn-done, #btn-trash')) closeFreeTime();
+}, true);
 // De ronde +-knop (mobiel): naar het invoerveld bovenaan en daar typen. Focus meteen in de klik, anders geen toetsenbord op iOS.
 $('#fab').addEventListener('click', () => {
   $('#add-title').focus({ preventScroll: true });
@@ -121,7 +139,7 @@ document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
   if (e.key !== '/' && e.key !== 'n' && e.key !== 'N') return;
   if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable], dialog')) return;
-  if (document.body.matches('.settings-open, .calendar-open, .help-open, .manager-open, .map-open')) return;
+  if (document.body.matches('.settings-open, .calendar-open, .help-open, .manager-open, .freetime-open, .map-open')) return;
   e.preventDefault();
   if (e.key === '/') openSearch();
   else $('#add-title').focus();
@@ -189,6 +207,7 @@ function goTo(route, { push = false } = {}) {
   if (route.page !== 'calendar') hideCalendar();
   if (route.page !== 'help') hideHelp();
   if (route.page !== 'manager') hideManager();
+  if (route.page !== 'freetime') hideFreeTime();
   if (route.page !== 'task') selectTask(null, { push: false });
   if (route.page === 'all') selectList(null);
   else if (route.page === 'inbox') selectList('Inbox');
@@ -202,6 +221,7 @@ function goTo(route, { push = false } = {}) {
   else if (route.page === 'settings') openSettings({ push });
   else if (route.page === 'help') openHelp({ push });
   else if (route.page === 'manager') openManager({ push }); // uitgezet: doet niets, de gewone lijst blijft
+  else if (route.page === 'freetime') openFreeTime({ push }); // testfeature uit: doet niets
   else if (route.page === 'task') selectTask(route.id, { push });
 }
 
@@ -214,11 +234,12 @@ window.addEventListener('popstate', (e) => {
   // Een bladwijzer of getypt adres in de open app: een nieuwe stap met een adres dat render.js niet schreef.
   const route = location.hash && e.state?.hash !== location.hash ? parseHash(location.hash) : null;
   if (route) { goTo(route); return; }
-  if (e.state?.settings) { hideCalendar(); hideHelp(); hideManager(); openSettings({ push: false }); return; }
+  if (e.state?.settings) { hideCalendar(); hideHelp(); hideManager(); hideFreeTime(); openSettings({ push: false }); return; }
   if (e.state?.help) {
     hideSettings();
     hideCalendar();
     hideManager();
+    hideFreeTime();
     if (!isHelpOpen()) openHelp({ push: false });
     selectTask(null, { push: false });
     return;
@@ -227,14 +248,25 @@ window.addEventListener('popstate', (e) => {
     hideSettings();
     hideCalendar();
     hideHelp();
+    hideFreeTime();
     if (!isManagerOpen()) openManager({ push: false });
     selectTask(null, { push: false });
+    return;
+  }
+  if (e.state?.freetime) {
+    hideSettings();
+    hideCalendar();
+    hideHelp();
+    hideManager();
+    if (!isFreeTimeOpen()) openFreeTime({ push: false });
+    selectTask(null, { push: false }); // terug vanuit een taak die over de pagina lag
     return;
   }
   if (e.state?.calendar) {
     hideSettings();
     hideHelp();
     hideManager();
+    hideFreeTime();
     if (!isCalendarOpen()) openCalendar({ push: false });
     selectTask(null, { push: false }); // terug vanuit een taak die over de kalender lag
     return;
@@ -243,6 +275,7 @@ window.addEventListener('popstate', (e) => {
   if (isHelpOpen()) { hideHelp(); return; }
   if (isManagerOpen()) { hideManager(); return; }
   if (isCalendarOpen() && !e.state?.task) { hideCalendar(); return; }
+  if (isFreeTimeOpen() && !e.state?.task) { hideFreeTime(); return; }
   selectTask(e.state?.task ?? null, { push: false });
 });
 
@@ -310,6 +343,8 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').cat
 // Na Klaar, Morgen of Snooze in een melding: de taak is op de server gewijzigd, dus opnieuw laden.
 navigator.serviceWorker?.addEventListener('message', (e) => {
   if (e.data?.type === 'refresh') return load();
+  // Testfeature "Tijd voor een taak?": Ja in de melding terwijl Tick al open is.
+  if (e.data?.type === 'open-page' && e.data.page === 'freetime') { showFreeTime(); return; }
   if (e.data?.type !== 'open-task' || !e.data.id) return;
   if (e.data.geo) offerAppSync();
   if (isSettingsOpen()) hideSettings();

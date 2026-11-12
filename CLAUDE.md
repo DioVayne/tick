@@ -25,6 +25,13 @@ Use the skill `setup-tick` (`.claude/skills/setup-tick/SKILL.md`); it follows [S
 - **GitHub:** the repo is public. When a change is finished and verified, commit it on `main` and push to `origin`. Never commit `wrangler.jsonc`, secrets, keys or personal data.
 - **Deploy:** `npm run db:migrate`, then `npm run deploy`, then check with `npx wrangler deployments list`.
 
+## Test features
+The owner can ask for a feature to be a **test feature** first: it only runs on Ticks that list its name in `TEST_FEATURES` (`wrangler.jsonc`), so on their own Tick and not for everyone. How it works and which ones exist: "Test features" in `ARCHITECTURE.md`. For a test feature:
+- Code in its own files; in shared files only the switch check, with a comment naming the feature. No migration: settings as prefixed rows in `user_settings`.
+- Add its row to the table in `ARCHITECTURE.md` (files, marked places, settings rows), add the name to `TEST_FEATURES` in `src/features.ts`, and turn it on in the owner's own `wrangler.jsonc` (not in git).
+- No user-guide page, no website, no Play work until the owner makes it a normal feature; then remove the switch checks and do the checklist below.
+- Removing it: delete its files and marked lines, its row in the table, and clean up its settings rows with a new migration.
+
 ## Checklist for a new feature
 1. Code + `public/i18n.js` (en + nl) + a migration if needed.
 2. Tests; `npm run typecheck` and `npm test`.

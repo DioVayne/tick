@@ -2,11 +2,12 @@
 // app.js leest het adres bij het starten en bij een bladwijzer, render.js schrijft het na elke render.
 
 /**
- * @typedef {{ page: 'all' | 'inbox' | 'done' | 'trash' | 'calendar' | 'settings' | 'help' | 'manager' }
+ * @typedef {{ page: 'all' | 'inbox' | 'done' | 'trash' | 'calendar' | 'settings' | 'help' | 'manager' | 'freetime' }
  *   | { page: 'list', id: string } | { page: 'task', id: string }} Route
  */
 
-const PAGES = ['all', 'inbox', 'done', 'trash', 'calendar', 'settings', 'help', 'manager'];
+// freetime: testfeature "Tijd voor een taak?" (freetimeview.js); uitgezet doet het adres niets.
+const PAGES = ['all', 'inbox', 'done', 'trash', 'calendar', 'settings', 'help', 'manager', 'freetime'];
 
 /**
  * Het adres voor wat er in beeld is. Een pagina gaat voor een taak, een taak voor de lijst eronder. Een lijst zonder
@@ -17,6 +18,7 @@ export function toHash(v) {
   if (v.page === 'settings' || v.page === 'help' || v.page === 'manager') return '#/' + v.page;
   if (v.task) return '#/task/' + encodeURIComponent(v.task);
   if (v.page === 'calendar') return '#/calendar';
+  if (v.page === 'freetime') return '#/freetime';
   if (v.showTrash) return '#/trash';
   if (v.showDone) return '#/done';
   if (v.list === null) return '#/all';

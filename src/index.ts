@@ -39,6 +39,8 @@ import { backgroundApi } from './background';
 import { type Attachment, attachmentsApi, attachmentsFor, maxAccount, maxUpload, sweepAttachments } from './attachments';
 import { mcpApi } from './mcp';
 import { calendarApi, calendarOn, refreshStaleFeeds } from './calendar';
+import { testFeature, testFeatures } from './features';
+import { freeTimeApi, runFreeTime } from './freetime';
 import { taskIcs } from '../public/ics.js';
 
 export type Env = {
@@ -92,6 +94,8 @@ export type Env = {
   FREE_SHARE_PEOPLE?: string;
   /** Agenda's koppelen via geheime iCal-adressen (src/calendar.ts). Alles behalve "false" is aan. */
   CALENDAR_FEEDS?: string;
+  /** Testfeatures die op deze Tick aanstaan, komma's ertussen (src/features.ts); leeg = geen. */
+  TEST_FEATURES?: string;
 };
 
 export type TaskRow = {
@@ -283,6 +287,7 @@ app.use('*', async (c, next) => {
 
 app.route('/api/settings', settingsApi);
 app.route('/api/review', reviewApi);
+app.route('/api/freetime', freeTimeApi);
 app.route('/api/keys', keysApi);
 app.route('/api/pair', pairApi);
 app.route('/api/account', accountApi);
@@ -671,7 +676,7 @@ app.get('/config.js', (c) => {
     userId: user.id, userName: user.name, isAdmin: user.role === 'admin',
     attachments: !!c.env.FILES, maxUploadMb: maxUpload(c.env) / 1024 / 1024,
     maxAccountMb: c.env.FILES && maxAccount(c.env) !== null ? maxAccount(c.env)! / 1024 / 1024 : null,
-    calendarFeeds: calendarOn(c.env),
+    calendarFeeds: calendarOn(c.env), testFeatures: testFeatures(c.env),
     openSignup: openSignup(c.env), emailVerified: !!user.email_verified_at, verifyBy: verifyBy(c.env, user),
   };
   return c.body(`export default ${JSON.stringify(config)};
@@ -1452,6 +1457,8 @@ export function cronSteps(env: Env, install: InstallPrefs, at: number): [string,
   ];
   // Gekoppelde agenda's: elke 5 minuten een paar feeds die langer dan een uur niet opgehaald zijn.
   if (calendarOn(env) && new Date(at).getUTCMinutes() % 5 === 0) steps.push(['agenda', () => refreshStaleFeeds(env, Date.now())]);
+  // Testfeature "Tijd voor een taak?": per persoon eens per uur (zie src/freetime.ts).
+  if (calendarOn(env) && testFeature(env, 'freetime')) steps.push(['tijd voor een taak', () => runFreeTime(env, install)]);
   if (new Date(at).getUTCMinutes() === 0) {
     steps.push(
       ['prullenbak', () => purgeTrash(env.DB, Date.now())],
