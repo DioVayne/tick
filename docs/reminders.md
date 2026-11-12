@@ -1,7 +1,7 @@
 # Reminders
 
 ## A reminder at a time
-**Remind me…** on a task (the line with the bell) offers *Today*, *Tomorrow* and *Next week*; *Other day and time…* opens the date and time picker. At that moment Tick sends a notification to each device where you turned notifications on. A new reminder starts at the next whole hour; a date without a time uses your *reminder without a time* setting (09:00 unless you changed it). With a [linked calendar](calendar.md) the menu also lists free moments from your calendar and says **Busy: …** when you already have an appointment at a suggested time. **Add to calendar** (below the reminder) puts the task in Google Calendar or downloads an .ics file for Outlook and Apple.
+**Remind me…** on a task (the line with the bell) opens with **Pick day and time** at the top, which opens the date and time picker. Below it, as a shortcut, are up to three quick choices: today, tomorrow and next week, each with its time. At that moment Tick sends a notification to each device where you turned notifications on. A new reminder starts at the next whole hour; a date without a time uses your *reminder without a time* setting (09:00 unless you changed it). With a [linked calendar](calendar.md) the quick choices never land on an appointment: Tick moves each one to the first free moment that day (or leaves it out when the day is full), and the menu says *Suggestions based on your calendar*. **Add to calendar** (below the reminder) puts the task in Google Calendar or downloads an .ics file for Outlook and Apple.
 
 The reminder is also the task's deadline: there is no separate due date.
 

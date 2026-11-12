@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { busyAt, calendarSlots, suggest } from '../public/planner.js';
+import { busyAt, calendarSlots, freeFrom, suggest } from '../public/planner.js';
 import { setDefaultTime, setTimeZone } from '../public/repeat.js';
 
 const reset = () => {
@@ -85,5 +85,33 @@ describe('agenda als bron', () => {
   it('suggest zonder agenda (null): alleen de vaste voorstellen', async () => {
     const slots = await suggest({}, { now: Z('2026-11-10T09:00:00Z'), busy: null });
     expect(slots.every((s) => s.source === 'fixed' && !s.busy)).toBe(true);
+  });
+});
+
+describe('freeFrom: snelkeuzes van het herinneringsmenu vallen nooit op een afspraak', () => {
+  const at = (s: string) => Date.parse(s);
+  const ev = (start: string, end: string, allDay = false) => ({ start: at(start), end: at(end), title: 'Overleg', allDay });
+
+  it('vrij: blijft staan', () => {
+    expect(freeFrom(at('2026-11-13T08:00:00Z'), [ev('2026-11-13T10:00:00Z', '2026-11-13T11:00:00Z')])).toBe(at('2026-11-13T08:00:00Z'));
+  });
+
+  it('op een afspraak: naar het einde, op een kwartier naar boven', () => {
+    const busy = [ev('2026-11-13T08:00:00Z', '2026-11-13T08:40:00Z')];
+    expect(freeFrom(at('2026-11-13T08:00:00Z'), busy)).toBe(at('2026-11-13T08:45:00Z'));
+  });
+
+  it('aaneengesloten afspraken: voorbij allemaal', () => {
+    const busy = [ev('2026-11-13T08:00:00Z', '2026-11-13T09:00:00Z'), ev('2026-11-13T09:00:00Z', '2026-11-13T10:30:00Z')];
+    expect(freeFrom(at('2026-11-13T08:00:00Z'), busy)).toBe(at('2026-11-13T10:30:00Z'));
+  });
+
+  it('dag vol tot na 21:30 (Amsterdam): null', () => {
+    expect(freeFrom(at('2026-11-13T08:00:00Z'), [ev('2026-11-13T07:00:00Z', '2026-11-13T21:00:00Z')])).toBeNull();
+  });
+
+  it('een afspraak van een hele dag blokkeert niets', () => {
+    const busy = [ev('2026-11-13T00:00:00Z', '2026-11-14T00:00:00Z', true)];
+    expect(freeFrom(at('2026-11-13T08:00:00Z'), busy)).toBe(at('2026-11-13T08:00:00Z'));
   });
 });
