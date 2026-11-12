@@ -6,6 +6,7 @@ import { Hono } from 'hono';
 import type { AppEnv, Env } from './index';
 import { HttpError } from './errors';
 import { sessionOnly } from './guards';
+import { futureBusy, notifyClashes } from './clash';
 import { parseIcs } from './ics';
 import { loadUserPrefs } from './prefs';
 import { getUser } from './users';
@@ -29,6 +30,8 @@ export const calendarOn = (env: Pick<Env, 'CALENDAR_FEEDS'>) => (env.CALENDAR_FE
 type FeedRow = {
   id: string; user_id: string; name: string; url_enc: string; url_hash: string; host: string; created_at: string;
   fetched_at: string | null; status: string | null; error: string | null; events: number;
+  /** De laatste goede ophaalronde (migratie 0030); null = nog nooit. */
+  ok_at?: string | null;
 };
 
 /** Wat de app van een feed ziet: nooit de URL. */
@@ -146,15 +149,20 @@ export async function refreshFeed(env: Env, feed: FeedRow, timeZone: string, now
     const from = now - DAY;
     const events = parseIcs(text, { from, to: now + WINDOW_DAYS * DAY, zone: timeZone, max: MAX_EVENTS });
     const rows = JSON.stringify(events.map((e) => [e.title, new Date(e.start).toISOString(), new Date(e.end).toISOString(), e.allDay ? 1 : 0]));
+    // Voor de melding bij een nieuwe afspraak op het moment van een taak: wat er eerst stond (alle agenda's van deze persoon).
+    const before = feed.ok_at ? await futureBusy(env.DB, feed.user_id, now) : [];
     await env.DB.batch([
       env.DB.prepare('DELETE FROM calendar_events WHERE feed_id = ?').bind(feed.id),
       // Alleen als de feed er nog is (tegelijk ontkoppeld: niets achterlaten).
       env.DB.prepare(`INSERT INTO calendar_events (feed_id, user_id, title, start_at, end_at, all_day)
         SELECT ?1, ?2, json_extract(value, '$[0]'), json_extract(value, '$[1]'), json_extract(value, '$[2]'), json_extract(value, '$[3]')
         FROM json_each(?3) WHERE EXISTS (SELECT 1 FROM calendar_feeds WHERE id = ?1)`).bind(feed.id, feed.user_id, rows),
-      env.DB.prepare("UPDATE calendar_feeds SET fetched_at = ?, status = 'ok', error = NULL, events = ? WHERE id = ?").bind(at, events.length, feed.id),
+      env.DB.prepare("UPDATE calendar_feeds SET fetched_at = ?, ok_at = ?, status = 'ok', error = NULL, events = ? WHERE id = ?").bind(at, at, events.length, feed.id),
     ]);
-    return { ...feed, fetched_at: at, status: 'ok', error: null, events: events.length };
+    // Een mislukte melding laat de nieuwe afspraken staan.
+    await notifyClashes(env, feed.user_id, feed.ok_at ?? null, before, events.map((e) => ({ title: e.title, start: e.start, end: e.end, allDay: !!e.allDay })), timeZone, now)
+      .catch((e) => console.warn(`agenda ${feed.id}: botsing melden mislukt`, (e as Error).message));
+    return { ...feed, fetched_at: at, ok_at: at, status: 'ok', error: null, events: events.length };
   } catch (e) {
     const code = e instanceof FetchError ? e.code : 'parse';
     // Geen URL in de log, alleen welke feed en wat er misging.
@@ -223,7 +231,7 @@ calendarApi.post('/feeds', async (c) => {
   const hash = await hashUrl(c.env, user.id, url.href);
   const row: FeedRow = {
     id, user_id: user.id, name, url_enc: await sealUrl(c.env, id, url.href), url_hash: hash, host: url.hostname,
-    created_at: new Date().toISOString(), fetched_at: null, status: null, error: null, events: 0,
+    created_at: new Date().toISOString(), fetched_at: null, status: null, error: null, events: 0, ok_at: null,
   };
   const res = await c.env.DB.prepare(`INSERT OR IGNORE INTO calendar_feeds (id, user_id, name, url_enc, url_hash, host, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(row.id, row.user_id, row.name, row.url_enc, row.url_hash, row.host, row.created_at).run();

@@ -1,7 +1,7 @@
 import CONFIG from './settings.js'; // eerst: taal en tijdzone
 import { initAndroidApp, offerAppSync, startLocationBar } from './androidapp.js';
 import { t } from './i18n.js';
-import { closeTask, detailReady, flushPending, onManagerStart, selectTask } from './detail.js';
+import { closeTask, detailReady, flushPending, onManagerStart, openWhenSoon, selectTask } from './detail.js';
 import { openListMenu } from './listmenu.js';
 import { initComposer, refreshComposer } from './composer.js';
 import { $, el, render, status, toast } from './render.js';
@@ -167,6 +167,8 @@ if (openList) {
 }
 const openTask = params.get('task');
 if (openTask && params.get('geo') === '1') offerAppSync();
+// Uit de melding "Botst met je agenda": meteen de herinneringskiezer van de taak.
+if (openTask && params.get('when') === '1') openWhenSoon(openTask);
 if (openTask) {
   state.selected = openTask;
   history.replaceState(null, '', '/');
@@ -378,6 +380,7 @@ navigator.serviceWorker?.addEventListener('message', (e) => {
   hideCalendar();
   hideHelp();
   hideManager();
+  if (e.data.when) openWhenSoon(e.data.id);
   selectTask(e.data.id);
   document.querySelector(`li.task[data-id="${CSS.escape(e.data.id)}"]`)?.scrollIntoView({ block: 'center' });
 });
