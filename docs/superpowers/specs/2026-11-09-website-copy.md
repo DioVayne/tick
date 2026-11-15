@@ -11,7 +11,7 @@ Vaste links:
 - Account verwijderen: https://app.ticktodo.nl/delete-account
 - Broncode en zelf hosten: https://github.com/DioVayne/tick
 - Android-app via GitHub: https://github.com/DioVayne/tick/releases/latest/download/Tick.apk
-- Android-app in Google Play: `nl.ticktodo.app` (nog in de testfase, link volgt)
+- Android-app in Google Play: `nl.ticktodo.app`, live sinds 2026-11-15: https://play.google.com/store/apps/details?id=nl.ticktodo.app
 
 ---
 
@@ -499,7 +499,7 @@ Meer talen? Misschien later. Ik spreek er zelf maar twee goed genoeg.
 
 Kolommen:
 - **Webapp:** app.ticktodo.nl in een browser, op je computer of telefoon
-- **Android (Play Store):** de app `nl.ticktodo.app`, nog in de testfase, verbonden met app.ticktodo.nl
+- **Android (Play Store):** de app `nl.ticktodo.app`, verbonden met app.ticktodo.nl
 - **Android (APK via GitHub):** de app van GitHub, voor app.ticktodo.nl of je eigen Tick
 - **iPhone/iPad:** Tick op je beginscherm via Safari
 - **Zelf gehost:** je eigen Tick op je eigen Cloudflare-account
@@ -607,7 +607,7 @@ In de gratis versie met één persoon, zoveel taken en lijsten als je wilt. Wat 
 Ja. Open app.ticktodo.nl in Safari, tik op de deelknop en kies **Zet op beginscherm**. Dan opent Tick als een app, met meldingen (iOS 16.4 of nieuwer). Meldingen op een plek, een widget en snel toevoegen kan een iPhone niet. Een App Store-app is er niet: die heeft een betaald Apple-account en een keuring voor elke update nodig.
 
 **Is er een Android-app?**
-Ja. Er is een gratis app op GitHub, en een versie in Google Play die nog in de testfase is. De versie van GitHub heeft ook *Op tijd melden onderweg*. Gebruik er één van, niet allebei.
+Ja. De gratis app staat in Google Play, en er is ook een versie op GitHub. De versie van GitHub heeft ook *Op tijd melden onderweg*. Gebruik er één van, niet allebei.
 
 **Weet Tick waar ik ben?**
 Nee. Je telefoon let zelf op je plekken en vertelt Tick alleen dat een melding afging. Rijmodus gebruikt je locatie alleen op je apparaat, terwijl Tick open is. Tick bewaart alleen de plekken die je zelf opslaat.
@@ -1129,7 +1129,7 @@ More languages? Maybe later. I only speak two well enough myself.
 
 Columns:
 - **Web app:** app.ticktodo.nl in a browser, on your computer or phone
-- **Android (Play Store):** the app `nl.ticktodo.app`, still in testing, connected to app.ticktodo.nl
+- **Android (Play Store):** the app `nl.ticktodo.app`, connected to app.ticktodo.nl
 - **Android (APK via GitHub):** the app from GitHub, for app.ticktodo.nl or your own Tick
 - **iPhone/iPad:** Tick on your home screen from Safari
 - **Self-hosted:** your own Tick on your own Cloudflare account
@@ -1239,7 +1239,7 @@ In the free version, one person, with as many tasks and lists as you like. What 
 Yes. Open app.ticktodo.nl in Safari, tap the Share button and choose **Add to Home Screen**. Tick then opens like an app, with notifications (iOS 16.4 or newer). Place reminders, a widget and quick add aren't possible on an iPhone. There's no App Store app: that needs a paid Apple account and a review for every update.
 
 **Is there an Android app?**
-Yes. There's a free app on GitHub, and a version in Google Play that's still in testing. The GitHub version also has *On time on the road*. Use one of them, not both.
+Yes. The free app is on Google Play, and there's also a version on GitHub. The GitHub version also has *On time on the road*. Use one of them, not both.
 
 **Does Tick know where I am?**
 No. Your phone watches your places itself and only tells Tick that a notification went off. Driving mode uses your location only on your device, while Tick is open. Tick only keeps the places you save yourself.
