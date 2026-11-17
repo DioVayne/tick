@@ -70,6 +70,7 @@ The deploy prints your URL. Logging in does not work yet: that needs the secrets
 | `API_TOKEN` | optional | Random; an old-style key for the Android app. Easier: connect the phone in the app (step 10) |
 | `INBOX_TOKEN` | optional | Random; an old-style key for automations. Easier: make an inbox key in the app (step 9) |
 | `RESEND_API_KEY` | optional | An API key from [Resend](https://resend.com) with sending access; turns on "Forgot password?" by email (see "Good to know") |
+| `TELEGRAM_BOT_TOKEN` | optional | The token of a Telegram bot (from @BotFather): `npx wrangler secret put TELEGRAM_BOT_TOKEN`. With `TELEGRAM_CHAT_ID` (see "Good to know") it sends you a message when email gets stuck |
 | `FALLBACK_WEBHOOK` | optional | Starting value for the administrator's webhook that receives a reminder as JSON when push did not arrive; in the app you can replace it, switch it off, or reset to this value. It does not apply to other accounts |
 
 A random value:
@@ -226,6 +227,8 @@ Open the app once online afterwards, so the service worker caches the new versio
   3. In `wrangler.jsonc`, under `vars`, set `"MAIL_FROM": "Tick <noreply@your-domain>"` (an address on the verified domain) and deploy.
 
   Every email goes through a queue: if the mail service is busy or down, the email stays in the queue and goes out later (the cron tries again every minute, at most 50 a minute), so none is lost. There is no daily cap for the whole install; the limits are per account (at most one email per 5 minutes and 5 a day), per receiving address and per IP address. Mind your mail service's own plan limits (Resend's free plan allows 100 a day): over that, emails wait in the queue until there is room. The answer on the page is always the same, so nobody can find out which addresses have an account.
+
+  Messages to you (optional): Tick can tell you when email gets stuck: when the mail service fails (at most one message an hour, with the number of waiting emails), when an email can never be delivered, when the emails of one day reach `MAIL_WARN_AT` (default 70, once a day) and for every 100 sign-ups in a day. For Telegram: make a bot with @BotFather, set its token with `npx wrangler secret put TELEGRAM_BOT_TOKEN`, put your chat id under `vars` as `"TELEGRAM_CHAT_ID"` (send the bot a message first; your id shows at `https://api.telegram.org/bot<token>/getUpdates`) and deploy. Without both, you get a push notification as administrator instead. The messages contain no email addresses.
 - **Open sign-up (optional, for a Tick open to strangers):** only if you host Tick for people you don't know, like a public app. Set email up first (above): without it, nobody can confirm their address, so nobody can share. Then, under `vars` in `wrangler.jsonc`:
   - `"OPEN_SIGNUP": "true"`: the login page gets **Create account** (`/signup`). New accounts must confirm their email address before they can share; unconfirmed accounts are deleted after 30 days. Accounts can no longer see each other: sharing goes by typing a full email address, and an address without an account gets an invitation email. Invitation emails go to at most 1 address per 24 hours and confirmation emails to at most 3 per address per 24 hours (so **Send email again** works).
   - `"PLAY_STORE_URL"` (optional): a Google Play link the invitation email mentions.

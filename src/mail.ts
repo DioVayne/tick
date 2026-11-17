@@ -1,5 +1,6 @@
 import type { Env } from './index';
 import type { Locale } from './push';
+import { warnMailCount } from './telegram';
 
 /**
  * E-mail via Resend (https://resend.com). Alles wat mail verstuurt gaat hierlangs: de aan/uit-check, de opmaak en de
@@ -142,7 +143,7 @@ export async function recipientHash(email: string): Promise<string> {
  * opgegeven); er is geen grens voor heel Tick. Eén INSERT … SELECT … WHERE, zodat twee gelijktijdige aanvragen niet
  * allebei slagen. Ruimt oude rijen op. Een volle ontvanger telt als `'account_limit'`.
  */
-export async function reserveMail(db: D1Database, _env: Env, kind: string, userId: string, now = Date.now(), o: MailLimits = {}):
+export async function reserveMail(db: D1Database, env: Env, kind: string, userId: string, now = Date.now(), o: MailLimits = {}):
   Promise<{ id: string } | 'account_limit'> {
   const id = crypto.randomUUID();
   const gap = o.gapMs ?? ACCOUNT_GAP_MS;
@@ -158,7 +159,10 @@ export async function reserveMail(db: D1Database, _env: Env, kind: string, userI
       .bind(id, kind, userId, iso(now), iso(now - gap), iso(now - DAY), perDay, hash, perRecipient),
   ]);
   // De enige weigeringen zijn de grenzen per account en per ontvangend adres.
-  return insert.meta.changes === 1 ? { id } : 'account_limit';
+  if (insert.meta.changes !== 1) return 'account_limit';
+  // Een gereserveerde mail wordt altijd verstuurd (de wachtrij): hier al kijken of het aantal van vandaag hoog wordt.
+  await warnMailCount(env, now);
+  return { id };
 }
 
 /** Geeft een gereserveerde plek terug (de mail is niet verstuurd), zodat hij niet meetelt. */

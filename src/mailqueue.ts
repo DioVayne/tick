@@ -4,6 +4,7 @@ import { createLink } from './links';
 import { hashKey, newKey } from './keys';
 import { mailEnabled, mailLayout, sendMail, type Mail, type SendResult } from './mail';
 import { adminAddresses, type ReportRow } from './reports';
+import { tellOwner } from './telegram';
 import { translate } from '../public/i18n.js';
 
 /**
@@ -69,8 +70,12 @@ export async function deliverQueued(env: Env, now = Date.now(), opts: { id?: str
     try {
       sent += await deliverOne(env, row, now);
     } catch (e) {
-      // De claim blijft staan: over 5 minuten probeert de cron het opnieuw.
+      // Opbouwen of versturen gooide: telt als een mislukte poging, zodat de rij terugloopt (5, 10, … minuten) en in
+      // `mailBacklog` meetelt, in plaats van elke 5 minuten dezelfde fout te herhalen.
       console.error(`mail: wachtrij ${row.kind} mislukt (${(e as Error)?.name ?? 'fout'})`);
+      const attempts = row.attempts + 1;
+      await db.prepare("UPDATE mail_queue SET attempts = ?, last_status = 'error', next_try_at = ? WHERE id = ?")
+        .bind(attempts, iso(now + retryDelayMs(attempts)), row.id).run().catch(() => {});
     }
   }
   const left = await db.prepare('SELECT COUNT(*) AS n FROM mail_queue').first<{ n: number }>();
@@ -82,7 +87,7 @@ type Failed = Extract<SendResult, { ok: false }>;
 /** Eén geclaimde rij: opbouwen en versturen; geeft het aantal verstuurde mails. */
 async function deliverOne(env: Env, row: QueueRow, now: number): Promise<number> {
   const db = env.DB;
-  const mails = await buildQueued(env, row);
+  const mails = await buildQueued(env, row, now);
   let ok = 0;
   let retry: Failed | null = null;
   let failed: Failed | null = null;
@@ -97,11 +102,16 @@ async function deliverOne(env: Env, row: QueueRow, now: number): Promise<number>
     const attempts = row.attempts + 1;
     await db.prepare('UPDATE mail_queue SET attempts = ?, last_status = ?, next_try_at = ? WHERE id = ?')
       .bind(attempts, retry.status, iso(now + retryDelayMs(attempts)), row.id).run();
+    // Een fout van de maildienst: hooguit één bericht per uur aan de eigenaar, met het aantal wachtende mails.
+    const left = await db.prepare('SELECT COUNT(*) AS n FROM mail_queue').first<{ n: number }>();
+    await tellOwner(env, 'mail_failing', { status: String(retry.status), waiting: String(left?.n ?? 1) }, 'hour', now);
     return ok;
   }
   await db.prepare('DELETE FROM mail_queue WHERE id = ?').bind(row.id).run();
-  // Task 5: tellOwner
-  if (failed) console.error(`mail: ${row.kind} definitief niet bezorgd (${failed.status})`);
+  if (failed) {
+    console.error(`mail: ${row.kind} definitief niet bezorgd (${failed.status})`);
+    await tellOwner(env, 'mail_dropped', { kind: row.kind }, 'hour', now);
+  }
   return ok;
 }
 
@@ -110,7 +120,7 @@ async function deliverOne(env: Env, row: QueueRow, now: number): Promise<number>
  * hoeft: account weg, adres al bevestigd (verify), geen gewoon account meer (reset), uitnodiging weg of verlopen
  * (invite), melding of melder weg (report). Een melding geeft één mail per beheerdersadres.
  */
-export async function buildQueued(env: Env, row: QueueRow): Promise<Mail[] | null> {
+export async function buildQueued(env: Env, row: QueueRow, now = Date.now()): Promise<Mail[] | null> {
   const db = env.DB;
   const lang = (row.lang === 'nl' ? 'nl' : 'en') as Locale;
   const t = (key: string, vars: Record<string, string> = {}) => translate(lang, key, vars);
@@ -145,7 +155,7 @@ export async function buildQueued(env: Env, row: QueueRow): Promise<Mail[] | nul
       const inv = await db.prepare('SELECT e.email, e.task_id, u.name AS from_name, COALESCE(tk.title, m.name) AS title FROM email_invites e ' +
         'JOIN users u ON u.id = e.from_user LEFT JOIN tasks tk ON tk.id = e.task_id ' +
         'LEFT JOIN shared_lists l ON l.id = e.list_id LEFT JOIN list_members m ON m.list_id = l.id AND m.user_id = l.owner_id ' +
-        'WHERE e.id = ? AND e.expires_at > ?').bind(row.ref, new Date().toISOString())
+        'WHERE e.id = ? AND e.expires_at > ?').bind(row.ref, iso(now))
         .first<{ email: string; task_id: string | null; from_name: string; title: string | null }>();
       if (!inv) return null;
       // Een unieke link voor deze uitnodiging; alleen de hash komt in de database (een nieuwe poging maakt een nieuwe).

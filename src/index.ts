@@ -85,6 +85,12 @@ export type Env = {
   MAIL_FROM?: string;
   /** Maildiensten in volgorde van proberen: `resend` (standaard), `cloudflare` of een lijst met komma (`cloudflare,resend`). */
   MAIL_PROVIDERS?: string;
+  /** Telegram-bot (secret) voor berichten aan de eigenaar bij mailproblemen; samen met `TELEGRAM_CHAT_ID`. Zonder: een pushmelding aan de beheerder. */
+  TELEGRAM_BOT_TOKEN?: string;
+  /** Chat-id van de eigenaar voor die berichten. */
+  TELEGRAM_CHAT_ID?: string;
+  /** Bij zoveel mails op één dag een bericht aan de eigenaar (geheel getal van minstens 1; standaard 70). */
+  MAIL_WARN_AT?: string;
   /** Binding `send_email` (Cloudflare Email Service) voor `MAIL_PROVIDERS=cloudflare`; optioneel. */
   EMAIL?: { send(m: { from: string; to: string; subject: string; text: string; html: string }): Promise<{ messageId: string }> };
   /** "true" = openbare Tick: iedereen kan zelf een account maken en accounts zien elkaar niet (standaard uit). */

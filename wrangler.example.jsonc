@@ -74,6 +74,13 @@
     // Which mail service(s) to use, in order: "resend" (default), "cloudflare" or a list like "cloudflare,resend"
     // (the next one takes over when the previous one fails). "cloudflare" sends through the `EMAIL` binding below.
     // "MAIL_PROVIDERS": "resend",
+    // Optional: messages to you (the owner) on Telegram when email gets stuck (the mail service fails, an email can
+    // never be delivered), when many emails go out in one day and for every 100 sign-ups in a day. Make a bot with
+    // @BotFather, set its token as a secret with `npx wrangler secret put TELEGRAM_BOT_TOKEN` (never here) and put your
+    // chat id here. Without both, you get a push notification as administrator instead.
+    // "TELEGRAM_CHAT_ID": "123456789",
+    // Message at this many emails in one day (default 70; Resend's free plan stops at 100 a day).
+    // "MAIL_WARN_AT": "70",
     // Only for a Tick open to strangers (like a hosted app): "true" lets anyone create an account on /signup, and
     // accounts can no longer see each other (sharing goes by email address). Set up email (above) first. Default off.
     // "OPEN_SIGNUP": "true",
