@@ -1,4 +1,4 @@
-﻿import { env } from 'cloudflare:workers';
+import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { callAs, createUser, session } from './helpers';
 import { claimCapNotice, dailyLimit, mailEnabled, mailLayout, mailProviders, releaseMail, reserveMail, sendMail } from '../src/mail';
@@ -13,7 +13,7 @@ const user = async () => (await createUser()).id;
 afterEach(() => vi.restoreAllMocks());
 
 describe('mailEnabled en dailyLimit', () => {
-  it('aan alleen met sleutel Ã©n afzender', () => {
+  it('aan alleen met sleutel én afzender', () => {
     expect(mailEnabled({ ...env, RESEND_API_KEY: '', MAIL_FROM: 'x' })).toBe(false);
     expect(mailEnabled({ ...env, RESEND_API_KEY: 'k', MAIL_FROM: '' })).toBe(false);
     expect(mailEnabled({ ...env, RESEND_API_KEY: undefined, MAIL_FROM: undefined })).toBe(false);
@@ -101,6 +101,7 @@ describe('sendMail', () => {
     for (const args of log.mock.calls) expect(args.join(' ')).not.toMatch(/test-resend|a@example\.test/);
   });
 });
+
 describe('mailLayout', () => {
   it('tekst met de link voluit, html met knop en ge-escapete tekst', () => {
     const m = mailLayout('nl', { heading: 'Kop', intro: 'Hoi <script>x</script>', button: { label: 'Klik', url: 'https://tick.test/reset/abc' }, outro: 'Doei' });
@@ -131,7 +132,7 @@ describe('reserveMail', () => {
     expect(await reserveMail(env.DB, lim, 'reset', await user(), t)).toBe('daily_limit');
   });
 
-  it('twee aanvragen tegelijk voor Ã©Ã©n account: precies Ã©Ã©n slaagt', async () => {
+  it('twee aanvragen tegelijk voor één account: precies één slaagt', async () => {
     const id = await user(); const t = freshDay();
     const r = await Promise.all([reserveMail(env.DB, env, 'reset', id, t), reserveMail(env.DB, env, 'reset', id, t)]);
     expect(r.filter((x) => typeof x === 'object')).toHaveLength(1);
@@ -153,7 +154,7 @@ describe('reserveMail', () => {
     expect(await reserveMail(env.DB, lim, 'reset', await user(), t)).toHaveProperty('id');
   });
 
-  it('recipient: hooguit Ã©Ã©n mail per adres per 24 uur, ook van verschillende afzenders en in andere schrijfwijze', async () => {
+  it('recipient: hooguit één mail per adres per 24 uur, ook van verschillende afzenders en in andere schrijfwijze', async () => {
     const t = freshDay(); const email = `ontvanger-${t}@ex.test`;
     const o = { gapMs: 0, recipient: email.toUpperCase() };
     expect(await reserveMail(env.DB, env, 'invite_mail', await user(), t, o)).toHaveProperty('id');
@@ -173,7 +174,7 @@ describe('reserveMail', () => {
 });
 
 describe('claimCapNotice', () => {
-  it('Ã©Ã©n keer per UTC-dag', async () => {
+  it('één keer per UTC-dag', async () => {
     const t = freshDay();
     expect(await claimCapNotice(env.DB, t)).toBe(true);
     expect(await claimCapNotice(env.DB, t + 60 * MIN)).toBe(false);
