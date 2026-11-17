@@ -4,7 +4,7 @@ import { HttpError } from './errors';
 import { getAccess } from './access';
 import { blockStmts } from './blocks';
 import { contactEmail } from './login';
-import { mailEnabled, reserveMail } from './mail';
+import { mailEnabled, releaseMail, reserveMail } from './mail';
 import { deliverQueued, enqueueMail } from './mailqueue';
 import { inBackground, type Locale } from './push';
 import { leaveShareStmts } from './shares';
@@ -171,15 +171,19 @@ export async function sendReportMail(env: Env, reportId: string, origin: string,
   // Is de melder al weg (account verwijderd voordat deze mail op de achtergrond vertrok), dan is er geen grens per
   // melder meer om binnen te blijven; de melding staat wel op de beheerpagina.
   if (!r?.reporter_id) return;
-  // Eén plek per beheerdersadres, zoals voorheen; de mail zelf is één rij in de wachtrij (src/mailqueue.ts maakt er
-  // bij versturen één mail per adres van). Geen enkele plek vrij: geen mail.
+  // Eén plek per beheerdersadres, alles of niets: lukt er één niet, dan geven we de rest terug en gaat er geen mail uit
+  // (de mail zelf is één rij in de wachtrij; src/mailqueue.ts maakt er bij versturen één mail per adres van).
   const now = Date.now();
-  let reserved = 0;
+  const slots: string[] = [];
   for (let n = (await adminAddresses(env)).length; n > 0; n--) {
-    if (typeof (await reserveMail(env.DB, env, 'report', r.reporter_id, now, { gapMs: 0, perDay: REPORTS_PER_DAY * 3 })) !== 'object') break;
-    reserved++;
+    const slot = await reserveMail(env.DB, env, 'report', r.reporter_id, now, { gapMs: 0, perDay: REPORTS_PER_DAY * 3 });
+    if (typeof slot !== 'object') {
+      for (const id of slots) await releaseMail(env.DB, id);
+      return;
+    }
+    slots.push(slot.id);
   }
-  if (!reserved) return;
+  if (!slots.length) return;
   const id = await enqueueMail(env, { kind: 'report', userId: r.reporter_id, ref: reportId, lang, origin }, now);
   await deliverQueued(env, now, { id });
 }

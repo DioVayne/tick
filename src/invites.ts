@@ -102,13 +102,13 @@ export async function afterEmailInvite(c: Context<AppEnv>, inviteId: string, ema
 
 /**
  * Uitnodigingsmail aan een adres zonder (bevestigd) account: wie deelt, wat Tick is, en waar je een account maakt.
- * Grenzen: per deler 5 per dag (zonder wachttijd), per adres 1 per dag, en samen hooguit de helft van de daggrens.
+ * Grenzen: per deler 5 per dag (zonder wachttijd), per adres 1 per dag.
  * Geen e-mailadres in een link.
  */
 export async function sendInviteMail(env: Env, fromId: string, inviteId: string, email: string, origin: string, lang: Locale): Promise<void> {
   if (!mailEnabled(env)) return;
   const now = Date.now();
-  const slot = await reserveMail(env.DB, env, 'invite_mail', fromId, now, { gapMs: 0, perDay: 5, dailyShare: 0.5, recipient: email });
+  const slot = await reserveMail(env.DB, env, 'invite_mail', fromId, now, { gapMs: 0, perDay: 5, recipient: email });
   if (typeof slot !== 'object') return;
   // Via de wachtrij: adres, titel en de unieke join-link komen bij versturen uit `email_invites` (src/mailqueue.ts).
   const id = await enqueueMail(env, { kind: 'invite', userId: fromId, ref: inviteId, lang, origin }, now);

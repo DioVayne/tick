@@ -87,14 +87,10 @@ export type Env = {
   MAIL_PROVIDERS?: string;
   /** Binding `send_email` (Cloudflare Email Service) voor `MAIL_PROVIDERS=cloudflare`; optioneel. */
   EMAIL?: { send(m: { from: string; to: string; subject: string; text: string; html: string }): Promise<{ messageId: string }> };
-  /** Hoeveel mails Tick per UTC-dag hooguit verstuurt (standaard 50). */
-  MAIL_DAILY_LIMIT?: string;
   /** "true" = openbare Tick: iedereen kan zelf een account maken en accounts zien elkaar niet (standaard uit). */
   OPEN_SIGNUP?: string;
   /** Link naar de app in Google Play, voor de uitnodigingsmail op een openbare Tick (optioneel). */
   PLAY_STORE_URL?: string;
-  /** Hoeveel accounts er per UTC-dag hooguit zelf aangemaakt worden op een openbare Tick (standaard 100). */
-  SIGNUP_DAILY_LIMIT?: string;
   /** Openbare Tick, gratis versie: met hoeveel verschillende mensen je hoogstens deelt (standaard 1; de beheerder onbeperkt). */
   FREE_SHARE_PEOPLE?: string;
   /** Agenda's koppelen via geheime iCal-adressen (src/calendar.ts). Alles behalve "false" is aan. */

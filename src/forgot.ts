@@ -3,12 +3,9 @@ import type { AppEnv, Env } from './index';
 import { HttpError } from './errors';
 import { cleanEmail } from './account';
 import { forgotPage } from './login';
-import { claimCapNotice, dailyLimit, mailEnabled, reserveMail } from './mail';
+import { mailEnabled, reserveMail } from './mail';
 import { deliverQueued, enqueueMail } from './mailqueue';
-import { loadInstallPrefs } from './prefs';
-import { inBackground, type Locale, notifyUser } from './push';
-import { ADMIN_ID } from './users';
-import { translate } from '../public/i18n.js';
+import { inBackground, type Locale } from './push';
 
 /**
  * "Wachtwoord vergeten?" (/forgot), openbaar en alleen als mailen aan staat. Het antwoord is voor elk geldig adres
@@ -40,14 +37,6 @@ export async function sendResetMail(env: Env, email: string, origin: string, lan
   const now = Date.now();
   const slot = await reserveMail(db, env, 'reset', user.id, now);
   if (slot === 'account_limit') return;
-  if (slot === 'daily_limit') {
-    if (await claimCapNotice(db)) {
-      const limit = String(dailyLimit(env));
-      await notifyUser(env, ADMIN_ID, (l) => ({ title: translate(l, 'mail.cap_title'), body: translate(l, 'mail.cap_body', { limit }) }),
-        (await loadInstallPrefs(env)).defaultLocale);
-    }
-    return;
-  }
   // Via de wachtrij: de link wordt pas bij versturen gemaakt, dus ook na lang wachten nog een uur geldig.
   const id = await enqueueMail(env, { kind: 'reset', userId: user.id, ref: null, lang, origin }, now);
   await deliverQueued(env, now, { id });

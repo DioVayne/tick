@@ -38,7 +38,6 @@ export default defineConfig({
           // Mail staat in de tests uit; test/mail.test.ts en test/forgot.test.ts zetten hem zelf aan.
           RESEND_API_KEY: '',
           MAIL_FROM: '',
-          MAIL_DAILY_LIMIT: '',
           CALENDAR_FEEDS: 'true',
           // De testfeatures staan in de tests aan (src/features.ts): zet hier hun namen neer. Nu zijn er geen.
           TEST_FEATURES: '',

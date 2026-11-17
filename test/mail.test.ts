@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { callAs, createUser, session } from './helpers';
-import { claimCapNotice, dailyLimit, mailEnabled, mailLayout, mailProviders, releaseMail, reserveMail, sendMail } from '../src/mail';
+import { mailEnabled, mailLayout, mailProviders, recordSignup, releaseMail, reserveMail, sendMail } from '../src/mail';
 
 const mailEnv = { ...env, RESEND_API_KEY: 'test-resend', MAIL_FROM: 'Tick <noreply@ticktodo.nl>' };
 const MIN = 60_000;
@@ -12,19 +12,12 @@ const user = async () => (await createUser()).id;
 
 afterEach(() => vi.restoreAllMocks());
 
-describe('mailEnabled en dailyLimit', () => {
+describe('mailEnabled', () => {
   it('aan alleen met sleutel én afzender', () => {
     expect(mailEnabled({ ...env, RESEND_API_KEY: '', MAIL_FROM: 'x' })).toBe(false);
     expect(mailEnabled({ ...env, RESEND_API_KEY: 'k', MAIL_FROM: '' })).toBe(false);
     expect(mailEnabled({ ...env, RESEND_API_KEY: undefined, MAIL_FROM: undefined })).toBe(false);
     expect(mailEnabled(mailEnv)).toBe(true);
-  });
-
-  it('daggrens: standaard 50, alleen een geheel getal vanaf 1 telt', () => {
-    expect(dailyLimit({ ...env, MAIL_DAILY_LIMIT: undefined })).toBe(50);
-    expect(dailyLimit({ ...env, MAIL_DAILY_LIMIT: '10' })).toBe(10);
-    expect(dailyLimit({ ...env, MAIL_DAILY_LIMIT: '0' })).toBe(50);
-    expect(dailyLimit({ ...env, MAIL_DAILY_LIMIT: 'x' })).toBe(50);
   });
 });
 
@@ -124,12 +117,9 @@ describe('reserveMail', () => {
     expect(await reserveMail(env.DB, env, 'verify', id, t + 60 * MIN)).toHaveProperty('id');
   });
 
-  it('daggrens voor heel Tick, per UTC-dag, alle soorten samen', async () => {
-    const lim = { ...env, MAIL_DAILY_LIMIT: '2' }; const t = freshDay();
-    expect(await reserveMail(env.DB, lim, 'reset', await user(), t - 86_400_000)).toHaveProperty('id'); // gisteren telt niet
-    expect(await reserveMail(env.DB, lim, 'reset', await user(), t)).toHaveProperty('id');
-    expect(await reserveMail(env.DB, lim, 'verify', await user(), t)).toHaveProperty('id');
-    expect(await reserveMail(env.DB, lim, 'reset', await user(), t)).toBe('daily_limit');
+  it('geen vaste daggrens voor heel Tick: 60 herstelmails voor 60 accounts slagen allemaal', async () => {
+    const t = freshDay();
+    for (let i = 0; i < 60; i++) expect(await reserveMail(env.DB, env, 'reset', await user(), t)).toHaveProperty('id');
   });
 
   it('twee aanvragen tegelijk voor één account: precies één slaagt', async () => {
@@ -143,15 +133,6 @@ describe('reserveMail', () => {
     const o = { gapMs: 0, perDay: 5 };
     for (let i = 0; i < 5; i++) expect(await reserveMail(env.DB, env, 'invite_mail', id, t + i, o)).toHaveProperty('id');
     expect(await reserveMail(env.DB, env, 'invite_mail', id, t + 10, o)).toBe('account_limit');
-  });
-
-  it('dailyShare: deze soort mag maar een deel van de daggrens gebruiken; andere soorten daarna nog wel', async () => {
-    const lim = { ...env, MAIL_DAILY_LIMIT: '4' }; const t = freshDay();
-    const o = { gapMs: 0, dailyShare: 0.5 };
-    expect(await reserveMail(env.DB, lim, 'invite_mail', await user(), t, o)).toHaveProperty('id');
-    expect(await reserveMail(env.DB, lim, 'invite_mail', await user(), t, o)).toHaveProperty('id');
-    expect(await reserveMail(env.DB, lim, 'invite_mail', await user(), t, o)).toBe('daily_limit');
-    expect(await reserveMail(env.DB, lim, 'reset', await user(), t)).toHaveProperty('id');
   });
 
   it('recipient: hooguit één mail per adres per 24 uur, ook van verschillende afzenders en in andere schrijfwijze', async () => {
@@ -173,12 +154,24 @@ describe('reserveMail', () => {
   });
 });
 
-describe('claimCapNotice', () => {
-  it('één keer per UTC-dag', async () => {
+describe('recordSignup', () => {
+  it('schrijft een rij zonder grens en geeft het aantal van vandaag (UTC) mee, de nieuwe rij inbegrepen', async () => {
     const t = freshDay();
-    expect(await claimCapNotice(env.DB, t)).toBe(true);
-    expect(await claimCapNotice(env.DB, t + 60 * MIN)).toBe(false);
-    expect(await claimCapNotice(env.DB, t + 86_400_000)).toBe(true);
+    await recordSignup(env.DB, t - 86_400_000); // gisteren telt niet mee
+    for (let i = 1; i <= 120; i++) expect((await recordSignup(env.DB, t)).count).toBe(i);
+  });
+
+  it('een teruggegeven rij telt niet meer mee', async () => {
+    const t = freshDay();
+    const a = await recordSignup(env.DB, t);
+    await releaseMail(env.DB, a.id);
+    expect((await recordSignup(env.DB, t)).count).toBe(1);
+  });
+
+  it('aanmeldingen tellen niet als mail voor de grenzen per account', async () => {
+    const id = await user(); const t = freshDay();
+    await recordSignup(env.DB, t);
+    expect(await reserveMail(env.DB, env, 'reset', id, t)).toHaveProperty('id');
   });
 });
 
