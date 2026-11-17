@@ -81,7 +81,7 @@ accountApi.post('/verify', async (c) => {
   const user = c.get('user');
   if (!openSignup(c.env) || !mailEnabled(c.env) || user.email_verified_at || !user.email) throw new HttpError(400, 'err.already_verified');
   await inBackground(c, sendVerifyMail(c.env, user.id, new URL(c.req.url).origin, c.get('lang')), 'bevestigingsmail');
-  return c.json({ ok: true, delayed: await mailBacklog(c.env.DB) });
+  return c.json({ ok: true, delayed: await mailBacklog(c.env.DB).catch(() => false) });
 });
 
 accountApi.get('/', (c) => {

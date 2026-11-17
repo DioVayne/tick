@@ -27,7 +27,7 @@ forgotPages.post('/forgot', async (c) => {
   const email = cleanEmail(body?.email);
   await inBackground(c, sendResetMail(c.env, email, new URL(c.req.url).origin, c.get('lang')), 'herstelmail');
   // `delayed` hangt alleen af van de wachtrij als geheel, nooit van het adres.
-  return c.json({ ok: true, delayed: await mailBacklog(c.env.DB) });
+  return c.json({ ok: true, delayed: await mailBacklog(c.env.DB).catch(() => false) });
 });
 
 /** Mailt (via de wachtrij) een herstellink naar een gewoon account met dit adres, binnen de grenzen; beheerders krijgen er geen. */

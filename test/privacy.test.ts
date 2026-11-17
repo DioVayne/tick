@@ -49,9 +49,17 @@ describe('openbare privacypagina', () => {
     expect(both).toContain('Resend');
   });
 
+  it('open Tick met alleen Cloudflare: nergens Resend, ook niet bij de uitnodigingen', () => {
+    for (const lang of ['en', 'nl']) {
+      const page = privacyPage(lang, null, undefined, ['cloudflare'], true);
+      expect(page).toContain('Cloudflare Email Service');
+      expect(page).not.toContain('Resend');
+    }
+  });
+
   it('op een openbare Tick: uitnodigingen per mail en het opruimen van onbevestigde accounts', () => {
     const open = privacyPage('nl', null, undefined, ['resend'], true);
-    expect(open).toContain(translate('nl', 'priv.open_invites'));
+    expect(open).toContain(translate('nl', 'priv.open_invites', { service: 'Resend' }));
     expect(open).toContain(translate('nl', 'priv.open_unverified'));
     expect(open).toContain(translate('nl', 'priv.open_reports'));
     expect(privacyPage('nl', null, undefined, ['resend'])).not.toContain(translate('nl', 'priv.open_reports'));
