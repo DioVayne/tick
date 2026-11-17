@@ -36,6 +36,8 @@
   // `npx wrangler r2 bucket create tick-files` and remove the // below. Without it the app shows no attachments.
   // "r2_buckets": [{ "binding": "FILES", "bucket_name": "tick-files" }],
   // Every minute: send reminders that are due.
+  // Optional, for MAIL_PROVIDERS "cloudflare" (Cloudflare Email Service): needs Workers Paid and a sending domain in Email Service.
+  // "send_email": [{ "name": "EMAIL", "remote": true }],
   "triggers": { "crons": ["* * * * *"] },
   "vars": {
     // Public key from `node scripts/gen-vapid.mjs`; the private key is the secret VAPID_PRIVATE_KEY.
@@ -71,6 +73,9 @@
     // "MAIL_FROM": "Tick <noreply@example.com>",
     // Most emails Tick sends per day (UTC), all kinds together (default 50; Resend's free plan allows 100 a day).
     // "MAIL_DAILY_LIMIT": "50",
+    // Which mail service(s) to use, in order: "resend" (default), "cloudflare" or a list like "cloudflare,resend"
+    // (the next one takes over when the previous one fails). "cloudflare" sends through the `EMAIL` binding below.
+    // "MAIL_PROVIDERS": "resend",
     // Only for a Tick open to strangers (like a hosted app): "true" lets anyone create an account on /signup, and
     // accounts can no longer see each other (sharing goes by email address). Set up email (above) first. Default off.
     // "OPEN_SIGNUP": "true",

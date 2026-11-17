@@ -14,8 +14,21 @@ const ACCOUNT_GAP_MS = 5 * MINUTE;
 const ACCOUNT_PER_DAY = 5;
 const CAP_NOTICE = 'cap_notice';
 
+export type MailProvider = 'resend' | 'cloudflare';
+
+/**
+ * De maildiensten die aan staan, in volgorde van proberen: `MAIL_PROVIDERS` (komma-lijst; onbekend en dubbel vervalt;
+ * leeg is `resend`), daarna alleen wat ingesteld is: resend = sleutel + afzender, cloudflare = binding `EMAIL` + afzender.
+ */
+export function mailProviders(env: Env): MailProvider[] {
+  const wanted = (env.MAIL_PROVIDERS ?? '').split(',').map((x) => x.trim().toLowerCase()).filter((x): x is MailProvider => x === 'resend' || x === 'cloudflare');
+  const list: MailProvider[] = wanted.length ? [...new Set(wanted)] : ['resend'];
+  const from = !!env.MAIL_FROM?.trim();
+  return list.filter((p) => from && (p === 'resend' ? !!env.RESEND_API_KEY?.trim() : !!env.EMAIL));
+}
+
 export function mailEnabled(env: Env): boolean {
-  return !!env.RESEND_API_KEY?.trim() && !!env.MAIL_FROM?.trim();
+  return mailProviders(env).length > 0;
 }
 
 /** `MAIL_DAILY_LIMIT` als geheel getal vanaf 1, anders 50. */
@@ -26,20 +39,49 @@ export function dailyLimit(env: Env): number {
 
 export type Mail = { to: string; subject: string; text: string; html: string };
 
-/** Verstuurt één mail; true bij succes. Een fout wordt gelogd zonder adres of sleutel. */
-export async function sendMail(env: Env, m: Mail): Promise<boolean> {
+export type SendResult = { ok: true; via: MailProvider } | { ok: false; retry: boolean; status: string };
+
+async function viaResend(env: Env, m: Mail): Promise<SendResult> {
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
       body: JSON.stringify({ from: env.MAIL_FROM, to: [m.to], subject: m.subject, text: m.text, html: m.html }),
     });
-    if (res.ok) return true;
+    if (res.ok) return { ok: true, via: 'resend' };
     console.error(`mail: resend ${res.status}`);
+    return { ok: false, retry: res.status === 429 || res.status >= 500, status: String(res.status) };
   } catch (e) {
     console.error(`mail: resend onbereikbaar (${(e as Error).name})`);
+    return { ok: false, retry: true, status: 'network' };
   }
-  return false;
+}
+
+async function viaCloudflare(env: Env, m: Mail): Promise<SendResult> {
+  try {
+    await env.EMAIL!.send({ from: env.MAIL_FROM!, to: m.to, subject: m.subject, text: m.text, html: m.html });
+    return { ok: true, via: 'cloudflare' };
+  } catch (e) {
+    // De foutvorm van de binding is niet gedocumenteerd: een melding over een ongeldig adres is blijvend, de rest niet.
+    console.error('mail: cloudflare mislukt');
+    return { ok: false, retry: !/invalid|not allowed|recipient/i.test(String((e as Error)?.message ?? e)), status: 'cloudflare' };
+  }
+}
+
+/**
+ * Verstuurt één mail via de diensten uit `mailProviders`, op volgorde; de eerste die slaagt wint. Faalt alles: het
+ * resultaat van de laatste, met `retry: true` zodra één dienst `retry: true` gaf. Logt geen adres of sleutel.
+ */
+export async function sendMail(env: Env, m: Mail): Promise<SendResult> {
+  let last: SendResult = { ok: false, retry: false, status: 'disabled' };
+  let retry = false;
+  for (const p of mailProviders(env)) {
+    const r = p === 'resend' ? await viaResend(env, m) : await viaCloudflare(env, m);
+    if (r.ok) return r;
+    retry ||= r.retry;
+    last = r;
+  }
+  return last.ok ? last : { ...last, retry };
 }
 
 const esc = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);

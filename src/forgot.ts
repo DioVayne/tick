@@ -53,5 +53,5 @@ export async function sendResetMail(env: Env, email: string, origin: string, lan
     heading: t('mail.reset_heading'), intro: t('mail.reset_intro'),
     button: { label: t('mail.reset_button'), url: `${origin}/reset/${code}` }, outro: t('mail.reset_outro'),
   });
-  if (!(await sendMail(env, { to: user.email, subject: t('mail.reset_subject'), ...body }))) await releaseMail(db, slot.id);
+  if (!(await sendMail(env, { to: user.email, subject: t('mail.reset_subject'), ...body })).ok) await releaseMail(db, slot.id);
 }

@@ -82,6 +82,10 @@ export type Env = {
   RESEND_API_KEY?: string;
   /** Afzender van mail, bijv. `Tick <noreply@ticktodo.nl>` (een domein dat in Resend geverifieerd is). */
   MAIL_FROM?: string;
+  /** Maildiensten in volgorde van proberen: `resend` (standaard), `cloudflare` of een lijst met komma (`cloudflare,resend`). */
+  MAIL_PROVIDERS?: string;
+  /** Binding `send_email` (Cloudflare Email Service) voor `MAIL_PROVIDERS=cloudflare`; optioneel. */
+  EMAIL?: { send(m: { from: string; to: string; subject: string; text: string; html: string }): Promise<{ messageId: string }> };
   /** Hoeveel mails Tick per UTC-dag hooguit verstuurt (standaard 50). */
   MAIL_DAILY_LIMIT?: string;
   /** "true" = openbare Tick: iedereen kan zelf een account maken en accounts zien elkaar niet (standaard uit). */

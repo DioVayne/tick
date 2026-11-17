@@ -123,7 +123,7 @@ export async function sendInviteMail(env: Env, from: { id: string; name: string 
     extra: play ? { label: t('mail.invite_play'), url: play } : undefined,
     outro: t('mail.invite_outro'),
   });
-  if (!(await sendMail(env, { to: email, subject: t('mail.invite_subject', { name: from.name }), ...body }))) await releaseMail(env.DB, slot.id);
+  if (!(await sendMail(env, { to: email, subject: t('mail.invite_subject', { name: from.name }), ...body })).ok) await releaseMail(env.DB, slot.id);
 }
 
 /**
