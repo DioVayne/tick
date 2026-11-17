@@ -2,9 +2,9 @@ import { Hono } from 'hono';
 import type { AppEnv, Env } from './index';
 import { HttpError } from './errors';
 import { cleanEmail } from './account';
-import { createLink } from './links';
 import { forgotPage } from './login';
-import { claimCapNotice, dailyLimit, mailEnabled, mailLayout, releaseMail, reserveMail, sendMail } from './mail';
+import { claimCapNotice, dailyLimit, mailEnabled, reserveMail } from './mail';
+import { deliverQueued, enqueueMail } from './mailqueue';
 import { loadInstallPrefs } from './prefs';
 import { inBackground, type Locale, notifyUser } from './push';
 import { ADMIN_ID } from './users';
@@ -32,12 +32,13 @@ forgotPages.post('/forgot', async (c) => {
   return c.json({ ok: true });
 });
 
-/** Mailt een herstellink naar een gewoon account met dit adres, binnen de grenzen; beheerders krijgen er geen. */
+/** Mailt (via de wachtrij) een herstellink naar een gewoon account met dit adres, binnen de grenzen; beheerders krijgen er geen. */
 export async function sendResetMail(env: Env, email: string, origin: string, lang: Locale): Promise<void> {
   const db = env.DB;
   const user = await db.prepare("SELECT id, email FROM users WHERE email = ? AND role = 'member'").bind(email).first<{ id: string; email: string }>();
   if (!user) return;
-  const slot = await reserveMail(db, env, 'reset', user.id);
+  const now = Date.now();
+  const slot = await reserveMail(db, env, 'reset', user.id, now);
   if (slot === 'account_limit') return;
   if (slot === 'daily_limit') {
     if (await claimCapNotice(db)) {
@@ -47,11 +48,7 @@ export async function sendResetMail(env: Env, email: string, origin: string, lan
     }
     return;
   }
-  const { code } = await createLink(db, 'reset', user.id, user.id);
-  const t = (key: string) => translate(lang, key);
-  const body = mailLayout(lang, {
-    heading: t('mail.reset_heading'), intro: t('mail.reset_intro'),
-    button: { label: t('mail.reset_button'), url: `${origin}/reset/${code}` }, outro: t('mail.reset_outro'),
-  });
-  if (!(await sendMail(env, { to: user.email, subject: t('mail.reset_subject'), ...body })).ok) await releaseMail(db, slot.id);
+  // Via de wachtrij: de link wordt pas bij versturen gemaakt, dus ook na lang wachten nog een uur geldig.
+  const id = await enqueueMail(env, { kind: 'reset', userId: user.id, ref: null, lang, origin }, now);
+  await deliverQueued(env, now, { id });
 }

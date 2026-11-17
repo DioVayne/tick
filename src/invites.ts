@@ -2,11 +2,11 @@ import type { Context } from 'hono';
 import type { AppEnv, Env } from './index';
 import { cleanEmail } from './account';
 import { HttpError } from './errors';
-import { mailEnabled, mailLayout, releaseMail, reserveMail, sendMail } from './mail';
+import { mailEnabled, reserveMail } from './mail';
+import { deliverQueued, enqueueMail } from './mailqueue';
 import { openSignup } from './signup';
 import { inBackground, type Locale } from './push';
-import { hashKey, newKey } from './keys';
-import { translate } from '../public/i18n.js';
+import { hashKey } from './keys';
 import type { User } from './users';
 
 /**
@@ -95,10 +95,9 @@ export async function emailInviteRows(db: D1Database, ownerId: string): Promise<
 }
 
 /** Na een nieuwe uitnodiging aan een adres: de uitnodigingsmail, op de achtergrond. */
-export async function afterEmailInvite(c: Context<AppEnv>, inviteId: string, email: string, what: { kind: 'task' | 'list'; title: string }, silent = false): Promise<void> {
+export async function afterEmailInvite(c: Context<AppEnv>, inviteId: string, email: string, silent = false): Promise<void> {
   if (silent) return; // geblokkeerd of geschorst: geen mail
-  const me = c.get('user');
-  await inBackground(c, sendInviteMail(c.env, { id: me.id, name: me.name }, inviteId, email, what, new URL(c.req.url).origin, c.get('lang')), 'uitnodigingsmail');
+  await inBackground(c, sendInviteMail(c.env, c.get('user').id, inviteId, email, new URL(c.req.url).origin, c.get('lang')), 'uitnodigingsmail');
 }
 
 /**
@@ -106,24 +105,14 @@ export async function afterEmailInvite(c: Context<AppEnv>, inviteId: string, ema
  * Grenzen: per deler 5 per dag (zonder wachttijd), per adres 1 per dag, en samen hooguit de helft van de daggrens.
  * Geen e-mailadres in een link.
  */
-export async function sendInviteMail(env: Env, from: { id: string; name: string }, inviteId: string, email: string, what: { kind: 'task' | 'list'; title: string },
-  origin: string, lang: Locale): Promise<void> {
+export async function sendInviteMail(env: Env, fromId: string, inviteId: string, email: string, origin: string, lang: Locale): Promise<void> {
   if (!mailEnabled(env)) return;
-  const slot = await reserveMail(env.DB, env, 'invite_mail', from.id, Date.now(), { gapMs: 0, perDay: 5, dailyShare: 0.5, recipient: email });
+  const now = Date.now();
+  const slot = await reserveMail(env.DB, env, 'invite_mail', fromId, now, { gapMs: 0, perDay: 5, dailyShare: 0.5, recipient: email });
   if (typeof slot !== 'object') return;
-  // Een unieke link voor deze uitnodiging; alleen de hash komt in de database.
-  const code = newKey().slice('tick_'.length);
-  await env.DB.prepare('UPDATE email_invites SET join_hash = ? WHERE id = ?').bind(await hashKey(code), inviteId).run();
-  const t = (key: string, vars: Record<string, string> = {}) => translate(lang, key, vars);
-  const play = env.PLAY_STORE_URL?.trim();
-  const body = mailLayout(lang, {
-    heading: t(what.kind === 'task' ? 'mail.invite_heading_task' : 'mail.invite_heading_list', { name: from.name, title: what.title }),
-    intro: t('mail.invite_intro'),
-    button: { label: t('mail.invite_button'), url: `${origin}/join/${code}` },
-    extra: play ? { label: t('mail.invite_play'), url: play } : undefined,
-    outro: t('mail.invite_outro'),
-  });
-  if (!(await sendMail(env, { to: email, subject: t('mail.invite_subject', { name: from.name }), ...body })).ok) await releaseMail(env.DB, slot.id);
+  // Via de wachtrij: adres, titel en de unieke join-link komen bij versturen uit `email_invites` (src/mailqueue.ts).
+  const id = await enqueueMail(env, { kind: 'invite', userId: fromId, ref: inviteId, lang, origin }, now);
+  await deliverQueued(env, now, { id });
 }
 
 /**

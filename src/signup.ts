@@ -3,9 +3,10 @@ import type { AppEnv, Env } from './index';
 import { cleanEmail, cleanName } from './account';
 import { sessionCookie } from './auth';
 import { HttpError } from './errors';
-import { checkPassword, consumeLink, createLink } from './links';
+import { checkPassword, consumeLink } from './links';
 import { joinInvalidPage, signupPage, verifyPage } from './login';
-import { claimCapNotice, mailEnabled, mailLayout, releaseMail, reserveMail, reserveSignup, sendMail, SIGNUP_CAP } from './mail';
+import { claimCapNotice, mailEnabled, releaseMail, reserveMail, reserveSignup, SIGNUP_CAP } from './mail';
+import { deliverQueued, enqueueMail } from './mailqueue';
 import { claimEmailInvites, claimInvites, inviteByCode } from './invites';
 import { authorize } from './auth';
 import { hashPassword } from './password';
@@ -130,7 +131,7 @@ export const VERIFY_DAILY_SHARE = 0.5;
 /** Hooguit zoveel bevestigingsmails per adres per 24 uur (ook over verwijderde accounts heen), zodat opnieuw sturen werkt. */
 export const VERIFY_PER_RECIPIENT = 3;
 
-/** Mailt een bevestigingslink naar een onbevestigd account, binnen de grenzen van `reserveMail`. */
+/** Mailt (via de wachtrij) een bevestigingslink naar een onbevestigd account, binnen de grenzen van `reserveMail`. */
 export async function sendVerifyMail(env: Env, userId: string, origin: string, lang: Locale): Promise<void> {
   if (!mailEnabled(env)) return;
   const db = env.DB;
@@ -139,15 +140,12 @@ export async function sendVerifyMail(env: Env, userId: string, origin: string, l
   if (!user) return;
   // Hooguit de helft van de maildaggrens (herstelmails houden ruimte) en een paar per adres per 24 uur, ook over een
   // verwijderd account heen; binnen die grens werkt "opnieuw sturen" gewoon.
-  const slot = await reserveMail(db, env, 'verify', userId, Date.now(), { dailyShare: VERIFY_DAILY_SHARE, recipient: user.email, recipientPerDay: VERIFY_PER_RECIPIENT });
+  const now = Date.now();
+  const slot = await reserveMail(db, env, 'verify', userId, now, { dailyShare: VERIFY_DAILY_SHARE, recipient: user.email, recipientPerDay: VERIFY_PER_RECIPIENT });
   if (typeof slot !== 'object') return;
-  const { code } = await createLink(db, 'verify', userId, userId);
-  const t = (key: string) => translate(lang, key);
-  const body = mailLayout(lang, {
-    heading: t('mail.verify_heading'), intro: t('mail.verify_intro'),
-    button: { label: t('mail.verify_button'), url: `${origin}/verify/${code}` }, outro: t('mail.verify_outro'),
-  });
-  if (!(await sendMail(env, { to: user.email, subject: t('mail.verify_subject'), ...body })).ok) await releaseMail(db, slot.id);
+  // Via de wachtrij (link en adres bij versturen, src/mailqueue.ts); lukt de directe poging niet, dan later alsnog.
+  const id = await enqueueMail(env, { kind: 'verify', userId, ref: null, lang, origin }, now);
+  await deliverQueued(env, now, { id });
 }
 
 /** Zet het e-mailadres op bevestigd (als dat nog niet zo was) en zet uitnodigingen aan dat adres om. */

@@ -26,6 +26,7 @@ import { linkPages } from './links';
 import { openSignup, purgeUnverified, signupPages, verifyBy } from './signup';
 import { forgotPages } from './forgot';
 import { mailEnabled } from './mail';
+import { deliverQueued } from './mailqueue';
 import { deviceApi, devicesApi } from './devices';
 import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
@@ -1473,6 +1474,8 @@ export function cronSteps(env: Env, install: InstallPrefs, at: number): [string,
     ['reminders', () => runReminders(env, install)],
     ['verlopen', () => runOverdue(env, install)],
   ];
+  // Mailwachtrij: elke minuut wat klaar staat (hooguit 50, oudste eerst); zonder mail is er niets te doen.
+  if (mailEnabled(env)) steps.push(['mailwachtrij', () => deliverQueued(env, Date.now())]);
   // Gekoppelde agenda's: elke 5 minuten een paar feeds die langer dan een uur niet opgehaald zijn.
   if (calendarOn(env) && new Date(at).getUTCMinutes() % 5 === 0) steps.push(['agenda', () => refreshStaleFeeds(env, Date.now())]);
   if (new Date(at).getUTCMinutes() === 0) {
