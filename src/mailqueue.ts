@@ -4,7 +4,7 @@ import { createLink } from './links';
 import { hashKey, newKey } from './keys';
 import { mailEnabled, mailLayout, sendMail, type Mail, type SendResult } from './mail';
 import { adminAddresses, type ReportRow } from './reports';
-import { tellOwner } from './telegram';
+import { background, tellOwner } from './telegram';
 import { translate } from '../public/i18n.js';
 
 /**
@@ -103,14 +103,18 @@ async function deliverOne(env: Env, row: QueueRow, now: number): Promise<number>
     await db.prepare('UPDATE mail_queue SET attempts = ?, last_status = ?, next_try_at = ? WHERE id = ?')
       .bind(attempts, retry.status, iso(now + retryDelayMs(attempts)), row.id).run();
     // Een fout van de maildienst: hooguit één bericht per uur aan de eigenaar, met het aantal wachtende mails.
-    const left = await db.prepare('SELECT COUNT(*) AS n FROM mail_queue').first<{ n: number }>();
-    await tellOwner(env, 'mail_failing', { status: String(retry.status), waiting: String(left?.n ?? 1) }, 'hour', now);
+    // Op de achtergrond en met een eigen try: de telling of het bericht mag het versturen nooit verstoren.
+    const status = String(retry.status);
+    background((async () => {
+      const left = await db.prepare('SELECT COUNT(*) AS n FROM mail_queue').first<{ n: number }>();
+      await tellOwner(env, 'mail_failing', { status, waiting: String(left?.n ?? 1) }, 'hour', now);
+    })());
     return ok;
   }
   await db.prepare('DELETE FROM mail_queue WHERE id = ?').bind(row.id).run();
   if (failed) {
     console.error(`mail: ${row.kind} definitief niet bezorgd (${failed.status})`);
-    await tellOwner(env, 'mail_dropped', { kind: row.kind }, 'hour', now);
+    background(tellOwner(env, 'mail_dropped', { kind: row.kind }, 'hour', now));
   }
   return ok;
 }

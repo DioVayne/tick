@@ -1,3 +1,4 @@
+import { waitUntil } from 'cloudflare:workers';
 import type { Env } from './index';
 import { loadInstallPrefs } from './prefs';
 import { notifyUser, sendToAll, type Sender } from './push';
@@ -33,7 +34,7 @@ export function mailWarnAt(env: Pick<Env, 'MAIL_WARN_AT'>): number {
  */
 async function claim(db: D1Database, key: OwnerKey, vars: Record<string, string>, throttle: 'hour' | 'day' | 'once', now: number): Promise<boolean> {
   const start = now - (now % DAY);
-  const [kind, since] = throttle === 'once' ? [`tg:${key}:${vars.count ?? ''}`, 0]
+  const [kind, since] = throttle === 'once' ? [`tg:${key}:${new Date(now).toISOString().slice(0, 10)}:${vars.count ?? ''}`, 0]
     : throttle === 'day' ? [`tg:${key}`, start] : [`tg:${key}`, now - HOUR];
   const r = await db.prepare(`INSERT INTO mail_log (id, kind, user_id, sent_at) SELECT ?1, ?2, NULL, ?3
     WHERE NOT EXISTS (SELECT 1 FROM mail_log WHERE kind = ?2 AND sent_at > ?4)`)
@@ -57,6 +58,7 @@ export async function tellOwner(env: Env, key: OwnerKey, vars: Record<string, st
       try {
         const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text }),
+          signal: AbortSignal.timeout(5000),
         });
         if (!res.ok) console.error(`telegram: ${res.status}`);
       } catch {
@@ -71,17 +73,34 @@ export async function tellOwner(env: Env, key: OwnerKey, vars: Record<string, st
 }
 
 /**
- * Na een gereserveerde mail: is het aantal mails van vandaag (UTC; zonder aanmeldingen en vlagrijen) bij `MAIL_WARN_AT`
+ * Na een gereserveerde mail: is het aantal mails van vandaag (UTC; alleen de soorten mail, geen aanmeldingen of vlagrijen) bij `MAIL_WARN_AT`
  * of erover, dan één bericht per dag. `>=` met de daggrens van `tellOwner`, zodat gelijktijdige mails hem niet missen.
  */
 export async function warnMailCount(env: Env, now = Date.now()): Promise<void> {
   try {
     const start = now - (now % DAY);
-    const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM mail_log WHERE sent_at >= ? AND sent_at < ? AND kind != 'signup' AND kind NOT LIKE 'tg:%'")
+    const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM mail_log WHERE sent_at >= ? AND sent_at < ? AND kind IN ('verify', 'reset', 'invite_mail', 'report')")
       .bind(iso(start), iso(start + DAY)).first<{ n: number }>();
     const count = r?.n ?? 0;
     if (count >= mailWarnAt(env)) await tellOwner(env, 'mail_warn', { count: String(count) }, 'day', now);
   } catch (e) {
     console.error(`telegram: telling mislukt (${(e as Error)?.name ?? 'fout'})`);
   }
+}
+
+const pending = new Set<Promise<unknown>>();
+
+/**
+ * Laat werk voor de eigenaar op de achtergrond lopen (waitUntil als er een verzoek is), zodat een traag of kapot
+ * Telegram nooit het versturen of reserveren van een mail ophoudt. Gooit nooit.
+ */
+export function background(work: Promise<unknown>): void {
+  const p = work.catch(() => {}).finally(() => pending.delete(p));
+  pending.add(p);
+  try { waitUntil(p); } catch { /* geen verzoek (bijv. in een test): het werk loopt gewoon door */ }
+}
+
+/** Wacht tot al het werk van `background` klaar is (voor tests). */
+export async function flushBackground(): Promise<void> {
+  while (pending.size) await Promise.all([...pending]);
 }

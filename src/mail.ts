@@ -1,6 +1,6 @@
 import type { Env } from './index';
 import type { Locale } from './push';
-import { warnMailCount } from './telegram';
+import { background, warnMailCount } from './telegram';
 
 /**
  * E-mail via Resend (https://resend.com). Alles wat mail verstuurt gaat hierlangs: de aan/uit-check, de opmaak en de
@@ -161,7 +161,7 @@ export async function reserveMail(db: D1Database, env: Env, kind: string, userId
   // De enige weigeringen zijn de grenzen per account en per ontvangend adres.
   if (insert.meta.changes !== 1) return 'account_limit';
   // Een gereserveerde mail wordt altijd verstuurd (de wachtrij): hier al kijken of het aantal van vandaag hoog wordt.
-  await warnMailCount(env, now);
+  background(warnMailCount(env, now));
   return { id };
 }
 

@@ -4,7 +4,7 @@ import { ADMIN_ID, callWith, openEnv, randomIp } from './helpers';
 import type { Env } from '../src/index';
 import { reserveMail } from '../src/mail';
 import { deliverQueued, enqueueMail } from '../src/mailqueue';
-import { tellOwner } from '../src/telegram';
+import { flushBackground, tellOwner } from '../src/telegram';
 import type { Sender } from '../src/push';
 
 const tg: Env = { ...openEnv, TELEGRAM_BOT_TOKEN: 'geheim-token-123', TELEGRAM_CHAT_ID: '4242' };
@@ -52,6 +52,7 @@ describe('tellOwner', () => {
     for (let i = 0; i < 10; i++) {
       const id = await enqueueMail(tg, { kind: 'reset', userId: u, ref: null, lang: 'nl', origin: 'https://tick.test' }, t0 + i * 6 * 60_000);
       await deliverQueued(tg, t0 + i * 6 * 60_000, { id });
+      await flushBackground();
     }
     expect(telegramCalls()).toHaveLength(1);
     expect(telegramTexts()[0].text).toMatch(/429/);
@@ -74,6 +75,7 @@ describe('tellOwner', () => {
       .bind(u, `t-${u}@example.test`, new Date().toISOString()).run();
     const id = await enqueueMail(tg, { kind: 'reset', userId: u, ref: null, lang: 'nl', origin: 'https://tick.test' });
     await deliverQueued(tg, Date.now(), { id });
+    await flushBackground();
     expect(telegramTexts().map((x) => x.text)).toEqual([expect.stringContaining('reset')]);
   });
 
@@ -106,7 +108,7 @@ describe('tellOwner', () => {
 describe('mail_warn', () => {
   const day = new Date(); day.setUTCHours(12, 0, 0, 0);
   const noon = day.getTime();
-  const reserve = (e: Env, i: number) => reserveMail(env.DB, e, 'x', ADMIN_ID, noon + i, { gapMs: 0, perDay: 1000 });
+  const reserve = async (e: Env, i: number) => { await reserveMail(env.DB, e, 'reset', ADMIN_ID, noon + i, { gapMs: 0, perDay: 1000 }); await flushBackground(); };
 
   it('de 70e mail van de dag geeft één bericht; de 71e niet; vlagrijen tellen niet als mail', async () => {
     for (let i = 1; i <= 69; i++) await reserve(tg, i);
@@ -140,7 +142,7 @@ describe('signups', () => {
     const ts = new Date().toISOString();
     await env.DB.batch(Array.from({ length: 98 }, () =>
       env.DB.prepare("INSERT INTO mail_log (id, kind, user_id, sent_at) VALUES (?, 'signup', NULL, ?)").bind(crypto.randomUUID(), ts)));
-    const go = () => callWith(tg, '/signup', { method: 'POST', json: { name: 'A', email: `s-${crypto.randomUUID()}@example.test`, password: 'lang-genoeg-1' }, ip: randomIp() });
+    const go = async (email = `s-${crypto.randomUUID()}@example.test`) => { const r = await callWith(tg, '/signup', { method: 'POST', json: { name: 'A', email, password: 'lang-genoeg-1' }, ip: randomIp() }); await flushBackground(); return r; };
     expect((await go()).status).toBe(201); // 99e
     expect(telegramCalls()).toHaveLength(0);
     expect((await go()).status).toBe(201); // 100e
@@ -148,5 +150,27 @@ describe('signups', () => {
     expect(telegramTexts()[0].text).toContain('100');
     expect((await go()).status).toBe(201); // 101e
     expect(telegramCalls()).toHaveLength(1);
+  });
+
+  const go = async (email: string) => { const r = await callWith(tg, '/signup', { method: 'POST', json: { name: 'A', email, password: 'lang-genoeg-1' }, ip: randomIp() }); await flushBackground(); return r; };
+  it('een mislukte aanmelding (adres bestaat al) geeft geen bericht', async () => {
+    const ts = new Date().toISOString();
+    await env.DB.batch(Array.from({ length: 99 }, () =>
+      env.DB.prepare("INSERT INTO mail_log (id, kind, user_id, sent_at) VALUES (?, 'signup', NULL, ?)").bind(crypto.randomUUID(), ts)));
+    const email = `dubbel-${crypto.randomUUID()}@example.test`;
+    expect((await go(email)).status).toBe(201); // 100e: bericht
+    fetchSpy.mockClear();
+    await env.DB.prepare("DELETE FROM mail_log WHERE kind LIKE 'tg:%'").run();
+    expect((await go(email)).status).toBe(409); // 101e, mislukt
+    expect(telegramCalls()).toHaveLength(0);
+  });
+
+  it('het honderdtal telt per dag: 100 op dag 1 en 100 op dag 2 geven allebei een bericht', async () => {
+    const day1 = Date.now();
+    await tellOwner(tg, 'signups', { count: '100' }, 'once', day1);
+    await tellOwner(tg, 'signups', { count: '100' }, 'once', day1 + 1000);
+    expect(telegramCalls()).toHaveLength(1);
+    await tellOwner(tg, 'signups', { count: '100' }, 'once', day1 + 86_400_000);
+    expect(telegramCalls()).toHaveLength(2);
   });
 });
