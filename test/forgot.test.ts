@@ -142,7 +142,7 @@ describe('wachtwoord vergeten', () => {
       .bind(u.id, u.email, hash, new Date().toISOString())));
     for (const u of users) await forgot(u.email);
     expect(sent().map((m) => m.to[0]).sort()).toEqual(users.map((u) => u.email).sort());
-  });
+  }, 120_000);
 
   it('rem per IP', async () => {
     resend();

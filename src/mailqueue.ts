@@ -106,7 +106,8 @@ async function deliverOne(env: Env, row: QueueRow, now: number): Promise<number>
     // Op de achtergrond en met een eigen try: de telling of het bericht mag het versturen nooit verstoren.
     const status = String(retry.status);
     background((async () => {
-      const left = await db.prepare('SELECT COUNT(*) AS n FROM mail_queue').first<{ n: number }>();
+      // Tellen mislukt: de melding gaat dan met 1 wachtende mail weg; wel loggen (zonder adres of token).
+      const left = await db.prepare('SELECT COUNT(*) AS n FROM mail_queue').first<{ n: number }>().catch(() => { console.error('telegram: wachtrij tellen mislukt'); return null; });
       await tellOwner(env, 'mail_failing', { status, waiting: String(left?.n ?? 1) }, 'hour', now);
     })());
     return ok;

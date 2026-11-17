@@ -1,5 +1,6 @@
 import { waitUntil } from 'cloudflare:workers';
 import type { Env } from './index';
+import { MAIL_KINDS } from './mail';
 import { loadInstallPrefs } from './prefs';
 import { notifyUser, sendToAll, type Sender } from './push';
 import { ADMIN_ID } from './users';
@@ -79,8 +80,8 @@ export async function tellOwner(env: Env, key: OwnerKey, vars: Record<string, st
 export async function warnMailCount(env: Env, now = Date.now()): Promise<void> {
   try {
     const start = now - (now % DAY);
-    const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM mail_log WHERE sent_at >= ? AND sent_at < ? AND kind IN ('verify', 'reset', 'invite_mail', 'report')")
-      .bind(iso(start), iso(start + DAY)).first<{ n: number }>();
+    const r = await env.DB.prepare(`SELECT COUNT(*) AS n FROM mail_log WHERE sent_at >= ? AND sent_at < ? AND kind IN (${MAIL_KINDS.map(() => '?').join(', ')})`)
+      .bind(iso(start), iso(start + DAY), ...MAIL_KINDS).first<{ n: number }>();
     const count = r?.n ?? 0;
     if (count >= mailWarnAt(env)) await tellOwner(env, 'mail_warn', { count: String(count) }, 'day', now);
   } catch (e) {

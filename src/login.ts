@@ -1,5 +1,6 @@
 import { normLocale, translate } from '../public/i18n.js';
 import { MIN_PASSWORD } from './account';
+import type { MailProvider } from './mail';
 
 // Stijl en script staan in public/login.css en login.js: de CSP staat geen inline code toe.
 // emptyEmailHint: de beheerder heeft nog geen e-mailadres, dan zegt de pagina dat het veld leeg mag (de overgang).
@@ -135,16 +136,17 @@ ${forgot ? `<p>${t('del.no_login_forgot', { link: `<a href="/forgot">${t('del.fo
  * Openbare privacypagina (zonder inlog), voor de link die Google Play vraagt. `operator` komt uit `OPERATOR_NAME`
  * (wie deze Tick draait), `contact` uit `ADMIN_CONTACT` via contactEmail; zonder een van beide een algemene zin.
  */
-// mailOn: mailen staat aan, dan noemt de pagina Resend bij de diensten.
+// providers: de maildiensten die aan staan (`mailProviders`); leeg is mailen uit. De pagina noemt ze bij de diensten.
 // open: een openbare Tick (OPEN_SIGNUP): ook uitnodigingen per mail en het opruimen van onbevestigde accounts.
-export function privacyPage(locale: string | undefined, contact: string | null, operator?: string, mailOn = false, open = false, calendar = false): string {
+export function privacyPage(locale: string | undefined, contact: string | null, operator?: string, providers: MailProvider[] = [], open = false, calendar = false): string {
   const lang = normLocale(locale);
   const t = (key: string, vars?: Record<string, string>) => translate(lang, key, vars);
   const name = (operator ?? '').trim();
   const who = name ? t('priv.who_named', { name: escapeHtml(name) }) : t('priv.who_unnamed');
   const mail = contact ? escapeHtml(contact) : '';
   const ask = contact ? t('priv.contact', { email: `<a href="mailto:${mail}">${mail}</a>` }) : t('priv.contact_admin');
-  const items = (keys: string[]) => `<ul>${keys.map((k) => `<li>${t(k)}</li>`).join('')}</ul>`;
+  const service = providers.map((p) => (p === 'cloudflare' ? 'Cloudflare Email Service' : 'Resend')).join(' + ');
+  const items = (keys: string[]) => `<ul>${keys.map((k) => `<li>${t(k, { service })}</li>`).join('')}</ul>`;
   return `<!doctype html>
 <html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -166,7 +168,7 @@ ${items(['priv.what_account', 'priv.what_content', 'priv.what_devices', 'priv.wh
 <p>${t('priv.not')}</p>
 <p>${t('priv.cookie')}</p>
 <h2>${t('priv.others_title')}</h2>
-${items(['priv.others_cloudflare', 'priv.others_push', 'priv.others_osm', ...(mailOn ? ['priv.others_mail'] : []), ...(open ? ['priv.open_invites'] : [])])}
+${items(['priv.others_cloudflare', 'priv.others_push', 'priv.others_osm', ...(providers.length ? ['priv.others_mail', 'priv.others_mail_queue'] : []), ...(open ? ['priv.open_invites'] : [])])}
 <h2>${t('priv.why_title')}</h2>
 <p>${t('priv.why')}</p>
 <h2>${t('priv.keep_title')}</h2>

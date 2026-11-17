@@ -13,6 +13,9 @@ const DAY = 86_400_000;
 const ACCOUNT_GAP_MS = 5 * MINUTE;
 const ACCOUNT_PER_DAY = 5;
 
+/** De soorten mail die `reserveMail` krijgt (tabel `mail_log`): elke nieuwe soort hier toevoegen; de telling van `MAIL_WARN_AT` gebruikt dezelfde lijst. */
+export const MAIL_KINDS = ['verify', 'reset', 'invite_mail', 'report'] as const;
+
 export type MailProvider = 'resend' | 'cloudflare';
 
 /**
