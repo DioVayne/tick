@@ -145,6 +145,31 @@ describe('mailwachtrij', () => {
     expect((await rows())[0].attempts).toBe(7);
   });
 
+  it('Resend 429 in de cron: stopt na de eerste poging, de rest blijft ongemoeid', async () => {
+    statuses = [429];
+    const now = Date.now();
+    for (let i = 0; i < 60; i++) {
+      const u = await member();
+      await enqueueMail(e, { kind: 'reset', userId: u.id, ref: null, lang: 'en', origin: BASE }, now - (60 - i) * MIN);
+    }
+    await deliverQueued(e, now, { pauseMs: 0 });
+    expect(resendCalls()).toBe(1);
+    const all = await rows();
+    expect(all.filter((r) => r.attempts === 0)).toHaveLength(59);
+    expect(all.filter((r) => r.attempts === 1)).toHaveLength(1);
+  });
+
+  it('Resend 403 (instelling) houdt de rij vast en meldt geen definitief verlies', async () => {
+    statuses = [403];
+    const u = await member();
+    await enqueueMail(e, { kind: 'reset', userId: u.id, ref: null, lang: 'en', origin: BASE });
+    await deliverQueued(e);
+    const [row] = await rows();
+    expect(row).toMatchObject({ attempts: 1, last_status: '403' });
+    expect(Date.parse(row.next_try_at) - Date.now()).toBeGreaterThan(4 * MIN);
+    expect(logSpy.mock.calls.flat().join(' ')).not.toContain('definitief');
+  });
+
   it('Review 4: 60 rijen klaar → één run verstuurt de oudste 50', async () => {
     const now = Date.now();
     const users: string[] = [];
@@ -153,7 +178,7 @@ describe('mailwachtrij', () => {
       users.push(u.email);
       await enqueueMail(e, { kind: 'reset', userId: u.id, ref: null, lang: 'en', origin: BASE }, now - (60 - i) * MIN);
     }
-    expect(await deliverQueued(e, now)).toEqual({ sent: 50, waiting: 10 });
+    expect(await deliverQueued(e, now, { pauseMs: 0 })).toEqual({ sent: 50, waiting: 10 });
     expect(sent.map((m) => m.to[0])).toEqual(users.slice(0, 50));
     expect(await rows()).toHaveLength(10);
   });

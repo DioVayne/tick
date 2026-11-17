@@ -28,6 +28,8 @@ const LEASE_MS = 5 * MINUTE;
 const MAX_WAIT_MIN = 60;
 /** Zoveel rijen per run (cron), oudste eerst: een grote wachtrij loopt zo niet vast en overspoelt de maildienst niet. */
 export const QUEUE_BATCH = 50;
+/** Pauze tussen twee mails in één cron-run (ms), om de grens per seconde van de maildienst te respecteren. */
+export const SEND_PAUSE_MS = 300;
 
 const iso = (ms: number) => new Date(ms).toISOString();
 
@@ -56,19 +58,27 @@ export async function mailBacklog(db: D1Database): Promise<boolean> {
  * directe poging en de cron samen nooit dezelfde mail twee keer versturen. `sent`: verstuurde mails in deze run;
  * `waiting`: rijen die daarna nog in de wachtrij staan.
  */
-export async function deliverQueued(env: Env, now = Date.now(), opts: { id?: string; max?: number } = {}): Promise<{ sent: number; waiting: number }> {
+export async function deliverQueued(env: Env, now = Date.now(), opts: { id?: string; max?: number; pauseMs?: number } = {}): Promise<{ sent: number; waiting: number }> {
   if (!mailEnabled(env)) return { sent: 0, waiting: 0 };
   const db = env.DB;
   const due = opts.id
     ? await db.prepare('SELECT id FROM mail_queue WHERE id = ? AND next_try_at <= ?').bind(opts.id, iso(now)).all<{ id: string }>()
     : await db.prepare('SELECT id FROM mail_queue WHERE next_try_at <= ? ORDER BY created_at, id LIMIT ?').bind(iso(now), opts.max ?? QUEUE_BATCH).all<{ id: string }>();
+  const pauseMs = opts.pauseMs ?? SEND_PAUSE_MS;
   let sent = 0;
+  let first = true;
   for (const { id } of due.results) {
     const row = await db.prepare('UPDATE mail_queue SET next_try_at = ? WHERE id = ? AND next_try_at <= ? RETURNING *')
       .bind(iso(now + LEASE_MS), id, iso(now)).first<QueueRow>();
     if (!row) continue; // een andere run is ermee bezig
+    // Cron: korte pauze tussen twee mails (grens per seconde van de maildienst).
+    if (!opts.id && !first && pauseMs > 0) await new Promise((r) => setTimeout(r, pauseMs));
+    first = false;
     try {
-      sent += await deliverOne(env, row, now);
+      const r = await deliverOne(env, row, now);
+      sent += r.ok;
+      // Cron: bij de eerste mislukte poging (maildienst stuk of vol) stoppen; de rest blijft voor de volgende minuut.
+      if (r.retry && !opts.id) break;
     } catch (e) {
       // Opbouwen of versturen gooide: telt als een mislukte poging, zodat de rij terugloopt (5, 10, … minuten) en in
       // `mailBacklog` meetelt, in plaats van elke 5 minuten dezelfde fout te herhalen.
@@ -76,6 +86,7 @@ export async function deliverQueued(env: Env, now = Date.now(), opts: { id?: str
       const attempts = row.attempts + 1;
       await db.prepare("UPDATE mail_queue SET attempts = ?, last_status = 'error', next_try_at = ? WHERE id = ?")
         .bind(attempts, iso(now + retryDelayMs(attempts)), row.id).run().catch(() => {});
+      if (!opts.id) break;
     }
   }
   const left = await db.prepare('SELECT COUNT(*) AS n FROM mail_queue').first<{ n: number }>();
@@ -84,8 +95,8 @@ export async function deliverQueued(env: Env, now = Date.now(), opts: { id?: str
 
 type Failed = Extract<SendResult, { ok: false }>;
 
-/** Eén geclaimde rij: opbouwen en versturen; geeft het aantal verstuurde mails. */
-async function deliverOne(env: Env, row: QueueRow, now: number): Promise<number> {
+/** Eén geclaimde rij: opbouwen en versturen; geeft het aantal verstuurde mails en of er later opnieuw moet. */
+async function deliverOne(env: Env, row: QueueRow, now: number): Promise<{ ok: number; retry: boolean }> {
   const db = env.DB;
   const mails = await buildQueued(env, row, now);
   let ok = 0;
@@ -110,14 +121,14 @@ async function deliverOne(env: Env, row: QueueRow, now: number): Promise<number>
       const left = await db.prepare('SELECT COUNT(*) AS n FROM mail_queue').first<{ n: number }>().catch(() => { console.error('telegram: wachtrij tellen mislukt'); return null; });
       await tellOwner(env, 'mail_failing', { status, waiting: String(left?.n ?? 1) }, 'hour', now);
     })());
-    return ok;
+    return { ok, retry: true };
   }
   await db.prepare('DELETE FROM mail_queue WHERE id = ?').bind(row.id).run();
   if (failed) {
     console.error(`mail: ${row.kind} definitief niet bezorgd (${failed.status})`);
     background(tellOwner(env, 'mail_dropped', { kind: row.kind }, 'hour', now));
   }
-  return ok;
+  return { ok, retry: false };
 }
 
 /**

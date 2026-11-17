@@ -685,7 +685,7 @@ app.get('/config.js', async (c) => {
     calendarFeeds: calendarOn(c.env), testFeatures: testFeatures(c.env),
     openSignup: openSignup(c.env), emailVerified: !!user.email_verified_at, verifyBy: verifyBy(c.env, user),
     // Wachttekst bij de bevestigingsbalk: alleen op een openbare Tick, en alleen als er mails wachten.
-    mailDelayed: openSignup(c.env) ? await mailBacklog(c.env.DB).catch(() => false) : false,
+    mailDelayed: openSignup(c.env) && !user.email_verified_at ? await mailBacklog(c.env.DB).catch(() => false) : false,
   };
   return c.body(`export default ${JSON.stringify(config)};
 `, 200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' });

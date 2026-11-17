@@ -43,10 +43,11 @@ async function viaResend(env: Env, m: Mail): Promise<SendResult> {
       method: 'POST',
       headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
       body: JSON.stringify({ from: env.MAIL_FROM, to: [m.to], subject: m.subject, text: m.text, html: m.html }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (res.ok) return { ok: true, via: 'resend' };
     console.error(`mail: resend ${res.status}`);
-    return { ok: false, retry: res.status === 429 || res.status >= 500, status: String(res.status) };
+    return { ok: false, retry: !(res.status === 400 || res.status === 422) && (res.status === 401 || res.status === 403 || res.status === 408 || res.status === 429 || res.status >= 500), status: String(res.status) };
   } catch (e) {
     console.error(`mail: resend onbereikbaar (${(e as Error).name})`);
     return { ok: false, retry: true, status: 'network' };

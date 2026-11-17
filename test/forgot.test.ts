@@ -5,6 +5,7 @@ import worker from '../src/index';
 import { deliverQueued } from '../src/mailqueue';
 import { ADMIN_ID, BASE, createUser, randomIp, untilRateLimited } from './helpers';
 import { translate } from '../public/i18n.js';
+import { sendResetMail } from '../src/forgot';
 import { hashPassword } from '../src/password';
 import type { Env } from '../src/index';
 
@@ -140,7 +141,9 @@ describe('wachtwoord vergeten', () => {
     const users = Array.from({ length: 60 }, () => ({ id: crypto.randomUUID(), email: `bulk-${crypto.randomUUID()}@example.test` }));
     await env.DB.batch(users.map((u) => env.DB.prepare("INSERT INTO users (id, name, email, password_hash, role, created_at) VALUES (?, 'Lid', ?, ?, 'member', ?)")
       .bind(u.id, u.email, hash, new Date().toISOString())));
-    for (const u of users) await forgot(u.email);
+    // Rechtstreeks `sendResetMail` (zoals /forgot op de achtergrond): 60 HTTP-verzoeken kosten elk een halve seconde
+    // aan middleware en database en liepen in de volledige suite op tot minuten; de grenzen zelf zitten in `sendResetMail`.
+    for (const u of users) await sendResetMail(mailEnv, u.email, BASE, 'en');
     expect(sent().map((m) => m.to[0]).sort()).toEqual(users.map((u) => u.email).sort());
   }, 120_000);
 
