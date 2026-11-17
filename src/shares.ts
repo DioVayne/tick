@@ -114,7 +114,7 @@ sharesApi.post('/', async (c) => {
         .bind(b.mode, to.email, task.id, userId, now()).run();
       if (sw.meta.changes) return c.json({ ok: true, status: 'pending', mode: b.mode, changed: 'mode' });
       const inv = await addEmailInvite(db, userId, to.email, { kind: 'task', taskId: task.id, mode: b.mode });
-      await afterEmailInvite(c, inv.id, to.email, { kind: 'task', title: task.title }, to.silent);
+      await afterEmailInvite(c, inv.id, to.email, to.silent);
       return c.json({ ok: true, status: 'pending', mode: b.mode }, 201);
     }
     toUser = to.userId;

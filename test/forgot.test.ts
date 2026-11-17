@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import { createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index';
+import { deliverQueued } from '../src/mailqueue';
 import { ADMIN_ID, BASE, createUser, randomIp, untilRateLimited } from './helpers';
 import { translate } from '../public/i18n.js';
 import type { Env } from '../src/index';
@@ -96,15 +97,20 @@ describe('wachtwoord vergeten', () => {
     expect(sent()).toHaveLength(1);
   });
 
-  it('mislukt Resend, dan telt de aanvraag niet mee', async () => {
+  it('mislukt Resend, dan blijft de mail in de wachtrij en gaat hij later alsnog (één keer)', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const u = await createUser();
     resend(500);
     expect((await forgot(u.email)).status).toBe(200);
+    const row = await env.DB.prepare("SELECT next_try_at FROM mail_queue WHERE kind = 'reset' AND user_id = ?").bind(u.id).first<{ next_try_at: string }>();
+    expect(row).not.toBeNull();
     vi.restoreAllMocks();
     const sent = resend();
+    // Nog een aanvraag binnen 5 minuten: geen tweede mail (de eerste wacht al).
     await forgot(u.email);
-    expect(sent()).toHaveLength(1);
+    expect(sent()).toHaveLength(0);
+    await deliverQueued(mailEnv, Date.parse(row!.next_try_at));
+    expect(sent().map((m) => m.to[0])).toEqual([u.email]);
   });
 
   it('de mail is in de taal van het verzoek', async () => {

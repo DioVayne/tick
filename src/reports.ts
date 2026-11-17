@@ -4,12 +4,12 @@ import { HttpError } from './errors';
 import { getAccess } from './access';
 import { blockStmts } from './blocks';
 import { contactEmail } from './login';
-import { mailEnabled, mailLayout, reserveMail, releaseMail, sendMail } from './mail';
+import { mailEnabled, reserveMail } from './mail';
+import { deliverQueued, enqueueMail } from './mailqueue';
 import { inBackground, type Locale } from './push';
 import { leaveShareStmts } from './shares';
 import { leaveListStmts } from './sharedlists';
 import { openSignup } from './signup';
-import { translate } from '../public/i18n.js';
 
 /**
  * Melden op een openbare Tick (OPEN_SIGNUP): een gedeelde taak, lijst, bijlage of openstaande uitnodiging van een
@@ -154,7 +154,7 @@ reportsApi.post('/', async (c) => {
 });
 
 /** De adressen die een melding krijgen: beheerders met een e-mailadres, anders `ADMIN_CONTACT`. */
-async function adminAddresses(env: Env): Promise<string[]> {
+export async function adminAddresses(env: Env): Promise<string[]> {
   const { results } = await env.DB.prepare("SELECT email FROM users WHERE role = 'admin' AND email IS NOT NULL AND email != ''").all<{ email: string }>();
   if (results.length) return results.map((r) => r.email);
   const contact = contactEmail(env.ADMIN_CONTACT);
@@ -167,28 +167,19 @@ async function adminAddresses(env: Env): Promise<string[]> {
  */
 export async function sendReportMail(env: Env, reportId: string, origin: string, lang: Locale): Promise<void> {
   if (!mailEnabled(env)) return;
-  const r = await env.DB.prepare('SELECT r.*, a.name AS reporter_name, b.name AS reported_name FROM reports r ' +
-    'LEFT JOIN users a ON a.id = r.reporter_id LEFT JOIN users b ON b.id = r.reported_id WHERE r.id = ?').bind(reportId)
-    .first<ReportRow & { reporter_name: string | null; reported_name: string | null }>();
+  const r = await env.DB.prepare('SELECT reporter_id FROM reports WHERE id = ?').bind(reportId).first<{ reporter_id: string | null }>();
   // Is de melder al weg (account verwijderd voordat deze mail op de achtergrond vertrok), dan is er geen grens per
   // melder meer om binnen te blijven; de melding staat wel op de beheerpagina.
   if (!r?.reporter_id) return;
-  const t = (key: string, vars: Record<string, string> = {}) => translate(lang, key, vars);
-  const title = r.title || t('admin.title_removed');
-  const what = r.attachment_name ? `${title} — ${r.attachment_name}` : title;
-  const intro = t('mail.report_intro', {
-    reporter: r.reporter_name ?? t('admin.account_deleted'), reported: r.reported_name ?? t('admin.account_deleted'),
-    reason: t(`report.reason_${r.reason}`), title: what,
-  }) +
-    (r.note ? `\n\n${t('mail.report_note', { note: r.note })}` : '');
-  const body = mailLayout(lang, {
-    heading: t('mail.report_heading'), intro,
-    button: { label: t('mail.report_button'), url: `${origin}/admin/reports/${r.id}` },
-    outro: t('mail.report_outro'),
-  });
-  for (const to of await adminAddresses(env)) {
-    const slot = await reserveMail(env.DB, env, 'report', r.reporter_id!, Date.now(), { gapMs: 0, perDay: REPORTS_PER_DAY * 3 });
-    if (typeof slot !== 'object') return;
-    if (!(await sendMail(env, { to, subject: t('mail.report_subject', { title }), ...body })).ok) await releaseMail(env.DB, slot.id);
+  // Eén plek per beheerdersadres, zoals voorheen; de mail zelf is één rij in de wachtrij (src/mailqueue.ts maakt er
+  // bij versturen één mail per adres van). Geen enkele plek vrij: geen mail.
+  const now = Date.now();
+  let reserved = 0;
+  for (let n = (await adminAddresses(env)).length; n > 0; n--) {
+    if (typeof (await reserveMail(env.DB, env, 'report', r.reporter_id, now, { gapMs: 0, perDay: REPORTS_PER_DAY * 3 })) !== 'object') break;
+    reserved++;
   }
+  if (!reserved) return;
+  const id = await enqueueMail(env, { kind: 'report', userId: r.reporter_id, ref: reportId, lang, origin }, now);
+  await deliverQueued(env, now, { id });
 }
