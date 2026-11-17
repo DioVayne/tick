@@ -7,6 +7,7 @@ import { hashPassword } from './password';
 import { getUser } from './users';
 import { deleteAccount } from './users-api';
 import { mailEnabled } from './mail';
+import { mailBacklog } from './mailqueue';
 import { inBackground } from './push';
 import { openSignup, sendVerifyMail } from './signup';
 
@@ -80,10 +81,10 @@ accountApi.post('/verify', async (c) => {
   const user = c.get('user');
   if (!openSignup(c.env) || !mailEnabled(c.env) || user.email_verified_at || !user.email) throw new HttpError(400, 'err.already_verified');
   await inBackground(c, sendVerifyMail(c.env, user.id, new URL(c.req.url).origin, c.get('lang')), 'bevestigingsmail');
-  return c.json({ ok: true });
+  return c.json({ ok: true, delayed: await mailBacklog(c.env.DB) });
 });
 
-accountApi.get('/', (c) => {
+accountApi.get('/',(c) => {
   const { id, name, email, role } = c.get('user');
   return c.json({ id, name, email, role });
 });

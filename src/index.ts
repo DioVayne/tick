@@ -26,7 +26,7 @@ import { linkPages } from './links';
 import { openSignup, purgeUnverified, signupPages, verifyBy } from './signup';
 import { forgotPages } from './forgot';
 import { mailEnabled } from './mail';
-import { deliverQueued } from './mailqueue';
+import { deliverQueued, mailBacklog } from './mailqueue';
 import { deviceApi, devicesApi } from './devices';
 import { exportApi, importApi } from './data';
 import { purgeTrash, wipeStmts } from './trash';
@@ -674,7 +674,7 @@ function normRemind(v: unknown, z: Zone): string | null {
 app.get('/api/config', (c) => c.json({ vapidPublicKey: c.env.VAPID_PUBLIC_KEY }));
 
 // Instellingen voor de PWA als module, zodat de service worker ze met de shell cachet (offline de juiste taal en zone).
-app.get('/config.js', (c) => {
+app.get('/config.js', async (c) => {
   const { timeZone, reminderTime, weekStart, defaultLocale, driveMode, tickmanager, reviewNewDays, reviewSeenDays } = c.get('prefs');
   const user = c.get('user');
   const config = {
@@ -684,6 +684,8 @@ app.get('/config.js', (c) => {
     maxAccountMb: c.env.FILES && maxAccount(c.env) !== null ? maxAccount(c.env)! / 1024 / 1024 : null,
     calendarFeeds: calendarOn(c.env), testFeatures: testFeatures(c.env),
     openSignup: openSignup(c.env), emailVerified: !!user.email_verified_at, verifyBy: verifyBy(c.env, user),
+    // Wachttekst bij de bevestigingsbalk: alleen op een openbare Tick, en alleen als er mails wachten.
+    mailDelayed: openSignup(c.env) ? await mailBacklog(c.env.DB) : false,
   };
   return c.body(`export default ${JSON.stringify(config)};
 `, 200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' });

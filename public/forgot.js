@@ -20,6 +20,13 @@ form.addEventListener('submit', async (e) => {
       done.setAttribute('role', 'status');
       done.textContent = document.body.dataset.sent;
       form.querySelector('.intro').replaceWith(done);
+      // Wachten er mails (de maildienst weigert even), dan staat dat er eerlijk onder.
+      if ((await r.json().catch(() => ({}))).delayed) {
+        const late = document.createElement('p');
+        late.setAttribute('role', 'status');
+        late.textContent = document.body.dataset.delayed;
+        done.after(late);
+      }
       form.querySelector('#email').remove();
       button.remove();
       return;

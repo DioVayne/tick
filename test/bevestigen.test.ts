@@ -78,6 +78,28 @@ describe('bevestigen', () => {
     expect(await (await callWith(env, '/config.js', { cookie: u.cookie })).text()).toContain('"openSignup":false');
   });
 
+  it('wachttekst: met een wachtende rij (attempts > 0) delayed:true en mailDelayed in de config, anders false', async () => {
+    const { cookie } = await signUp();
+    await env.DB.prepare('DELETE FROM mail_queue').run();
+    const quiet = await callWith(openEnv, '/api/account/verify', { method: 'POST', cookie });
+    expect(await quiet.json()).toEqual({ ok: true, delayed: false });
+    expect(await (await callWith(openEnv, '/config.js', { cookie })).text()).toContain('"mailDelayed":false');
+
+    await env.DB.prepare("INSERT INTO mail_queue (id, kind, user_id, ref, lang, origin, created_at, next_try_at, attempts) VALUES (?, 'verify', NULL, NULL, 'en', 'https://tick.test', ?, ?, 1)")
+      .bind(crypto.randomUUID(), new Date().toISOString(), new Date(Date.now() + 3_600_000).toISOString()).run();
+    const waiting = await callWith(openEnv, '/api/account/verify', { method: 'POST', cookie });
+    expect(await waiting.json()).toEqual({ ok: true, delayed: true });
+    expect(await (await callWith(openEnv, '/config.js', { cookie })).text()).toContain('"mailDelayed":true');
+    // Zonder openbare aanmelding is er geen wachttekst.
+    expect(await (await callWith(env, '/config.js', { cookie })).text()).not.toContain('"mailDelayed":true');
+    await env.DB.prepare('DELETE FROM mail_queue').run();
+  });
+
+  it('mail.delayed: precies de tekst uit het besluit', () => {
+    expect(translate('nl', 'mail.delayed')).toBe('Door onverwacht grote interesse in Tick kan het even duren voordat de mail aankomt.');
+    expect(translate('en', 'mail.delayed')).toBe('Because of unexpectedly high interest in Tick, it may take a while for the email to arrive.');
+  });
+
   it('herstel via /forgot bevestigt het adres; een resetlink van de beheerder niet', async () => {
     const { sent, id, email } = await signUp();
     await callWith(openEnv, '/forgot', { method: 'POST', json: { email } });
