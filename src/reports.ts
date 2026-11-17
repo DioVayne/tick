@@ -189,6 +189,6 @@ export async function sendReportMail(env: Env, reportId: string, origin: string,
   for (const to of await adminAddresses(env)) {
     const slot = await reserveMail(env.DB, env, 'report', r.reporter_id!, Date.now(), { gapMs: 0, perDay: REPORTS_PER_DAY * 3 });
     if (typeof slot !== 'object') return;
-    if (!(await sendMail(env, { to, subject: t('mail.report_subject', { title }), ...body }))) await releaseMail(env.DB, slot.id);
+    if (!(await sendMail(env, { to, subject: t('mail.report_subject', { title }), ...body })).ok) await releaseMail(env.DB, slot.id);
   }
 }

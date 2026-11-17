@@ -147,7 +147,7 @@ export async function sendVerifyMail(env: Env, userId: string, origin: string, l
     heading: t('mail.verify_heading'), intro: t('mail.verify_intro'),
     button: { label: t('mail.verify_button'), url: `${origin}/verify/${code}` }, outro: t('mail.verify_outro'),
   });
-  if (!(await sendMail(env, { to: user.email, subject: t('mail.verify_subject'), ...body }))) await releaseMail(db, slot.id);
+  if (!(await sendMail(env, { to: user.email, subject: t('mail.verify_subject'), ...body })).ok) await releaseMail(db, slot.id);
 }
 
 /** Zet het e-mailadres op bevestigd (als dat nog niet zo was) en zet uitnodigingen aan dat adres om. */

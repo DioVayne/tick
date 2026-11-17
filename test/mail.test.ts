@@ -1,7 +1,7 @@
-import { env } from 'cloudflare:workers';
+﻿import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { callAs, createUser, session } from './helpers';
-import { claimCapNotice, dailyLimit, mailEnabled, mailLayout, releaseMail, reserveMail, sendMail } from '../src/mail';
+import { claimCapNotice, dailyLimit, mailEnabled, mailLayout, mailProviders, releaseMail, reserveMail, sendMail } from '../src/mail';
 
 const mailEnv = { ...env, RESEND_API_KEY: 'test-resend', MAIL_FROM: 'Tick <noreply@ticktodo.nl>' };
 const MIN = 60_000;
@@ -13,7 +13,7 @@ const user = async () => (await createUser()).id;
 afterEach(() => vi.restoreAllMocks());
 
 describe('mailEnabled en dailyLimit', () => {
-  it('aan alleen met sleutel én afzender', () => {
+  it('aan alleen met sleutel Ã©n afzender', () => {
     expect(mailEnabled({ ...env, RESEND_API_KEY: '', MAIL_FROM: 'x' })).toBe(false);
     expect(mailEnabled({ ...env, RESEND_API_KEY: 'k', MAIL_FROM: '' })).toBe(false);
     expect(mailEnabled({ ...env, RESEND_API_KEY: undefined, MAIL_FROM: undefined })).toBe(false);
@@ -28,31 +28,79 @@ describe('mailEnabled en dailyLimit', () => {
   });
 });
 
+describe('mailProviders', () => {
+  const cf = { send: vi.fn() };
+  it('volgorde uit MAIL_PROVIDERS, alleen ingestelde diensten', () => {
+    expect(mailProviders({ ...mailEnv, MAIL_PROVIDERS: ' cloudflare , resend,resend,onzin', EMAIL: cf })).toEqual(['cloudflare', 'resend']);
+    expect(mailProviders({ ...mailEnv, MAIL_PROVIDERS: 'cloudflare' })).toEqual([]);
+    expect(mailEnabled({ ...mailEnv, MAIL_PROVIDERS: 'cloudflare' })).toBe(false);
+    expect(mailProviders({ ...mailEnv, MAIL_PROVIDERS: '' })).toEqual(['resend']);
+    expect(mailProviders({ ...mailEnv, MAIL_PROVIDERS: undefined })).toEqual(['resend']);
+    expect(mailProviders({ ...mailEnv, MAIL_PROVIDERS: 'cloudflare', EMAIL: cf, MAIL_FROM: '' })).toEqual([]);
+  });
+});
+
 describe('sendMail', () => {
-  it('stuurt via Resend met de sleutel en geeft true bij 2xx', async () => {
+  const m = { to: 'a@example.test', subject: 'S', text: 'T', html: '<p>T</p>' };
+  it('stuurt via Resend met de sleutel en geeft ok bij 2xx', async () => {
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{"id":"1"}', { status: 200 }));
-    expect(await sendMail(mailEnv, { to: 'a@example.test', subject: 'S', text: 'T', html: '<p>T</p>' })).toBe(true);
+    expect(await sendMail(mailEnv, m)).toEqual({ ok: true, via: 'resend' });
     const [url, init] = spy.mock.calls[0];
     expect(String(url)).toBe('https://api.resend.com/emails');
     expect(new Headers((init as RequestInit).headers).get('authorization')).toBe('Bearer test-resend');
     expect(JSON.parse(String((init as RequestInit).body))).toMatchObject({ from: 'Tick <noreply@ticktodo.nl>', to: ['a@example.test'], subject: 'S' });
   });
 
-  it('een fout van Resend geeft false en logt geen adres of sleutel', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('nee', { status: 422 }));
+  it('429 en 5xx: opnieuw proberen; andere 4xx: niet', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(await sendMail(mailEnv, { to: 'a@example.test', subject: 'S', text: 'T', html: 'H' })).toBe(false);
-    expect(log).toHaveBeenCalled();
+    const spy = vi.spyOn(globalThis, 'fetch');
+    spy.mockResolvedValue(new Response('', { status: 429 }));
+    expect(await sendMail(mailEnv, m)).toEqual({ ok: false, retry: true, status: '429' });
+    spy.mockResolvedValue(new Response('', { status: 503 }));
+    expect(await sendMail(mailEnv, m)).toEqual({ ok: false, retry: true, status: '503' });
+    spy.mockResolvedValue(new Response('nee', { status: 422 }));
+    expect(await sendMail(mailEnv, m)).toEqual({ ok: false, retry: false, status: '422' });
     for (const args of log.mock.calls) expect(args.join(' ')).not.toMatch(/test-resend|a@example\.test/);
   });
 
-  it('een netwerkfout geeft false', async () => {
+  it('een netwerkfout: opnieuw proberen', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('weg'));
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(await sendMail(mailEnv, { to: 'a@example.test', subject: 'S', text: 'T', html: 'H' })).toBe(false);
+    expect(await sendMail(mailEnv, m)).toMatchObject({ ok: false, retry: true });
+  });
+
+  it('Cloudflare eerst; gooit die, dan vangt Resend op', async () => {
+    const send = vi.fn().mockRejectedValue(new Error('E_SERVICE_DOWN a@example.test'));
+    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const e = { ...mailEnv, MAIL_PROVIDERS: 'cloudflare,resend', EMAIL: { send } };
+    expect(await sendMail(e, m)).toEqual({ ok: true, via: 'resend' });
+    expect(send).toHaveBeenCalledWith({ from: 'Tick <noreply@ticktodo.nl>', to: 'a@example.test', subject: 'S', text: 'T', html: '<p>T</p>' });
+    expect(spy).toHaveBeenCalledTimes(1);
+    for (const args of log.mock.calls) expect(args.join(' ')).not.toMatch(/test-resend|a@example\.test/);
+  });
+
+  it('Cloudflare ok; ongeldig adres geeft retry false, andere fout retry true; alles faalt: retry zodra één dienst retry gaf', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const ok = { send: vi.fn().mockResolvedValue({ messageId: 'x' }) };
+    expect(await sendMail({ ...mailEnv, MAIL_PROVIDERS: 'cloudflare', EMAIL: ok }, m)).toEqual({ ok: true, via: 'cloudflare' });
+    const bad = { send: vi.fn().mockRejectedValue(new Error('Recipient not allowed')) };
+    expect(await sendMail({ ...mailEnv, MAIL_PROVIDERS: 'cloudflare', EMAIL: bad }, m)).toEqual({ ok: false, retry: false, status: 'cloudflare' });
+    const down = { send: vi.fn().mockRejectedValue(new Error('boom')) };
+    expect(await sendMail({ ...mailEnv, MAIL_PROVIDERS: 'cloudflare', EMAIL: down }, m)).toEqual({ ok: false, retry: true, status: 'cloudflare' });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('nee', { status: 422 }));
+    expect(await sendMail({ ...mailEnv, MAIL_PROVIDERS: 'cloudflare,resend', EMAIL: down }, m)).toEqual({ ok: false, retry: true, status: '422' });
+    expect(log).toHaveBeenCalledWith('mail: cloudflare mislukt');
+  });
+
+  it('een fout van Resend logt geen adres of sleutel', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('nee', { status: 422 }));
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect((await sendMail(mailEnv, m)).ok).toBe(false);
+    expect(log).toHaveBeenCalled();
+    for (const args of log.mock.calls) expect(args.join(' ')).not.toMatch(/test-resend|a@example\.test/);
   });
 });
-
 describe('mailLayout', () => {
   it('tekst met de link voluit, html met knop en ge-escapete tekst', () => {
     const m = mailLayout('nl', { heading: 'Kop', intro: 'Hoi <script>x</script>', button: { label: 'Klik', url: 'https://tick.test/reset/abc' }, outro: 'Doei' });
@@ -83,7 +131,7 @@ describe('reserveMail', () => {
     expect(await reserveMail(env.DB, lim, 'reset', await user(), t)).toBe('daily_limit');
   });
 
-  it('twee aanvragen tegelijk voor één account: precies één slaagt', async () => {
+  it('twee aanvragen tegelijk voor Ã©Ã©n account: precies Ã©Ã©n slaagt', async () => {
     const id = await user(); const t = freshDay();
     const r = await Promise.all([reserveMail(env.DB, env, 'reset', id, t), reserveMail(env.DB, env, 'reset', id, t)]);
     expect(r.filter((x) => typeof x === 'object')).toHaveLength(1);
@@ -105,7 +153,7 @@ describe('reserveMail', () => {
     expect(await reserveMail(env.DB, lim, 'reset', await user(), t)).toHaveProperty('id');
   });
 
-  it('recipient: hooguit één mail per adres per 24 uur, ook van verschillende afzenders en in andere schrijfwijze', async () => {
+  it('recipient: hooguit Ã©Ã©n mail per adres per 24 uur, ook van verschillende afzenders en in andere schrijfwijze', async () => {
     const t = freshDay(); const email = `ontvanger-${t}@ex.test`;
     const o = { gapMs: 0, recipient: email.toUpperCase() };
     expect(await reserveMail(env.DB, env, 'invite_mail', await user(), t, o)).toHaveProperty('id');
@@ -125,7 +173,7 @@ describe('reserveMail', () => {
 });
 
 describe('claimCapNotice', () => {
-  it('één keer per UTC-dag', async () => {
+  it('Ã©Ã©n keer per UTC-dag', async () => {
     const t = freshDay();
     expect(await claimCapNotice(env.DB, t)).toBe(true);
     expect(await claimCapNotice(env.DB, t + 60 * MIN)).toBe(false);
