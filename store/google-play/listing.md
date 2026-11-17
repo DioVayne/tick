@@ -31,7 +31,7 @@ HERINNERING OP LOCATIE
 • Zelf de straal kiezen, van 200 meter tot 2 kilometer
 • Favoriete plekken, zoals thuis, werk en de winkel, in één tik gekozen
 • Melding weggeveegd? Dan komt hij terug als je er de volgende keer bent
-• Je bewegingen blijven op je telefoon; alleen de plekken die je zelf opslaat gaan naar Tick
+• Je telefoon houdt zelf bij waar je bent; Tick krijgt alleen de plekken die je opslaat en of een herinnering is afgegaan
 
 TAKEN EN LIJSTEN DELEN
 • Deel een hele lijst, zoals boodschappen of klussen in huis
@@ -59,8 +59,8 @@ OVERZICHT ZONDER GEDOE
 • Rijmodus: een grotere, rustige weergave als je onderweg bent
 
 OP JE TELEFOON
-• Widgets op je beginscherm, per widget een eigen lijst en indeling
-• Afvinken vanaf de widget, met Ongedaan maken
+• Widgets op je beginscherm, per widget een eigen lijst
+• Afvinken vanaf de widget, en meteen terugdraaien als je mis tikt
 • Snel een taak toevoegen, ook met een plek erbij
 • Werkt offline; alles komt bij zodra je weer online bent
 • Ook in de browser op je computer, tablet of iPhone
@@ -98,7 +98,7 @@ LOCATION REMINDERS
 • Choose the radius yourself, from 200 metres to 2 kilometres
 • Favourite places like home, work and the shop, picked in one tap
 • Swiped a notification away? It comes back the next time you are there
-• Your movements stay on your phone; only the places you save go to Tick
+• Your phone keeps track of where you are; Tick only gets the places you save and whether a reminder went off
 
 SHARE TASKS AND LISTS
 • Share a whole list, like groceries or jobs around the house
@@ -126,8 +126,8 @@ OVERVIEW WITHOUT THE FUSS
 • Driving mode: a bigger, calmer view when you are on the road
 
 ON YOUR PHONE
-• Home-screen widgets, each with its own list and layout
-• Tick tasks off from the widget, with Undo
+• Home-screen widgets, each with its own list
+• Tick tasks off from the widget, and undo right away if you mis-tap
 • Quickly add a task, with a place if you like
 • Works offline; everything catches up once you are back online
 • Also in the browser on your computer, tablet or iPhone
