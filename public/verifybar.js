@@ -20,8 +20,8 @@ export function startVerifyBar() {
     onclick: async () => {
       resend.disabled = true;
       try {
-        await request('POST', '/api/account/verify');
-        toast(t('verify.sent'), 'ok');
+        const r = await request('POST', '/api/account/verify');
+        toast(r?.delayed ? `${t('verify.sent')} ${t('mail.delayed')}` : t('verify.sent'), 'ok');
       } catch (e) {
         toast(e instanceof Offline ? t('app.you_are_offline') : e.message);
         resend.disabled = false;
@@ -30,6 +30,7 @@ export function startVerifyBar() {
   }, t('verify.resend'));
   const bar = el('div', { class: 'locbar', role: 'status' },
     el('p', {}, verifyBarText(CONFIG.verifyBy, getLocale())),
+    CONFIG.mailDelayed ? el('p', {}, t('mail.delayed')) : null,
     el('div', { class: 'locbar-actions' }, resend));
   document.getElementById('net')?.after(bar);
 }

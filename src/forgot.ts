@@ -4,7 +4,7 @@ import { HttpError } from './errors';
 import { cleanEmail } from './account';
 import { forgotPage } from './login';
 import { mailEnabled, reserveMail } from './mail';
-import { deliverQueued, enqueueMail } from './mailqueue';
+import { deliverQueued, enqueueMail, mailBacklog } from './mailqueue';
 import { inBackground, type Locale } from './push';
 
 /**
@@ -26,7 +26,8 @@ forgotPages.post('/forgot', async (c) => {
   const body = await c.req.json<Record<string, unknown>>().catch(() => null);
   const email = cleanEmail(body?.email);
   await inBackground(c, sendResetMail(c.env, email, new URL(c.req.url).origin, c.get('lang')), 'herstelmail');
-  return c.json({ ok: true });
+  // `delayed` hangt alleen af van de wachtrij als geheel, nooit van het adres.
+  return c.json({ ok: true, delayed: await mailBacklog(c.env.DB) });
 });
 
 /** Mailt (via de wachtrij) een herstellink naar een gewoon account met dit adres, binnen de grenzen; beheerders krijgen er geen. */

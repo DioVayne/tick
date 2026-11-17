@@ -270,7 +270,7 @@ export function forgotPage(locale: string | undefined): string {
 <meta name="robots" content="noindex">
 <title>${t('forgot.title')}</title><meta name="theme-color" content="#ffffff">
 <script src="/theme.js"></script><link rel="stylesheet" href="/login.css">
-</head><body data-sent="${escapeHtml(t('forgot.sent'))}" data-offline="${escapeHtml(t('app.you_are_offline'))}">
+</head><body data-sent="${escapeHtml(t('forgot.sent'))}" data-delayed="${escapeHtml(t('mail.delayed'))}" data-offline="${escapeHtml(t('app.you_are_offline'))}">
 <form id="f"><h1>${t('forgot.title')}</h1><p class="intro">${t('forgot.intro')}</p>
 <input type="email" id="email" placeholder="${t('login.email')}" autocomplete="username" maxlength="254" required autofocus>
 <button>${t('forgot.submit')}</button><p id="err" role="alert"></p>

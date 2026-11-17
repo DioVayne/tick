@@ -56,7 +56,7 @@ describe('wachtwoord vergeten', () => {
     const sent = resend(); const u = await createUser();
     const res = await forgot(` ${u.email.toUpperCase()} `);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    expect(await res.json()).toMatchObject({ ok: true });
     const mails = sent();
     expect(mails).toHaveLength(1);
     expect(mails[0].to).toEqual([u.email]);
@@ -64,6 +64,19 @@ describe('wachtwoord vergeten', () => {
     expect(path).toBeTruthy();
     vi.restoreAllMocks();
     expect((await req(path!, { method: 'POST', json: { password: 'nieuw12345' } })).status).toBe(200);
+  });
+
+  it('delayed hangt alleen af van de wachtrij, niet van het adres; de pagina draagt de tekst', async () => {
+    resend(); const u = await createUser();
+    await env.DB.prepare('DELETE FROM mail_queue').run();
+    expect(await (await forgot(u.email)).json()).toEqual({ ok: true, delayed: false });
+    await env.DB.prepare("INSERT INTO mail_queue (id, kind, user_id, ref, lang, origin, created_at, next_try_at, attempts) VALUES (?, 'verify', NULL, NULL, 'en', 'https://tick.test', ?, ?, 2)")
+      .bind(crypto.randomUUID(), new Date().toISOString(), new Date(Date.now() + 3_600_000).toISOString()).run();
+    expect(await (await forgot(u.email)).json()).toEqual({ ok: true, delayed: true });
+    expect(await (await forgot('onbekend@example.test')).json()).toEqual({ ok: true, delayed: true });
+    const html = await (await req('/forgot', { lang: 'nl' })).text();
+    expect(html).toContain(`data-delayed="${translate('nl', 'mail.delayed')}"`);
+    await env.DB.prepare('DELETE FROM mail_queue').run();
   });
 
   it('een adres met een plusteken werkt ook', async () => {
@@ -79,7 +92,7 @@ describe('wachtwoord vergeten', () => {
       for (const email of ['niemand@example.test', 'baas@example.test']) {
         const res = await forgot(email);
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ ok: true });
+        expect(await res.json()).toMatchObject({ ok: true });
       }
       expect(sent()).toHaveLength(0);
     } finally {
