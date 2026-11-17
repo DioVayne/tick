@@ -5,6 +5,7 @@ import worker from '../src/index';
 import { deliverQueued } from '../src/mailqueue';
 import { ADMIN_ID, BASE, createUser, randomIp, untilRateLimited } from './helpers';
 import { translate } from '../public/i18n.js';
+import { hashPassword } from '../src/password';
 import type { Env } from '../src/index';
 
 const mailEnv: Env = { ...env, RESEND_API_KEY: 'test-resend', MAIL_FROM: 'Tick <noreply@ticktodo.nl>' };
@@ -119,26 +120,15 @@ describe('wachtwoord vergeten', () => {
     expect(sent()[0].subject).toBe(translate('nl', 'mail.reset_subject'));
   });
 
-  it('daggrens: geen mail meer en één melding aan de beheerder', async () => {
-    const start = new Date(); start.setUTCHours(0, 0, 0, 0);
-    const today = await env.DB.prepare("SELECT COUNT(*) AS n FROM mail_log WHERE kind <> 'cap_notice' AND sent_at >= ?")
-      .bind(start.toISOString()).first<{ n: number }>();
-    const e: Env = { ...mailEnv, MAIL_DAILY_LIMIT: String(today!.n + 1) };
-    await env.DB.prepare("INSERT OR REPLACE INTO user_settings (user_id, key, value) VALUES (?, 'fallback_webhook', 'https://hook.invalid/beheer')").bind(ADMIN_ID).run();
-    const sent = resend(); const spy = vi.mocked(globalThis.fetch);
-    const [a, b, c] = [await createUser(), await createUser(), await createUser()];
-    await forgot(a.email, { e });
-    await forgot(b.email, { e });
-    await forgot(c.email, { e });
-    expect(sent().map((m) => m.to[0])).toEqual([a.email]);
-    const notices = await env.DB.prepare("SELECT COUNT(*) AS n FROM mail_log WHERE kind = 'cap_notice' AND sent_at >= ?")
-      .bind(start.toISOString()).first<{ n: number }>();
-    expect(notices!.n).toBe(1);
-    // De beheerder kreeg de melding (zonder pushabonnement via zijn fallback-webhook), precies één keer.
-    const hooks = spy.mock.calls.filter(([url]) => String(url) === 'https://hook.invalid/beheer');
-    expect(hooks).toHaveLength(1);
-    expect(JSON.parse(String((hooks[0][1] as RequestInit).body))).toMatchObject({ title: translate('en', 'mail.cap_title') });
-    await env.DB.prepare("DELETE FROM user_settings WHERE user_id = ? AND key = 'fallback_webhook'").bind(ADMIN_ID).run();
+  it('geen vaste daggrens: 60 herstelmails voor 60 accounts gaan allemaal weg', async () => {
+    const sent = resend();
+    // Gebruikers rechtstreeks aanmaken met één gedeelde hash: 60 keer wachtwoord hashen duurt te lang.
+    const hash = await hashPassword('lid-wachtwoord');
+    const users = Array.from({ length: 60 }, () => ({ id: crypto.randomUUID(), email: `bulk-${crypto.randomUUID()}@example.test` }));
+    await env.DB.batch(users.map((u) => env.DB.prepare("INSERT INTO users (id, name, email, password_hash, role, created_at) VALUES (?, 'Lid', ?, ?, 'member', ?)")
+      .bind(u.id, u.email, hash, new Date().toISOString())));
+    for (const u of users) await forgot(u.email);
+    expect(sent().map((m) => m.to[0]).sort()).toEqual(users.map((u) => u.email).sort());
   });
 
   it('rem per IP', async () => {

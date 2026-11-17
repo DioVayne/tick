@@ -6,13 +6,11 @@ import type { Locale } from './push';
  * grenzen (tabel `mail_log`). Zonder `RESEND_API_KEY` of `MAIL_FROM` staat mailen uit en verandert er niets.
  */
 
-export const DEFAULT_DAILY_LIMIT = 50;
 const MINUTE = 60_000;
 const DAY = 86_400_000;
 /** Per account en per soort mail: hooguit één per `ACCOUNT_GAP_MS` en `ACCOUNT_PER_DAY` per 24 uur. */
 const ACCOUNT_GAP_MS = 5 * MINUTE;
 const ACCOUNT_PER_DAY = 5;
-const CAP_NOTICE = 'cap_notice';
 
 export type MailProvider = 'resend' | 'cloudflare';
 
@@ -29,12 +27,6 @@ export function mailProviders(env: Env): MailProvider[] {
 
 export function mailEnabled(env: Env): boolean {
   return mailProviders(env).length > 0;
-}
-
-/** `MAIL_DAILY_LIMIT` als geheel getal vanaf 1, anders 50. */
-export function dailyLimit(env: Env): number {
-  const n = Number(env.MAIL_DAILY_LIMIT);
-  return Number.isInteger(n) && n >= 1 ? n : DEFAULT_DAILY_LIMIT;
 }
 
 export type Mail = { to: string; subject: string; text: string; html: string };
@@ -107,43 +99,36 @@ ${p.extra ? `<p style="margin:0 0 20px;font-size:15px;line-height:1.5"><a href="
 const iso = (ms: number) => new Date(ms).toISOString();
 const dayStart = (ms: number) => ms - (ms % DAY);
 
-/** Grenzen voor één soort mail; zonder opgave gelden de standaardgrenzen (5 minuten, 5 per dag, de volle daggrens). */
+/** Grenzen voor één soort mail; zonder opgave gelden de standaardgrenzen (5 minuten en 5 per dag per account). */
 export type MailLimits = {
   /** Wachttijd tussen twee mails van deze soort aan/voor hetzelfde account (standaard 5 minuten). */
   gapMs?: number;
   /** Hoeveel mails van deze soort per account per 24 uur (standaard 5). */
   perDay?: number;
-  /** Deel (0–1) van `MAIL_DAILY_LIMIT` dat deze soort mag gebruiken (standaard 1). */
-  dailyShare?: number;
   /** E-mailadres van de ontvanger: dan ook hooguit `recipientPerDay` mails van deze soort per adres per 24 uur. */
   recipient?: string;
   /** Hoeveel mails van deze soort per ontvangend adres per 24 uur (standaard 1; telt alleen met `recipient`). */
   recipientPerDay?: number;
 };
 
-/**
- * Soorten rijen in `mail_log` die geen verstuurde mail zijn en dus niet voor `MAIL_DAILY_LIMIT` tellen: vlaggen
- * (de beheerder is vandaag gemeld) en `signup` (één rij per aanmelding, voor `SIGNUP_DAILY_LIMIT`; zie src/signup.ts).
- */
-export const SIGNUP_CAP = 'signup_cap';
+/** Soort rij in `mail_log` voor een aanmelding (geen verstuurde mail); zie `recordSignup`. */
 export const SIGNUP = 'signup';
-const FLAG_KINDS = [CAP_NOTICE, SIGNUP_CAP, SIGNUP];
 
 /**
- * Reserveert een plek voor een aanmelding: één rij `signup` (zonder account, zodat verwijderen hem niet weghaalt),
- * alleen als er vandaag (UTC) nog geen `limit` zijn. Eén INSERT … SELECT … WHERE, zodat gelijktijdige aanmeldingen de
- * grens niet samen overschrijden. Geeft het id (terug te geven met `releaseMail`) of null als de grens bereikt is.
+ * Schrijft een rij `signup` (zonder account, zodat verwijderen hem niet weghaalt) en geeft het aantal aanmeldingen van
+ * vandaag (UTC) terug, de nieuwe rij inbegrepen, en het id van de rij (terug te geven met `releaseMail` als er geen
+ * account komt). Er is geen grens: het aantal is alleen voor de melding aan de eigenaar.
  */
-export async function reserveSignup(db: D1Database, limit: number, now = Date.now()): Promise<string | null> {
+export async function recordSignup(db: D1Database, now = Date.now()): Promise<{ id: string; count: number }> {
   const id = crypto.randomUUID();
   const start = dayStart(now);
-  const [, insert] = await db.batch([
+  await db.batch([
     db.prepare('DELETE FROM mail_log WHERE sent_at < ?').bind(iso(now - 2 * DAY)),
-    db.prepare(`INSERT INTO mail_log (id, kind, user_id, sent_at) SELECT ?1, ?2, NULL, ?3
-      WHERE (SELECT COUNT(*) FROM mail_log WHERE kind = ?2 AND sent_at >= ?4 AND sent_at < ?5) < ?6`)
-      .bind(id, SIGNUP, iso(now), iso(start), iso(start + DAY), limit),
+    db.prepare('INSERT INTO mail_log (id, kind, user_id, sent_at) VALUES (?, ?, NULL, ?)').bind(id, SIGNUP, iso(now)),
   ]);
-  return insert.meta.changes === 1 ? id : null;
+  const row = await db.prepare('SELECT COUNT(*) AS n FROM mail_log WHERE kind = ? AND sent_at >= ? AND sent_at < ?')
+    .bind(SIGNUP, iso(start), iso(start + DAY)).first<{ n: number }>();
+  return { id, count: row?.n ?? 1 };
 }
 
 /** SHA-256 (hex) van het getrimde, kleingeschreven adres; het adres zelf komt niet in `mail_log`. */
@@ -153,49 +138,30 @@ export async function recipientHash(email: string): Promise<string> {
 }
 
 /**
- * Reserveert een plek voor een mail aan `userId`, binnen de grenzen per account (per soort), per ontvanger (als
- * opgegeven) en per UTC-dag (alle soorten samen). Eén INSERT … SELECT … WHERE, zodat twee gelijktijdige aanvragen niet
+ * Reserveert een plek voor een mail aan `userId`, binnen de grenzen per account (per soort) en per ontvanger (als
+ * opgegeven); er is geen grens voor heel Tick. Eén INSERT … SELECT … WHERE, zodat twee gelijktijdige aanvragen niet
  * allebei slagen. Ruimt oude rijen op. Een volle ontvanger telt als `'account_limit'`.
  */
-export async function reserveMail(db: D1Database, env: Env, kind: string, userId: string, now = Date.now(), o: MailLimits = {}):
-  Promise<{ id: string } | 'account_limit' | 'daily_limit'> {
+export async function reserveMail(db: D1Database, _env: Env, kind: string, userId: string, now = Date.now(), o: MailLimits = {}):
+  Promise<{ id: string } | 'account_limit'> {
   const id = crypto.randomUUID();
-  const start = dayStart(now);
   const gap = o.gapMs ?? ACCOUNT_GAP_MS;
   const perDay = o.perDay ?? ACCOUNT_PER_DAY;
-  const daily = Math.floor(dailyLimit(env) * Math.min(1, Math.max(0, o.dailyShare ?? 1)));
   const hash = o.recipient ? await recipientHash(o.recipient) : null;
   const perRecipient = o.recipientPerDay ?? 1;
-  const flags = FLAG_KINDS.map((k) => `'${k}'`).join(', ');
   const [, insert] = await db.batch([
     db.prepare('DELETE FROM mail_log WHERE sent_at < ?').bind(iso(now - 2 * DAY)),
-    db.prepare(`INSERT INTO mail_log (id, kind, user_id, sent_at, recipient_hash) SELECT ?1, ?2, ?3, ?4, ?11
+    db.prepare(`INSERT INTO mail_log (id, kind, user_id, sent_at, recipient_hash) SELECT ?1, ?2, ?3, ?4, ?8
       WHERE (SELECT COUNT(*) FROM mail_log WHERE user_id = ?3 AND kind = ?2 AND sent_at > ?5) = 0
         AND (SELECT COUNT(*) FROM mail_log WHERE user_id = ?3 AND kind = ?2 AND sent_at > ?6) < ?7
-        AND (SELECT COUNT(*) FROM mail_log WHERE kind NOT IN (${flags}) AND sent_at >= ?8 AND sent_at < ?9) < ?10
-        AND (?11 IS NULL OR (SELECT COUNT(*) FROM mail_log WHERE kind = ?2 AND recipient_hash = ?11 AND sent_at > ?6) < ?12)`)
-      .bind(id, kind, userId, iso(now), iso(now - gap), iso(now - DAY), perDay, iso(start), iso(start + DAY), daily, hash, perRecipient),
+        AND (?8 IS NULL OR (SELECT COUNT(*) FROM mail_log WHERE kind = ?2 AND recipient_hash = ?8 AND sent_at > ?6) < ?9)`)
+      .bind(id, kind, userId, iso(now), iso(now - gap), iso(now - DAY), perDay, hash, perRecipient),
   ]);
-  if (insert.meta.changes === 1) return { id };
-  const [recent, toRecipient] = await Promise.all([
-    db.prepare('SELECT COUNT(*) AS n, MAX(sent_at) AS last FROM mail_log WHERE user_id = ? AND kind = ? AND sent_at > ?')
-      .bind(userId, kind, iso(now - DAY)).first<{ n: number; last: string | null }>(),
-    hash ? db.prepare('SELECT COUNT(*) AS n FROM mail_log WHERE kind = ? AND recipient_hash = ? AND sent_at > ?').bind(kind, hash, iso(now - DAY)).first<{ n: number }>() : null,
-  ]);
-  const accountFull = (!!toRecipient && toRecipient.n >= perRecipient) || (!!recent && (recent.n >= perDay || (gap > 0 && !!recent.last && recent.last > iso(now - gap))));
-  return accountFull ? 'account_limit' : 'daily_limit';
+  // De enige weigeringen zijn de grenzen per account en per ontvangend adres.
+  return insert.meta.changes === 1 ? { id } : 'account_limit';
 }
 
 /** Geeft een gereserveerde plek terug (de mail is niet verstuurd), zodat hij niet meetelt. */
 export async function releaseMail(db: D1Database, id: string): Promise<void> {
   await db.prepare('DELETE FROM mail_log WHERE id = ?').bind(id).run();
-}
-
-/** true bij de eerste aanroep op een UTC-dag: dan krijgt de beheerder een melding dat de daggrens bereikt is. */
-export async function claimCapNotice(db: D1Database, now = Date.now(), kind = CAP_NOTICE): Promise<boolean> {
-  const start = dayStart(now);
-  const r = await db.prepare(`INSERT INTO mail_log (id, kind, user_id, sent_at) SELECT ?1, ?2, NULL, ?3
-    WHERE NOT EXISTS (SELECT 1 FROM mail_log WHERE kind = ?2 AND sent_at >= ?4 AND sent_at < ?5)`)
-    .bind(crypto.randomUUID(), kind, iso(now), iso(start), iso(start + DAY)).run();
-  return r.meta.changes === 1;
 }

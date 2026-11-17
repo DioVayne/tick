@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ADMIN_ID, callWith, createUser, openEnv, randomIp, untilRateLimited } from './helpers';
+import { callWith, createUser, openEnv, randomIp, untilRateLimited } from './helpers';
 import type { Env } from '../src/index';
 import { translate } from '../public/i18n.js';
 import { MIN_PASSWORD } from '../src/account';
@@ -73,17 +73,19 @@ describe('met OPEN_SIGNUP', () => {
     expect(await (await signup({ name: 'C', email: 'geen-adres', password: 'lang-genoeg-1' })).json()).toEqual(err('err.invalid_email'));
   });
 
-  it('daggrens: bij de grens 429 en één melding aan de beheerder', async () => {
-    const lim: Env = { ...openEnv, SIGNUP_DAILY_LIMIT: '1' };
-    // Vandaag al een aanmelding (de grens telt de rijen 'signup' in mail_log): de grens van 1 is bereikt.
-    await env.DB.prepare("INSERT INTO mail_log (id, kind, user_id, sent_at) VALUES (?, 'signup', NULL, ?)").bind(crypto.randomUUID(), new Date().toISOString()).run();
-    const res = await signup({ name: 'D', email: fresh(), password: 'lang-genoeg-1' }, lim);
-    expect(res.status).toBe(429);
-    expect(await res.json()).toEqual(err('err.signup_full'));
-    await signup({ name: 'D', email: fresh(), password: 'lang-genoeg-1' }, lim);
-    const flags = await env.DB.prepare("SELECT COUNT(*) AS n FROM mail_log WHERE kind = 'signup_cap'").first<{ n: number }>();
-    expect(flags!.n).toBe(1);
-    expect(ADMIN_ID).toBeTruthy();
+  it('geen vaste daggrens: ook na 120 aanmeldingen op één dag (verschillende IP-sleutels) geeft een aanmelding 201', async () => {
+    // 120 echte aanmeldingen zijn te traag (elk hasht een wachtwoord): 120 rijen `signup` van vandaag klaarzetten.
+    const now = new Date().toISOString();
+    await env.DB.batch(Array.from({ length: 120 }, () => env.DB.prepare("INSERT INTO mail_log (id, kind, user_id, sent_at) VALUES (?, 'signup', NULL, ?)").bind(crypto.randomUUID(), now)));
+    for (let i = 0; i < 2; i++) expect((await signup({ name: 'D', email: fresh(), password: 'lang-genoeg-1' })).status).toBe(201);
+  });
+
+  it('een aanmelding die geen account maakt (bestaand adres) laat geen rij achter', async () => {
+    const u = await createUser();
+    const count = async () => (await env.DB.prepare("SELECT COUNT(*) AS n FROM mail_log WHERE kind = 'signup'").first<{ n: number }>())!.n;
+    const before = await count();
+    expect((await signup({ name: 'D', email: u.email, password: 'lang-genoeg-1' })).status).toBe(409);
+    expect(await count()).toBe(before);
   });
 
   it('rem per IP', async () => {

@@ -5,16 +5,15 @@ import { sessionCookie } from './auth';
 import { HttpError } from './errors';
 import { checkPassword, consumeLink } from './links';
 import { joinInvalidPage, signupPage, verifyPage } from './login';
-import { claimCapNotice, mailEnabled, releaseMail, reserveMail, reserveSignup, SIGNUP_CAP } from './mail';
+import { mailEnabled, recordSignup, releaseMail, reserveMail } from './mail';
 import { deliverQueued, enqueueMail } from './mailqueue';
 import { claimEmailInvites, claimInvites, inviteByCode } from './invites';
 import { authorize } from './auth';
 import { hashPassword } from './password';
 import { loadInstallPrefs } from './prefs';
-import { inBackground, type Locale, notifyUser } from './push';
-import { ADMIN_ID, getUser, type User } from './users';
+import { inBackground, type Locale } from './push';
+import { getUser, type User } from './users';
 import { deleteAccount } from './users-api';
-import { translate } from '../public/i18n.js';
 
 /**
  * Een openbare Tick (`OPEN_SIGNUP` = "true"): iedereen kan zelf een account maken, accounts zien elkaar niet, en delen
@@ -22,14 +21,6 @@ import { translate } from '../public/i18n.js';
  */
 export function openSignup(env: Env): boolean {
   return env.OPEN_SIGNUP?.trim() === 'true';
-}
-
-export const DEFAULT_SIGNUP_LIMIT = 100;
-
-/** `SIGNUP_DAILY_LIMIT` als geheel getal vanaf 1, anders 100. */
-export function signupDailyLimit(env: Env): number {
-  const n = Number(env.SIGNUP_DAILY_LIMIT);
-  return Number.isInteger(n) && n >= 1 ? n : DEFAULT_SIGNUP_LIMIT;
 }
 
 /**
@@ -83,12 +74,8 @@ signupPages.post('/signup', async (c) => {
   // Hetzelfde adres als in de uitnodiging: de mail kwam aan, dus het adres is bevestigd.
   const confirmed = !!join && join.email.toLowerCase() === email.toLowerCase();
   const now = Date.now();
-  // De daggrens telt rijen `signup` in mail_log, niet de accounts: een verwijderd account telt zo nog mee.
-  const slot = await reserveSignup(db, signupDailyLimit(c.env), now);
-  if (!slot) {
-    await inBackground(c, notifySignupCap(c.env, now), 'aanmeldgrens');
-    throw new HttpError(429, 'err.signup_full');
-  }
+  // Eén rij `signup` per aanmelding (geen grens); een verwijderd account telt zo nog mee in het aantal van vandaag.
+  const slot = await recordSignup(db, now);
   const id = crypto.randomUUID();
   try {
     if (await db.prepare('SELECT 1 FROM users WHERE email = ?').bind(email).first()) throw new HttpError(409, 'err.email_taken');
@@ -99,7 +86,7 @@ signupPages.post('/signup', async (c) => {
       .bind(id, name, email, await hashPassword(password), ts, deadline, confirmed ? ts : null).run();
   } catch (e) {
     // Geen account gemaakt: de plek telt niet mee.
-    await releaseMail(db, slot);
+    await releaseMail(db, slot.id);
     if (/UNIQUE constraint failed/.test((e as Error).message)) throw new HttpError(409, 'err.email_taken');
     throw e;
   }
@@ -110,14 +97,6 @@ signupPages.post('/signup', async (c) => {
   return c.json({ ok: true }, 201);
 });
 
-/** Eén pushmelding per UTC-dag aan de beheerder dat de aanmeldgrens bereikt is. */
-async function notifySignupCap(env: Env, now: number): Promise<void> {
-  if (!(await claimCapNotice(env.DB, now, SIGNUP_CAP))) return;
-  const limit = String(signupDailyLimit(env));
-  await notifyUser(env, ADMIN_ID, (l) => ({ title: translate(l, 'mail.signup_cap_title'), body: translate(l, 'mail.signup_cap_body', { limit }) }),
-    (await loadInstallPrefs(env)).defaultLocale);
-}
-
 export const UNVERIFIED_TTL_MS = 30 * 86_400_000;
 
 /** Tot wanneer een onbevestigd account blijft bestaan; null als het niet opgeruimd wordt. */
@@ -126,8 +105,6 @@ export function verifyBy(env: Env, user: Pick<User, 'email_verified_at' | 'verif
   return user.verify_deadline;
 }
 
-/** Deel van `MAIL_DAILY_LIMIT` dat bevestigingsmails samen mogen gebruiken. */
-export const VERIFY_DAILY_SHARE = 0.5;
 /** Hooguit zoveel bevestigingsmails per adres per 24 uur (ook over verwijderde accounts heen), zodat opnieuw sturen werkt. */
 export const VERIFY_PER_RECIPIENT = 3;
 
@@ -138,10 +115,9 @@ export async function sendVerifyMail(env: Env, userId: string, origin: string, l
   const user = await db.prepare('SELECT email FROM users WHERE id = ? AND email IS NOT NULL AND email_verified_at IS NULL')
     .bind(userId).first<{ email: string }>();
   if (!user) return;
-  // Hooguit de helft van de maildaggrens (herstelmails houden ruimte) en een paar per adres per 24 uur, ook over een
-  // verwijderd account heen; binnen die grens werkt "opnieuw sturen" gewoon.
+  // Een paar per adres per 24 uur, ook over een verwijderd account heen; binnen die grens werkt "opnieuw sturen" gewoon.
   const now = Date.now();
-  const slot = await reserveMail(db, env, 'verify', userId, now, { dailyShare: VERIFY_DAILY_SHARE, recipient: user.email, recipientPerDay: VERIFY_PER_RECIPIENT });
+  const slot = await reserveMail(db, env, 'verify', userId, now, { recipient: user.email, recipientPerDay: VERIFY_PER_RECIPIENT });
   if (typeof slot !== 'object') return;
   // Via de wachtrij (link en adres bij versturen, src/mailqueue.ts); lukt de directe poging niet, dan later alsnog.
   const id = await enqueueMail(env, { kind: 'verify', userId, ref: null, lang, origin }, now);
