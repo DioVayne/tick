@@ -145,7 +145,7 @@ describe('wachtwoord vergeten', () => {
     // aan middleware en database en liepen in de volledige suite op tot minuten; de grenzen zelf zitten in `sendResetMail`.
     for (const u of users) await sendResetMail(mailEnv, u.email, BASE, 'en');
     expect(sent().map((m) => m.to[0]).sort()).toEqual(users.map((u) => u.email).sort());
-  }, 120_000);
+  }, 300_000); // 60 mails na elkaar; in de volle suite (parallel) duurt dat minuten
 
   it('rem per IP', async () => {
     resend();
