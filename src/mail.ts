@@ -59,6 +59,7 @@ async function viaResend(env: Env, m: Mail): Promise<SendResult> {
 
 async function viaCloudflare(env: Env, m: Mail): Promise<SendResult> {
   try {
+    // `env.EMAIL` en `MAIL_FROM` zijn zeker aanwezig: `mailProviders` laat cloudflare alleen toe met beide.
     await env.EMAIL!.send({ from: env.MAIL_FROM!, to: m.to, subject: m.subject, text: m.text, html: m.html });
     return { ok: true, via: 'cloudflare' };
   } catch (e) {
