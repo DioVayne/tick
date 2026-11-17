@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { call } from './helpers';
 import { translate } from '../public/i18n.js';
 import { privacyPage } from '../src/login';
+import { mailProviders } from '../src/mail';
 
 const page = (lang: string) => call('/privacy', { auth: null, headers: { 'accept-language': lang, accept: 'text/html' } });
 
@@ -28,21 +29,33 @@ describe('openbare privacypagina', () => {
     expect(html).toContain(translate('nl', 'priv.calendar'));
     expect(translate('en', 'priv.calendar')).toMatch(/title and the start and end time.*14 days.*encrypted.*Unlinking/s);
     expect(privacyPage('nl', null)).not.toContain(translate('nl', 'priv.calendar_title'));
-    expect(privacyPage('nl', null, undefined, false, false, true)).toContain(translate('nl', 'priv.calendar'));
+    expect(privacyPage('nl', null, undefined, [], false, true)).toContain(translate('nl', 'priv.calendar'));
   });
 
-  it('met mail aan noemt de pagina Resend, zonder niet', () => {
-    expect(privacyPage('nl', null, undefined, true)).toContain(translate('nl', 'priv.others_mail'));
+  it('met mail aan noemt de pagina de maildienst, zonder niet', () => {
+    expect(privacyPage('nl', null, undefined, ['resend'])).toContain(translate('nl', 'priv.others_mail', { service: 'Resend' }));
+    expect(privacyPage('nl', null, undefined, ['resend'])).toContain(translate('nl', 'priv.others_mail_queue'));
     expect(privacyPage('nl', null)).not.toContain('Resend');
+    expect(privacyPage('nl', null)).not.toContain(translate('nl', 'priv.others_mail_queue'));
+  });
+
+  it('de genoemde dienst volgt MAIL_PROVIDERS: Cloudflare met binding noemt Cloudflare Email Service, niet Resend', () => {
+    const env: any = { MAIL_FROM: 'Tick <a@example.com>', MAIL_PROVIDERS: 'cloudflare', EMAIL: { send: async () => ({}) }, RESEND_API_KEY: 'x' };
+    const cf = privacyPage('en', null, undefined, mailProviders(env));
+    expect(cf).toContain('Cloudflare Email Service');
+    expect(cf).not.toContain('Resend');
+    const both = privacyPage('en', null, undefined, mailProviders({ ...env, MAIL_PROVIDERS: 'cloudflare,resend' }));
+    expect(both).toContain('Cloudflare Email Service');
+    expect(both).toContain('Resend');
   });
 
   it('op een openbare Tick: uitnodigingen per mail en het opruimen van onbevestigde accounts', () => {
-    const open = privacyPage('nl', null, undefined, true, true);
+    const open = privacyPage('nl', null, undefined, ['resend'], true);
     expect(open).toContain(translate('nl', 'priv.open_invites'));
     expect(open).toContain(translate('nl', 'priv.open_unverified'));
     expect(open).toContain(translate('nl', 'priv.open_reports'));
-    expect(privacyPage('nl', null, undefined, true)).not.toContain(translate('nl', 'priv.open_reports'));
-    expect(privacyPage('nl', null, undefined, true)).not.toContain(translate('nl', 'priv.open_invites'));
+    expect(privacyPage('nl', null, undefined, ['resend'])).not.toContain(translate('nl', 'priv.open_reports'));
+    expect(privacyPage('nl', null, undefined, ['resend'])).not.toContain(translate('nl', 'priv.open_invites'));
   });
 
   it('met naam en adres: beide op de pagina, en de naam wordt ge-escaped', () => {

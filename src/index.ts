@@ -25,7 +25,7 @@ import { usersApi } from './users-api';
 import { linkPages } from './links';
 import { openSignup, purgeUnverified, signupPages, verifyBy } from './signup';
 import { forgotPages } from './forgot';
-import { mailEnabled } from './mail';
+import { mailEnabled, mailProviders } from './mail';
 import { deliverQueued, mailBacklog } from './mailqueue';
 import { deviceApi, devicesApi } from './devices';
 import { exportApi, importApi } from './data';
@@ -194,7 +194,7 @@ app.get('/login', async (c) => {
 });
 // Zonder inlog: uitleg over je account verwijderen, voor de link die Google Play vraagt.
 app.get('/delete-account', (c) => c.html(deleteAccountPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), mailEnabled(c.env), openSignup(c.env))));
-app.get('/privacy', (c) => c.html(privacyPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), c.env.OPERATOR_NAME, mailEnabled(c.env), openSignup(c.env), calendarOn(c.env))));
+app.get('/privacy', (c) => c.html(privacyPage(c.get('lang'), contactEmail(c.env.ADMIN_CONTACT), c.env.OPERATOR_NAME, mailProviders(c.env), openSignup(c.env), calendarOn(c.env))));
 // Zonder inlog, alleen op een openbare Tick: de algemene voorwaarden, met een vaste taal per adres.
 for (const [path, lang] of [['/terms', 'en'], ['/voorwaarden', 'nl']] as const) {
   app.get(path, (c) => {
@@ -685,7 +685,7 @@ app.get('/config.js', async (c) => {
     calendarFeeds: calendarOn(c.env), testFeatures: testFeatures(c.env),
     openSignup: openSignup(c.env), emailVerified: !!user.email_verified_at, verifyBy: verifyBy(c.env, user),
     // Wachttekst bij de bevestigingsbalk: alleen op een openbare Tick, en alleen als er mails wachten.
-    mailDelayed: openSignup(c.env) ? await mailBacklog(c.env.DB) : false,
+    mailDelayed: openSignup(c.env) ? await mailBacklog(c.env.DB).catch(() => false) : false,
   };
   return c.body(`export default ${JSON.stringify(config)};
 `, 200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' });

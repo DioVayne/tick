@@ -84,7 +84,7 @@ accountApi.post('/verify', async (c) => {
   return c.json({ ok: true, delayed: await mailBacklog(c.env.DB) });
 });
 
-accountApi.get('/',(c) => {
+accountApi.get('/', (c) => {
   const { id, name, email, role } = c.get('user');
   return c.json({ id, name, email, role });
 });
