@@ -12,7 +12,7 @@ import { authorize } from './auth';
 import { hashPassword } from './password';
 import { loadInstallPrefs } from './prefs';
 import { inBackground, type Locale } from './push';
-import { tellOwner } from './telegram';
+import { background, tellOwner } from './telegram';
 import { getUser, type User } from './users';
 import { deleteAccount } from './users-api';
 
@@ -77,9 +77,6 @@ signupPages.post('/signup', async (c) => {
   const now = Date.now();
   // Eén rij `signup` per aanmelding (geen grens); een verwijderd account telt zo nog mee in het aantal van vandaag.
   const slot = await recordSignup(db, now);
-  // Elke 100 aanmeldingen op een dag een bericht aan de eigenaar (één per honderdtal, ook bij gelijktijdige aanmeldingen).
-  const hundred = Math.floor(slot.count / 100) * 100;
-  if (hundred >= 100) await tellOwner(c.env, 'signups', { count: String(hundred) }, 'once', now);
   const id = crypto.randomUUID();
   try {
     if (await db.prepare('SELECT 1 FROM users WHERE email = ?').bind(email).first()) throw new HttpError(409, 'err.email_taken');
@@ -94,6 +91,10 @@ signupPages.post('/signup', async (c) => {
     if (/UNIQUE constraint failed/.test((e as Error).message)) throw new HttpError(409, 'err.email_taken');
     throw e;
   }
+  // Elke 100 aanmeldingen op een dag een bericht aan de eigenaar (één per honderdtal, ook bij gelijktijdige
+  // aanmeldingen), pas als het account er is en zonder dat de aanmelder erop wacht.
+  const hundred = Math.floor(slot.count / 100) * 100;
+  if (hundred >= 100) background(tellOwner(c.env, 'signups', { count: String(hundred) }, 'once', now));
   if (join) await claimInvites(c.env, id, { inviteId: join.id });
   if (confirmed) await claimEmailInvites(c.env, id); // ook uitnodigingen van anderen aan dit adres
   c.header('Set-Cookie', await sessionCookie(c.env, (await getUser(db, id))!));
