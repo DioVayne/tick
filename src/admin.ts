@@ -6,6 +6,7 @@ import { bumpSessionVersionStmt } from './auth';
 import { openSignup } from './signup';
 import type { ReportRow } from './reports';
 import { wipeStmts } from './trash';
+import { telegramOn, testOwner, type OwnerResult } from './telegram';
 import { normLocale, translate } from '../public/i18n.js';
 
 /**
@@ -73,7 +74,25 @@ ${results.length ? `<div class="scroll"><table><thead><tr><th>${t('admin.col_whe
     `<th>${t('admin.col_reporter')}</th><th>${t('admin.col_reported')}</th><th>${t('admin.col_status')}</th></tr></thead><tbody>
 ${rows}
 </tbody></table></div>` : `<p>${t('admin.none')}</p>`}
+${ownerSection(c.env, t, c.req.query('test'))}
 <p><a href="/">${t('admin.to_app')}</a></p>`));
+});
+
+const OWNER_RESULTS: OwnerResult[] = ['telegram', 'push', 'failed'];
+
+/** Berichten aan jou (de eigenaar): waar ze heen gaan, de knop voor een testbericht en de uitkomst van de vorige test. */
+function ownerSection(env: Env, t: (k: string) => string, result: string | undefined): string {
+  const done = OWNER_RESULTS.includes(result as OwnerResult) ? result as OwnerResult : null;
+  return `<h2>${t('admin.owner_title')}</h2>
+<p>${t(telegramOn(env) ? 'admin.owner_via_telegram' : 'admin.owner_via_push')}</p>
+${done ? `<p class="${done === 'failed' ? 'gone' : 'ok'}" role="status">${t(`admin.owner_sent_${done}`)}</p>` : ''}
+<form method="post" action="/admin/owner-test"><button class="ghost">${t('admin.owner_test')}</button></form>`;
+}
+
+/** Eén testbericht aan de eigenaar (zonder grens per uur); terug naar de meldingenpagina met de uitkomst. */
+adminPages.post('/owner-test', async (c) => {
+  sameOrigin(c);
+  return c.redirect(`/admin/reports?test=${await testOwner(c.env)}`, 303);
 });
 
 adminPages.get('/reports/:id', async (c) => {
