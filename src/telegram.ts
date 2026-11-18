@@ -12,7 +12,15 @@ import { translate } from '../public/i18n.js';
  * `TELEGRAM_CHAT_ID`); zonder die instellingen een pushmelding aan de beheerder. Nooit een adres of sleutel in de tekst.
  */
 
-export type OwnerKey = 'mail_failing' | 'mail_dropped' | 'mail_warn' | 'signups';
+export type OwnerKey = 'mail_failing' | 'mail_dropped' | 'mail_warn' | 'signups' | 'test';
+
+/** Hoe een bericht aan de eigenaar ging: via Telegram, als pushmelding (geen Telegram ingesteld) of mislukt. */
+export type OwnerResult = 'telegram' | 'push' | 'failed';
+
+/** Of deze Tick berichten aan de eigenaar via Telegram stuurt (token en chat-id allebei ingesteld). */
+export function telegramOn(env: Env): boolean {
+  return !!env.TELEGRAM_BOT_TOKEN?.trim() && !!env.TELEGRAM_CHAT_ID?.trim();
+}
 
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
@@ -51,26 +59,41 @@ export async function tellOwner(env: Env, key: OwnerKey, vars: Record<string, st
   now = Date.now(), send: Sender = sendToAll): Promise<void> {
   try {
     if (!(await claim(env.DB, key, vars, throttle, now))) return;
-    const { defaultLocale } = await loadInstallPrefs(env);
-    const token = env.TELEGRAM_BOT_TOKEN?.trim();
-    const chat = env.TELEGRAM_CHAT_ID?.trim();
-    if (token && chat) {
-      const text = translate(defaultLocale, `owner.${key}`, vars);
-      try {
-        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text }),
-          signal: AbortSignal.timeout(5000),
-        });
-        if (!res.ok) console.error(`telegram: ${res.status}`);
-      } catch {
-        console.error('telegram: geen verbinding');
-      }
-      return;
-    }
-    await notifyUser(env, ADMIN_ID, (l) => ({ title: translate(l, 'owner.title'), body: translate(l, `owner.${key}`, vars) }), defaultLocale, send);
+    await deliver(env, key, vars, send);
   } catch (e) {
     console.error(`telegram: bericht aan de eigenaar mislukt (${(e as Error)?.name ?? 'fout'})`);
   }
+}
+
+/** Testbericht van de knop op de beheerpagina: zonder grens, en met de uitkomst. Gooit nooit. */
+export async function testOwner(env: Env, send: Sender = sendToAll): Promise<OwnerResult> {
+  try {
+    return await deliver(env, 'test', {}, send);
+  } catch (e) {
+    console.error(`telegram: testbericht mislukt (${(e as Error)?.name ?? 'fout'})`);
+    return 'failed';
+  }
+}
+
+/** Verstuurt één bericht aan de eigenaar: via Telegram als dat ingesteld is, anders als pushmelding aan de beheerder. */
+async function deliver(env: Env, key: OwnerKey, vars: Record<string, string>, send: Sender): Promise<OwnerResult> {
+  const { defaultLocale } = await loadInstallPrefs(env);
+  if (telegramOn(env)) {
+    const text = translate(defaultLocale, `owner.${key}`, vars);
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN!.trim()}/sendMessage`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID!.trim(), text }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) return 'telegram';
+      console.error(`telegram: ${res.status}`);
+    } catch {
+      console.error('telegram: geen verbinding');
+    }
+    return 'failed';
+  }
+  await notifyUser(env, ADMIN_ID, (l) => ({ title: translate(l, 'owner.title'), body: translate(l, `owner.${key}`, vars) }), defaultLocale, send);
+  return 'push';
 }
 
 /**

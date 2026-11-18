@@ -73,7 +73,7 @@ The deploy prints your URL. Logging in does not work yet: that needs the secrets
 | `TELEGRAM_BOT_TOKEN` | optional | The token of a Telegram bot (from @BotFather): `npx wrangler secret put TELEGRAM_BOT_TOKEN`. With `TELEGRAM_CHAT_ID` (see "Good to know") it sends you a message when email gets stuck |
 | `MAIL_PROVIDERS` | optional (var) | Which mail service sends: `resend` (default), `cloudflare`, or a list such as `cloudflare,resend` (the next one takes over when the previous fails). See "Switching to Cloudflare Email Service" in "Good to know" |
 | `MAIL_WARN_AT` | optional (var) | Number of emails in one day at which you get a message (default 70, once a day) |
-| `TELEGRAM_CHAT_ID` | optional (var) | Your Telegram chat id, together with `TELEGRAM_BOT_TOKEN` (see "Good to know") |
+| `TELEGRAM_CHAT_ID` | optional (var) | Your Telegram chat id, together with `TELEGRAM_BOT_TOKEN` (see "Good to know"). Check it with **Send test message** on `/admin/reports` |
 | `FALLBACK_WEBHOOK` | optional | Starting value for the administrator's webhook that receives a reminder as JSON when push did not arrive; in the app you can replace it, switch it off, or reset to this value. It does not apply to other accounts |
 
 A random value:
