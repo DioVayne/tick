@@ -58,13 +58,16 @@ Ask for feedback, never for upvotes (that's against Product Hunt's rules), also 
 
 ## 4. Images
 
-- **Thumbnail 240×240:** `store/google-play/icon-512.png`, scaled down.
-- **Gallery 1270×760** (landscape; the first image is also the preview when the link is shared). Use the English Play screenshots in `store/google-play/en/`, one or two phones per image on a plain background with one short line:
-  1. `screenshot-3-location.png` + `screenshot-7-driving.png` — "Reminds you when you get there"
-  2. `screenshot-4-shared.png` — "Shared, or each your own copy"
-  3. `screenshot-6-manager.png` — "Old tasks get a second chance"
-  4. `screenshot-1-home.png` + `screenshot-5-calendar.png` — "Free, no ads, open source"
+Ready to upload, in this folder:
+- **Thumbnail:** `thumbnail-240.png` (the app icon).
+- **Gallery** (1270×760, in this order; the first is also the preview when the link is shared):
+  1. `gallery-1.png` — "Reminds you when you get there" (place + driving mode)
+  2. `gallery-2.png` — "Do it together" (shared list)
+  3. `gallery-3.png` — "Old tasks get a second chance" (Tickmanager)
+  4. `gallery-4.png` — "Free. No ads. No tracking." (home + calendar)
 - Optional: a short video or GIF of a place notification arriving.
+
+To change them: edit `gallery.html` (it uses the English Play screenshots in `../google-play/en/`) and render each slide with headless Chrome, e.g. `chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 --allow-file-access-from-files --virtual-time-budget=6000 --window-size=1270,760 --screenshot=gallery-1.png "file:///…/store/product-hunt/gallery.html#1"` (`#1` to `#4`).
 
 ## 5. On launch day
 
