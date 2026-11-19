@@ -7,7 +7,7 @@ import { zonedParts, buildRule, customState, quickRules, shortDay, chipDays, wit
 // Een snelkeuze houdt de einddatum van het huidige ritme.
 
 // De waarden blijven de interne eenheden van buildRule/customState; alleen de labels zijn vertaald.
-const EENHEID = ['dag', 'week', 'maand', 'jaar'];
+const EENHEID = ['minuut', 'uur', 'dag', 'week', 'maand', 'jaar'];
 
 let closeOpen = null;
 let openAnchor = null;

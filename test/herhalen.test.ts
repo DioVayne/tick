@@ -36,11 +36,22 @@ describe('herhalende taken', () => {
   });
 
   it('ongeldig ritme geeft 400', async () => {
-    const res = await call('/api/tasks', { method: 'POST', json: { title: 'x', remind_at: '2099-10-18T10:00:00', repeat: 'FREQ=HOURLY' } });
+    const res = await call('/api/tasks', { method: 'POST', json: { title: 'x', remind_at: '2099-10-18T10:00:00', repeat: 'FREQ=MINUTELY;INTERVAL=0' } });
     expect(res.status).toBe(400);
     expect((await json<{ error: string }>(res)).error).toMatch(/invalid repeat rule/);
     const t = await createTask({ title: 'blijft', remind_at: '2099-10-18T10:00:00' });
     expect((await patch(t.id, { repeat: 'onzin' })).status).toBe(400);
+  });
+
+  it('elk uur: afvinken schuift een uur door, elke 15 minuten een kwartier', async () => {
+    const t = await createTask({ title: 'elk uur', remind_at: '2099-10-18T10:00:00', repeat: 'freq=hourly' });
+    expect(t.repeat?.rule).toBe('FREQ=HOURLY');
+    expect(t.remind_at).toBe(ZO1);
+    const u = await json<Task>(await patch(t.id, { done: true }));
+    expect(u.done).toBe(false);
+    expect(u.remind_at).toBe('2099-10-18T09:00:00.000Z');
+    const k = await createTask({ title: 'kwartier', remind_at: '2099-10-18T10:00:00', repeat: 'FREQ=MINUTELY;INTERVAL=15' });
+    expect((await json<Task>(await patch(k.id, { done: true }))).remind_at).toBe('2099-10-18T08:15:00.000Z');
   });
 
   it('met een einddatum rondt de laatste keer de taak af', async () => {

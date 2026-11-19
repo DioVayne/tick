@@ -1,5 +1,5 @@
 // Kalenderberekeningen: puur, zonder DOM. Dagen volgen de ingestelde tijdzone (zonedParts), nooit die van de browser.
-import { occurrencesBetween, parseRule, weekdayOrder, zonedParts, zonedToUtc } from './repeat.js';
+import { nextOccurrence, occurrencesBetween, parseRule, weekdayOrder, zonedParts, zonedToUtc } from './repeat.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -93,12 +93,41 @@ export function taskMoments(task, fromMs, toMs) {
   if (isNaN(at)) return [];
   if (!task.repeat) return at >= fromMs && at < toMs ? [at] : [];
   try {
-    parseRule(task.repeat.rule); // een onbekende regel valt terug op de ene keer
+    const { freq } = parseRule(task.repeat.rule); // een onbekende regel valt terug op de ene keer
     const current = at >= fromMs && at < toMs ? [at] : [];
     const rhythm = Date.parse(task.repeat.at);
     const after = Math.max(at, isNaN(rhythm) ? at : rhythm);
-    return current.concat(occurrencesBetween(task.repeat.rule, task.repeat.start, Math.max(fromMs, after + 1), toMs));
+    const from = Math.max(fromMs, after + 1);
+    if (freq === 'HOURLY' || freq === 'MINUTELY') return current.concat(firstPerDay(task.repeat.rule, task.repeat.start, from, toMs, current));
+    return current.concat(occurrencesBetween(task.repeat.rule, task.repeat.start, from, toMs));
   } catch { return at >= fromMs && at < toMs ? [at] : []; }
+}
+
+/**
+ * Een ritme per uur of minuut: alleen de eerste keer van elke dag (in de ingestelde zone), anders vult één taak de hele
+ * agenda. Een dag waarop `taken` al een keer heeft, slaat hij over.
+ * @param {string} rule
+ * @param {string} start
+ * @param {number} fromMs
+ * @param {number} toMs
+ * @param {number[]} taken
+ * @returns {number[]}
+ */
+function firstPerDay(rule, start, fromMs, toMs, taken) {
+  const out = [];
+  const dayOf = (ms) => { const p = zonedParts(ms); return `${p.y}-${p.m}-${p.d}`; };
+  const seen = new Set(taken.map(dayOf));
+  let after = fromMs - 1;
+  for (let i = 0; i < 400; i++) {
+    const next = nextOccurrence(rule, start, after);
+    if (next === null) break;
+    const ms = Date.parse(next);
+    if (ms >= toMs) break;
+    const p = zonedParts(ms);
+    if (!seen.has(dayOf(ms))) { seen.add(dayOf(ms)); out.push(ms); }
+    after = zonedToUtc(p.y, p.m, p.d + 1, 0, 0) - 1; // door naar de volgende dag
+  }
+  return out;
 }
 
 /**

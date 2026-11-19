@@ -14,12 +14,13 @@ A notification has two buttons: **Done** ticks the task off, **In 1 hour** moves
 Reminders can be up to a minute late, because Tick checks once a minute.
 
 ## Repeating
-Under **Repeat** at a reminder you choose how often: daily, weekly, monthly or yearly, every so many days/weeks/months, on certain weekdays, on a day of the month or on, say, the third Sunday. You can add an end date.
+Under **Repeat** at a reminder you choose how often: daily, weekly, monthly or yearly, every so many minutes/hours/days/weeks/months (1 to 99), on certain weekdays, on a day of the month or on, say, the third Sunday. You can add an end date. Choose minutes or hours under **Custom…**.
 
 - Ticking off a repeating task moves it on to the next time; it stays open. Subtasks reopen.
 - Missed times are skipped: the next time is always in the future.
 - Snoozing, *Tomorrow* or another date in the picker only move this one time; the date picker says so. To change all times, change the rhythm under **Repeat**.
 - Removing the reminder also removes the repeat.
+- Every so many minutes or hours counts from the reminder: every 2 hours from 10:15 is 12:15, 14:15 and so on. Like the other rhythms it moves on when you tick the task off, to the next of those times after now; it does not remind you again while the task is still open. These steps are real hours, also on the night daylight saving time changes. In the calendar such a task shows once per day.
 - Times follow the clock of your time zone, so 10:00 stays 10:00 when daylight saving time changes. "On the 31st" falls on the last day of shorter months.
 
 ## Overdue tasks

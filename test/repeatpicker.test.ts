@@ -5,6 +5,13 @@ const ZO_10 = '2026-10-18T08:00:00.000Z'; // zondag 18 okt 2026
 const DAG_31 = '2026-10-31T09:00:00.000Z'; // zaterdag 31 okt
 
 describe('buildRule (Aangepast-paneel)', () => {
+  it('minuten en uren', () => {
+    expect(buildRule({ interval: 1, unit: 'uur' }, ZO_10)).toBe('FREQ=HOURLY');
+    expect(buildRule({ interval: 45, unit: 'minuut' }, ZO_10)).toBe('FREQ=MINUTELY;INTERVAL=45');
+    expect(buildRule({ interval: 0, unit: 'minuut' }, ZO_10)).toBe('FREQ=MINUTELY');
+    expect(customState('FREQ=HOURLY;INTERVAL=3', ZO_10)).toMatchObject({ interval: 3, unit: 'uur' });
+    expect(customState('FREQ=MINUTELY;INTERVAL=20', ZO_10)).toMatchObject({ interval: 20, unit: 'minuut' });
+  });
   it('dagen en jaren', () => {
     expect(buildRule({ interval: 1, unit: 'dag' }, ZO_10)).toBe('FREQ=DAILY');
     expect(buildRule({ interval: 3, unit: 'jaar' }, ZO_10)).toBe('FREQ=YEARLY;INTERVAL=3');

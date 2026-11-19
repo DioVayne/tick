@@ -114,6 +114,7 @@ function translateRule(rrule: string, start: When): { rule: string; count: numbe
     if (k && v) kv[k] = v;
   }
   delete kv.WKST;
+  if (kv.FREQ === 'HOURLY' || kv.FREQ === 'MINUTELY') return null; // ritmes binnen een dag zijn alleen voor taken
   const p = inTz(start.zone, () => zonedParts(start.ms));
   let count: number | null = null;
   if (kv.COUNT) {
