@@ -58,7 +58,7 @@ On a Tick where everyone makes their own account (such as the one behind the And
 - **Confirm first:** you can share once your own email address is confirmed (see [Creating your own account](signup.md)).
 - **An address without an account:** Tick emails that address an invitation with your name, the name of the task or list, and how to get Tick. The button in that email is a personal link: it opens the sign-up screen with their address filled in. Whoever signs up through that link gets the invitation, even with another email address; someone who already has an account can sign in through the link and gets it in that account. An invitation stays open for 30 days.
 
-- **Free version: one person.** You can share with one other person: as many tasks and lists as you like, but all with that same person (the administrator can change the number). Tasks, lists and invitations by email all count; what others share with you does not, so you can always accept an invitation. Trying to share with a second person gives a message saying so.
+- **Free version: up to 3 people.** You can share with up to 3 other people: as many tasks and lists as you like, but all with those same 3 people (the administrator can change the number). Tasks, lists and invitations by email all count; what others share with you does not, so you can always accept an invitation. Trying to share with a fourth person gives a message saying so.
 
 Something shared with you that shouldn't be? You can report it and block the person: see [Reporting and blocking](reporting.md).
 

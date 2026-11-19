@@ -86,8 +86,8 @@
     // "OPEN_SIGNUP": "true",
     // With OPEN_SIGNUP: a Google Play link for the invitation email (optional).
     // "PLAY_STORE_URL": "https://play.google.com/store/apps/details?id=com.example.tick",
-    // With OPEN_SIGNUP: with how many different people one account can share (default 1; the administrator has no limit).
-    // "FREE_SHARE_PEOPLE": "1",
+    // With OPEN_SIGNUP: with how many different people one account can share (default 3; the administrator has no limit).
+    // "FREE_SHARE_PEOPLE": "3",
     // With OPEN_SIGNUP: your address and Chamber of Commerce (KvK) number, shown with OPERATOR_NAME on the terms of
     // service (/terms and /voorwaarden). Optional; the terms are written for a Tick run from the Netherlands.
     // "OPERATOR_ADDRESS": "Street 1, 1234 AB Town",

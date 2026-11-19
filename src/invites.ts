@@ -177,11 +177,11 @@ export async function pendingMemberId(listId: string, userId: string): Promise<s
   return `${MAIL_PREFIX}${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }
 
-export const DEFAULT_FREE_SHARE_PEOPLE = 1;
+export const DEFAULT_FREE_SHARE_PEOPLE = 3;
 
 /**
  * Met hoeveel verschillende mensen je hoogstens deelt: alleen op een openbare Tick, en niet voor de beheerder (dan
- * null, geen grens). Nu heeft iedereen de gratis versie (`FREE_SHARE_PEOPLE`, standaard 1); een betaalde versie komt
+ * null, geen grens). Nu heeft iedereen de gratis versie (`FREE_SHARE_PEOPLE`, standaard 3); een betaalde versie komt
  * later hier bij.
  */
 export function sharePeopleLimit(env: Env, user: Pick<User, 'role'>): number | null {
@@ -216,5 +216,5 @@ export async function assertMayShareWith(env: Env, me: User, to: { userId: strin
     const u = await env.DB.prepare('SELECT email FROM users WHERE id = ?').bind(to.userId).first<{ email: string | null }>();
     if (u?.email && emails.has(u.email.toLowerCase())) return;
   } else if (emails.has(to.email.toLowerCase())) return;
-  if (ids.size + emails.size >= max) throw new HttpError(403, 'err.share_limit', { max });
+  if (ids.size + emails.size >= max) throw new HttpError(403, max === 1 ? 'err.share_limit_one' : 'err.share_limit', { max });
 }

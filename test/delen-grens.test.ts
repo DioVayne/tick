@@ -4,11 +4,12 @@ import { callWith, createUser, openEnv as roomy, randomIp } from './helpers';
 import { translate } from '../public/i18n.js';
 import type { Env } from '../src/index';
 
-// Gratis versie op een openbare Tick: je deelt met hoogstens FREE_SHARE_PEOPLE (standaard 1) verschillende mensen.
+// Gratis versie op een openbare Tick: je deelt met hoogstens FREE_SHARE_PEOPLE (standaard 3) verschillende mensen.
 type User = Awaited<ReturnType<typeof createUser>>;
 
-// De gratis standaard, zonder de ruime grens uit de testhulp.
-const openEnv: Env = { ...roomy, FREE_SHARE_PEOPLE: undefined };
+// Grens 1 voor de meeste gevallen; de gratis standaard (3) staat in een eigen test.
+const openEnv: Env = { ...roomy, FREE_SHARE_PEOPLE: '1' };
+const standard: Env = { ...roomy, FREE_SHARE_PEOPLE: undefined };
 const uniq = () => crypto.randomUUID().slice(0, 8);
 beforeEach(() => { vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('{"id":"x"}', { status: 200 })); });
 afterEach(() => vi.restoreAllMocks());
@@ -18,9 +19,20 @@ const newTask = async (u: { cookie: string }, list = 'Thuis', e: Env = openEnv) 
   (await (await as(u, '/api/tasks', { method: 'POST', json: { title: `T ${uniq()}`, list } }, e)).json()) as { id: string; title: string };
 const share = async (u: { cookie: string }, to: string, e: Env = openEnv, mode = 'shared') =>
   as(u, '/api/shares', { method: 'POST', json: { task_id: (await newTask(u, 'Thuis', e)).id, mode, to } }, e);
-const limitError = (max: number) => ({ error: translate('en', 'err.share_limit', { max }), key: 'err.share_limit', vars: { max } });
+const limitError = (max: number) => {
+  const key = max === 1 ? 'err.share_limit_one' : 'err.share_limit';
+  return { error: translate('en', key, { max }), key, vars: { max } };
+};
 
-describe('gratis versie: delen met 1 persoon', () => {
+describe('gratis versie: grens op het aantal mensen', () => {
+  it('standaard met 3 mensen; de vierde niet', async () => {
+    const [a, b, c, d, e] = [await createUser(), await createUser(), await createUser(), await createUser(), await createUser()];
+    for (const u of [b, c, d]) expect((await share(a, u.email, standard)).status).toBe(201);
+    const fourth = await share(a, e.email, standard);
+    expect(fourth.status).toBe(403);
+    expect(await fourth.json()).toEqual(limitError(3));
+  });
+
   it('met dezelfde persoon onbeperkt; een tweede persoon (met of zonder account) niet', async () => {
     const [a, b, c] = [await createUser(), await createUser(), await createUser()];
     expect((await share(a, b.email)).status).toBe(201);

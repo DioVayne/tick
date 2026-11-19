@@ -117,7 +117,7 @@ export async function untilRateLimited(attempt: () => Promise<Response>, limit =
 }
 
 /** De env van een openbare Tick (OPEN_SIGNUP) met mail aan (Resend wordt in de tests nagebootst). */
-// Met een ruime grens voor delen: alleen test/delen-grens.test.ts test de gratis standaard (1 persoon).
+// Met een ruime grens voor delen: alleen test/delen-grens.test.ts test de gratis standaard (3 personen).
 export const openEnv: Env = { ...env, OPEN_SIGNUP: 'true', RESEND_API_KEY: 'test-resend', MAIL_FROM: 'Tick <noreply@ticktodo.nl>', FREE_SHARE_PEOPLE: '100' };
 
 /** Request met een eigen env (zonder Bearer); wacht ook op het werk op de achtergrond (waitUntil). */
