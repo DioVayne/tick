@@ -1,6 +1,8 @@
 pluginManagement {
     repositories {
         google()
+        // Googles kopie van Maven Central: GitHub-bouwmachines krijgen bij Maven Central zelf soms 429 (te veel verzoeken).
+        maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }
         mavenCentral()
         gradlePluginPortal()
     }
@@ -9,6 +11,8 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
+        // Googles kopie van Maven Central: GitHub-bouwmachines krijgen bij Maven Central zelf soms 429 (te veel verzoeken).
+        maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }
         mavenCentral()
     }
 }
