@@ -21,6 +21,15 @@ Product Hunt visitors are early adopters who compare every to-do app with Todois
 
 Launches go live at 00:01 Pacific time = **09:01 in the Netherlands**. Tuesday–Thursday are busiest; a weekend day is quieter and easier to stand out on.
 
+**Planned: Tuesday 8 December 2026, 09:01 NL** (the day's ranking runs until 09:00 NL the next morning). Don't schedule it later in the day for the US: every launch of that day competes on the same 24-hour leaderboard, so a later start only means fewer hours. Europe gives the first votes in the morning; the US joins from about 15:00 NL.
+
+Plan:
+- **This week:** account + profile (photo, short bio, link to ticktodo.nl).
+- **Until 1 December:** a few times a week, real comments on 2–3 other launches.
+- **Around 1 December:** create the post and schedule it for 8 December.
+- **Before launch:** test password reset and an email invite on app.ticktodo.nl; check the Resend (100 mails/day) and Cloudflare Workers (100,000 requests/day on the free plan) limits against the plan for many signups.
+- **8 December:** maker comment at 09:01; share in the morning (NL network), again around 15:00–17:00 (US, in English); answer every comment within an hour or two, until the evening.
+
 ## 2. Product page
 
 **Name:** Tick (if the form allows a longer name: "Tick To-Do", to avoid confusion with TickTick and Tick time tracking)
