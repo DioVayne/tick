@@ -4,30 +4,37 @@ Everything needed to put Tick on [Product Hunt](https://www.producthunt.com). Pr
 
 Limits (Product Hunt help, checked 2026-11-19): name ≤ 40 characters, tagline ≤ 60, description ≤ 260 (check the live form), up to 3 launch tags, thumbnail 240×240, gallery images 1270×760 and under 3 MB, at least 2 gallery images.
 
+## Positioning
+
+Product Hunt visitors are early adopters who compare every to-do app with Todoist, TickTick and Apple Reminders. "A reminder when you reach the shop" alone won't stand out there (other apps have it, and on iPhone Tick can't do it). So:
+
+1. **Lead with sharing** (what is really different): one task together, or a copy for each with visible progress; shared lists with *Take it*.
+2. **Place reminders as the Android bonus:** free, and named honestly as Android-only.
+3. **A touch of open source** for the tech crowd: host your own on a free Cloudflare account, set up with Claude Code, MCP server for Claude.
+
 ## 1. Before launch day
 
 1. Create a **personal** Product Hunt account (real name, photo) at least a week ahead: new accounts usually have to wait about a week before they can post.
 2. Comment on and upvote a few other launches in the weeks before, so the account isn't empty.
-3. Prepare the images (section 4).
-4. Check that signup on https://app.ticktodo.nl/signup works, and that the Play link opens.
-5. Create the post (*Submit* → *Launch a product*), choose **I made this**, fill in everything from section 2 and 3, and **schedule** it. Don't launch on the spot.
+3. Check that signup on https://app.ticktodo.nl/signup works, that the Play link opens, and that the website says the same sharing limit as the app (3 people).
+4. Ask your girlfriend if she's OK with her story in the maker comment.
+5. Create the post (*Submit* → *Launch a product*), choose **I made this**, fill in everything from sections 2–4, and **schedule** it. Don't launch on the spot.
 
 Launches go live at 00:01 Pacific time = **09:01 in the Netherlands**. Tuesday–Thursday are busiest; a weekend day is quieter and easier to stand out on.
 
 ## 2. Product page
 
-**Name:** Tick
+**Name:** Tick (if the form allows a longer name: "Tick To-Do", to avoid confusion with TickTick and Tick time tracking)
 
-**Website:** https://ticktodo.nl/en/
+**Website:** https://ticktodo.nl/en/ (it opens with a demo you can try without an account)
 
 **Tagline** (pick one):
-1. `A to-do app that reminds you when you reach the shop` (52)
-2. `Reminders at the right time, and at the right place` (51)
-3. `Free, open-source to-do app with place-based reminders` (54)
+1. `Shared to-do lists, with reminders at the right place` (53)
+2. `Share to-dos your way: one task together, or a copy each` (56)
 
-**Description** (≈250 characters):
+**Description** (252 characters):
 
-> Tick is a free to-do app that reminds you at the right moment: at a time, or when you arrive somewhere. Share tasks and lists, clear out old tasks with the Tickmanager, and keep working offline. No ads, no tracking. Open source, so you can host it yourself.
+> Tick is a free to-do app for the things you sort out with others. Share one task, or give each person their own copy and see their progress. On Android, Tick also reminds you when you reach the shop. No ads, no tracking, and open source: host your own.
 
 **Launch tags:** Productivity · Task Management · Open Source
 
@@ -40,19 +47,21 @@ Launches go live at 00:01 Pacific time = **09:01 in the Netherlands**. Tuesday�
 
 ## 3. Maker comment (post it right after going live)
 
-> Hi Product Hunt 👋 I'm Dio, and I made Tick because I needed an app that reminds me of things. One that just does what I want, and doesn't suddenly disappear or start costing money.
+> Hi Product Hunt 👋 I'm Dio. I made Tick because I needed an app that reminds me of things. One that just does what I want, and doesn't suddenly disappear or start costing money.
 >
-> My girlfriend has ADD. She described what Tick had to do in one sentence: "Remind me at the right moment, like when I'm at the shop and can't forget to buy something." That's where it started. We both use it every day.
+> My girlfriend has ADD. She described what Tick had to do in one sentence: "Remind me at the right moment, like when I'm at the shop and can't forget to buy something." That's where it started. We both use it every day, mostly for the things we sort out together.
 >
-> What it does:
-> 📍 Place reminders: get a notification when you arrive at (or leave) a place. Android only; on iPhone you can set the place but there's no notification.
-> 👥 Shared or copy: one task for both of you, or each your own copy with visible progress. Whole lists can be shared too.
-> ⚡ Tickmanager: old tasks come back one at a time, so you can plan, pin, keep or delete them.
-> 🚗 Driving mode: big, simple buttons when you're behind the wheel.
+> That's where Tick is different from most to-do apps:
+> 👥 **Shared or copy.** Share a task as one task for both of you (done is done for everyone), or give the other person their own copy and see how far they are. Handy when you both have to do the same thing, like your tax return.
+> 🙋 **Shared lists with "Take it".** Tap it and the others see you're on it. Ticked-off tasks show who did it and when.
+> 📍 **Place reminders, free on Android.** A notification when you arrive at or leave a place. On iPhone you get reminders at a time, not at a place (Apple doesn't let a home-screen app do that).
+> ⚡ **Tickmanager.** Old tasks come back one at a time: schedule, move to top, leave it or delete.
 >
-> It's free, without ads or tracking, and runs in your browser, on Android, and on iPhone from the home screen. The code is MIT-licensed, so you can run your own Tick on a free Cloudflare account.
+> It's free, without ads or tracking. The free version lets you share with up to 3 people, as many tasks and lists as you like. If paid extras ever come, nothing that's free when you sign up becomes paid without notice.
 >
-> It started as a little list for the two of us, and got a bit out of hand. I'd love to hear what you'd miss, or what doesn't work the way you'd expect.
+> For the tinkerers: Tick is open source (MIT). You can run your own Tick on a free Cloudflare account in about 15 minutes with Claude Code, and the built-in MCP server lets Claude manage your tasks.
+>
+> It started as a little list for the two of us, and got a bit out of hand. I'd love to hear how you share to-dos with the people around you, and what you'd miss in Tick.
 
 Ask for feedback, never for upvotes (that's against Product Hunt's rules), also not in messages to friends: share the link and say "I launched today, curious what you think".
 
@@ -61,16 +70,19 @@ Ask for feedback, never for upvotes (that's against Product Hunt's rules), also 
 Ready to upload, in this folder:
 - **Thumbnail:** `thumbnail-240.png` (the app icon).
 - **Gallery** (1270×760, in this order; the first is also the preview when the link is shared):
-  1. `gallery-1.png` — "Reminds you when you get there" (place + driving mode)
-  2. `gallery-2.png` — "Do it together" (shared list)
-  3. `gallery-3.png` — "Old tasks get a second chance" (Tickmanager)
-  4. `gallery-4.png` — "Free. No ads. No tracking." (home + calendar)
+  1. `gallery-1.png` — "One task together, or a copy for each" (share dialog + copy progress)
+  2. `gallery-2.png` — "Share a list, see who takes what" (shared list, up to 3 people free)
+  3. `gallery-3.png` — "Reminds you when you reach the shop", badge "Free on Android", with the iPhone note
+  4. `gallery-4.png` — "On your phone and in your browser" (desktop web app)
+  5. `gallery-5.png` — "Old tasks get a second chance" (Tickmanager)
+  6. `gallery-6.png` — "Open source. Host your own." (Cloudflare, Claude Code, MCP, MIT)
 - Optional: a short video or GIF of a place notification arriving.
 
-To change them: edit `gallery.html` (it uses the English Play screenshots in `../google-play/en/`) and render each slide with headless Chrome, e.g. `chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 --allow-file-access-from-files --virtual-time-budget=6000 --window-size=1270,760 --screenshot=gallery-1.png "file:///…/store/product-hunt/gallery.html#1"` (`#1` to `#4`).
+To change them: edit `gallery.html` (it uses the raw app screens in `docs/screenshots/src/raw/`) and render each slide with headless Chrome, e.g. `chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 --allow-file-access-from-files --virtual-time-budget=6000 --window-size=1270,760 --screenshot=gallery-1.png "file:///…/store/product-hunt/gallery.html#1"` (`#1` to `#6`).
 
 ## 5. On launch day
 
 1. Post the maker comment as soon as the launch is live.
 2. Share the link (LinkedIn, friends, the people already using Tick). Reply to every comment the same day.
-3. After launch: a Product Hunt badge on ticktodo.nl (NL + EN) is optional; it goes through the normal website rules in `CLAUDE.md`.
+3. Expect "how is this different from Apple Reminders / Todoist?": answer with shared vs copy and *Take it*, not with place reminders.
+4. After launch: a Product Hunt badge on ticktodo.nl (NL + EN) is optional; it goes through the normal website rules in `CLAUDE.md`.
