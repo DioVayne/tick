@@ -317,7 +317,13 @@ Rules, so a test feature is easy to remove:
 - No user-guide page, nothing on the website and no Play work while it is a test. Making it a normal feature: remove the switch checks, then the usual docs, website and Play steps.
 - Removing it: delete its files and the marked lines (search for the feature name), and clean up its rows with a new migration (`DELETE FROM user_settings WHERE key LIKE '<prefix>%'`).
 
-There are no test features at the moment. When there is one, it gets a row here: name, what it does, its own files, the marked places in other files and its settings rows. Removed: `freetime` "Time for a task?" (a notification when the linked calendar was free for a while, with six random tasks); migration `0029` deletes its `freetime_*` rows.
+Each test feature has a row here: name, what it does, its own files, the marked places in other files and its settings rows.
+
+| Name | What it does | Own files | Marked places | Settings rows |
+|---|---|---|---|---|
+| `quickdate` | Reads a date and time from the title you type ("call dentist tomorrow 15:00", "om 1500", "over 2 uur", "vrijdag", "24 nov"; Dutch and English). The add card shows it as a suggestion in the timeline ("Remind me … · from your text") with Ignore; on add, those words leave the title. Picking a time yourself wins. | `public/quickdate.js`, `test/quickdate.test.ts` | `public/composer.js` (search `quickdate`), `quickdate.*` keys in `public/i18n.js`, `/quickdate.js` in `SHELL` of `public/sw.js` | none |
+
+Removed: `freetime` "Time for a task?" (a notification when the linked calendar was free for a while, with six random tasks); migration `0029` deletes its `freetime_*` rows.
 
 ## Tests
 Vitest with `@cloudflare/vitest-plugin`: the tests run in the Workers runtime against a local D1 with the same migrations as production (`test/`). They use your `wrangler.jsonc` when it exists and `wrangler.example.jsonc` otherwise; the bindings in `vitest.config.ts` fix `LOCALE` (`en`), `TIMEZONE` (`Europe/Amsterdam`) and the test secrets. Android has JUnit tests for the geofence logic, start URLs, pair links and when to forget the key. CI (`.github/workflows/ci.yml`) runs typecheck and tests on every push and pull request.

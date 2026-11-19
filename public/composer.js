@@ -11,6 +11,8 @@ import { addFiles, attachmentsOn } from './attachments.js';
 import { inviteToTask, people } from './share.js';
 import { selectTask } from './detail.js';
 import { addSubtask, addTask, load, sharedOf, state } from './store.js';
+import CONFIG from './settings.js'; // testfeature quickdate
+import { findDate } from './quickdate.js'; // testfeature quickdate
 
 // De invoerkaart bovenaan de lijst. In rust de blauwe balk; na de eerste letter klapt eronder een tijdlijn open met per
 // eigenschap een zin ("Herinner me morgen 09:00", "Als ik aankom bij …", "In Inbox"). Een stap opent één kiezer (de
@@ -34,6 +36,15 @@ let editing = /** @type {'description' | 'subtasks' | null} */ (null);
 let focusEditor = false; // het tekstvak van `editing` krijgt bij de volgende draw de focus
 let form, input, rail, moreButton, fileInput;
 let peek = false; // het veld heeft de focus: de rij icoontjes staat (zolang de kaart nog niet open is)
+// Testfeature quickdate: een datum uit de getypte titel als voorstel, zolang je zelf geen tijd kiest. `ignored`: de
+// woorden van een voorstel dat je met Negeren wegtikte.
+const quickdate = !!CONFIG.testFeatures?.includes('quickdate');
+let ignored = '';
+const guess = (text = input.value) => {
+  if (!quickdate || v.remind) return null;
+  const g = findDate(text);
+  return g && g.match !== ignored && g.title ? g : null;
+};
 
 const defaultList = () => (!state.showDone && !state.showTrash && state.list) || 'Inbox';
 const listOf = () => v.list ?? defaultList();
@@ -71,7 +82,7 @@ export function initComposer() {
   form.addEventListener('submit', (e) => { e.preventDefault(); submit(false); });
   // ✕: alles weg en dicht, ook het toetsenbord.
   $('#add-cancel').addEventListener('click', () => { reset(); input.blur(); });
-  input.addEventListener('input', sync);
+  input.addEventListener('input', quickdate ? draw : sync); // testfeature quickdate: het voorstel volgt het typen
   // Terug in de titel: een open tekstvak klapt dicht (de tekst blijft), en de lijst waar je naar kijkt kan veranderd zijn.
   input.addEventListener('focus', () => { editing = null; draw(); });
   input.addEventListener('keydown', (e) => {
@@ -110,6 +121,7 @@ function addLocalFiles(files) {
 
 function reset() {
   input.value = '';
+  ignored = ''; // testfeature quickdate
   peek = false;
   v = blank();
   more = false;
@@ -146,7 +158,10 @@ function draw() {
   if (!form) return;
   const loc = v.location;
   const list = listOf();
+  const g = guess(); // testfeature quickdate
   const steps = [
+    g ? railStep({ kind: 'when', icon: 'bell', on: true, lead: t('add.when_set'), value: fmt(/** @type {string} */ (fromLocalInput(g.value))), note: t('quickdate.note'), open: pickWhen,
+      actions: [{ label: t('quickdate.ignore'), run: () => { ignored = g.match; done(); } }] }) :
     step('when', 'bell', !!v.remind, t(v.remind ? 'add.when_set' : 'add.when'), v.remind ? fmt(remindIso()) : null, pickWhen, () => { v.remind = ''; }),
     step('repeat', 'repeat', !!v.repeat, v.repeat ? '' : t('add.repeat'), v.repeat ? describeRule(v.repeat, remindIso() ?? new Date().toISOString()) : null, pickRepeat, () => { v.repeat = null; }),
     step('place', 'place', !!loc, loc ? t(loc.trigger === 'exit' ? 'add.leave' : 'add.arrive') : t('add.place'), loc ? placeShort(loc) : null, pickPlace, () => { v.location = null; }),
@@ -256,10 +271,12 @@ async function pickShare(anchor) {
 
 /** Maakt de taak; met open=true gaat hij meteen open in het detailpaneel. De kaart blijft open en leeg voor de volgende. */
 function submit(open) {
-  const title = input.value.trim();
+  let title = input.value.trim();
   if (!title) { back(); return; }
   const card = v;
-  const id = addTask(title, remindIso(), listOf(), { description: card.description.trim(), repeat: card.repeat, location: card.location });
+  const g = guess(title); // testfeature quickdate: titel zonder de datumwoorden, met het voorstel als tijd
+  if (g) title = g.title;
+  const id = addTask(title, g ? fromLocalInput(g.value) : remindIso(), listOf(), { description: card.description.trim(), repeat: card.repeat, location: card.location });
   const parent = state.open.find((x) => x.id === id);
   if (parent) for (const s of card.subtasks) addSubtask(parent, s);
   reset();

@@ -39,8 +39,8 @@ export default defineConfig({
           RESEND_API_KEY: '',
           MAIL_FROM: '',
           CALENDAR_FEEDS: 'true',
-          // De testfeatures staan in de tests aan (src/features.ts): zet hier hun namen neer. Nu zijn er geen.
-          TEST_FEATURES: '',
+          // De testfeatures staan in de tests aan (src/features.ts): zet hier hun namen neer.
+          TEST_FEATURES: 'quickdate',
           TEST_MIGRATIONS: migrations,
         },
       },
