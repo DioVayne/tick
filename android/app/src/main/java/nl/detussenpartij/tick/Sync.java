@@ -75,7 +75,14 @@ final class Sync {
             Prefs.setSyncError(c, null);
             Prefs.setLastSync(c, System.currentTimeMillis());
             retryLocationNotified(c, arr, fetchedFrom);
-            Geo.apply(c, arr, false);
+            // Alles opnieuw aanmelden als Android de plekken kwijt kan zijn: na "Gedwongen stoppen" (de PendingIntent
+            // is weg) en eens per dag, want Play-diensten kunnen ze ook kwijtraken zonder dat de app dat hoort.
+            String why = GeoLog.Why.CHANGED;
+            if (Geo.permitted(c)) {
+                if (!Geo.intentAlive(c)) why = GeoLog.Why.LOST;
+                else if (GeoPlan.fullDue(Prefs.geoFullAt(c), System.currentTimeMillis())) why = GeoLog.Why.DAILY;
+            }
+            Geo.apply(c, arr, !why.isEmpty(), why);
             DeviceStatus.report(c);
         } catch (Exception e) {
             Log.w("Tick", "Verversen mislukt", e);

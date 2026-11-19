@@ -14,7 +14,7 @@ import org.json.JSONObject;
 
 /**
  * Verversen op de achtergrond, zodat nieuwe of gewijzigde plekken ook zonder widget of herstart een geofence krijgen.
- * Job 1: elke 15 minuten (met netwerk). Job 2: zo snel mogelijk, bijvoorbeeld na een plek in de PWA (tick://sync).
+ * Job 1: elke 15 minuten (met netwerk), met daarna het vangnet voor aankomstmeldingen (SafetyNet). Job 2: zo snel mogelijk, bijvoorbeeld na een plek in de PWA (tick://sync).
  * Job 3: direct (expedited), na een tik op de verversknop van de widget.
  * Job 4: de wachtrij (Outbox) opnieuw versturen zodra er netwerk is en de wachttijd om is; blijft staan na een herstart.
  */
@@ -106,6 +106,8 @@ public class SyncJob extends JobService {
         new Thread(() -> {
             Log.i("Tick", "SyncJob " + params.getJobId() + ": verversen");
             if (!Prefs.token(app).isEmpty()) Sync.refresh(app, params.getJobId() == MANUAL, true);
+            // Het vangnet voor aankomstmeldingen die Android niet gaf (zie SafetyNet); alleen in de periodieke job.
+            if (params.getJobId() == PERIODIC && !Prefs.token(app).isEmpty()) SafetyNet.check(app);
             Updates.checkIfDue(app);
             if (params.getJobId() == MANUAL) {
                 TaskWidgetProvider.manualRefreshFinished(app);

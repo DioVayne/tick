@@ -33,6 +33,7 @@ public class GeofenceReceiver extends BroadcastReceiver {
         if (event == null) return;
         if (event.hasError()) {
             Log.w("Tick", "Geofence-fout: " + GeofenceStatusCodes.getStatusCodeString(event.getErrorCode()));
+            Prefs.log(context.getApplicationContext(), GeoLog.eventError(System.currentTimeMillis(), event.getErrorCode()));
             // Locatie is uitgezet: Play-diensten hebben alle geofences weggegooid. Signature wissen,
             // zodat de volgende refresh (of het openen van de app) ze opnieuw zet.
             if (event.getErrorCode() == GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE) {
@@ -48,19 +49,34 @@ public class GeofenceReceiver extends BroadcastReceiver {
         for (Geofence g : triggered) requestIds.add(g.getRequestId());
         // Waar je was toen hij afging (mag ontbreken): alleen voor de meting van hoe laat de melding kwam.
         final Location fix = event.getTriggeringLocation();
+        Prefs.log(app, GeoLog.event(System.currentTimeMillis(), exit, requestIds.size()));
 
         // De beslissing pas op de achtergrond: eerst kort bij de server navragen of de taak nog open is.
         final PendingResult result = goAsync();
         new Thread(() -> {
             try {
-                handle(app, requestIds, exit, fix);
+                handle(app, requestIds, exit, fix, false);
             } finally {
                 result.finish();
             }
         }).start();
     }
 
-    private static void handle(Context app, List<String> requestIds, boolean exit, Location fix) {
+    /** Een geofence en het vangnet tegelijk: één van beide beslist, zodat er geen dubbele melding komt. */
+    private static final Object LOCK = new Object();
+
+    /**
+     * Toont de meldingen voor deze request-ids (als ze nog moeten) en meldt ze aan de server. Blokkeert (netwerk).
+     * net: de aankomst kwam van het vangnet (SafetyNet) in plaats van Android; dan geen meting, want die zou zeggen
+     * hoe laat Android meldt. Geeft het aantal getoonde meldingen.
+     */
+    static int handle(Context app, List<String> requestIds, boolean exit, Location fix, boolean net) {
+        synchronized (LOCK) {
+            return handleLocked(app, requestIds, exit, fix, net);
+        }
+    }
+
+    private static int handleLocked(Context app, List<String> requestIds, boolean exit, Location fix, boolean net) {
         long start = SystemClock.elapsedRealtime();
         JSONArray tasks = fresh(app);
         JSONObject pending = Prefs.pending(app);
@@ -77,6 +93,9 @@ public class GeofenceReceiver extends BroadcastReceiver {
             NotifyDecision.Result r = NotifyDecision.decide(tasks, id, GeoPlan.fenceKey(rid), exit, fired, pending);
             if (r != NotifyDecision.Result.MELDEN) {
                 Log.i("Tick", "Geen locatiemelding voor " + id + ": " + r);
+                JSONObject t = NotifyDecision.find(tasks, id);
+                // Een taak die er niet (meer) is, heeft geen titel; die regel helpt wel bij het nagaan.
+                Prefs.log(app, GeoLog.decide(System.currentTimeMillis(), t == null ? "" : t.optString("title"), r.name(), net));
                 continue;
             }
             JSONObject task = NotifyDecision.find(tasks, id);
@@ -90,13 +109,15 @@ public class GeofenceReceiver extends BroadcastReceiver {
             if (!shown) {
                 // Meldingen staan uit: de herinnering niet stilletjes opmaken.
                 Log.w("Tick", "Locatiemelding niet getoond: meldingen staan uit");
+                Prefs.log(app, GeoLog.decide(System.currentTimeMillis(), task.optString("title"), GeoLog.OFF, net));
                 continue;
             }
             notified.put(id, GeoPlan.key(loc));
             done.add(rid);
-            measure(app, exit, rid, place, fix);
+            Prefs.log(app, GeoLog.decide(System.currentTimeMillis(), task.optString("title"), GeoLog.SHOWN, net));
+            if (!net) measure(app, exit, rid, place, fix);
         }
-        if (notified.isEmpty()) return;
+        if (notified.isEmpty()) return 0;
         Prefs.markLocFired(app, notified);
         // Alleen deze taken zijn klaar, met al hun plekken; de rest blijft gewoon staan.
         Set<String> gone = new LinkedHashSet<>(done);
@@ -115,6 +136,7 @@ public class GeofenceReceiver extends BroadcastReceiver {
                 Log.w("Tick", "location_notified doorgeven mislukt", e);
             }
         }
+        return notified.size();
     }
 
     /**

@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.util.Log;
 
 import com.google.android.gms.location.Geofence;
+import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
@@ -45,11 +46,15 @@ final class Geo {
                 PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_MUTABLE) != null;
     }
 
-    /**
-     * Registreert de geofences opnieuw als de set veranderd is (of bij force, zoals na een herstart).
-     * Zonder permissie haalt hij alles weg.
-     */
     static void apply(Context c, JSONArray tasks, boolean force) {
+        apply(c, tasks, force, GeoLog.Why.START);
+    }
+
+    /**
+     * Registreert de geofences opnieuw als de set veranderd is (of bij force, zoals na een herstart; why zegt waarom,
+     * voor het logboek). Zonder permissie haalt hij alles weg.
+     */
+    static void apply(Context c, JSONArray tasks, boolean force, String why) {
         final Context app = c.getApplicationContext();
         final GeofencingClient client = LocationServices.getGeofencingClient(app);
         final PendingIntent pi = intent(app);
@@ -71,34 +76,51 @@ final class Geo {
         if (!force && !Prefs.geoSig(app).isEmpty() && registered != null) {
             final GeoPlan.Diff d = GeoPlan.diff(registered, fences);
             Task<Void> removed = d.remove.isEmpty() ? Tasks.forResult(null) : client.removeGeofences(d.remove);
-            removed.addOnCompleteListener(r -> add(app, client, pi, d.add, d.addArrived, sig, ids));
+            removed.addOnCompleteListener(r -> add(app, client, pi, d.add, d.addArrived, sig, ids, null));
             return;
         }
-        client.removeGeofences(pi).addOnCompleteListener(r -> add(app, client, pi, fences, new ArrayList<>(), sig, ids));
+        final String reason = force ? why : GeoLog.Why.START;
+        client.removeGeofences(pi).addOnCompleteListener(r -> add(app, client, pi, fences, new ArrayList<>(), sig, ids, reason));
     }
 
     /**
      * Zet de geofences in fresh zonder initiële trigger (sta je al op de plek, dan meldt hij pas bij de volgende
      * aankomst) en die in arrived met (GeoPlan.Diff.addArrived). Bewaart daarna signature en request-ids.
+     * fullWhy: waarom alles opnieuw aangemeld werd, of null als alleen het verschil.
      */
     private static void add(Context app, GeofencingClient client, PendingIntent pi, List<GeoPlan.Fence> fresh,
-                            List<GeoPlan.Fence> arrived, String sig, List<String> ids) {
+                            List<GeoPlan.Fence> arrived, String sig, List<String> ids, String fullWhy) {
         try {
             Task<Void> first = fresh.isEmpty() ? Tasks.forResult(null) : client.addGeofences(request(fresh, 0), pi);
             first.onSuccessTask(v -> arrived.isEmpty() ? Tasks.forResult(null)
                             : client.addGeofences(request(arrived, GeofencingRequest.INITIAL_TRIGGER_ENTER), pi))
                     .addOnSuccessListener(v -> {
-                        Log.i("Tick", "Geofences: " + ids.size() + " (nieuw " + (fresh.size() + arrived.size()) + ")");
+                        int added = fresh.size() + arrived.size();
+                        Log.i("Tick", "Geofences: " + ids.size() + " (nieuw " + added + ")");
                         Prefs.setGeo(app, sig, ids);
+                        long now = System.currentTimeMillis();
+                        if (fullWhy != null) Prefs.setGeoFullAt(app, now);
+                        Prefs.log(app, GeoLog.reg(now, ids.size(), added, fullWhy != null,
+                                fullWhy == null ? GeoLog.Why.CHANGED : fullWhy));
                     })
                     .addOnFailureListener(e -> {
                         Log.w("Tick", "Geofences zetten mislukt", e);
                         Prefs.setGeoSig(app, null);
+                        Prefs.log(app, GeoLog.regFailed(System.currentTimeMillis(), failure(e)));
                     });
         } catch (SecurityException e) {
             Log.w("Tick", "Geen locatietoestemming voor geofences", e);
             Prefs.setGeoSig(app, null);
+            Prefs.log(app, GeoLog.regFailed(System.currentTimeMillis(), "SecurityException"));
         }
+    }
+
+    /** Korte naam van een fout voor het logboek: de statuscode van Play-diensten, of de soort fout. */
+    private static String failure(Exception e) {
+        if (e instanceof com.google.android.gms.common.api.ApiException) {
+            return GeofenceStatusCodes.getStatusCodeString(((com.google.android.gms.common.api.ApiException) e).getStatusCode());
+        }
+        return e.getClass().getSimpleName();
     }
 
     private static GeofencingRequest request(List<GeoPlan.Fence> fences, int initialTrigger) {
@@ -136,13 +158,17 @@ final class Geo {
 
     /** Zelfde als apply, met de laatst opgehaalde lijst (zonder netwerk). */
     static void applyFromCache(Context c, boolean force) {
+        applyFromCache(c, force, GeoLog.Why.START);
+    }
+
+    static void applyFromCache(Context c, boolean force, String why) {
         JSONArray tasks;
         try {
             tasks = new JSONArray(Prefs.cache(c));
         } catch (Exception e) {
             tasks = new JSONArray();
         }
-        apply(c, tasks, force);
+        apply(c, tasks, force, why);
     }
 
     private Geo() {}

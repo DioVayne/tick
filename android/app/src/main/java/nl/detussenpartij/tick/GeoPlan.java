@@ -21,6 +21,17 @@ final class GeoPlan {
     /** Android staat maximaal 100 geofences per app toe. */
     static final int MAX = 100;
 
+    /**
+     * Zo vaak worden alle geofences volledig opnieuw aangemeld, ook als de app denkt dat ze er nog staan: Play-diensten
+     * kunnen ze kwijtraken (een update, locatie even uit) zonder dat de app dat hoort.
+     */
+    static final long FULL_EVERY_MS = 24L * 60 * 60 * 1000;
+
+    /** Moeten alle geofences nu volledig opnieuw aangemeld worden? Ook als de klok terugsprong. */
+    static boolean fullDue(long lastFullAt, long now) {
+        return now - lastFullAt >= FULL_EVERY_MS || now < lastFullAt;
+    }
+
     static final class Fence {
         final String id, title, name, key;
         /** Welke plek van de taak: 0 = de eerste (location zelf), 1.. = location.more[idx - 1]. */

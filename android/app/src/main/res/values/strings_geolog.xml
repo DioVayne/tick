@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logbook of location notifications (GeoLog, GeoLogView) in "Tick on this phone". -->
+<resources>
+    <string name="geolog_title">Location notification log</string>
+    <string name="geolog_help">What Tick did with your places: registering them with Android, what Android reported, what the safety net saw, and whether a notification came. If a notification did not come, this usually says why. Everything stays on this phone.</string>
+    <string name="geolog_empty">Nothing has happened yet.</string>
+    <string name="geolog_copy">Copy</string>
+    <string name="geolog_copied">Log copied</string>
+    <string name="geolog_repeat">" (%1$d× since %2$s)"</string>
+    <string name="geolog_reg">Places registered with Android: %1$d (new: %2$d)</string>
+    <string name="geolog_reg_full">All places registered with Android again: %1$d (%2$s)</string>
+    <string name="geolog_why_start">after a restart, an update, or on opening</string>
+    <string name="geolog_why_daily">daily check</string>
+    <string name="geolog_why_lost">Android had stopped Tick</string>
+    <string name="geolog_why_missed">the safety net caught a missed arrival</string>
+    <string name="geolog_reg_failed">Registering places with Android failed: %s</string>
+    <string name="geolog_event_enter">Android reported: arrival (places: %d)</string>
+    <string name="geolog_event_exit">Android reported: leaving (places: %d)</string>
+    <string name="geolog_event_error">Android reported an error: %s</string>
+    <string name="geolog_shown">Notification shown: %s</string>
+    <string name="geolog_net_shown">Safety net: notification shown: %s</string>
+    <string name="geolog_skipped">No notification for %1$s: %2$s</string>
+    <string name="geolog_net_skipped">Safety net: no notification for %1$s: %2$s</string>
+    <string name="geolog_untitled">(task not found)</string>
+    <string name="geolog_r_no_task">the task is no longer open</string>
+    <string name="geolog_r_done">the task is done</string>
+    <string name="geolog_r_server">already notified, maybe on another phone</string>
+    <string name="geolog_r_other_place">the place has changed</string>
+    <string name="geolog_r_this_phone">already notified on this phone</string>
+    <string name="geolog_r_direction">other direction (arrival or leaving)</string>
+    <string name="geolog_r_off">notifications are off</string>
+    <string name="geolog_net">Safety net checked where you are (accurate to %1$d m). Arrival tasks watched: %2$d</string>
+    <string name="geolog_net_no_acc">Safety net checked where you are. Arrival tasks watched: %d</string>
+    <string name="geolog_net_no_fix">Safety net: no location found</string>
+</resources>
