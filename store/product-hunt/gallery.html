@@ -1,0 +1,44 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;800&display=block" rel="stylesheet">
+<style>
+  html,body{margin:0;width:1270px;height:760px;overflow:hidden}
+  body{font-family:Figtree,"Segoe UI",sans-serif;color:#fff;
+    background:radial-gradient(ellipse at 75% 20%,#26324a 0%,#1b2438 45%,#111827 100%)}
+  .text{position:absolute;left:80px;top:0;bottom:0;width:530px;display:flex;flex-direction:column;justify-content:center}
+  .logo{display:flex;align-items:center;gap:22px;margin-bottom:40px}
+  .logo img{width:92px;height:92px;border-radius:22px;box-shadow:0 0 0 2px #334155}
+  .logo span{font-size:76px;font-weight:800;letter-spacing:-1px}
+  h1{font-size:62px;line-height:1.06;font-weight:800;margin:0 0 24px;letter-spacing:-.5px}
+  p{font-size:27px;line-height:1.4;color:#cbd5e1;margin:0}
+  .tags{display:flex;gap:12px;margin-top:34px;flex-wrap:wrap}
+  .tags b{font-weight:500;font-size:21px;color:#fcd34d;border:2px solid #fcd34d66;border-radius:999px;padding:7px 18px}
+  .phone{position:absolute;width:389px;height:860px;overflow:hidden;border-radius:56px 56px 0 0;
+    box-shadow:0 30px 80px #0009}
+  .phone img{position:absolute;width:618px;left:-114px;top:-223px} /* 1080 wide * .572; phone frame starts x200,y390 */
+  .one   {left:740px;top:70px}
+  .back  {left:880px;top:150px;transform:scale(.86);transform-origin:top left;opacity:.97}
+  .front {left:650px;top:62px}
+</style></head><body>
+<div id="s"></div>
+<script>
+const G='../google-play/';
+const ph=(f,c)=>`<div class="phone ${c}"><img src="${G}en/${f}"></div>`;
+const slides={
+ 1:`<div class="text"><div class="logo"><img src="${G}icon-512.png"><span>Tick</span></div>
+    <h1>Reminds you when you get there</h1>
+    <p>A free to-do app with reminders at the right time, and at the right place.</p></div>
+    ${ph('screenshot-7-driving.png','back')}${ph('screenshot-3-location.png','front')}`,
+ 2:`<div class="text"><h1>Do it together</h1>
+    <p>Share one task, or give each person their own copy. Share a whole list and see who takes what.</p></div>
+    ${ph('screenshot-4-shared.png','one')}`,
+ 3:`<div class="text"><h1>Old tasks get a second chance</h1>
+    <p>The Tickmanager brings forgotten tasks back one at a time: schedule, move to top, leave it, or delete.</p></div>
+    ${ph('screenshot-6-manager.png','one')}`,
+ 4:`<div class="text"><h1>Free. No ads. No&nbsp;tracking.</h1>
+    <p>In your browser, on Android, and on iPhone from the home screen. Open source, so you can host your own.</p>
+    <div class="tags"><b>Web</b><b>Android</b><b>iPhone</b><b>MIT licence</b></div></div>
+    ${ph('screenshot-5-calendar.png','back')}${ph('screenshot-1-home.png','front')}`
+};
+document.getElementById('s').innerHTML=slides[location.hash.slice(1)||1];
+</script></body></html>
