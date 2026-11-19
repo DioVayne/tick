@@ -201,7 +201,7 @@ Meldingen kunnen tot een minuut later komen, want Tick kijkt eens per minuut. Ee
 - **Anker:** `#herhalen`
 - **Tegel:** Herhalen · Elke week op woensdag, tot een datum als je wilt.
 - **Lees meer:**
-Bij een herinnering kies je onder **Herhalen** hoe vaak: elke dag, week, maand of elk jaar. Of om de zoveel dagen, op bepaalde weekdagen, op een dag van de maand, of op bijvoorbeeld de derde zondag. Een einddatum kan ook.
+Bij een herinnering kies je onder **Herhalen** hoe vaak: elke dag, week, maand of elk jaar. Of om de zoveel minuten, uren of dagen, op bepaalde weekdagen, op een dag van de maand, of op bijvoorbeeld de derde zondag. Een einddatum kan ook.
 
 Vink je een herhalende taak af, dan schuift hij door naar de volgende keer. Hij blijft open staan, en de subtaken gaan weer open.
 
@@ -831,7 +831,7 @@ Notifications can be up to a minute late, because Tick checks once a minute. Fai
 - **Anchor:** `#repeating`
 - **Tile:** Repeating · Every week on Wednesday, until a date if you like.
 - **Read more:**
-At a reminder, choose under **Repeat** how often: every day, week, month or year. Or every so many days, on certain weekdays, on a day of the month, or on, say, the third Sunday. An end date works too.
+At a reminder, choose under **Repeat** how often: every day, week, month or year. Or every so many minutes, hours or days, on certain weekdays, on a day of the month, or on, say, the third Sunday. An end date works too.
 
 Tick off a repeating task and it moves on to the next time. It stays open, and its subtasks reopen.
 
