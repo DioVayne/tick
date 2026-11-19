@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ordinal, setLocale } from '../public/i18n.js';
-import { describeRule, nextOccurrence, normalizeRule, occurrencesBetween, parseRule, quickRules, setTimeZone, untilOf, withUntil, zonedToUtc } from '../public/repeat.js';
+import { describeRule, isSubDay, nextOccurrence, normalizeRule, occurrencesBetween, parseRule, quickRules, setTimeZone, untilOf, withUntil, zonedToUtc } from '../public/repeat.js';
 
 const ZO_10 = '2026-10-18T08:00:00.000Z'; // zondag 18 okt 2026 10:00 CEST
 const ms = (s: string) => Date.parse(s);
@@ -24,6 +24,19 @@ describe('nextOccurrence', () => {
     expect(nextOccurrence('FREQ=MINUTELY;INTERVAL=15', ZO_10, ms('2026-10-18T08:15:00Z'))).toBe('2026-10-18T08:30:00.000Z');
     expect(nextOccurrence('FREQ=MINUTELY', ZO_10, ms('2026-10-18T08:00:30Z'))).toBe('2026-10-18T08:01:00.000Z');
     expect(nextOccurrence('FREQ=MINUTELY;INTERVAL=5', ZO_10, ms('2026-10-17T00:00:00Z'))).toBe(ZO_10); // niet vóór de start
+  });
+  it('einde met tijd: t/m die minuut, ook bij ritmes per dag', () => {
+    expect(normalizeRule('FREQ=HOURLY;UNTIL=20261018T143000')).toBe('FREQ=HOURLY;UNTIL=20261018T143000');
+    for (const bad of ['FREQ=HOURLY;UNTIL=20261018T2400', 'FREQ=HOURLY;UNTIL=20261018T246000', 'FREQ=HOURLY;UNTIL=20261018T143015', 'FREQ=HOURLY;UNTIL=20261018T1430'])
+      expect(() => parseRule(bad), bad).toThrow(/invalid repeat rule/);
+    const rule = 'FREQ=HOURLY;UNTIL=20261018T120000'; // t/m 12:00 Amsterdam = 10:00 UTC
+    expect(nextOccurrence(rule, ZO_10, ms(ZO_10))).toBe('2026-10-18T09:00:00.000Z');
+    expect(nextOccurrence(rule, ZO_10, ms('2026-10-18T09:00:00Z'))).toBe('2026-10-18T10:00:00.000Z'); // 12:00 telt nog mee
+    expect(nextOccurrence(rule, ZO_10, ms('2026-10-18T10:00:00Z'))).toBeNull();
+    expect(nextOccurrence('FREQ=MINUTELY;INTERVAL=20;UNTIL=20261018T105900', ZO_10, ms('2026-10-18T08:40:00Z'))).toBeNull(); // 11:00 is te laat
+    // Per dag om 10:00 t/m 19 okt 09:00: de 19e valt al af.
+    expect(nextOccurrence('FREQ=DAILY;UNTIL=20261019T090000', ZO_10, ms(ZO_10))).toBeNull();
+    expect(nextOccurrence('FREQ=DAILY;UNTIL=20261019T100000', ZO_10, ms(ZO_10))).toBe('2026-10-19T08:00:00.000Z');
   });
   it('per uur: over de wintertijd heen in echte uren, en stopt na de einddatum (wandklok)', () => {
     // 25 okt 2026 02:00 CEST → 02:00 CET: elk uur blijft 60 minuten.
@@ -75,6 +88,10 @@ describe('einddatum (UNTIL)', () => {
   });
   it('withUntil en untilOf', () => {
     expect(withUntil('FREQ=DAILY', '2026-12-31')).toBe('FREQ=DAILY;UNTIL=20261231');
+    expect(withUntil('FREQ=HOURLY', '2026-12-31T17:30')).toBe('FREQ=HOURLY;UNTIL=20261231T173000');
+    expect(untilOf('FREQ=HOURLY;UNTIL=20261231T173000')).toBe('2026-12-31T17:30');
+    expect(withUntil('FREQ=HOURLY;UNTIL=20261231T173000', '')).toBe('FREQ=HOURLY');
+    expect([isSubDay('FREQ=HOURLY'), isSubDay('FREQ=MINUTELY;INTERVAL=5'), isSubDay('FREQ=DAILY'), isSubDay(null), isSubDay('onzin')]).toEqual([true, true, false, false, false]);
     expect(withUntil('FREQ=DAILY;UNTIL=20261231', '')).toBe('FREQ=DAILY');
     expect(untilOf('FREQ=DAILY;UNTIL=20261231')).toBe('2026-12-31');
     expect(untilOf('FREQ=DAILY')).toBe('');
@@ -101,6 +118,7 @@ describe('teksten', () => {
     expect(describeRule('FREQ=HOURLY;INTERVAL=2', ZO_10)).toBe('Elke 2 uur');
     expect(describeRule('FREQ=MINUTELY', ZO_10)).toBe('Elke minuut');
     expect(describeRule('FREQ=MINUTELY;INTERVAL=30;UNTIL=20261231', ZO_10)).toBe('Elke 30 minuten, t/m 31 dec 2026');
+    expect(describeRule('FREQ=HOURLY;UNTIL=20261231T170500', ZO_10)).toBe('Elk uur, t/m 31 dec 2026 17:05');
   });
   it('snelkeuzes volgen de startdatum', () => {
     expect(quickRules(ZO_10).map((q) => q.label)).toEqual(
@@ -119,6 +137,7 @@ describe('teksten', () => {
     expect(describeRule('FREQ=HOURLY;INTERVAL=4', ZO_10)).toBe('Every 4 hours');
     expect(describeRule('FREQ=MINUTELY', ZO_10)).toBe('Every minute');
     expect(describeRule('FREQ=MINUTELY;INTERVAL=10', ZO_10)).toBe('Every 10 minutes');
+    expect(describeRule('FREQ=HOURLY;INTERVAL=2;UNTIL=20261018T220000', ZO_10)).toBe('Every 2 hours, until 18 Oct 2026 22:00');
     expect(quickRules(ZO_10).map((q) => q.label)).toEqual(
       ['Every day', 'Every week on Sunday', 'Every 2 weeks on Sunday', 'Every month on the 18th', 'Every year on 18 Oct']);
   });

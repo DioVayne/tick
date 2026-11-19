@@ -14,7 +14,7 @@ A notification has two buttons: **Done** ticks the task off, **In 1 hour** moves
 Reminders can be up to a minute late, because Tick checks once a minute.
 
 ## Repeating
-Under **Repeat** at a reminder you choose how often: daily, weekly, monthly or yearly, every so many minutes/hours/days/weeks/months (1 to 99), on certain weekdays, on a day of the month or on, say, the third Sunday. You can add an end date. Choose minutes or hours under **Custom…**.
+Under **Repeat** at a reminder you choose how often: daily, weekly, monthly or yearly, every so many minutes/hours/days/weeks/months (1 to 99), on certain weekdays, on a day of the month or on, say, the third Sunday. You can add an end date (**Until**, the last time counts). Choose minutes or hours under **Custom…**; with those the end has a time too, such as every hour until 17:30.
 
 - Ticking off a repeating task moves it on to the next time; it stays open. Subtasks reopen.
 - Missed times are skipped: the next time is always in the future.

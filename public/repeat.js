@@ -12,7 +12,8 @@ const shortMonth = (m) => t(`month.short.${m - 1}`);
 
 /** @typedef {{ wd: number, n: number | null }} ByDay  wd: 0 = maandag t/m 6 = zondag */
 /** @typedef {{ y: number, m: number, d: number }} Day  een kalenderdag, `m` 1-12 */
-/** @typedef {{ freq: 'MINUTELY' | 'HOURLY' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY', interval: number, byday: ByDay[], bymonthday: number | null, until: Day | null }} Rule  until: laatste dag (t/m, wandklok) */
+/** @typedef {{ y: number, m: number, d: number, h?: number, mi?: number }} Until  laatste dag, eventueel met tijd (t/m, wandklok) */
+/** @typedef {{ freq: 'MINUTELY' | 'HOURLY' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY', interval: number, byday: ByDay[], bymonthday: number | null, until: Until | null }} Rule  until: laatste dag of moment (t/m, wandklok) */
 
 /** @param {string} timeZone */
 const formatter = (timeZone) => new Intl.DateTimeFormat('en-US', {
@@ -227,13 +228,19 @@ export function parseRule(s) {
     bymonthday = Number(kv.BYMONTHDAY);
     if (bymonthday < 1 || bymonthday > 31) throw bad(s);
   }
-  /** @type {Day | null} */
+  /** @type {Until | null} */
   let until = null;
   if ('UNTIL' in kv) {
-    const m = /^(\d{4})(\d{2})(\d{2})$/.exec(kv.UNTIL);
+    // Een dag (YYYYMMDD) of een moment (YYYYMMDDTHHMMSS, seconden 00), allebei wandklok in TIMEZONE.
+    const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})00)?$/.exec(kv.UNTIL);
     if (!m) throw bad(s);
     until = { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) };
     if (until.m < 1 || until.m > 12 || until.d < 1 || until.d > daysIn(until.y, until.m)) throw bad(s);
+    if (m[4] !== undefined) {
+      until.h = Number(m[4]);
+      until.mi = Number(m[5]);
+      if (until.h > 23 || until.mi > 59) throw bad(s);
+    }
   }
   return { freq, interval, byday, bymonthday, until };
 }
@@ -241,28 +248,39 @@ export function parseRule(s) {
 const pad = (n, w = 2) => String(n).padStart(w, '0');
 
 /**
- * Een ritme met een andere einddatum (YYYY-MM-DD, t/m die dag), of zonder (null/leeg).
+ * Een ritme met een ander einde: YYYY-MM-DD (t/m die dag) of YYYY-MM-DDTHH:MM (t/m dat moment), of zonder (null/leeg).
  * @param {string} rule
- * @param {string | null | undefined} untilDate
+ * @param {string | null | undefined} untilValue
  * @returns {string}
  */
-export function withUntil(rule, untilDate) {
+export function withUntil(rule, untilValue) {
   const r = parseRule(rule);
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(untilDate || '');
-  r.until = m ? { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) } : null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(untilValue || '');
+  r.until = m ? { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]), ...(m[4] !== undefined ? { h: Number(m[4]), mi: Number(m[5]) } : {}) } : null;
   return normalizeRule(formatRule(r));
 }
 
 /**
- * De einddatum van een ritme als YYYY-MM-DD (voor een datumveld), of '' zonder einde.
+ * Het einde van een ritme als YYYY-MM-DD of YYYY-MM-DDTHH:MM (de vorm van een datum- of datum-tijdveld), of '' zonder einde.
  * @param {string | null | undefined} rule
  * @returns {string}
  */
 export function untilOf(rule) {
   try {
     const u = rule ? parseRule(rule).until : null;
-    return u ? `${pad(u.y, 4)}-${pad(u.m)}-${pad(u.d)}` : '';
+    if (!u) return '';
+    const day = `${pad(u.y, 4)}-${pad(u.m)}-${pad(u.d)}`;
+    return u.h === undefined ? day : `${day}T${pad(u.h)}:${pad(/** @type {number} */ (u.mi))}`;
   } catch { return ''; }
+}
+
+/**
+ * Of een ritme binnen een dag herhaalt (per uur of minuut): dan krijgt het einde ook een tijd.
+ * @param {string | null | undefined} rule
+ * @returns {boolean}
+ */
+export function isSubDay(rule) {
+  try { return !!rule && !!STEP_MS[parseRule(rule).freq]; } catch { return false; }
 }
 
 /**
@@ -275,12 +293,18 @@ export function formatRule(r) {
   if (r.interval > 1) out.push('INTERVAL=' + r.interval);
   if (r.byday.length) out.push('BYDAY=' + [...r.byday].sort((a, b) => a.wd - b.wd).map((b) => (b.n ?? '') + CODES[b.wd]).join(','));
   if (r.bymonthday !== null) out.push('BYMONTHDAY=' + r.bymonthday);
-  if (r.until) out.push('UNTIL=' + pad(r.until.y, 4) + pad(r.until.m) + pad(r.until.d));
+  if (r.until) {
+    const u = r.until;
+    out.push('UNTIL=' + pad(u.y, 4) + pad(u.m) + pad(u.d) + (u.h === undefined ? '' : 'T' + pad(u.h) + pad(/** @type {number} */ (u.mi)) + '00'));
+  }
   return out.join(';');
 }
 
 /** @param {string} s */
 export const normalizeRule = (s) => formatRule(parseRule(s));
+
+/** Het laatste toegestane moment van een einde met tijd (t/m die minuut); zonder tijd: geen grens binnen de dag. */
+const untilMs = (u) => (u.h === undefined ? Infinity : zonedToUtc(u.y, u.m, u.d, u.h, u.mi) + 59999);
 
 /** Ritmes binnen een dag: een vaste stap in milliseconden. */
 const STEP_MS = { MINUTELY: 60000, HOURLY: 3600000 };
@@ -341,6 +365,7 @@ export function nextOccurrence(rule, startIso, afterMs) {
     if (r.until) {
       const p = zonedParts(ms);
       if (dayNum(p.y, p.m, p.d) > dayNum(r.until.y, r.until.m, r.until.d)) return null;
+      if (ms > untilMs(r.until)) return null;
     }
     return new Date(ms).toISOString();
   }
@@ -355,6 +380,7 @@ export function nextOccurrence(rule, startIso, afterMs) {
       if (dn > last) return null;
       const c = fromDayNum(dn);
       const ms = zonedToUtc(c.y, c.m, c.d, s.h, s.mi);
+      if (r.until && ms > untilMs(r.until)) return null;
       if (ms >= startMs && ms > afterMs) return new Date(ms).toISOString();
     }
   }
@@ -397,7 +423,10 @@ const every = (base, n, vars = {}) => t(`${base}_${n === 1 ? 'one' : 'many'}`, {
 export function describeRule(rule, startIso) {
   const r = parseRule(rule);
   const text = describeRhythm(r, startIso);
-  return r.until ? t('rep.until', { rule: text, d: r.until.d, month: shortMonth(r.until.m), y: r.until.y }) : text;
+  if (!r.until) return text;
+  const u = r.until;
+  const vars = { rule: text, d: u.d, month: shortMonth(u.m), y: u.y };
+  return u.h === undefined ? t('rep.until', vars) : t('rep.until_time', { ...vars, time: `${pad(u.h)}:${pad(/** @type {number} */ (u.mi))}` });
 }
 
 /** @param {Rule} r @param {string} startIso */

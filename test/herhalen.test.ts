@@ -54,6 +54,14 @@ describe('herhalende taken', () => {
     expect((await json<Task>(await patch(k.id, { done: true }))).remind_at).toBe('2099-10-18T08:15:00.000Z');
   });
 
+  it('elk uur t/m een tijd: na de laatste keer rondt afvinken de taak af', async () => {
+    const t = await createTask({ title: 'tot elf', remind_at: '2099-10-18T10:00:00', repeat: 'FREQ=HOURLY;UNTIL=20991018T110000' });
+    const u = await json<Task>(await patch(t.id, { done: true }));
+    expect([u.done, u.remind_at]).toEqual([false, '2099-10-18T09:00:00.000Z']);
+    expect((await json<Task>(await patch(t.id, { done: true }))).done).toBe(true);
+    expect((await call('/api/tasks', { method: 'POST', json: { title: 'x', remind_at: '2099-10-18T10:00:00', repeat: 'FREQ=HOURLY;UNTIL=20991018T090000' } })).status).toBe(400);
+  });
+
   it('met een einddatum rondt de laatste keer de taak af', async () => {
     const t = await createTask({ title: 'twee keer', remind_at: '2099-10-18T10:00:00', repeat: WEKELIJKS + ';until=20991025' });
     expect(t.repeat?.rule).toBe('FREQ=WEEKLY;BYDAY=SU;UNTIL=20991025');

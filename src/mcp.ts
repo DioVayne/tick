@@ -26,7 +26,7 @@ const remindAt = {
 };
 const repeat = {
   type: ['string', 'null'],
-  description: 'Repeat rule, an RRULE subset: FREQ=MINUTELY|HOURLY|DAILY|WEEKLY|MONTHLY|YEARLY, INTERVAL (1-99), BYDAY (e.g. MO,FR or 3SU/-1SU for months), BYMONTHDAY, UNTIL=YYYYMMDD. Only on top-level tasks with a reminder. null removes it.',
+  description: 'Repeat rule, an RRULE subset: FREQ=MINUTELY|HOURLY|DAILY|WEEKLY|MONTHLY|YEARLY, INTERVAL (1-99), BYDAY (e.g. MO,FR or 3SU/-1SU for months), BYMONTHDAY, UNTIL=YYYYMMDD or UNTIL=YYYYMMDDTHHMM00 (inclusive, local time). Only on top-level tasks with a reminder. null removes it.',
 };
 const fields = {
   title: { type: 'string', description: 'Title, at most 500 characters' },
