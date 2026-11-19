@@ -12,7 +12,7 @@ const shortMonth = (m) => t(`month.short.${m - 1}`);
 
 /** @typedef {{ wd: number, n: number | null }} ByDay  wd: 0 = maandag t/m 6 = zondag */
 /** @typedef {{ y: number, m: number, d: number }} Day  een kalenderdag, `m` 1-12 */
-/** @typedef {{ freq: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY', interval: number, byday: ByDay[], bymonthday: number | null, until: Day | null }} Rule  until: laatste dag (t/m, wandklok) */
+/** @typedef {{ freq: 'MINUTELY' | 'HOURLY' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY', interval: number, byday: ByDay[], bymonthday: number | null, until: Day | null }} Rule  until: laatste dag (t/m, wandklok) */
 
 /** @param {string} timeZone */
 const formatter = (timeZone) => new Intl.DateTimeFormat('en-US', {
@@ -196,7 +196,7 @@ export function parseRule(s) {
     kv[m[1]] = m[2];
   }
   const freq = kv.FREQ;
-  if (freq !== 'DAILY' && freq !== 'WEEKLY' && freq !== 'MONTHLY' && freq !== 'YEARLY') throw bad(s);
+  if (!['MINUTELY', 'HOURLY', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'].includes(freq)) throw bad(s);
   for (const k of Object.keys(kv)) if (!['FREQ', 'INTERVAL', 'BYDAY', 'BYMONTHDAY', 'UNTIL'].includes(k)) throw bad(s);
   let interval = 1;
   if ('INTERVAL' in kv) {
@@ -282,6 +282,9 @@ export function formatRule(r) {
 /** @param {string} s */
 export const normalizeRule = (s) => formatRule(parseRule(s));
 
+/** Ritmes binnen een dag: een vaste stap in milliseconden. */
+const STEP_MS = { MINUTELY: 60000, HOURLY: 3600000 };
+
 const dayNum = (y, m, d) => Math.floor(Date.UTC(y, m - 1, d) / DAG_MS);
 const fromDayNum = (n) => {
   const t = new Date(n * DAG_MS);
@@ -329,6 +332,18 @@ export function nextOccurrence(rule, startIso, afterMs) {
   const r = parseRule(rule);
   const startMs = Date.parse(startIso);
   if (isNaN(startMs)) throw new Error('invalid start: ' + startIso);
+  const step = STEP_MS[r.freq];
+  if (step) {
+    // Per uur of minuut: vaste stappen in echte tijd vanaf de start (ook over zomer-/wintertijd heen).
+    const every = step * r.interval;
+    const k = afterMs < startMs ? 0 : Math.floor((afterMs - startMs) / every) + 1;
+    const ms = startMs + k * every;
+    if (r.until) {
+      const p = zonedParts(ms);
+      if (dayNum(p.y, p.m, p.d) > dayNum(r.until.y, r.until.m, r.until.d)) return null;
+    }
+    return new Date(ms).toISOString();
+  }
   const s = zonedParts(startMs);
   const startIdx = periodIndex(r.freq, s);
   const first = periodIndex(r.freq, zonedParts(Math.max(startMs, afterMs)));
@@ -390,6 +405,8 @@ function describeRhythm(r, startIso) {
   const s = zonedParts(Date.parse(startIso));
   const i = r.interval;
   switch (r.freq) {
+    case 'MINUTELY': return every('rep.minutely', i);
+    case 'HOURLY': return every('rep.hourly', i);
     case 'DAILY': return every('rep.daily', i);
     case 'WEEKLY': {
       const days = r.byday.length ? r.byday.map((b) => shortDay(b.wd)) : [shortDay(s.wd)];
@@ -422,9 +439,9 @@ export function quickRules(startIso) {
 }
 
 /**
- * Het ritme uit de keuzes van het Aangepast-paneel. `unit`: dag | week | maand | jaar. `days`: weekdagen
+ * Het ritme uit de keuzes van het Aangepast-paneel. `unit`: minuut | uur | dag | week | maand | jaar. `days`: weekdagen
  * (0 = ma) bij weken, minstens één. `monthMode`: 'dag' (op de <d>e) of 'weekdag' (de n-de/laatste <dag>).
- * @param {{ interval: number, unit: 'dag'|'week'|'maand'|'jaar', days?: number[], monthMode?: 'dag'|'weekdag' }} k
+ * @param {{ interval: number, unit: 'minuut'|'uur'|'dag'|'week'|'maand'|'jaar', days?: number[], monthMode?: 'dag'|'weekdag' }} k
  * @param {string} startIso
  * @returns {string}
  */
@@ -442,6 +459,8 @@ export function buildRule(k, startIso) {
     if (k.monthMode === 'weekdag') r.byday = [{ wd: s.wd, n: s.d > 28 ? -1 : Math.ceil(s.d / 7) }];
     else r.bymonthday = s.d;
   } else if (k.unit === 'jaar') r.freq = 'YEARLY';
+  else if (k.unit === 'uur') r.freq = 'HOURLY';
+  else if (k.unit === 'minuut') r.freq = 'MINUTELY';
   return normalizeRule(formatRule(r));
 }
 
@@ -449,7 +468,7 @@ export function buildRule(k, startIso) {
  * Beginstand van het Aangepast-paneel: uit het huidige ritme, anders elke week op de dag van de start.
  * @param {string | null | undefined} rule
  * @param {string} startIso
- * @returns {{ interval: number, unit: 'dag'|'week'|'maand'|'jaar', days: number[], monthMode: 'dag'|'weekdag' }}
+ * @returns {{ interval: number, unit: 'minuut'|'uur'|'dag'|'week'|'maand'|'jaar', days: number[], monthMode: 'dag'|'weekdag' }}
  */
 export function customState(rule, startIso) {
   const s = zonedParts(Date.parse(startIso));
@@ -457,7 +476,7 @@ export function customState(rule, startIso) {
   if (!rule) return base;
   try {
     const r = parseRule(rule);
-    const unit = { DAILY: 'dag', WEEKLY: 'week', MONTHLY: 'maand', YEARLY: 'jaar' }[r.freq];
+    const unit = { MINUTELY: 'minuut', HOURLY: 'uur', DAILY: 'dag', WEEKLY: 'week', MONTHLY: 'maand', YEARLY: 'jaar' }[r.freq];
     return {
       interval: r.interval, unit: /** @type {any} */ (unit),
       days: r.freq === 'WEEKLY' && r.byday.length ? r.byday.map((b) => b.wd) : [s.wd],

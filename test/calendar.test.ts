@@ -67,6 +67,15 @@ describe('taskMoments / tasksByDay', () => {
     const t = task('s', '2026-10-11T10:00:00Z', { repeat: { rule: 'FREQ=WEEKLY;BYDAY=SU', start: '2026-10-04T08:00:00Z', at: '2026-10-11T08:00:00Z' } });
     expect(taskMoments(t, from, to)).toEqual([ms('2026-10-11T10:00:00Z'), ms('2026-10-18T08:00:00Z'), ms('2026-10-25T09:00:00Z')]); // 25-10: wintertijd
   });
+  it('per minuut of uur: één keer per dag (de eerste), niet honderden', () => {
+    const r = { rule: 'FREQ=MINUTELY;INTERVAL=5', start: '2026-10-05T08:00:00Z', at: '2026-10-05T08:00:00Z' };
+    const t = task('m', '2026-10-05T08:00:00Z', { repeat: r });
+    const got = taskMoments(t, ms('2026-10-05T00:00:00Z'), ms('2026-10-07T22:00:00Z')); // t/m 7 okt Amsterdamse tijd
+    // 5 okt 10:00 (nu), dan 6 en 7 okt elk om 00:00 Amsterdamse tijd (= 22:00 UTC de dag ervoor).
+    expect(got).toEqual([ms('2026-10-05T08:00:00Z'), ms('2026-10-05T22:00:00Z'), ms('2026-10-06T22:00:00Z')]);
+    const h = task('h', '2026-10-05T08:00:00Z', { repeat: { ...r, rule: 'FREQ=HOURLY;UNTIL=20261006' } });
+    expect([...tasksByDay([h], from, to).keys()]).toEqual(['2026-10-05', '2026-10-06']);
+  });
   it('een herhaling zonder volgende keer valt terug op één keer', () => {
     const t = task('x', '2026-10-05T08:00:00Z', { repeat: { rule: 'ONZIN', start: '2026-10-05T08:00:00Z', at: '2026-10-05T08:00:00Z' } });
     expect(taskMoments(t, from, to)).toEqual([ms('2026-10-05T08:00:00Z')]);

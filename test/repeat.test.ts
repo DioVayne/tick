@@ -9,13 +9,30 @@ describe('parseRule', () => {
   it('normaliseert en weigert onzin', () => {
     expect(normalizeRule('freq=weekly;byday=su,mo;interval=2')).toBe('FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,SU');
     expect(normalizeRule('FREQ=DAILY;INTERVAL=1')).toBe('FREQ=DAILY');
-    for (const bad of ['', 'FREQ=HOURLY', 'FREQ=DAILY;INTERVAL=0', 'FREQ=DAILY;INTERVAL=100', 'FREQ=WEEKLY;BYDAY=3SU',
+    for (const bad of ['', 'FREQ=SECONDLY', 'FREQ=HOURLY;INTERVAL=0', 'FREQ=MINUTELY;INTERVAL=100', 'FREQ=HOURLY;BYDAY=MO', 'FREQ=MINUTELY;BYMONTHDAY=3', 'FREQ=DAILY;INTERVAL=0', 'FREQ=DAILY;INTERVAL=100', 'FREQ=WEEKLY;BYDAY=3SU',
       'FREQ=MONTHLY;BYDAY=SU', 'FREQ=MONTHLY;BYDAY=1SU,-1SU', 'FREQ=MONTHLY;BYMONTHDAY=32', 'FREQ=YEARLY;BYDAY=SU', 'FREQ=DAILY;COUNT=3'])
       expect(() => parseRule(bad), bad).toThrow(/invalid repeat rule/);
   });
 });
 
 describe('nextOccurrence', () => {
+  it('per uur en per minuut: vaste stappen vanaf de start, ook als er keren gemist zijn', () => {
+    expect(normalizeRule('freq=hourly;interval=1')).toBe('FREQ=HOURLY');
+    expect(nextOccurrence('FREQ=HOURLY', ZO_10, ms(ZO_10) - 1)).toBe(ZO_10);
+    expect(nextOccurrence('FREQ=HOURLY', ZO_10, ms(ZO_10))).toBe('2026-10-18T09:00:00.000Z');
+    expect(nextOccurrence('FREQ=HOURLY;INTERVAL=3', ZO_10, ms('2026-10-18T13:30:00Z'))).toBe('2026-10-18T14:00:00.000Z');
+    expect(nextOccurrence('FREQ=MINUTELY;INTERVAL=15', ZO_10, ms('2026-10-18T08:15:00Z'))).toBe('2026-10-18T08:30:00.000Z');
+    expect(nextOccurrence('FREQ=MINUTELY', ZO_10, ms('2026-10-18T08:00:30Z'))).toBe('2026-10-18T08:01:00.000Z');
+    expect(nextOccurrence('FREQ=MINUTELY;INTERVAL=5', ZO_10, ms('2026-10-17T00:00:00Z'))).toBe(ZO_10); // niet vóór de start
+  });
+  it('per uur: over de wintertijd heen in echte uren, en stopt na de einddatum (wandklok)', () => {
+    // 25 okt 2026 02:00 CEST → 02:00 CET: elk uur blijft 60 minuten.
+    expect(nextOccurrence('FREQ=HOURLY', '2026-10-24T23:00:00.000Z', ms('2026-10-25T00:00:00Z'))).toBe('2026-10-25T01:00:00.000Z');
+    const rule = 'FREQ=HOURLY;INTERVAL=6;UNTIL=20261018';
+    expect(nextOccurrence(rule, ZO_10, ms(ZO_10))).toBe('2026-10-18T14:00:00.000Z'); // 16:00
+    expect(nextOccurrence(rule, ZO_10, ms('2026-10-18T14:00:00Z'))).toBe('2026-10-18T20:00:00.000Z'); // 22:00
+    expect(nextOccurrence(rule, ZO_10, ms('2026-10-18T20:00:00Z'))).toBeNull(); // 04:00 de dag erna
+  });
   it('elke zondag 10:00, ook over de overgang naar wintertijd', () => {
     expect(nextOccurrence('FREQ=WEEKLY;BYDAY=SU', ZO_10, ms(ZO_10))).toBe('2026-10-25T09:00:00.000Z');
   });
@@ -80,6 +97,10 @@ describe('teksten', () => {
     expect(describeRule('FREQ=MONTHLY;BYMONTHDAY=19', ZO_10)).toBe('Elke maand op de 19e');
     expect(describeRule('FREQ=MONTHLY;BYDAY=-1SU', ZO_10)).toBe('Elke maand op de laatste zo');
     expect(describeRule('FREQ=YEARLY', ZO_10)).toBe('Elk jaar op 18 okt');
+    expect(describeRule('FREQ=HOURLY', ZO_10)).toBe('Elk uur');
+    expect(describeRule('FREQ=HOURLY;INTERVAL=2', ZO_10)).toBe('Elke 2 uur');
+    expect(describeRule('FREQ=MINUTELY', ZO_10)).toBe('Elke minuut');
+    expect(describeRule('FREQ=MINUTELY;INTERVAL=30;UNTIL=20261231', ZO_10)).toBe('Elke 30 minuten, t/m 31 dec 2026');
   });
   it('snelkeuzes volgen de startdatum', () => {
     expect(quickRules(ZO_10).map((q) => q.label)).toEqual(
@@ -94,6 +115,10 @@ describe('teksten', () => {
     expect(describeRule('FREQ=MONTHLY;BYMONTHDAY=22', ZO_10)).toBe('Every month on the 22nd');
     expect(describeRule('FREQ=MONTHLY;BYDAY=-1SU', ZO_10)).toBe('Every month on the last Sun');
     expect(describeRule('FREQ=YEARLY;INTERVAL=2', ZO_10)).toBe('Every 2 years on 18 Oct');
+    expect(describeRule('FREQ=HOURLY', ZO_10)).toBe('Every hour');
+    expect(describeRule('FREQ=HOURLY;INTERVAL=4', ZO_10)).toBe('Every 4 hours');
+    expect(describeRule('FREQ=MINUTELY', ZO_10)).toBe('Every minute');
+    expect(describeRule('FREQ=MINUTELY;INTERVAL=10', ZO_10)).toBe('Every 10 minutes');
     expect(quickRules(ZO_10).map((q) => q.label)).toEqual(
       ['Every day', 'Every week on Sunday', 'Every 2 weeks on Sunday', 'Every month on the 18th', 'Every year on 18 Oct']);
   });
