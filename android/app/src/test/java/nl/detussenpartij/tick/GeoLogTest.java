@@ -12,7 +12,7 @@ import java.util.List;
 
 public class GeoLogTest {
     @Test
-    public void houdtDeLaatsteKeep() {
+    public void houdtDeLaatsteKeep() throws Exception {
         String json = "[]";
         for (int i = 0; i < GeoLog.KEEP + 10; i++) json = GeoLog.add(json, GeoLog.event(i, false, 1));
         JSONArray arr = new JSONArray(json);
@@ -22,14 +22,14 @@ public class GeoLogTest {
     }
 
     @Test
-    public void onleesbaarTeltAlsLeeg() {
+    public void onleesbaarTeltAlsLeeg() throws Exception {
         assertEquals(1, new JSONArray(GeoLog.add("onzin", GeoLog.netNoFix(5))).length());
         assertEquals(1, new JSONArray(GeoLog.add(null, GeoLog.netNoFix(5))).length());
         assertTrue(GeoLog.newestFirst("onzin", 10).isEmpty());
     }
 
     @Test
-    public void nieuwsteEerst() {
+    public void nieuwsteEerst() throws Exception {
         String json = GeoLog.add(GeoLog.add(GeoLog.add("[]", GeoLog.event(1, false, 1)), GeoLog.event(2, true, 1)),
                 GeoLog.decide(3, "Taak", GeoLog.SHOWN, false));
         List<JSONObject> out = GeoLog.newestFirst(json, 2);
@@ -39,7 +39,7 @@ public class GeoLogTest {
     }
 
     @Test
-    public void rustigVangnetWordtSamengevoegd() {
+    public void rustigVangnetWordtSamengevoegd() throws Exception {
         String json = GeoLog.add("[]", GeoLog.event(1, false, 1));
         json = GeoLog.add(json, GeoLog.net(10, 2, 30, 0));
         json = GeoLog.add(json, GeoLog.net(20, 2, 45, 0));
@@ -54,7 +54,7 @@ public class GeoLogTest {
     }
 
     @Test
-    public void vangnetMetMeldingOfAnderAantalNietSamengevoegd() {
+    public void vangnetMetMeldingOfAnderAantalNietSamengevoegd() throws Exception {
         String json = GeoLog.add("[]", GeoLog.net(10, 2, 30, 0));
         json = GeoLog.add(json, GeoLog.net(20, 3, 30, 0)); // een taak erbij
         json = GeoLog.add(json, GeoLog.net(30, 3, 30, 1)); // ving een aankomst
@@ -63,7 +63,7 @@ public class GeoLogTest {
     }
 
     @Test
-    public void andereRegelTussendoorBreektHetSamenvoegen() {
+    public void andereRegelTussendoorBreektHetSamenvoegen() throws Exception {
         String json = GeoLog.add("[]", GeoLog.net(10, 1, 30, 0));
         json = GeoLog.add(json, GeoLog.reg(15, 1, 0, true, GeoLog.Why.DAILY));
         json = GeoLog.add(json, GeoLog.net(20, 1, 30, 0));
@@ -71,7 +71,7 @@ public class GeoLogTest {
     }
 
     @Test
-    public void geenLocatieWordtSamengevoegd() {
+    public void geenLocatieWordtSamengevoegd() throws Exception {
         String json = GeoLog.add("[]", GeoLog.netNoFix(10));
         json = GeoLog.add(json, GeoLog.netNoFix(20));
         JSONArray arr = new JSONArray(json);
@@ -80,7 +80,7 @@ public class GeoLogTest {
     }
 
     @Test
-    public void regelsHebbenHunVelden() {
+    public void regelsHebbenHunVelden() throws Exception {
         JSONObject r = GeoLog.reg(1, 4, 1, false, GeoLog.Why.CHANGED);
         assertEquals(GeoLog.REG, r.getString("kind"));
         assertEquals(4, r.getInt("n"));
@@ -95,7 +95,7 @@ public class GeoLogTest {
     }
 
     @Test
-    public void langeTitelIngekort() {
+    public void langeTitelIngekort() throws Exception {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 100; i++) sb.append('x');
         String t = GeoLog.title(sb.toString());
