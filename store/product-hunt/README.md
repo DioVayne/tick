@@ -9,7 +9,7 @@ Limits (Product Hunt help, checked 2026-11-19): name ≤ 40 characters, tagline 
 Product Hunt visitors are early adopters who compare every to-do app with Todoist, TickTick and Apple Reminders. "A reminder when you reach the shop" alone won't stand out there (other apps have it, and on iPhone Tick can't do it). So:
 
 1. **Lead with sharing** (what is really different): one task together, or a copy for each with visible progress; shared lists with *Take it*.
-2. **Place reminders as the Android bonus:** free, and named honestly as Android-only.
+2. **Place reminders as the Android bonus**, named honestly as Android-only (not "free on Android": that sounds as if iPhone pays).
 3. **A touch of open source** for the tech crowd: host your own on a free Cloudflare account, set up with Claude Code, MCP server for Claude.
 
 ## 1. Before launch day
@@ -17,8 +17,7 @@ Product Hunt visitors are early adopters who compare every to-do app with Todois
 1. Create a **personal** Product Hunt account (real name, photo) at least a week ahead: new accounts usually have to wait about a week before they can post.
 2. Comment on and upvote a few other launches in the weeks before, so the account isn't empty.
 3. Check that signup on https://app.ticktodo.nl/signup works, that the Play link opens, and that the website says the same sharing limit as the app (3 people).
-4. Ask your girlfriend if she's OK with her story in the maker comment.
-5. Create the post (*Submit* → *Launch a product*), choose **I made this**, fill in everything from sections 2–4, and **schedule** it. Don't launch on the spot.
+4. Create the post (*Submit* → *Launch a product*), choose **I made this**, fill in everything from sections 2–4, and **schedule** it. Don't launch on the spot.
 
 Launches go live at 00:01 Pacific time = **09:01 in the Netherlands**. Tuesday–Thursday are busiest; a weekend day is quieter and easier to stand out on.
 
@@ -49,17 +48,19 @@ Launches go live at 00:01 Pacific time = **09:01 in the Netherlands**. Tuesday�
 
 > Hi Product Hunt 👋 I'm Dio. I made Tick because I needed an app that reminds me of things. One that just does what I want, and doesn't suddenly disappear or start costing money.
 >
-> My girlfriend has ADD. She described what Tick had to do in one sentence: "Remind me at the right moment, like when I'm at the shop and can't forget to buy something." That's where it started. We both use it every day, mostly for the things we sort out together.
+> My girlfriend (an ADD-powergirl) needed reminders at the right moment, not just at the right time: when she's at the shop, that's when she has to remember what to buy. That's where it started. Now we both use it every day, and she loves that I can send her a task and she can send me one. Things we sort out together don't get lost between us anymore.
 >
 > That's where Tick is different from most to-do apps:
 > 👥 **Shared or copy.** Share a task as one task for both of you (done is done for everyone), or give the other person their own copy and see how far they are. Handy when you both have to do the same thing, like your tax return.
 > 🙋 **Shared lists with "Take it".** Tap it and the others see you're on it. Ticked-off tasks show who did it and when.
-> 📍 **Place reminders, free on Android.** A notification when you arrive at or leave a place. On iPhone you get reminders at a time, not at a place (Apple doesn't let a home-screen app do that).
+> 📍 **Place reminders in the Android app.** A notification when you arrive at or leave a place. On iPhone you get reminders at a time, not at a place (Apple doesn't let a home-screen app do that).
 > ⚡ **Tickmanager.** Old tasks come back one at a time: schedule, move to top, leave it or delete.
 >
-> It's free, without ads or tracking. The free version lets you share with up to 3 people, as many tasks and lists as you like. If paid extras ever come, nothing that's free when you sign up becomes paid without notice.
+> It's free, without ads or tracking. The free version lets you share with up to 3 people, as many tasks and lists as you like.
 >
-> For the tinkerers: Tick is open source (MIT). You can run your own Tick on a free Cloudflare account in about 15 minutes with Claude Code, and the built-in MCP server lets Claude manage your tasks.
+> To be honest about money: I don't want to make a business out of Tick, but it shouldn't cost me money in the long run either. If hosting and sending mail get too expensive, I'll add paid extras to cover that. Nothing that's free when you sign up becomes paid without notice.
+>
+> And running Tick yourself will always stay free: it's open source (MIT), and you can put your own Tick on a free Cloudflare account in about 15 minutes with Claude Code. The built-in MCP server lets Claude manage your tasks too.
 >
 > It started as a little list for the two of us, and got a bit out of hand. I'd love to hear how you share to-dos with the people around you, and what you'd miss in Tick.
 
@@ -72,7 +73,7 @@ Ready to upload, in this folder:
 - **Gallery** (1270×760, in this order; the first is also the preview when the link is shared):
   1. `gallery-1.png` — "One task together, or a copy for each" (share dialog + copy progress)
   2. `gallery-2.png` — "Share a list, see who takes what" (shared list, up to 3 people free)
-  3. `gallery-3.png` — "Reminds you when you reach the shop", badge "Free on Android", with the iPhone note
+  3. `gallery-3.png` — "Reminds you when you reach the shop", badge "In the Android app", with the iPhone note
   4. `gallery-4.png` — "On your phone and in your browser" (desktop web app)
   5. `gallery-5.png` — "Old tasks get a second chance" (Tickmanager)
   6. `gallery-6.png` — "Open source. Host your own." (Cloudflare, Claude Code, MCP, MIT)
