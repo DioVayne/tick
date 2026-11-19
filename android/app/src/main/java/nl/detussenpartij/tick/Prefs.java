@@ -69,6 +69,7 @@ final class Prefs {
         sp(c).edit().putString("cache", "[]").remove("pending").remove("pendingRemind")
                 .remove("locFired").remove("locSynced").remove("locRearm").remove("geoSig").remove("geoIds")
                 .remove("roadMode").remove("roadModeAt").remove("roadRadii")
+                .remove("geoLog").remove("netOutside").remove("geoFullAt")
                 .remove("outbox").remove("outboxNote").remove("outboxNoteAt").remove("quickDraft").commit();
     }
 
@@ -421,6 +422,45 @@ final class Prefs {
         if (now == null) return;
         now.removeAll(ids);
         sp(c).edit().putString("geoIds", new JSONArray(now).toString()).apply();
+    }
+
+    /**
+     * Logboek van de locatiemeldingen (GeoLog, JSON-array). Bevat taaktitels, dus hoort bij het account:
+     * wipeAccountData wist het.
+     */
+    static synchronized String geoLog(Context c) {
+        return sp(c).getString("geoLog", "[]");
+    }
+
+    /** Voegt een regel toe aan het logboek. Een fout daarin mag een melding of aanmelding nooit tegenhouden. */
+    static synchronized void log(Context c, JSONObject entry) {
+        try {
+            sp(c).edit().putString("geoLog", GeoLog.add(geoLog(c), entry)).apply();
+        } catch (Exception e) {
+            android.util.Log.w("Tick", "Logboek bijwerken mislukt", e);
+        }
+    }
+
+    /** Stand van het vangnet (NetPlan): taak-id -> key van de plek waar je de vorige keer buiten was. */
+    static synchronized JSONObject netOutside(Context c) {
+        try {
+            return new JSONObject(sp(c).getString("netOutside", "{}"));
+        } catch (Exception e) {
+            return new JSONObject();
+        }
+    }
+
+    static synchronized void setNetOutside(Context c, JSONObject outside) {
+        sp(c).edit().putString("netOutside", outside.toString()).apply();
+    }
+
+    /** Moment (ms) waarop alle plekken voor het laatst volledig opnieuw bij Android aangemeld zijn, of 0. */
+    static long geoFullAt(Context c) {
+        return sp(c).getLong("geoFullAt", 0);
+    }
+
+    static void setGeoFullAt(Context c, long ms) {
+        sp(c).edit().putLong("geoFullAt", ms).apply();
     }
 
     /** De laatst aan Tick gemelde apparaatstatus (JSON) en het tijdstip (ms) van die melding. */

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logboek van de locatiemeldingen (GeoLog, GeoLogView) in "Tick op deze telefoon". -->
+<resources>
+    <string name="geolog_title">Logboek locatiemeldingen</string>
+    <string name="geolog_help">Wat Tick met je plekken deed: aanmelden bij Android, wat Android meldde, wat het vangnet zag en of er een melding kwam. Kwam een melding niet, dan staat hier meestal waarom. Alles blijft op deze telefoon.</string>
+    <string name="geolog_empty">Er is nog niets gebeurd.</string>
+    <string name="geolog_copy">Kopiëren</string>
+    <string name="geolog_copied">Logboek gekopieerd</string>
+    <string name="geolog_repeat">" (%1$d× sinds %2$s)"</string>
+    <string name="geolog_reg">Plekken aangemeld bij Android: %1$d (nieuw: %2$d)</string>
+    <string name="geolog_reg_full">Alle plekken opnieuw aangemeld bij Android: %1$d (%2$s)</string>
+    <string name="geolog_why_start">na een herstart, een update of bij openen</string>
+    <string name="geolog_why_daily">dagelijkse controle</string>
+    <string name="geolog_why_lost">Android had Tick gestopt</string>
+    <string name="geolog_why_missed">het vangnet ving een gemiste aankomst</string>
+    <string name="geolog_reg_failed">Plekken aanmelden bij Android mislukt: %s</string>
+    <string name="geolog_event_enter">Android meldde: aankomst (plekken: %d)</string>
+    <string name="geolog_event_exit">Android meldde: vertrek (plekken: %d)</string>
+    <string name="geolog_event_error">Android meldde een fout: %s</string>
+    <string name="geolog_shown">Melding getoond: %s</string>
+    <string name="geolog_net_shown">Vangnet: melding getoond: %s</string>
+    <string name="geolog_skipped">Geen melding voor %1$s: %2$s</string>
+    <string name="geolog_net_skipped">Vangnet: geen melding voor %1$s: %2$s</string>
+    <string name="geolog_untitled">(taak niet gevonden)</string>
+    <string name="geolog_r_no_task">de taak staat niet meer open</string>
+    <string name="geolog_r_done">de taak is af</string>
+    <string name="geolog_r_server">al gemeld, misschien op een andere telefoon</string>
+    <string name="geolog_r_other_place">de plek is veranderd</string>
+    <string name="geolog_r_this_phone">al gemeld op deze telefoon</string>
+    <string name="geolog_r_direction">andere richting (aankomst of vertrek)</string>
+    <string name="geolog_r_off">meldingen staan uit</string>
+    <string name="geolog_net">Vangnet keek waar je bent (nauwkeurig op %1$d m). Bewaakte aankomsttaken: %2$d</string>
+    <string name="geolog_net_no_acc">Vangnet keek waar je bent. Bewaakte aankomsttaken: %d</string>
+    <string name="geolog_net_no_fix">Vangnet: geen locatie gevonden</string>
+</resources>

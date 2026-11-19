@@ -76,6 +76,6 @@ Adding also works without a connection: the task shows up in the widget at once 
 A date here uses 09:00, not your own reminder time.
 
 ## When something does not work
-- **No place notifications:** check in *Tick on this phone* that location is allowed all the time and that battery saving does not stop the app.
+- **No place notifications:** check in *Tick on this phone* that location is allowed all the time and that battery saving does not stop the app. The **Location notification log** there shows what happened and usually why a notification did not come; see [Places, When a notification does not come](places.md#when-a-notification-does-not-come).
 - **The widget says "not linked":** the key was revoked (for example under **⚙ Settings → Devices**). Open the app and link again.
 - **Notifications twice:** if Chrome on the same phone also has notifications on, turn them off there; the app offers this hint once.

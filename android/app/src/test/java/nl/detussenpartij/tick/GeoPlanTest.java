@@ -389,4 +389,13 @@ public class GeoPlanTest {
         assertEquals(NotifyDecision.Result.ANDERE_PLEK, NotifyDecision.decide(new JSONArray().put(taak("a", anders, false, false)),
                 "a", GeoPlan.fenceKey(rid), false, new JSONObject(), new JSONObject()));
     }
+
+    @Test
+    public void volledigOpnieuwAanmeldenEensPerDag() {
+        long dag = GeoPlan.FULL_EVERY_MS;
+        assertTrue(GeoPlan.fullDue(0, 1_000_000_000_000L)); // nog nooit
+        assertFalse(GeoPlan.fullDue(1_000_000L, 1_000_000L + dag - 1));
+        assertTrue(GeoPlan.fullDue(1_000_000L, 1_000_000L + dag));
+        assertTrue(GeoPlan.fullDue(5_000_000L, 1_000_000L)); // klok teruggezet
+    }
 }

@@ -47,6 +47,14 @@ Android notices that you reached a place only a few minutes later. On foot that 
 - Tick asks for the permission **Physical activity**, only to know *whether* you drive or cycle; it is not a health or fitness feature. Only how late earlier notifications came is kept, on the phone; nothing about where you are or how you travel is sent.
 - Android itself takes up to a minute or so to notice you started driving or cycling, so a place a few hundred metres from where you set off may still come late.
 
+## When a notification does not come
+Android watches your places for Tick, and sometimes it does not report an arrival at all. The Android app has two things for that:
+
+- **Safety net.** About every 15 minutes the app itself checks where you are, but only while you have open tasks with an arrival place. Were you clearly outside a task's circle at an earlier check, and are you inside it now, while Android said nothing? Then you still get the notification, at most about 15 minutes late. Just like a normal arrival notification, it does not come if you were already there when you set the place. The safety net only covers arrivals, not leaving. Your location is only used for this check and is not kept or sent.
+- **Log.** Under **⚙ Tick on this phone**, **Location notification log** shows what happened with your places: when they were registered with Android, what Android reported, what the safety net saw, and whether a notification came. If one did not come, it usually says why: the task was done, it was already notified on another phone, notifications are off, and so on. **Copy** puts the whole log on the clipboard, so you can send it along with a question. It keeps task titles and times, never where you were.
+
+Tick also registers all places with Android again once a day, in case Android lost them (for example after an update of Google Play services).
+
 ## Why the radius has limits
 - Below 200 m the location drifts too much indoors and you get false alarms.
 - A car crosses a small circle in seconds, so arrival uses 500 m by default.

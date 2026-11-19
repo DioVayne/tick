@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
     private TextView result;
     private TextView locStatus;
     private TextView locStats;
+    private GeoLogView geoLog;
     private Button road;
     private TextView roadStatus;
     private TextView pairStatus;
@@ -62,7 +63,7 @@ public class MainActivity extends Activity {
         // Na "Gedwongen stoppen" werken de geofences niet meer, terwijl de signature nog zegt dat ze staan.
         if (Geo.permitted(c) && !Geo.intentAlive(c)) {
             Prefs.setGeoSig(c, null);
-            Geo.applyFromCache(c, true);
+            Geo.applyFromCache(c, true, GeoLog.Why.LOST);
         }
         // Ook na "Gedwongen stoppen" is het abonnement op rijden en fietsen weg; opnieuw abonneren mag altijd.
         Road.subscribe(c);
@@ -152,6 +153,9 @@ public class MainActivity extends Activity {
         locStats = new TextView(this);
         locStats.setPadding(0, 0, 0, (int) (12 * d));
         root.addView(locStats);
+
+        // Wat er met je plekken gebeurde (ingeklapt): om na te gaan waarom een melding uitbleef.
+        geoLog = GeoLogView.addTo(this, root);
 
         // "Op tijd melden onderweg": knop, vaste uitleg en status.
         road = new Button(this);
@@ -265,6 +269,7 @@ public class MainActivity extends Activity {
         updatePairStatus();
         updateLocStatus();
         updateBatteryStatus();
+        geoLog.refresh();
         placeCheck.refresh(); // testfeature placecheck
         // Zonder toestemming of na "locatie uit" is de signature gewist: dan alles opnieuw zetten. Anders alleen
         // als de set veranderd is; elke keer opnieuw registreren kan een nog niet afgeleverde aankomst wissen.
