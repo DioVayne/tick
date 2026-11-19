@@ -108,7 +108,7 @@ Je kunt een taak op twee manieren met iemand delen. **Gedeeld** is één taak vo
 - **Omzetten:** nog niet geaccepteerd? Dan wissel je gewoon tussen gedeeld en kopie. Gedeeld en al geaccepteerd? Dan kun je er een kopie van maken. Een geaccepteerde kopie kan niet meer gedeeld worden; die moet eerst weg.
 - **Gedeelde lijst:** iedereen in de lijst kan toevoegen, wijzigen, afvinken en verwijderen. Afgevinkte taken blijven onderaan staan, met wie het deed en wanneer.
 - Sleep je een taak uit een gedeelde lijst naar een eigen lijst, dan is hij alleen van jou. Sleep je een eigen taak erin, dan is hij van iedereen.
-- In de gratis versie op app.ticktodo.nl deel je met één persoon: zoveel taken en lijsten als je wilt.
+- In de gratis versie op app.ticktodo.nl deel je met maximaal 3 personen: zoveel taken en lijsten als je wilt.
 
 **Labels voor de demo met twee telefoons**
 <!-- Links "Jij", rechts "Sanne" (de voorbeeldnaam uit de handleiding). Bovenaan een schakelaar Gedeeld / Kopie. -->
@@ -393,7 +393,7 @@ Open een taak en tik op **Samen doen met…**. Kies iemand en kies hoe.
 
 De ander krijgt een melding met **Accepteren** en **Weigeren**. Een geaccepteerde taak komt in de Inbox.
 
-Op app.ticktodo.nl deel je met een e-mailadres. Heeft die persoon nog geen account, dan krijgt die een uitnodiging per mail. Eerst bevestig je je eigen e-mailadres. In de gratis versie deel je met één persoon: zoveel taken en lijsten als je wilt.
+Op app.ticktodo.nl deel je met een e-mailadres. Heeft die persoon nog geen account, dan krijgt die een uitnodiging per mail. Eerst bevestig je je eigen e-mailadres. In de gratis versie deel je met maximaal 3 personen: zoveel taken en lijsten als je wilt.
 
 ### Gedeelde lijsten
 - **Anker:** `#gedeelde-lijsten`
@@ -520,7 +520,7 @@ Kolommen:
 | Widget op het beginscherm | — | ✓ | ✓ | — | met de Android-app | <!-- android.md "The widget"; iphone.md "no widget" -->
 | Snel toevoegen en delen vanuit andere apps | — | ✓ | ✓ | — | met de Android-app | <!-- android.md "Quick add and sharing to Tick"; iphone.md "no quick add from the share menu" -->
 | Werkt offline | ✓ | ✓ | ✓ | ✓ | ✓ | <!-- tasks-and-lists.md "Offline"; README "Works offline as an installable web app" -->
-| Taken en lijsten delen | met 1 persoon (gratis) | met 1 persoon (gratis) | met 1 persoon op app.ticktodo.nl | met 1 persoon (gratis) | ✓ met iedereen op je Tick | <!-- sharing.md "On an open Tick" (Free version: one person); sharing.md "Accounts" -->
+| Taken en lijsten delen | met max. 3 personen (gratis) | met max. 3 personen (gratis) | met max. 3 personen op app.ticktodo.nl | met max. 3 personen (gratis) | ✓ met iedereen op je Tick | <!-- sharing.md "On an open Tick" (Free version: up to 3 people); sharing.md "Accounts" -->
 | Zelf een account maken | ✓ | ✓ | ✓ op app.ticktodo.nl | ✓ | via een uitnodigingslink | <!-- signup.md; sharing.md "Accounts" (invite link). Een eigen Tick kan ook open aanmelding aanzetten (OPEN_SIGNUP, signup.md/privacy.md) -->
 | Melden en blokkeren | ✓ | ✓ | ✓ op app.ticktodo.nl | ✓ | — (alleen op een open Tick) | <!-- reporting.md "On a Tick for your own household these buttons don't exist" -->
 | Tickmanager | ✓ | ✓ | ✓ | ✓ | ✓ | <!-- tickmanager.md -->
@@ -573,7 +573,7 @@ Kost het iets?
 ### Tekst
 Nee. Tick is nu gratis.
 
-In de gratis versie op app.ticktodo.nl deel je met één persoon. Zoveel taken en lijsten als je wilt, maar wel met dezelfde persoon. Wat anderen met jou delen, telt niet mee. Een uitnodiging accepteren kan dus altijd.
+In de gratis versie op app.ticktodo.nl deel je met maximaal 3 personen. Zoveel taken en lijsten als je wilt, maar wel met dezelfde 3 personen. Wat anderen met jou delen, telt niet mee. Een uitnodiging accepteren kan dus altijd.
 
 Hosting en ontwikkeling kosten wel wat. Misschien komen er later betaalde extra's om dat te dekken. Tick hoeft geen winst te maken. Als het zichzelf terugverdient, ben ik tevreden.
 
@@ -601,7 +601,7 @@ Zolang de ander de kopie nog niet accepteerde, ja: kies dezelfde persoon en tik 
 Op app.ticktodo.nl deel je met een e-mailadres. Heeft dat adres nog geen account, dan krijgt het een uitnodiging per mail, met een link om je aan te melden. De uitnodiging staat dan klaar. Een uitnodiging blijft 30 dagen open. Je bevestigt eerst je eigen e-mailadres voordat je kunt delen.
 
 **Met hoeveel mensen kan ik delen?**
-In de gratis versie met één persoon, zoveel taken en lijsten als je wilt. Wat anderen met jou delen, telt niet mee.
+In de gratis versie met maximaal 3 personen, zoveel taken en lijsten als je wilt. Wat anderen met jou delen, telt niet mee.
 
 **Werkt Tick op een iPhone?**
 Ja. Open app.ticktodo.nl in Safari, tik op de deelknop en kies **Zet op beginscherm**. Dan opent Tick als een app, met meldingen (iOS 16.4 of nieuwer). Meldingen op een plek, een widget en snel toevoegen kan een iPhone niet. Een App Store-app is er niet: die heeft een betaald Apple-account en een keuring voor elke update nodig.
@@ -742,7 +742,7 @@ You can share a task with someone in two ways. **Shared** is one task for both o
 - **Change:** not accepted yet? Then you simply switch between shared and copy. Shared and already accepted? Then you can turn it into a copy. An accepted copy can't become shared; it has to go first.
 - **Shared list:** everyone in the list can add, change, tick off and delete. Ticked-off tasks stay at the bottom, with who did it and when.
 - Drag a task from a shared list to one of your own lists and it's yours alone. Drag one of your own tasks in, and it belongs to everyone.
-- In the free version on app.ticktodo.nl you share with one person: as many tasks and lists as you like.
+- In the free version on app.ticktodo.nl you share with up to 3 people: as many tasks and lists as you like.
 
 **Labels for the two-phone demo**
 - Toggle: **Shared** | **Copy**
@@ -1023,7 +1023,7 @@ Open a task and tap **Do it together with…**. Pick someone and choose how.
 
 The other person gets a notification with **Accept** and **Decline**. An accepted task lands in their Inbox.
 
-At app.ticktodo.nl you share with an email address. If that person has no account yet, they get an invitation by email. You confirm your own email address first. In the free version you share with one person: as many tasks and lists as you like.
+At app.ticktodo.nl you share with an email address. If that person has no account yet, they get an invitation by email. You confirm your own email address first. In the free version you share with up to 3 people: as many tasks and lists as you like.
 
 ### Shared lists
 - **Anchor:** `#shared-lists`
@@ -1152,7 +1152,7 @@ Columns:
 | Home-screen widget | — | ✓ | ✓ | — | with the Android app |
 | Quick add and sharing from other apps | — | ✓ | ✓ | — | with the Android app |
 | Works offline | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Sharing tasks and lists | with 1 person (free) | with 1 person (free) | with 1 person at app.ticktodo.nl | with 1 person (free) | ✓ with everyone on your Tick |
+| Sharing tasks and lists | with up to 3 people (free) | with up to 3 people (free) | with up to 3 people at app.ticktodo.nl | with up to 3 people (free) | ✓ with everyone on your Tick |
 | Make your own account | ✓ | ✓ | ✓ at app.ticktodo.nl | ✓ | through an invitation link |
 | Reporting and blocking | ✓ | ✓ | ✓ at app.ticktodo.nl | ✓ | — (only on an open Tick) |
 | Tickmanager | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -1205,7 +1205,7 @@ Does it cost anything?
 ### Text
 No. Tick is free right now.
 
-In the free version on app.ticktodo.nl you share with one person. As many tasks and lists as you like, but with that same person. What others share with you doesn't count. So you can always accept an invitation.
+In the free version on app.ticktodo.nl you share with up to 3 people. As many tasks and lists as you like, but with those same 3 people. What others share with you doesn't count. So you can always accept an invitation.
 
 Hosting and development do cost something. Maybe there will be paid extras later to cover that. Tick doesn't need to make a profit. If it pays for itself, I'm happy.
 
@@ -1233,7 +1233,7 @@ As long as the other person hasn't accepted the copy yet, yes: pick the same per
 At app.ticktodo.nl you share with an email address. If that address has no account yet, it gets an invitation by email, with a link to sign up. The invitation is then waiting for them. An invitation stays open for 30 days. You confirm your own email address before you can share.
 
 **How many people can I share with?**
-In the free version, one person, with as many tasks and lists as you like. What others share with you doesn't count.
+In the free version, up to 3 people, with as many tasks and lists as you like. What others share with you doesn't count.
 
 **Does Tick work on an iPhone?**
 Yes. Open app.ticktodo.nl in Safari, tap the Share button and choose **Add to Home Screen**. Tick then opens like an app, with notifications (iOS 16.4 or newer). Place reminders, a widget and quick add aren't possible on an iPhone. There's no App Store app: that needs a paid Apple account and a review for every update.

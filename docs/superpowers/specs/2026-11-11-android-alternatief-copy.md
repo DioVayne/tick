@@ -49,7 +49,7 @@ Er zijn genoeg to-do-apps. Dit is hoe Tick zich verhoudt tot de bekendste op And
 |---|---|---|---|---|---|---|
 | Gratis te gebruiken | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Melding op een plek, gratis | ✓ ¹ | ✗ | ✗ | Alleen Premium | Alleen Pro | ✓ |
-| Een lijst delen, gratis | ✓ met 1 persoon ² | Beperkt ³ | ✓ | ✓ met 1 persoon | ✓ tot 5 mensen | Betaald ⁴ |
+| Een lijst delen, gratis | ✓ tot 3 mensen ² | Beperkt ³ | ✓ | ✓ met 1 persoon | ✓ tot 5 mensen | Betaald ⁴ |
 | Android en iPhone samen | ✓ ⁵ | ✓ | ✓ | ✓ | ✓ | Betaald ⁶ |
 | Werkt in de browser | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
 | Open source | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ |
@@ -120,7 +120,7 @@ There are plenty of to-do apps. This is how Tick compares to the best-known ones
 |---|---|---|---|---|---|---|
 | Free to use | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Reminder at a place, free | ✓ ¹ | ✗ | ✗ | Premium only | Pro only | ✓ |
-| Share a list, free | ✓ with 1 person ² | Limited ³ | ✓ | ✓ with 1 person | ✓ up to 5 people | Paid ⁴ |
+| Share a list, free | ✓ up to 3 people ² | Limited ³ | ✓ | ✓ with 1 person | ✓ up to 5 people | Paid ⁴ |
 | Android and iPhone together | ✓ ⁵ | ✓ | ✓ | ✓ | ✓ | Paid ⁶ |
 | Works in the browser | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
 | Open source | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ |

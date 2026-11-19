@@ -26,7 +26,7 @@ Right after you sign up, Tick sends you an email with a link. Tap it to confirm 
 - If you change your email address under **⚙ Settings → Account** (this asks for your current password), you confirm the new one the same way.
 
 ## Nobody sees who else is on this Tick
-On an open Tick, people can't see each other's names or addresses. You share by typing someone's full email address (see [Sharing](sharing.md#on-an-open-tick)). People you already share a task or list with appear as a button in the share dialog, so you don't have to type them again. With the free version you share with one person (see [Sharing](sharing.md#on-an-open-tick)).
+On an open Tick, people can't see each other's names or addresses. You share by typing someone's full email address (see [Sharing](sharing.md#on-an-open-tick)). People you already share a task or list with appear as a button in the share dialog, so you don't have to type them again. With the free version you share with up to 3 people (see [Sharing](sharing.md#on-an-open-tick)).
 
 ## Reporting and blocking
 You can report something someone shared with you, and block a person. See [Reporting and blocking](reporting.md).
