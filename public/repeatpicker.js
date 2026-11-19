@@ -23,22 +23,41 @@ export function openRepeatPicker(anchor, task, onPick, remindAt) {
   closeOpen?.();
   const start = remindAt ?? task.remind_at ?? task.repeat?.start ?? new Date().toISOString();
   const current = task.repeat?.rule ?? null;
-  const pick = (rule) => { close(); onPick(rule); };
+  // Een einde dat in het menu is getypt maar nog niet bevestigd: wordt opgeslagen zodra het menu sluit (niet bij Esc).
+  /** @type {(() => void) | null} */
+  let pendingUntil = null;
+  const pick = (rule) => { pendingUntil = null; close(); onPick(rule); };
   const s0 = zonedParts(Date.parse(start));
   const firstDay = `${String(s0.y).padStart(4, '0')}-${String(s0.m).padStart(2, '0')}-${String(s0.d).padStart(2, '0')}`;
-  // Veld voor het einde (t/m); leeg = geen einde. Bij een ritme per uur of minuut met tijd (datum-tijdveld).
-  // Een dag wordt die dag t/m 23:59; een moment wordt zijn dag.
-  const asType = (v, timed) => (!v ? '' : timed ? (v.includes('T') ? v : `${v}T23:59`) : v.slice(0, 10));
-  const setTimed = (input, timed, v = input.value) => {
-    input.type = timed ? 'datetime-local' : 'date';
-    input.min = timed ? `${firstDay}T00:00` : firstDay;
-    input.value = asType(v, timed);
-  };
-  const untilField = (value, onChange, timed = false) => {
-    const input = el('input', { class: 'rp-until-date', 'aria-label': t('rep.ends'), title: t('rep.ends_hint') });
-    setTimed(input, timed || value.includes('T'), value);
-    if (onChange) input.addEventListener('change', () => onChange(input.value));
-    return { input, row: el('label', { class: 'rp-row rp-until' }, el('span', {}, t('rep.ends')), input) };
+  // Het einde (t/m): een datumveld, plus een tijdveld bij een ritme per uur of minuut. Leeg = geen einde.
+  // Alleen een tijd telt op de eerste dag; alleen een datum met tijd telt t/m 23:59.
+  /**
+   * @param {string} value YYYY-MM-DD of YYYY-MM-DDTHH:MM
+   * @param {((v: string) => void) | null} onChange in het menu: opslaan (een datum direct, een tijd bij Enter, weg of sluiten)
+   * @param {boolean} timed
+   */
+  const untilField = (value, onChange, timed) => {
+    const date = el('input', { class: 'rp-until-date', type: 'date', min: firstDay, value: value.slice(0, 10), 'aria-label': t('rep.ends'), title: t('rep.ends_hint') });
+    const time = el('input', { class: 'rp-until-time', type: 'time', value: value.slice(11, 16), 'aria-label': t('rep.ends_time') });
+    const read = () => {
+      if (time.hidden) return date.value;
+      if (!date.value && !time.value) return '';
+      return `${date.value || firstDay}T${time.value || '23:59'}`;
+    };
+    const setTimed = (on) => {
+      time.hidden = !on;
+      if (on && date.value && !time.value) time.value = '23:59';
+    };
+    setTimed(timed || value.includes('T'));
+    const row = el('div', { class: 'rp-row rp-until' }, el('span', {}, t('rep.ends')), date, time);
+    if (onChange) {
+      const save = () => { if (read() !== value) onChange(read()); };
+      date.addEventListener('change', () => { if (time.hidden) save(); else pendingUntil = save; });
+      time.addEventListener('input', () => { pendingUntil = save; });
+      row.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+      row.addEventListener('focusout', (e) => { if (pendingUntil && !row.contains(/** @type {Node | null} */ (e.relatedTarget))) save(); });
+    }
+    return { row, read, setTimed, isTimed: () => !time.hidden };
   };
   const keepUntil = (rule) => (current ? withUntil(rule, untilOf(current)) : rule);
 
@@ -63,7 +82,7 @@ export function openRepeatPicker(anchor, task, onPick, remindAt) {
       weeks.hidden = unit.value !== 'week';
       months.hidden = unit.value !== 'maand';
       const timed = unit.value === 'minuut' || unit.value === 'uur';
-      if ((until.input.type === 'datetime-local') !== timed) setTimed(until.input, timed);
+      if (until.isTimed() !== timed) until.setTimed(timed);
     };
     unit.value = st.unit;
 
@@ -89,12 +108,13 @@ export function openRepeatPicker(anchor, task, onPick, remindAt) {
     mode.value = st.monthMode;
     const months = el('div', { class: 'rp-months' }, mode);
 
-    const until = untilField(untilOf(current));
+    const until = untilField(untilOf(current), null, false);
     unit.addEventListener('change', sync);
     n.addEventListener('input', sync);
     sync();
 
-    const klaar = () => pick(withUntil(buildRule({ interval: Number(n.value), unit: /** @type {any} */ (unit.value), days: [...days], monthMode: /** @type {any} */ (mode.value) }, start), until.input.value));
+    const klaar = () => pick(withUntil(buildRule({ interval: Number(n.value), unit: /** @type {any} */ (unit.value), days: [...days], monthMode: /** @type {any} */ (mode.value) }, start), until.read()));
+    until.row.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); klaar(); } });
     return el('div', { class: 'rp' },
       el('div', { class: 'rp-row' }, el('span', {}, t('rep.every')), n, unit),
       weeks, months, until.row,
@@ -112,6 +132,7 @@ export function openRepeatPicker(anchor, task, onPick, remindAt) {
     if (e.key === 'Escape') {
       e.stopPropagation();
       e.preventDefault();
+      pendingUntil = null; // Esc: niet opslaan
       close();
       anchor.focus();
       return;
@@ -128,6 +149,12 @@ export function openRepeatPicker(anchor, task, onPick, remindAt) {
   const onDown = (e) => { if (!menu.contains(e.target) && e.target !== anchor && !anchor.contains(e.target) && !e.target.classList?.contains('sheet-scrim')) close(); };
   function close() {
     if (closeOpen !== close) return;
+    if (pendingUntil) { // eerst het getypte einde opslaan; dat sluit via pick() ook het menu
+      const save = pendingUntil;
+      pendingUntil = null;
+      save();
+      if (closeOpen !== close) return;
+    }
     closeOpen = null;
     openAnchor = null;
     document.removeEventListener('keydown', onKey, true);

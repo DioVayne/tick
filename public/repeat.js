@@ -354,8 +354,10 @@ function candidates(rule, idx, s) {
  */
 export function nextOccurrence(rule, startIso, afterMs) {
   const r = parseRule(rule);
-  const startMs = Date.parse(startIso);
-  if (isNaN(startMs)) throw new Error('invalid start: ' + startIso);
+  const parsed = Date.parse(startIso);
+  if (isNaN(parsed)) throw new Error('invalid start: ' + startIso);
+  // Op de hele minuut: een start met seconden (bijvoorbeeld via de API) slaat anders de eerste keer over.
+  const startMs = Math.floor(parsed / 60000) * 60000;
   const step = STEP_MS[r.freq];
   if (step) {
     // Per uur of minuut: vaste stappen in echte tijd vanaf de start (ook over zomer-/wintertijd heen).
