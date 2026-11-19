@@ -1,7 +1,7 @@
 import { place, showMenu } from './popover.js';
 import { el } from './render.js';
 import { ordinal, t } from './i18n.js';
-import { zonedParts, buildRule, customState, quickRules, shortDay, chipDays, withUntil, untilOf } from './repeat.js';
+import { zonedParts, buildRule, customState, quickRules, shortDay, chipDays, withUntil, untilOf, isSubDay } from './repeat.js';
 
 // Ritmemenu onder de Herhalen-pil (op een smal scherm van onderen): Niet herhalen, de snelkeuzes, "Aangepast…" (een paneel in hetzelfde menu) en de einddatum.
 // Een snelkeuze houdt de einddatum van het huidige ritme.
@@ -26,9 +26,17 @@ export function openRepeatPicker(anchor, task, onPick, remindAt) {
   const pick = (rule) => { close(); onPick(rule); };
   const s0 = zonedParts(Date.parse(start));
   const firstDay = `${String(s0.y).padStart(4, '0')}-${String(s0.m).padStart(2, '0')}-${String(s0.d).padStart(2, '0')}`;
-  // Datumveld voor de einddatum (t/m); leeg = geen einde.
-  const untilField = (value, onChange) => {
-    const input = el('input', { class: 'rp-until-date', type: 'date', min: firstDay, value, 'aria-label': t('rep.ends'), title: t('rep.ends_hint') });
+  // Veld voor het einde (t/m); leeg = geen einde. Bij een ritme per uur of minuut met tijd (datum-tijdveld).
+  // Een dag wordt die dag t/m 23:59; een moment wordt zijn dag.
+  const asType = (v, timed) => (!v ? '' : timed ? (v.includes('T') ? v : `${v}T23:59`) : v.slice(0, 10));
+  const setTimed = (input, timed, v = input.value) => {
+    input.type = timed ? 'datetime-local' : 'date';
+    input.min = timed ? `${firstDay}T00:00` : firstDay;
+    input.value = asType(v, timed);
+  };
+  const untilField = (value, onChange, timed = false) => {
+    const input = el('input', { class: 'rp-until-date', 'aria-label': t('rep.ends'), title: t('rep.ends_hint') });
+    setTimed(input, timed || value.includes('T'), value);
     if (onChange) input.addEventListener('change', () => onChange(input.value));
     return { input, row: el('label', { class: 'rp-row rp-until' }, el('span', {}, t('rep.ends')), input) };
   };
@@ -41,7 +49,7 @@ export function openRepeatPicker(anchor, task, onPick, remindAt) {
     el('div', { class: 'menu-sep' }),
     item(t('rep.custom'), () => { menu.replaceChildren(panel()); menu.setAttribute('role', 'dialog'); place(menu, anchor); focusFirst(); }, ' muted'),
     // Alleen bij een bestaand ritme: de einddatum direct aanpassen.
-    ...(current ? [untilField(untilOf(current), (v) => pick(withUntil(current, v))).row] : []),
+    ...(current ? [untilField(untilOf(current), (v) => pick(withUntil(current, v)), isSubDay(current)).row] : []),
   ];
 
   function panel() {
@@ -54,6 +62,8 @@ export function openRepeatPicker(anchor, task, onPick, remindAt) {
       [...unit.options].forEach((o, i) => { o.textContent = t(`rep.unit.${EENHEID[i]}_${Number(n.value) === 1 ? 'one' : 'many'}`); });
       weeks.hidden = unit.value !== 'week';
       months.hidden = unit.value !== 'maand';
+      const timed = unit.value === 'minuut' || unit.value === 'uur';
+      if ((until.input.type === 'datetime-local') !== timed) setTimed(until.input, timed);
     };
     unit.value = st.unit;
 
@@ -79,11 +89,11 @@ export function openRepeatPicker(anchor, task, onPick, remindAt) {
     mode.value = st.monthMode;
     const months = el('div', { class: 'rp-months' }, mode);
 
+    const until = untilField(untilOf(current));
     unit.addEventListener('change', sync);
     n.addEventListener('input', sync);
     sync();
 
-    const until = untilField(untilOf(current));
     const klaar = () => pick(withUntil(buildRule({ interval: Number(n.value), unit: /** @type {any} */ (unit.value), days: [...days], monthMode: /** @type {any} */ (mode.value) }, start), until.input.value));
     return el('div', { class: 'rp' },
       el('div', { class: 'rp-row' }, el('span', {}, t('rep.every')), n, unit),
