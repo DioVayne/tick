@@ -38,6 +38,11 @@ describe('nextOccurrence', () => {
     expect(nextOccurrence('FREQ=DAILY;UNTIL=20261019T090000', ZO_10, ms(ZO_10))).toBeNull();
     expect(nextOccurrence('FREQ=DAILY;UNTIL=20261019T100000', ZO_10, ms(ZO_10))).toBe('2026-10-19T08:00:00.000Z');
   });
+  it('een start met seconden of milliseconden telt vanaf de hele minuut', () => {
+    expect(nextOccurrence('FREQ=DAILY', '2026-10-18T08:00:00.312Z', ms('2026-10-18T07:00:00Z'))).toBe('2026-10-18T08:00:00.000Z');
+    expect(nextOccurrence('FREQ=WEEKLY;BYDAY=SU', '2026-10-18T08:00:42Z', ms('2026-10-18T07:00:00Z'))).toBe('2026-10-18T08:00:00.000Z');
+    expect(nextOccurrence('FREQ=HOURLY', '2026-10-18T08:00:14.428Z', ms('2026-10-18T08:30:00Z'))).toBe('2026-10-18T09:00:00.000Z');
+  });
   it('per uur: over de wintertijd heen in echte uren, en stopt na de einddatum (wandklok)', () => {
     // 25 okt 2026 02:00 CEST → 02:00 CET: elk uur blijft 60 minuten.
     expect(nextOccurrence('FREQ=HOURLY', '2026-10-24T23:00:00.000Z', ms('2026-10-25T00:00:00Z'))).toBe('2026-10-25T01:00:00.000Z');
