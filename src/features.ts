@@ -5,10 +5,10 @@ import type { Env } from './index';
 // instelling, geen API (404) en geen cron-stap. Welke er zijn en wat bij elk hoort: "Testfeatures" in ARCHITECTURE.md.
 
 /**
- * De testfeatures die deze code kent. Een naam die hier niet staat, zet niets aan. Nu geen: "freetime" (Tijd voor een
- * taak?) is getest en weer verwijderd (migratie 0029 ruimt zijn instellingen op).
+ * De testfeatures die deze code kent. Een naam die hier niet staat, zet niets aan. "quickdate": datum en tijd uit de
+ * getypte titel (public/quickdate.js). Eerder getest en verwijderd: "freetime" (migratie 0029 ruimt zijn instellingen op).
  */
-export const TEST_FEATURES: readonly string[] = [];
+export const TEST_FEATURES: readonly string[] = ['quickdate'];
 export type TestFeature = string;
 
 /** De testfeatures die op deze Tick aanstaan (alleen bekende namen, zonder dubbele). */

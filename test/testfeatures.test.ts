@@ -16,6 +16,12 @@ describe('testfeatures (TEST_FEATURES)', () => {
     expect(await (await callWith({ ...env, TEST_FEATURES: 'freetime' }, '/config.js', { cookie: u.cookie })).text()).toContain('"testFeatures":[]');
   });
 
+  it('quickdate staat alleen aan met zijn naam', async () => {
+    expect(testFeature({ TEST_FEATURES: 'QuickDate' }, 'quickdate')).toBe(true);
+    const u = await createUser();
+    expect(await (await callWith({ ...env, TEST_FEATURES: 'quickdate' }, '/config.js', { cookie: u.cookie })).text()).toContain('"testFeatures":["quickdate"]');
+  });
+
   it('de API van "Tijd voor een taak?" bestaat niet meer', async () => {
     const u = await createUser();
     expect((await callWith({ ...env, TEST_FEATURES: 'freetime' }, '/api/freetime', { cookie: u.cookie })).status).toBe(404);
