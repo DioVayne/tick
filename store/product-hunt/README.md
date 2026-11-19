@@ -53,7 +53,7 @@ Plan:
 
 **Pricing:** Free
 
-## 3. Maker comment (post it right after going live)
+## 3. Maker comment (saved in the draft; Product Hunt posts it when the launch is submitted)
 
 > Hi Product Hunt 👋 I'm Dio. I made Tick because I needed an app that reminds me of things. One that just does what I want, and doesn't suddenly disappear or start costing money.
 >
