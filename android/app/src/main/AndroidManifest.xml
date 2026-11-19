@@ -190,6 +190,11 @@
             android:name=".ActivityReceiver"
             android:exported="false" />
 
+        <!-- testfeature placecheck: de proefmelding in "Tick op deze telefoon" -->
+        <receiver
+            android:name=".PlaceCheck$Receiver"
+            android:exported="false" />
+
         <receiver
             android:name=".BootReceiver"
             android:exported="true">

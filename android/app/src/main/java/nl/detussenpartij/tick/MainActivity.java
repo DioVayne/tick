@@ -45,6 +45,7 @@ public class MainActivity extends Activity {
     private TextView addressStatus;
     private TextView batteryStatus;
     private Button battery;
+    private PlaceCheck placeCheck; // testfeature placecheck
 
     /**
      * Wat de app bij elke start nodig heeft: periodiek verversen, het kanaal "locatie" (zodat het in de instellingen staat
@@ -180,6 +181,8 @@ public class MainActivity extends Activity {
         batteryStatus.setPadding(0, (int) (4 * d), 0, (int) (12 * d));
         root.addView(batteryStatus);
 
+        placeCheck = PlaceCheck.addTo(this, root); // testfeature placecheck
+
         Button look = new Button(this);
         look.setText(R.string.widget_settings);
         look.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
@@ -262,6 +265,7 @@ public class MainActivity extends Activity {
         updatePairStatus();
         updateLocStatus();
         updateBatteryStatus();
+        placeCheck.refresh(); // testfeature placecheck
         // Zonder toestemming of na "locatie uit" is de signature gewist: dan alles opnieuw zetten. Anders alleen
         // als de set veranderd is; elke keer opnieuw registreren kan een nog niet afgeleverde aankomst wissen.
         if (Geo.permitted(this)) {

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Testfeature "placecheck" (PlaceCheck.java): proefmelding en uitleg per merk in "Tick op deze telefoon". -->
+<resources>
+    <string name="placecheck_title">Plekmeldingen controleren</string>
+    <string name="placecheck_help">Tik op de knop, vergrendel je telefoon en wacht. Na 15 seconden stuurt Tick een proefmelding, dezelfde soort als bij een plek. Zo zie je of meldingen doorkomen op een vergrendeld scherm. Je locatie wordt hiermee niet gecontroleerd.</string>
+    <string name="placecheck_button">Proefmelding over 15 seconden</string>
+    <string name="placecheck_scheduled">Vergrendel je telefoon nu. De proefmelding komt over 15 seconden.</string>
+    <string name="placecheck_status_none">Nog geen proef gedaan.</string>
+    <string name="placecheck_status_waiting">Wacht op de proefmelding…</string>
+    <string name="placecheck_status_blocked">Laatste proef: de melding kon niet getoond worden, want meldingen van Tick of Locatiemeldingen staan uit.</string>
+    <string name="placecheck_status_missing">Laatste proef: er kwam geen melding. Waarschijnlijk stopt je telefoon Tick op de achtergrond. Volg de stappen hieronder en probeer het opnieuw.</string>
+    <string name="placecheck_status_arrived_locked">Laatste proef: aangekomen %1$s, met het scherm op slot. Plekmeldingen kunnen doorkomen.</string>
+    <string name="placecheck_status_arrived_unlocked">Laatste proef: aangekomen %1$s, maar het scherm was niet op slot. Probeer het nog eens met het scherm op slot.</string>
+    <string name="placecheck_on_time">op tijd</string>
+    <string name="placecheck_late">%1$d seconden te laat</string>
+    <string name="placecheck_notification_title">Proefmelding van Tick</string>
+    <string name="placecheck_notification_text">Zo komt een plekmelding binnen. Tik om de uitslag te zien.</string>
+    <string name="placecheck_brand_title">Op je %1$s</string>
+    <string name="placecheck_open_settings">App-instellingen van Tick openen</string>
+    <string name="placecheck_steps_samsung">1. Instellingen → Apps → Tick → Batterij: kies Onbeperkt.\n2. Instellingen → Batterij → Limieten achtergrondgebruik: zorg dat Tick niet bij Apps in slaapstand of Apps in diepe slaapstand staat. Zet hem bij Apps die nooit in slaapstand gaan.\nDe namen kunnen per versie iets verschillen.</string>
+    <string name="placecheck_steps_xiaomi">1. Instellingen → Apps → Apps beheren → Tick: zet Autostart aan.\n2. Zelfde scherm → Batterijbesparing: kies Geen beperkingen.\n3. Open de recente apps en zet Tick vast (houd de kaart ingedrukt of trek hem omlaag), zodat opruimen hem niet stopt.\nDe namen kunnen per versie iets verschillen (MIUI of HyperOS).</string>
+    <string name="placecheck_steps_oneplus">1. Instellingen → Apps → Tick → Batterijgebruik: zet Activiteit op de achtergrond toestaan aan (en Automatisch starten toestaan, als dat er staat).\n2. Zet Tick vast in de recente apps, zodat opruimen hem niet stopt.\nDe namen kunnen per versie iets verschillen.</string>
+    <string name="placecheck_steps_vivo">1. Instellingen → Batterij → Beheer stroomverbruik op achtergrond → Tick: kies Hoog stroomverbruik op achtergrond toestaan.\n2. Instellingen → Apps → Tick → Rechten: zet Autostart aan, als dat er staat.\nDe namen kunnen per versie iets verschillen.</string>
+    <string name="placecheck_steps_huawei">1. Instellingen → Batterij → App starten → Tick: zet Automatisch beheren uit.\n2. In het venster dat opent: zet Automatisch starten, Secundair starten en Op achtergrond uitvoeren aan.\nDe namen kunnen per versie iets verschillen.</string>
+    <string name="placecheck_steps_other">1. Instellingen → Apps → Tick → Batterijgebruik van app (of Batterij): kies Onbeperkt.\n2. Controleer dat meldingen van Tick aanstaan, ook Locatiemeldingen.\nDe namen kunnen per telefoon iets verschillen.</string>
+</resources>

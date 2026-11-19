@@ -6,9 +6,10 @@ import type { Env } from './index';
 
 /**
  * De testfeatures die deze code kent. Een naam die hier niet staat, zet niets aan. "quickdate": datum en tijd uit de
- * getypte titel (public/quickdate.js). Eerder getest en verwijderd: "freetime" (migratie 0029 ruimt zijn instellingen op).
+ * getypte titel (public/quickdate.js). "placecheck": proefmelding en uitleg per merk in de Android-app (PlaceCheck.java;
+ * de app hoort het via /api/config). Eerder getest en verwijderd: "freetime" (migratie 0029 ruimt zijn instellingen op).
  */
-export const TEST_FEATURES: readonly string[] = ['quickdate'];
+export const TEST_FEATURES: readonly string[] = ['quickdate', 'placecheck'];
 export type TestFeature = string;
 
 /** De testfeatures die op deze Tick aanstaan (alleen bekende namen, zonder dubbele). */
