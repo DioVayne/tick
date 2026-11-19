@@ -60,7 +60,7 @@ Launches go live at 00:01 Pacific time = **09:01 in the Netherlands**. Tuesdayâ€
 >
 > To be honest about money: I don't want to make a business out of Tick, but it shouldn't cost me money in the long run either. If hosting and sending mail get too expensive, I'll add paid extras to cover that. Nothing that's free when you sign up becomes paid without notice.
 >
-> And running Tick yourself will always stay free: it's open source (MIT), and you can put your own Tick on a free Cloudflare account in about 15 minutes with Claude Code. The built-in MCP server lets Claude manage your tasks too.
+> And you never have to pay me: Tick is open source (MIT), and you can put your own Tick on Cloudflare's free plan in about 15 minutes with Claude Code. Want your Tick to send mail too (password resets, invites)? That's a Resend account, free up to 100 mails a day, plenty for a household. The built-in MCP server lets Claude manage your tasks too.
 >
 > It started as a little list for the two of us, and got a bit out of hand. I'd love to hear how you share to-dos with the people around you, and what you'd miss in Tick.
 
@@ -86,4 +86,6 @@ To change them: edit `gallery.html` (it uses the raw app screens in `docs/screen
 1. Post the maker comment as soon as the launch is live.
 2. Share the link (LinkedIn, friends, the people already using Tick). Reply to every comment the same day.
 3. Expect "how is this different from Apple Reminders / Todoist?": answer with shared vs copy and *Take it*, not with place reminders.
-4. After launch: a Product Hunt badge on ticktodo.nl (NL + EN) is optional; it goes through the normal website rules in `CLAUDE.md`.
+4. Expect "is self-hosting really free forever?". Answer:
+   > It runs on Cloudflare's free plan (Workers + D1), and a household stays far below its limits. Mail is optional: without it, you invite people with a link; with it, Resend is free up to 100 mails a day. I can't promise what Cloudflare or Resend do in ten years, but the code is MIT and yours: nothing in it depends on my servers or needs a licence.
+5. After launch: a Product Hunt badge on ticktodo.nl (NL + EN) is optional; it goes through the normal website rules in `CLAUDE.md`.
