@@ -671,7 +671,8 @@ function normRemind(v: unknown, z: Zone): string | null {
   }
 }
 
-app.get('/api/config', (c) => c.json({ vapidPublicKey: c.env.VAPID_PUBLIC_KEY }));
+// testFeatures ook voor de Android-app (Features.java), die /config.js niet leest.
+app.get('/api/config', (c) => c.json({ vapidPublicKey: c.env.VAPID_PUBLIC_KEY, testFeatures: testFeatures(c.env) }));
 
 // Instellingen voor de PWA als module, zodat de service worker ze met de shell cachet (offline de juiste taal en zone).
 app.get('/config.js', async (c) => {

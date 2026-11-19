@@ -22,6 +22,14 @@ describe('testfeatures (TEST_FEATURES)', () => {
     expect(await (await callWith({ ...env, TEST_FEATURES: 'quickdate' }, '/config.js', { cookie: u.cookie })).text()).toContain('"testFeatures":["quickdate"]');
   });
 
+  it('placecheck: de Android-app hoort het via /api/config', async () => {
+    const u = await createUser();
+    const off = await (await callWith({ ...env, TEST_FEATURES: '' }, '/api/config', { cookie: u.cookie })).json();
+    expect(off).toMatchObject({ testFeatures: [] });
+    const on = await (await callWith({ ...env, TEST_FEATURES: 'quickdate, placecheck' }, '/api/config', { cookie: u.cookie })).json();
+    expect(on).toMatchObject({ testFeatures: ['quickdate', 'placecheck'] });
+  });
+
   it('de API van "Tijd voor een taak?" bestaat niet meer', async () => {
     const u = await createUser();
     expect((await callWith({ ...env, TEST_FEATURES: 'freetime' }, '/api/freetime', { cookie: u.cookie })).status).toBe(404);
