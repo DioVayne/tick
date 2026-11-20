@@ -1000,6 +1000,12 @@ html[data-palette="retro"] .set-seg, html[data-palette="retro"] #side .item, htm
 html[data-palette="retro"] .check { border-radius: 50%; border-width: 2px; }
 html[data-palette="retro"] .set-list, html[data-palette="retro"] #main { border-radius: 18px; }
 html[data-palette="retro"] #topbar { background: transparent; }
+/* Op een smal scherm blijft de kop bovenaan staan terwijl de lijst eronder door schuift: dan wel een vlak, anders
+   schemert de tekst van de lijst door de kop heen (Retro en achtergrondfoto). */
+@media (max-width: 1023.98px) {
+  html[data-palette="retro"]:not([data-bg]) #topbar { background: var(--bg); }
+  html[data-bg] #topbar { background-color: color-mix(in srgb, var(--bg) 96%, transparent); }
+}
 
 /* Knoppen in de blokken van het detailpaneel (bestand toevoegen, delen): klein, met een rand, los van het vlak. */
 button.secbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font-size: .8125rem; }
