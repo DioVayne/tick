@@ -29,7 +29,7 @@ const NL_TO_EN: Record<string, string> = {
   top: 'top', maker: 'maker', 'op-de-juiste-plek': 'in-the-right-place', 'samen-of-kopie': 'shared-or-copy',
   'oude-taken': 'old-tasks', functies: 'features', 'wat-werkt-waar': 'what-works-where', vergelijken: 'compare',
   privacy: 'privacy', kost: 'cost', vragen: 'faq',
-  invoerkaart: 'entry-card', herinneringen: 'reminders', herhalen: 'repeating', vandaag: 'due-today', kalender: 'calendar',
+  invoerkaart: 'entry-card', 'datum-uit-tekst': 'date-from-text', herinneringen: 'reminders', herhalen: 'repeating', vandaag: 'due-today', kalender: 'calendar',
   'agenda-koppelen': 'link-calendar', subtaken: 'subtasks', notities: 'notes', bijlagen: 'attachments', offline: 'offline',
   themas: 'themes', widget: 'widget', plekken: 'places', 'meerdere-plekken': 'more-places', rijmodus: 'driving-mode', 'op-tijd-onderweg': 'on-time-on-the-road',
   tickmanager: 'tickmanager', delen: 'sharing', 'gedeelde-lijsten': 'shared-lists', 'melden-en-blokkeren': 'reporting-and-blocking',
@@ -52,7 +52,7 @@ describe('website ticktodo.nl', () => {
 
   it('NL and EN have the same feature stories and questions, in the same order', () => {
     const nl = detailsIds(page('index.html'));
-    expect(nl.length).toBe(25 + 18);
+    expect(nl.length).toBe(26 + 18);
     expect(detailsIds(page('en/index.html'))).toEqual(nl.map(toEn));
   });
 

@@ -179,7 +179,7 @@ Een taak toevoegen begint met typen in het veld bovenaan je lijst. Druk op Enter
 
 Onder de zinnen staat **Omschrijving, subtaken of bijlage**. Daar schrijf je notities, zet je subtaken neer, of voeg je een foto of bestand toe. Een plaatje plakken of een bestand op de kaart slepen kan ook.
 
-Tick haalt geen datum uit wat je typt. Je kiest de tijd zelf, met **Kies dag en tijd** of een snelle keuze voor vandaag, morgen of volgende week. Zo weet je altijd precies wat er staat.
+Typ je er een dag of tijd bij, zoals *morgen 15:00*, dan zet Tick die herinnering alvast klaar. Zie Datum uit je tekst. Zelf kiezen kan ook, met **Kies dag en tijd** of een snelle keuze voor vandaag, morgen of volgende week.
 
 Met een toetsenbord: **N** opent het veld, **Shift+Enter** voegt de taak toe en opent hem meteen, **Esc** maakt de kaart leeg. Open je de taak later, dan zie je dezelfde zinnen terug. Wat je hebt ingevuld staat in kleur.
 
@@ -613,7 +613,7 @@ Ja. De gratis app staat in Google Play, en er is ook een versie op GitHub. De ve
 Nee. Je telefoon let zelf op je plekken en vertelt Tick alleen dat een melding afging. Rijmodus gebruikt je locatie alleen op je apparaat, terwijl Tick open is. Tick bewaart alleen de plekken die je zelf opslaat.
 
 **Haalt Tick een datum uit wat ik typ?**
-Nee. Je kiest de tijd zelf met *Vandaag*, *Morgen*, *Volgende week* of een andere dag en tijd. Dan weet je zeker wat er staat.
+Ja. Typ *morgen 15:00*, *vrijdag* of *over 2 uur* in de titel en Tick stelt die herinnering voor. De woorden gaan dan uit de titel. Met **Negeren** blijft je tekst zoals hij is. Dit werkt in de app op het web, op Android en op de iPhone. Snel toevoegen en de widget in de Android-app doen het nog niet.
 
 **Hoe verwijder ik mijn account?**
 In de app: **Instellingen › Account › Account verwijderen**. Je bevestigt met je wachtwoord. Dan gaat alles direct weg, behalve een geanonimiseerde versie van meldingen; reservekopieën zijn binnen 30 dagen gewist. Kun je niet meer inloggen, kijk dan op app.ticktodo.nl/delete-account. Download eerst een back-up als je je taken wilt houden.
@@ -809,7 +809,7 @@ Adding a task starts with typing in the field at the top of your list. Press Ent
 
 Under the sentences is **Description, subtasks or attachment**. There you write notes, add subtasks, or attach a photo or file. You can also paste a picture or drop a file on the card.
 
-Tick doesn't pull a date out of what you type. You choose the time yourself, with **Pick day and time** or a quick choice for today, tomorrow or next week. So you always know exactly what's set.
+Add a day or time as you type, such as *tomorrow 3pm*, and Tick sets up that reminder for you. See Date from your text. You can also choose yourself, with **Pick day and time** or a quick choice for today, tomorrow or next week.
 
 With a keyboard: **N** opens the field, **Shift+Enter** adds the task and opens it right away, **Esc** empties the card. Open the task later and you see the same sentences. What you filled in shows in colour.
 
@@ -1245,7 +1245,7 @@ Yes. The free app is on Google Play, and there's also a version on GitHub. The G
 No. Your phone watches your places itself and only tells Tick that a notification went off. Driving mode uses your location only on your device, while Tick is open. Tick only keeps the places you save yourself.
 
 **Does Tick pick up a date from what I type?**
-No. You choose the time yourself with *Today*, *Tomorrow*, *Next week* or another day and time. Then you know for sure what's set.
+Yes. Type *tomorrow 3pm*, *friday* or *in 2 hours* in the title and Tick suggests that reminder. Those words then leave the title. **Ignore** keeps your text as it is. This works in the app on the web, on Android and on the iPhone. Quick add and the widget in the Android app don't do it yet.
 
 **How do I delete my account?**
 In the app: **Settings › Account › Delete account**. You confirm with your password. Then everything goes right away, except an anonymised record of reports; backups are erased within 30 days. Can't log in anymore? See app.ticktodo.nl/delete-account. Download a backup first if you want to keep your tasks.
@@ -1335,3 +1335,4 @@ Hero (bovenregel, intro, voetnoot), plek-voetnoot, twee nieuwe vragen (16 en 17)
 
 Ook 2026-11-11: tegel en verhaal *Meerdere plekken* (#meerdere-plekken / #more-places, met schermafbeelding nl-/en-places.webp), rij *Meerdere plekken per taak* in Wat werkt waar, en vraag 18 *Kan Tick me waarschuwen bij elke supermarkt?*. Teksten staan in de HTML; ontwerp in [2026-11-11-meerdere-plekken.md](2026-11-11-meerdere-plekken.md).
 
+2026-11-20: tegel en verhaal *Datum uit je tekst* (#datum-uit-tekst / #date-from-text, met schermafbeelding nl-/en-quickdate.webp), rij *Datum uit je tekst* in Wat werkt waar (Android: deels, niet bij snel toevoegen en de widget), vraag 10 nu *Ja*, en de regel "haalt geen datum uit wat je typt" weg uit Invoerkaart en Waar Tick minder is. Teksten staan in de HTML.
