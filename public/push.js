@@ -27,15 +27,19 @@ export async function pushState(reg) {
   return { supported: true, permission: Notification.permission, subscribed: !!sub, iosNeedsHomeScreen };
 }
 
-/** Vraagt toestemming, meldt deze browser aan bij de server (met de huidige taal). Gooit een Error met een leesbare tekst. */
-export async function enablePush(reg) {
+/**
+ * Vraagt toestemming, meldt deze browser aan bij de server (met de huidige taal). Gooit een Error met een leesbare tekst.
+ * @param {ServiceWorkerRegistration | null} reg
+ * @param {{ timeoutMs?: number }} [opts] hoe lang hooguit op de toestemmingsvraag en het aanmelden wachten
+ */
+export async function enablePush(reg, { timeoutMs = ASK_TIMEOUT_MS } = {}) {
   if (!supported(reg)) throw new Error(t('push.unsupported'));
-  const asked = await withTimeout(Notification.requestPermission(), ASK_TIMEOUT_MS, t('push.no_answer'));
+  const asked = await withTimeout(Notification.requestPermission(), timeoutMs, t('push.no_answer'));
   if (asked !== 'granted') throw new Error(t('push.denied'));
   const { vapidPublicKey } = await request('GET', '/api/config');
   const sub = await reg.pushManager.getSubscription()
     ?? await withTimeout(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(vapidPublicKey) }),
-      ASK_TIMEOUT_MS, t('push.no_answer'));
+      timeoutMs, t('push.no_answer'));
   await request('POST', '/api/push/subscribe', { ...sub.toJSON(), locale: getLocale() });
   markOff(false);
 }

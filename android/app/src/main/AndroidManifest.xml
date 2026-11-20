@@ -100,6 +100,14 @@
             </intent-filter>
         </service>
 
+        <!-- Vraagt de PWA om meldingen (Notification.requestPermission) terwijl ze voor de app uit staan, dan opent Chrome
+             via TickDelegationService dit scherm van Browser Helper voor de Android-toestemming. Zonder deze regel bleef
+             die vraag eeuwig hangen ("Stuur testmelding" deed niets). -->
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.NotificationPermissionRequestActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Het adres van je Tick: bij de eerste start van de algemene app en via "Adres wijzigen" -->
         <activity
             android:name=".SetupActivity"
