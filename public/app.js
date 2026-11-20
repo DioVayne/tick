@@ -184,7 +184,7 @@ const reloaded = !!location.hash && history.state?.hash === location.hash;
 if (startRoute && !reloaded) history.replaceState(null, '', location.pathname);
 if (startRoute) goTo(startRoute, { push: !reloaded });
 // Herladen op de instellingen (bijvoorbeeld na een taalwissel): daar weer verder.
-if (history.state?.settings) openSettings({ push: false });
+if (history.state?.settings) openSettings({ push: false, view: history.state.accounts ? 'accounts' : 'main' });
 init(CONFIG.userId, CONFIG.userName).then(() => {
   detailReady();
   ready = true;
@@ -202,7 +202,7 @@ init(CONFIG.userId, CONFIG.userName).then(() => {
  */
 function goTo(route, { push = false } = {}) {
   pendingList = null;
-  if (route.page !== 'settings') hideSettings();
+  if (route.page !== 'settings' && route.page !== 'accounts') hideSettings();
   if (route.page !== 'calendar') hideCalendar();
   if (route.page !== 'help') hideHelp();
   if (route.page !== 'manager') hideManager();
@@ -216,7 +216,7 @@ function goTo(route, { push = false } = {}) {
   } else if (route.page === 'done') selectDone();
   else if (route.page === 'trash') selectTrash();
   else if (route.page === 'calendar') openCalendar({ push });
-  else if (route.page === 'settings') openSettings({ push });
+  else if (route.page === 'settings' || route.page === 'accounts') openSettings({ push, view: route.page === 'accounts' ? 'accounts' : 'main' });
   else if (route.page === 'help') openHelp({ push });
   else if (route.page === 'manager') openManager({ push }); // uitgezet: doet niets, de gewone lijst blijft
   else if (route.page === 'task') selectTask(route.id, { push });
@@ -254,7 +254,7 @@ window.addEventListener('popstate', (e) => {
     selectList(viewFrom === 'Inbox' || lists().some((l) => l.name === viewFrom) ? viewFrom : null);
     return;
   }
-  if (e.state?.settings) { hideCalendar(); hideHelp(); hideManager(); openSettings({ push: false }); return; }
+  if (e.state?.settings) { hideCalendar(); hideHelp(); hideManager(); openSettings({ push: false, view: e.state.accounts ? 'accounts' : 'main' }); return; }
   if (e.state?.help) {
     hideSettings();
     hideCalendar();

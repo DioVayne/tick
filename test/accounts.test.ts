@@ -17,7 +17,34 @@ describe('accountbeheer', () => {
     const b = await createUser({ name: 'Sanne' });
     await callAs(b.cookie, '/api/account'); // zet last_seen
     const list = await json<any[]>(await callAs(await session(), '/api/users'));
-    expect(list.find((u) => u.id === b.id)).toEqual({ id: b.id, name: 'Sanne', email: b.email, role: 'member', created_at: expect.any(String), last_seen: expect.any(String) });
+    expect(list.find((u) => u.id === b.id)).toEqual({ id: b.id, name: 'Sanne', email: b.email, role: 'member', created_at: expect.any(String), last_seen: expect.any(String),
+      tasks_open: 0, tasks_done: 0, browsers: 0, phones: 0, lists_shared: 0, lists_joined: 0 });
+  });
+
+  it('de lijst telt taken, apparaten en gedeelde lijsten per account (alleen aantallen, geen inhoud)', async () => {
+    const b = await createUser({ name: 'Teller' });
+    const c = await createUser({ name: 'Lid van de lijst' });
+    const ts = new Date().toISOString();
+    const task = (done: number, deleted: string | null) => env.DB.prepare(
+      'INSERT INTO tasks (id, title, position, done, created_at, updated_at, user_id, deleted_at) VALUES (?, ?, 1, ?, ?, ?, ?, ?)',
+    ).bind(crypto.randomUUID(), 'geheim', done, ts, ts, b.id, deleted);
+    const listId = crypto.randomUUID();
+    await env.DB.batch([
+      task(0, null), task(0, null), task(0, null), task(1, null), task(1, null), task(0, ts), // één in de prullenbak
+      env.DB.prepare('INSERT INTO push_subscriptions (endpoint, p256dh, auth, user_agent, created_at, user_id) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind('https://push.test/tel-' + crypto.randomUUID(), 'p', 'a', 'Chrome', ts, b.id),
+      env.DB.prepare("INSERT INTO api_keys (id, name, kind, hash, hint, created_at, user_id) VALUES (?, 'Pixel', 'full', ?, 'abcd', ?, ?)").bind(crypto.randomUUID(), crypto.randomUUID(), ts, b.id),
+      env.DB.prepare("INSERT INTO api_keys (id, name, kind, hash, hint, created_at, user_id) VALUES (?, 'Bookmarklet', 'inbox', ?, 'abcd', ?, ?)").bind(crypto.randomUUID(), crypto.randomUUID(), ts, b.id),
+      env.DB.prepare("INSERT INTO shared_lists (id, owner_id, mode, created_at) VALUES (?, ?, 'shared', ?)").bind(listId, b.id, ts),
+      env.DB.prepare("INSERT INTO list_members (list_id, user_id, role, status, name, created_at) VALUES (?, ?, 'owner', 'accepted', 'Samen', ?)").bind(listId, b.id, ts),
+      env.DB.prepare("INSERT INTO list_members (list_id, user_id, role, status, name, created_at) VALUES (?, ?, 'member', 'accepted', 'Samen', ?)").bind(listId, c.id, ts),
+    ]);
+    const res = await callAs(await session(), '/api/users');
+    const text = await res.clone().text();
+    expect(text).not.toContain('geheim');
+    const list = await json<any[]>(res);
+    expect(list.find((u) => u.id === b.id)).toMatchObject({ tasks_open: 3, tasks_done: 2, browsers: 1, phones: 1, lists_shared: 1, lists_joined: 0 });
+    expect(list.find((u) => u.id === c.id)).toMatchObject({ tasks_open: 0, tasks_done: 0, browsers: 0, phones: 0, lists_shared: 0, lists_joined: 1 });
   });
 
   it('uitnodiging: 7 dagen, een link van 43 tekens, alleen de hash in de database', async () => {

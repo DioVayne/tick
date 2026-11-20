@@ -134,7 +134,7 @@ function updateHeader() {
   $('#btn-calendar').setAttribute('aria-pressed', String(cal));
   $('#btn-help')?.setAttribute('aria-pressed', String(help));
   $('#btn-settings')?.setAttribute('aria-pressed', String(open));
-  $('#title').textContent = open ? t('set.title') : cal ? t('cal.title') : help ? t('help.title') : mgr ? t('mgr.title')
+  $('#title').textContent = open ? (document.body.classList.contains('accounts-open') ? t('acc.title') : t('set.title')) : cal ? t('cal.title') : help ? t('help.title') : mgr ? t('mgr.title')
     : state.showTrash ? t('ui.trash') : state.showDone ? t('ui.completed') : state.list ?? t('ui.all');
   // Alleen een eigen lijst heeft een menu achter de titel; Alle, Inbox en de andere weergaven niet.
   /** @type {HTMLButtonElement} */ ($('#title')).disabled = open || cal || help || mgr || state.showTrash || state.showDone || !state.list || state.list === 'Inbox';

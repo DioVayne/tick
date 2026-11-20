@@ -20,8 +20,26 @@ export async function deleteAccount(env: Env, id: string): Promise<void> {
 export const usersApi = new Hono<AppEnv>();
 usersApi.use('*', adminOnly);
 
+/**
+ * Alle accounts met tellingen voor de accountpagina (public/accountsview.js): taken (open en afgevinkt, zonder de
+ * prullenbak), apparaten (browsers met een push-abonnement en telefoons met een volledige sleutel) en gedeelde lijsten
+ * (zelf gedeeld en geaccepteerd lid). Alleen aantallen, nooit inhoud. Eén query: per tabel één GROUP BY, geen N+1.
+ */
+const USERS_SQL = `
+SELECT u.id, u.name, u.email, u.role, u.created_at, u.last_seen,
+  COALESCE(t.open, 0) AS tasks_open, COALESCE(t.done, 0) AS tasks_done,
+  COALESCE(b.n, 0) AS browsers, COALESCE(k.n, 0) AS phones,
+  COALESCE(so.n, 0) AS lists_shared, COALESCE(sj.n, 0) AS lists_joined
+FROM users u
+LEFT JOIN (SELECT user_id, SUM(done = 0) AS open, SUM(done = 1) AS done FROM tasks WHERE deleted_at IS NULL GROUP BY user_id) t ON t.user_id = u.id
+LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM push_subscriptions GROUP BY user_id) b ON b.user_id = u.id
+LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM api_keys WHERE kind = 'full' GROUP BY user_id) k ON k.user_id = u.id
+LEFT JOIN (SELECT owner_id, COUNT(*) AS n FROM shared_lists GROUP BY owner_id) so ON so.owner_id = u.id
+LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM list_members WHERE role = 'member' AND status = 'accepted' GROUP BY user_id) sj ON sj.user_id = u.id
+ORDER BY u.created_at, u.id`;
+
 usersApi.get('/', async (c) => {
-  const { results } = await c.env.DB.prepare('SELECT id, name, email, role, created_at, last_seen FROM users ORDER BY created_at, id').all();
+  const { results } = await c.env.DB.prepare(USERS_SQL).all();
   return c.json(results);
 });
 
