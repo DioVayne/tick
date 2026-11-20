@@ -40,6 +40,7 @@ const S = {
   online: false,
   loaded: false, // de eerste poging om de instellingen op te halen is klaar
   /** @type {ServiceWorkerRegistration | null} */ reg: null,
+  /** getReg is klaar (ook als er geen service worker is): dan mag paintHome de meldingen tekenen. */ regChecked: false,
   /** @type {Record<string, HTMLElement>} */ parts: {},
   /** @type {{ name: string, email: string | null } | null} */ account: null, // null: nog niet van de server
   /** @type {{ id: string, name: string }[]} */ blocked: [], // openbare Tick: wie je blokkeerde
@@ -104,8 +105,11 @@ function syncThemeColor() {
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncThemeColor);
 syncThemeColor();
 
+/** De service worker; nog niet geregistreerd (eerste start, net bijgewerkt) dan hooguit 5 s wachten tot hij klaar is. */
 const getReg = () => ('serviceWorker' in navigator
-  ? navigator.serviceWorker.getRegistration().then((r) => r ?? null).catch(() => null)
+  ? navigator.serviceWorker.getRegistration()
+    .then((r) => r ?? Promise.race([navigator.serviceWorker.ready, new Promise((ok) => { setTimeout(() => ok(null), 5000); })]))
+    .then((r) => r ?? null).catch(() => null)
   : Promise.resolve(null));
 
 // ---------- bouwstenen ----------
@@ -296,7 +300,7 @@ function paintHome() {
   paintData();
   paintAdvanced();
   paintCalendar();
-  if (S.reg) paintPush(); // de rij voor verlopen taken hangt aan de instellingen
+  if (S.regChecked) paintPush(); // de rij voor verlopen taken hangt aan de instellingen; ook zonder service worker
 }
 
 // ---------- 🎨 Weergave ----------
@@ -576,32 +580,43 @@ function paintLangTime() {
 
 async function paintPush() {
   const ps = await pushState(S.reg);
+  const blocked = !ps.supported || ps.permission === 'denied';
+  const on = ps.subscribed && ps.permission === 'granted';
   const sw = /** @type {HTMLInputElement} */ (el('input', {
-    type: 'checkbox', role: 'switch', class: 'set-switch', 'aria-label': t('set.push_label'),
-    disabled: !ps.supported || ps.permission === 'denied',
+    type: 'checkbox', role: 'switch', class: 'set-switch', 'aria-label': t('set.push_label'), disabled: blocked,
   }));
-  sw.checked = ps.subscribed && ps.permission === 'granted';
+  sw.checked = on;
+  /** Aanzetten en meteen een testmelding sturen: de schakelaar én de testknop als meldingen hier nog uit staan. */
+  const turnOn = async () => {
+    sw.checked = true;
+    sw.disabled = true;
+    test.disabled = true;
+    try {
+      await enablePush(S.reg);
+      const r = await request('POST', '/api/push/test', {});
+      if (r.ok) toast(t('set.push_on_test'), 'ok'); else toast(t('push.enabled_test_missing'));
+    } catch (e) { toast(t('push.setup_failed', { reason: e.message })); }
+    paintPush();
+    paintDevices();
+  };
   sw.addEventListener('change', async () => {
+    if (sw.checked) { await turnOn(); return; }
     sw.disabled = true;
     try {
-      if (sw.checked) {
-        await enablePush(S.reg);
-        const r = await request('POST', '/api/push/test', {});
-        if (r.ok) toast(t('set.push_on_test'), 'ok'); else toast(t('push.enabled_test_missing'));
-      } else {
-        await disablePush(S.reg);
-        toast(t('set.push_off'), 'ok');
-      }
+      await disablePush(S.reg);
+      toast(t('set.push_off'), 'ok');
     } catch (e) { toast(t('push.setup_failed', { reason: e.message })); }
     paintPush();
     paintDevices();
   });
-  const test = btn(t('set.push_test'), async () => {
+  // Staan meldingen hier uit, dan zet de knop ze eerst aan (en zegt dat ook); alleen bij geblokkeerd kan hij niet.
+  const test = btn(on ? t('set.push_test') : t('set.push_on_and_test'), async () => {
+    if (!on) { await turnOn(); return; }
     try {
       const r = await request('POST', '/api/push/test', {});
       if (r.ok) toast(t('set.push_test_sent'), 'ok'); else toast(t('push.enabled_test_missing'));
     } catch (e) { toast(offlineText(e)); }
-  }, { disabled: !sw.checked });
+  }, { disabled: blocked });
   paint('push',
     row(t('set.push_label'), sw, t('set.this_device')),
     row('', test),
@@ -609,7 +624,8 @@ async function paintPush() {
     badgeRow(),
     ps.iosNeedsHomeScreen ? el('p', { class: 'hint' }, t('push.ios_hint'))
       : !ps.supported ? el('p', { class: 'hint' }, t('push.unsupported'))
-      : ps.permission === 'denied' ? el('p', { class: 'hint' }, t('set.push_blocked')) : null);
+      : ps.permission === 'denied' ? el('p', { class: 'hint' }, t(isInApp() ? 'set.push_blocked_app' : 'set.push_blocked'))
+      : !on ? el('p', { class: 'hint' }, t('set.push_off_hint')) : null);
 }
 
 /** Dagelijkse melding van verlopen taken: aan/uit en de tijd; geldt voor alle apparaten van deze persoon. */
@@ -1423,7 +1439,7 @@ export function openSettings({ push = true, section, view = 'main' } = {}) {
   paintHome(); // eerst met de laatst bekende waarden, uitgeschakeld
   if (section) reveal(section);
   paint('devices', note(t('set.loading')));
-  const reg = getReg().then((r) => { S.reg = r; if (S.open) paintPush(); });
+  const reg = getReg().then((r) => { S.reg = r; S.regChecked = true; if (S.open) paintPush(); });
   Promise.all([reg, fetchSettings(), fetchAccount()]).then(() => { if (S.open) { paintHome(); paintDevices(); } });
 }
 

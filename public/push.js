@@ -4,6 +4,9 @@ import { getLocale, t } from './i18n.js';
 const b64uToBytes = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=')), (c) => c.charCodeAt(0));
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+/** Wacht hooguit zo lang op de toestemmingsvraag en het aanmelden: in de Android-app kan zo'n vraag blijven hangen. */
+const ASK_TIMEOUT_MS = 30_000;
+const withTimeout = (p, ms, message) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error(message)), ms))]);
 const supported = (reg) => !!reg && 'PushManager' in window && 'Notification' in window;
 
 /** Zelf uitgezet op dit apparaat: dan zet de Android-app meldingen bij het starten niet vanzelf weer aan. */
@@ -27,10 +30,12 @@ export async function pushState(reg) {
 /** Vraagt toestemming, meldt deze browser aan bij de server (met de huidige taal). Gooit een Error met een leesbare tekst. */
 export async function enablePush(reg) {
   if (!supported(reg)) throw new Error(t('push.unsupported'));
-  if ((await Notification.requestPermission()) !== 'granted') throw new Error(t('push.denied'));
+  const asked = await withTimeout(Notification.requestPermission(), ASK_TIMEOUT_MS, t('push.no_answer'));
+  if (asked !== 'granted') throw new Error(t('push.denied'));
   const { vapidPublicKey } = await request('GET', '/api/config');
   const sub = await reg.pushManager.getSubscription()
-    ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(vapidPublicKey) });
+    ?? await withTimeout(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(vapidPublicKey) }),
+      ASK_TIMEOUT_MS, t('push.no_answer'));
   await request('POST', '/api/push/subscribe', { ...sub.toJSON(), locale: getLocale() });
   markOff(false);
 }
