@@ -11,8 +11,7 @@ import { addFiles, attachmentsOn } from './attachments.js';
 import { inviteToTask, people } from './share.js';
 import { selectTask } from './detail.js';
 import { addSubtask, addTask, load, sharedOf, state } from './store.js';
-import CONFIG from './settings.js'; // testfeature quickdate
-import { findDate } from './quickdate.js'; // testfeature quickdate
+import { findDate } from './quickdate.js';
 
 // De invoerkaart bovenaan de lijst. In rust de blauwe balk; na de eerste letter klapt eronder een tijdlijn open met per
 // eigenschap een zin ("Herinner me morgen 09:00", "Als ik aankom bij …", "In Inbox"). Een stap opent één kiezer (de
@@ -36,12 +35,11 @@ let editing = /** @type {'description' | 'subtasks' | null} */ (null);
 let focusEditor = false; // het tekstvak van `editing` krijgt bij de volgende draw de focus
 let form, input, rail, moreButton, fileInput;
 let peek = false; // het veld heeft de focus: de rij icoontjes staat (zolang de kaart nog niet open is)
-// Testfeature quickdate: een datum uit de getypte titel als voorstel, zolang je zelf geen tijd kiest. `ignored`: de
-// woorden van een voorstel dat je met Negeren wegtikte.
-const quickdate = !!CONFIG.testFeatures?.includes('quickdate');
+// Datum uit de tekst (quickdate.js): een datum in de getypte titel wordt een voorstel, zolang je zelf geen tijd kiest.
+// `ignored`: de woorden van een voorstel dat je met Negeren wegtikte.
 let ignored = '';
 const guess = (text = input.value) => {
-  if (!quickdate || v.remind) return null;
+  if (v.remind) return null;
   const g = findDate(text);
   return g && g.match !== ignored && g.title ? g : null;
 };
@@ -82,7 +80,7 @@ export function initComposer() {
   form.addEventListener('submit', (e) => { e.preventDefault(); submit(false); });
   // ✕: alles weg en dicht, ook het toetsenbord.
   $('#add-cancel').addEventListener('click', () => { reset(); input.blur(); });
-  input.addEventListener('input', quickdate ? draw : sync); // testfeature quickdate: het voorstel volgt het typen
+  input.addEventListener('input', draw); // het datumvoorstel volgt het typen
   // Terug in de titel: een open tekstvak klapt dicht (de tekst blijft), en de lijst waar je naar kijkt kan veranderd zijn.
   input.addEventListener('focus', () => { editing = null; draw(); });
   input.addEventListener('keydown', (e) => {
@@ -121,7 +119,7 @@ function addLocalFiles(files) {
 
 function reset() {
   input.value = '';
-  ignored = ''; // testfeature quickdate
+  ignored = '';
   peek = false;
   v = blank();
   more = false;
@@ -158,7 +156,7 @@ function draw() {
   if (!form) return;
   const loc = v.location;
   const list = listOf();
-  const g = guess(); // testfeature quickdate
+  const g = guess(); // datum uit de tekst
   const steps = [
     g ? railStep({ kind: 'when', icon: 'bell', on: true, lead: t('add.when_set'), value: fmt(/** @type {string} */ (fromLocalInput(g.value))), note: t('quickdate.note'), open: pickWhen,
       actions: [{ label: t('quickdate.ignore'), run: () => { ignored = g.match; done(); } }] }) :
@@ -274,7 +272,7 @@ function submit(open) {
   let title = input.value.trim();
   if (!title) { back(); return; }
   const card = v;
-  const g = guess(title); // testfeature quickdate: titel zonder de datumwoorden, met het voorstel als tijd
+  const g = guess(title); // datum uit de tekst: titel zonder de datumwoorden, met het voorstel als tijd
   if (g) title = g.title;
   const id = addTask(title, g ? fromLocalInput(g.value) : remindIso(), listOf(), { description: card.description.trim(), repeat: card.repeat, location: card.location });
   const parent = state.open.find((x) => x.id === id);
