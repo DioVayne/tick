@@ -22,6 +22,8 @@ import { timeButton } from './timepicker.js';
 import { badgeOff, setBadgeOff } from './badge.js';
 import { setDriveMode } from './driveview.js';
 import { reloadBusy } from './agenda.js';
+import { summarize } from './accounts.js';
+import { accountsPage } from './accountsview.js';
 
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
@@ -41,6 +43,8 @@ const S = {
   /** @type {Record<string, HTMLElement>} */ parts: {},
   /** @type {{ name: string, email: string | null } | null} */ account: null, // null: nog niet van de server
   /** @type {{ id: string, name: string }[]} */ blocked: [], // openbare Tick: wie je blokkeerde
+  /** @type {'main' | 'accounts'} */ view: 'main', // accounts: de accountpagina (#/accounts, accountsview.js)
+  stacked: false, // de accountpagina kwam als eigen stap bovenop de instellingen: sluiten gaat twee stappen terug
 };
 
 // ---------- kleine hulpjes ----------
@@ -930,38 +934,49 @@ async function resetLink(u) {
 async function deleteUser(u) {
   const yes = await ask({ title: t('set.user_delete_title'), text: t('set.user_delete_text', { name: u.name }), buttons: [
     { label: t('set.user_delete'), value: 'yes', kind: 'danger' }, { label: t('set.cancel'), value: null, kind: 'ghost' }] });
-  if (!yes) return;
+  if (!yes) return false;
   try {
     await request('DELETE', `/api/users/${encodeURIComponent(u.id)}`);
-    paintUsers();
-  } catch (e) { toast(offlineText(e)); }
+    return true;
+  } catch (e) { toast(offlineText(e)); return false; }
 }
 
-function userRow(u) {
-  const me = u.id === CONFIG.userId;
-  const sub = [u.email, t('set.created', { date: fmtDate(u.created_at) }), u.last_seen ? t('set.seen', { when: ago(u.last_seen) }) : t('set.never_seen')]
-    .filter(Boolean).join(' · ');
-  const controls = [btn(t('set.reset_link'), () => resetLink(u)), me ? null : btn(t('set.user_delete'), () => deleteUser(u), { kind: 'danger' })].filter(Boolean);
-  return row(me ? `${u.name} (${t('set.you')})` : u.name, controls, sub);
-}
-
+/** Instellingen › Accounts: een korte samenvatting en de knop naar de accountpagina; de lijst zelf staat daar. */
 async function paintUsers() {
   if (!CONFIG.isAdmin || !S.parts.accounts) return;
   const add = btn(t('set.invite'), invite, { kind: 'primary', disabled: !S.online });
-  let rows;
+  let head;
   try {
     if (!S.loaded) return; // de instellingen tekenen dit opnieuw zodra ze er zijn
     if (!S.online) throw new Offline(t('set.online_only'));
-    rows = (await request('GET', '/api/users')).map(userRow);
+    const { total, week } = summarize(await request('GET', '/api/users'));
+    const text = total === 1 ? t('acc.summary_one', { week: fmtNum(week) }) : t('acc.summary', { n: fmtNum(total), week: fmtNum(week) });
+    if (S.parts['accounts-sub']) S.parts['accounts-sub'].textContent = text;
+    head = row(text, btn(t('acc.all'), openAccounts, { kind: 'tint' }), t('acc.all_note'));
   } catch (e) {
-    rows = [note(offlineText(e))];
+    head = note(offlineText(e));
   }
-  if (!S.open) return;
+  if (!S.open || S.view !== 'main') return;
   // Openbare Tick: de meldingen van gebruikers (src/admin.ts), een pagina van de server.
   const reports = CONFIG.openSignup
     ? row(t('set.reports'), btn(t('set.reports_open'), () => { location.href = '/admin/reports'; }), t('set.reports_note'))
     : null;
-  paint('accounts', reports, ...rows, row('', add));
+  paint('accounts', head, reports, row('', add));
+}
+
+/** Naar de accountpagina, als eigen stap in de geschiedenis (terug komt weer in de instellingen uit). */
+const openAccounts = () => openSettings({ view: 'accounts' });
+
+/** De accountpagina met de bouwstenen en acties van deze module. */
+const buildAccounts = () => accountsPage({
+  row, btn, note, seg, select, fmtDate, ago, offlineText, resetLink, deleteUser, back: leaveAccounts,
+});
+
+/** ← Terug op de accountpagina (en Esc): naar de instellingen; met terug als hij er als eigen stap bovenop kwam. */
+function leaveAccounts() {
+  if (S.stacked && history.state?.accounts) { history.back(); return; }
+  history.replaceState({ settings: true }, '');
+  openSettings({ push: false });
 }
 
 // ---------- 💾 Gegevens ----------
@@ -1347,16 +1362,55 @@ function reveal(section) {
   d.scrollIntoView({ block: 'start' });
 }
 
+/** De geschiedenisstap van een weergave. */
+const stepOf = (view) => (view === 'accounts' ? { settings: true, accounts: true } : { settings: true });
+
+/** Zet de accountpagina in de middenkolom (de instellingen zelf bouwt openSettings hieronder). */
+function mountAccounts() {
+  S.view = 'accounts';
+  S.parts = {};
+  S.root = buildAccounts();
+  $('#main').append(S.root);
+  document.body.classList.add('settings-open', 'accounts-open');
+  render(); // titel Accounts en het adres #/accounts (zie updateHeader en writeHash)
+  $('#main').scrollTop = 0;
+  window.scrollTo(0, 0);
+}
+
 /**
  * Opent de instellingen in de middenkolom.
- * @param {{ push?: boolean, section?: string }} [opts] push: een eigen stap in de geschiedenis (niet bij terug/vooruit);
- *   section: dit blok staat meteen open (bv. 'account', vanaf je naam in de zijbalk)
+ * @param {{ push?: boolean, section?: string, view?: 'main' | 'accounts' }} [opts] push: een eigen stap in de
+ *   geschiedenis (niet bij terug/vooruit); section: dit blok staat meteen open (bv. 'account', vanaf je naam in de
+ *   zijbalk); view: 'accounts' is de accountpagina (alleen de beheerder), een weergave van deze pagina
  */
-export function openSettings({ push = true, section } = {}) {
+export function openSettings({ push = true, section, view = 'main' } = {}) {
   closeDrawer();
-  if (S.open) { if (section) reveal(section); return; }
+  if (view === 'accounts' && !CONFIG.isAdmin) view = 'main';
+  if (S.open && view === S.view) { if (section) reveal(section); return; }
+  if (S.open) {
+    // Wisselen tussen de instellingen en de accountpagina: een stap erbij (vanuit de instellingen) of terug.
+    const from = S.view;
+    if (push) history.pushState(stepOf(view), '');
+    else if (view === 'main' && history.state?.accounts) history.replaceState(stepOf('main'), ''); // via de knop Instellingen
+    S.root?.remove();
+    S.root = null;
+    if (view === 'accounts') {
+      S.stacked = from === 'main';
+      mountAccounts();
+      return;
+    }
+    S.open = false; // de instellingen opnieuw opbouwen zoals bij openen, zonder nieuwe stap; Accounts weer open
+    S.view = 'main';
+    S.stacked = false;
+    document.body.classList.remove('accounts-open');
+    openSettings({ push: false, section: section ?? 'accounts' });
+    return;
+  }
   S.open = true;
-  if (push) history.pushState({ settings: true }, '');
+  S.stacked = false;
+  if (push) history.pushState(stepOf(view), '');
+  if (view === 'accounts') { mountAccounts(); return; }
+  S.view = 'main';
   S.settings = cachedSettings();
   S.online = false;
   S.loaded = false;
@@ -1379,14 +1433,18 @@ export function hideSettings() {
   S.open = false;
   S.root?.remove();
   S.root = null;
-  document.body.classList.remove('settings-open');
+  S.view = 'main';
+  S.stacked = false;
+  document.body.classList.remove('settings-open', 'accounts-open');
   render(); // titel en lijst weer zoals daarvoor
 }
 
 /** Sluit de pagina; met een eigen stap in de geschiedenis via terug, zodat die stap niet blijft hangen. */
 export function closeSettings() {
   if (!S.open) return;
-  if (history.state?.settings) history.back(); // popstate verbergt de pagina
+  // De accountpagina bovenop de instellingen: beide stappen terug, anders komt terug weer in de instellingen uit.
+  const steps = history.state?.accounts && S.stacked ? 2 : history.state?.settings ? 1 : 0;
+  if (steps) history.go(-steps); // popstate verbergt de pagina
   else hideSettings();
 }
 
@@ -1397,5 +1455,6 @@ document.addEventListener('keydown', (e) => {
   if (document.querySelector('dialog[open]') || document.body.classList.contains('drawer-open') || document.body.classList.contains('map-open')) return;
   if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable]')) return;
   e.stopPropagation();
-  closeSettings();
+  if (S.view === 'accounts') leaveAccounts();
+  else closeSettings();
 }, true);
