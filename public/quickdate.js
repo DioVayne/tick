@@ -1,4 +1,4 @@
-// Testfeature "quickdate": haalt een datum en tijd uit de titel die je typt ("tandarts bellen morgen 15:00"). De
+// Datum uit de tekst ("quickdate"): haalt een datum en tijd uit de titel die je typt ("tandarts bellen morgen 15:00"). De
 // invoerkaart (composer.js) toont het als voorstel in de tijdlijn; met Niet blijft de titel zoals je hem typte. Deze module
 // is puur (geen DOM): `findDate` krijgt de tekst en het moment van nu en rekent in de ingestelde zone (repeat.js).
 // Nederlands en Engels werken altijd allebei, los van de taal van de app.

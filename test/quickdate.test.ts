@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { findDate } from '../public/quickdate.js';
 import { setDefaultTime, setTimeZone, setWeekStart } from '../public/repeat.js';
 
-// Testfeature "quickdate": datum en tijd uit de getypte titel.
+// Datum uit de tekst ("quickdate"): datum en tijd uit de getypte titel.
 const WO_1030 = Date.parse('2026-11-18T09:30:00Z'); // woensdag 18 nov 2026 10:30 in Amsterdam
 const find = (text: string, now = WO_1030) => findDate(text, now);
 

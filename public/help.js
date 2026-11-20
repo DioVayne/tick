@@ -11,7 +11,7 @@ import { state } from './store.js';
 const GROUPS = [
   ['basic', [['menu', 'menu'], ['search', 'search'], ['check', 'checkbox'], ['list', 'folder']]],
   ['order', [['drag', 'move'], ['swipe', 'swipe'], ['manager', 'bolt']]],
-  ['time', [['remind', 'bell'], ['repeat', 'repeat']]],
+  ['time', [['remind', 'bell'], ['quickdate', 'calendar'], ['repeat', 'repeat']]],
   ['back', [['done', 'done'], ['trash', 'trash'], ['undo', 'undo']]],
 ];
 

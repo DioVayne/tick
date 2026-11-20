@@ -13,6 +13,16 @@ When you tap the field, a row of small colored icons shows under it (reminder, r
 
 A line you filled in shows your choice in color, with *Clear* behind it. Press Enter in the title (or **Add**) to add the task; the field stays ready for the next one. **Shift+Enter** adds the task and opens it right away. **✕** (or **Esc**) empties the card and closes it. On a phone, *Cancel* or the back button closes a picker without changing anything.
 
+### A date in your text
+You can also type the day and time in the title, the way you would say it: *call dentist tomorrow 15:00*, *meeting at 3pm*, *gym on friday*, *birthday 24 nov*, *oven off in 2 hours*. Tick sees it while you type and fills in **Remind me…** with that moment, marked *from your text*. When you add the task, those words leave the title, so it becomes *call dentist* with a reminder tomorrow at 15:00.
+
+- It understands Dutch and English, whatever language the app is in: *morgen*, *overmorgen*, *vandaag*, *vanavond*, *volgende week*, a weekday, *over 3 dagen*, *over een kwartier*, a date such as *24 nov*, *3-2* or *1 mei 2027*, and times such as *15:00*, *om 1500*, *om 3 uur*, *half 4* or *8pm*.
+- A day without a time gets your *reminder without a time* setting (09:00 unless you changed it, see [Settings](settings.md#time)); *today* without a time is the next whole hour once that time has passed. A time without a day is today, or tomorrow when that time has already passed. A date without a year that has passed this year is next year.
+- Numbers on their own are left alone: *1500 flyers* stays a title, but *om 1500* or *morgen 1500* is a time.
+- Not what you meant? Tap **Ignore**: the words stay in the title and the task gets no reminder from them. Picking a time yourself under **Remind me…** always wins over the text.
+
+Only the card in the app does this. Quick add and the widget in the [Android app](android.md) do not read dates from your text.
+
 Sharing and attachments are sent once the task is on your Tick, so they need a connection. Offline, Tick adds the task and tells you to add those from the task later.
 
 Open a task to give it a reminder, a place, notes, subtasks or attachments. On a wide screen the task opens in a panel on the right (drag its edge to make it wider or narrower); on a phone it fills the screen and **‹** or the back button takes you back. Title and notes save while you type.

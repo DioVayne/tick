@@ -7,7 +7,7 @@ import { testFeature, testFeatures } from '../src/features';
 describe('testfeatures (TEST_FEATURES)', () => {
   it('onbekende namen zetten niets aan', () => {
     expect(testFeatures({})).toEqual([]);
-    expect(testFeatures({ TEST_FEATURES: ' freetime , iets-anders' })).toEqual([]);
+    expect(testFeatures({ TEST_FEATURES: ' freetime , quickdate, iets-anders' })).toEqual([]); // quickdate is nu gewoon aan
     expect(testFeature({ TEST_FEATURES: 'freetime' }, 'freetime')).toBe(false);
   });
 
@@ -16,10 +16,10 @@ describe('testfeatures (TEST_FEATURES)', () => {
     expect(await (await callWith({ ...env, TEST_FEATURES: 'freetime' }, '/config.js', { cookie: u.cookie })).text()).toContain('"testFeatures":[]');
   });
 
-  it('quickdate staat alleen aan met zijn naam', async () => {
-    expect(testFeature({ TEST_FEATURES: 'QuickDate' }, 'quickdate')).toBe(true);
+  it('placecheck staat alleen aan met zijn naam', async () => {
+    expect(testFeature({ TEST_FEATURES: 'PlaceCheck' }, 'placecheck')).toBe(true);
     const u = await createUser();
-    expect(await (await callWith({ ...env, TEST_FEATURES: 'quickdate' }, '/config.js', { cookie: u.cookie })).text()).toContain('"testFeatures":["quickdate"]');
+    expect(await (await callWith({ ...env, TEST_FEATURES: 'placecheck' }, '/config.js', { cookie: u.cookie })).text()).toContain('"testFeatures":["placecheck"]');
   });
 
   it('placecheck: de Android-app hoort het via /api/config', async () => {
@@ -27,7 +27,7 @@ describe('testfeatures (TEST_FEATURES)', () => {
     const off = await (await callWith({ ...env, TEST_FEATURES: '' }, '/api/config', { cookie: u.cookie })).json();
     expect(off).toMatchObject({ testFeatures: [] });
     const on = await (await callWith({ ...env, TEST_FEATURES: 'quickdate, placecheck' }, '/api/config', { cookie: u.cookie })).json();
-    expect(on).toMatchObject({ testFeatures: ['quickdate', 'placecheck'] });
+    expect(on).toMatchObject({ testFeatures: ['placecheck'] });
   });
 
   it('de API van "Tijd voor een taak?" bestaat niet meer', async () => {
