@@ -10,20 +10,25 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Insets;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.TextWatcher;
 import android.text.format.DateFormat;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -53,16 +58,69 @@ public class QuickAddActivity extends Activity {
     /** Weergave van de widget waar de + op zat: een lijstnaam, WidgetFilter.TODAY of leeg. */
     static final String EXTRA_VIEW = "view";
 
-    private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("EEE d MMM HH:mm", Locale.getDefault());
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault());
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault());
 
     private EditText title;
     private EditText notes;
     private TextView send;
-    private TextView listChip, today, tomorrow, week, pick, repeatChip, notesToggle, status;
-    private TextView placeChip, placeEnter, placeExit, moreToggle, remindText;
+    private TextView today, tomorrow, week, pick, status;
+    private TextView placeEnter, placeExit, moreToggle, remindText;
     private View placeRow, more, remindRow, remindClear, draftRow;
+    /** De tijdlijn onder "Meer opties" (quick_step), in de volgorde van de invoerkaart op het web. */
+    private Step stepWhen, stepRepeat, stepPlace, stepList, stepNotes;
+
+    /**
+     * Eén stap van de tijdlijn: rondje met icoon (blauw als er iets gekozen is), een zin met de waarde vet en in kleur,
+     * een kruisje om te wissen en eronder de keuzes van de stap (body).
+     */
+    private final class Step {
+        final ImageView icon;
+        final TextView text;
+        final View clear, lineTop, lineBottom;
+        final ViewGroup body;
+
+        Step(int id, int iconRes) {
+            View root = findViewById(id);
+            icon = root.findViewById(R.id.step_icon);
+            text = root.findViewById(R.id.step_text);
+            clear = root.findViewById(R.id.step_clear);
+            body = root.findViewById(R.id.step_body);
+            lineTop = root.findViewById(R.id.step_line_top);
+            lineBottom = root.findViewById(R.id.step_line_bottom);
+            icon.setImageResource(iconRes);
+        }
+
+        /** De zin: vaste woorden (lead) en de gekozen waarde, vet in de accentkleur of in valueColor. */
+        void show(boolean on, String lead, String value, Integer valueColor) {
+            icon.setSelected(on);
+            SpannableStringBuilder s = new SpannableStringBuilder(lead);
+            if (value != null && !value.isEmpty()) {
+                if (s.length() > 0) s.append(' ');
+                int start = s.length();
+                s.append(value);
+                s.setSpan(new StyleSpan(Typeface.BOLD), start, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                s.setSpan(new ForegroundColorSpan(valueColor != null ? valueColor : getColor(R.color.accent)),
+                        start, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            text.setText(s);
+            clear.setVisibility(on ? View.VISIBLE : View.GONE);
+        }
+
+        /** Een keuze-onderdeel uit step_bodies onder deze stap zetten. */
+        void put(View child) {
+            ((ViewGroup) child.getParent()).removeView(child);
+            body.addView(child);
+        }
+
+        void open(boolean open) {
+            body.setVisibility(open ? View.VISIBLE : View.GONE);
+        }
+
+        boolean isOpen() {
+            return body.getVisibility() == View.VISIBLE;
+        }
+    }
 
     /** Waar de popup mee begint (en na "nog een" weer op terugvalt). */
     private boolean fromToday;
@@ -97,15 +155,11 @@ public class QuickAddActivity extends Activity {
         title = findViewById(R.id.title);
         notes = findViewById(R.id.notes);
         send = findViewById(R.id.send);
-        listChip = findViewById(R.id.list);
         today = findViewById(R.id.when_today);
         tomorrow = findViewById(R.id.when_tomorrow);
         week = findViewById(R.id.when_week);
         pick = findViewById(R.id.when_pick);
-        repeatChip = findViewById(R.id.repeat);
-        notesToggle = findViewById(R.id.notes_toggle);
         status = findViewById(R.id.status);
-        placeChip = findViewById(R.id.place);
         placeEnter = findViewById(R.id.place_enter);
         placeExit = findViewById(R.id.place_exit);
         placeRow = findViewById(R.id.place_row);
@@ -116,6 +170,18 @@ public class QuickAddActivity extends Activity {
         remindClear = findViewById(R.id.remind_clear);
         draftRow = findViewById(R.id.draft_row);
         CheckBox keepOpen = findViewById(R.id.keep_open);
+
+        // De tijdlijn: stappen met hun keuzes eronder; de lijn begint bij de eerste en stopt bij de laatste stap.
+        stepWhen = new Step(R.id.step_when, R.drawable.ic_bell);
+        stepRepeat = new Step(R.id.step_repeat, R.drawable.ic_repeat);
+        stepPlace = new Step(R.id.step_place, R.drawable.ic_place);
+        stepList = new Step(R.id.step_list, R.drawable.ic_folder);
+        stepNotes = new Step(R.id.step_notes, R.drawable.ic_notes);
+        stepWhen.lineTop.setVisibility(View.INVISIBLE);
+        stepNotes.lineBottom.setVisibility(View.INVISIBLE);
+        stepWhen.put(findViewById(R.id.when_body));
+        stepPlace.put(placeRow);
+        stepNotes.put(notes);
 
         // De app tekent tot onder de systeembalken (edge-to-edge): het paneel schuift zelf boven het toetsenbord.
         int padBottom = sheet.getPaddingBottom();
@@ -160,21 +226,46 @@ public class QuickAddActivity extends Activity {
         });
         send.setOnClickListener(v -> submit());
 
-        listChip.setCompoundDrawableTintList(null);
-        listChip.setOnClickListener(v -> pickList());
         today.setOnClickListener(v -> choose(QuickAddPlan.today(LocalDateTime.now())));
         tomorrow.setOnClickListener(v -> choose(QuickAddPlan.tomorrow(LocalDateTime.now())));
         week.setOnClickListener(v -> choose(QuickAddPlan.nextWeek(LocalDateTime.now(), firstDayOfWeek())));
         pick.setOnClickListener(v -> pickDateTime());
-        repeatChip.setOnClickListener(v -> pickRepeat());
-        placeChip.setOnClickListener(v -> pickPlace());
         placeEnter.setOnClickListener(v -> { placeOnExit = false; refreshPlace(); });
         placeExit.setOnClickListener(v -> { placeOnExit = true; refreshPlace(); });
-        notesToggle.setOnClickListener(v -> {
-            boolean show = notes.getVisibility() != View.VISIBLE;
-            notes.setVisibility(show ? View.VISIBLE : View.GONE);
-            notesToggle.setSelected(show);
+
+        // Tik op de zin van een stap: de keuzes open of dicht (herinnering, omschrijving) of de kiezer (de rest).
+        stepWhen.text.setOnClickListener(v -> stepWhen.open(!stepWhen.isOpen()));
+        stepWhen.clear.setOnClickListener(v -> {
+            remindAt = null;
+            remindChanged = true;
+            refreshWhen();
+        });
+        stepRepeat.text.setOnClickListener(v -> pickRepeat());
+        stepRepeat.clear.setOnClickListener(v -> {
+            repeat = QuickAddPlan.Repeat.NONE;
+            refreshRepeat();
+        });
+        stepPlace.text.setOnClickListener(v -> pickPlace());
+        stepPlace.clear.setOnClickListener(v -> setPlace(null, false));
+        stepList.text.setOnClickListener(v -> pickList());
+        stepList.clear.setOnClickListener(v -> {
+            list = openedList;
+            refreshList();
+        });
+        stepNotes.text.setOnClickListener(v -> {
+            boolean show = !stepNotes.isOpen();
+            stepNotes.open(show);
             (show ? notes : title).requestFocus();
+        });
+        stepNotes.clear.setOnClickListener(v -> {
+            notes.setText("");
+            stepNotes.open(false);
+            title.requestFocus();
+        });
+        notes.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) { refreshNotes(); }
         });
         keepOpen.setChecked(Prefs.quickKeepOpen(this));
         keepOpen.setOnCheckedChangeListener((b, on) -> Prefs.setQuickKeepOpen(this, on));
@@ -203,6 +294,7 @@ public class QuickAddActivity extends Activity {
         refreshList();
         refreshRepeat();
         refreshPlace();
+        refreshNotes();
         refreshSend();
         title.requestFocus();
         title.setSelection(title.length());
@@ -229,7 +321,9 @@ public class QuickAddActivity extends Activity {
      * herinnering alleen vanuit Vandaag: dan zegt de regel dat de taak niet in die widget komt.
      */
     private void refreshRemindLine() {
-        remindRow.setVisibility(remindAt != null || fromToday ? View.VISIBLE : View.GONE);
+        // Met Meer opties open staat de herinnering al in de tijdlijn (stap Herinner me).
+        boolean moreOpen = more.getVisibility() == View.VISIBLE;
+        remindRow.setVisibility(!moreOpen && (remindAt != null || fromToday) ? View.VISIBLE : View.GONE);
         remindClear.setVisibility(remindAt != null ? View.VISIBLE : View.GONE);
         if (remindAt == null) {
             remindText.setText(R.string.quick_remind_none_today);
@@ -245,16 +339,21 @@ public class QuickAddActivity extends Activity {
         remindText.setTextColor(getColor(R.color.widget_text));
     }
 
-    /** "Meer opties" open of dicht. */
+    /**
+     * "Meer opties" open of dicht. Open: alle stappen onder elkaar, en de herinnering meteen open met "Kies dag en tijd"
+     * bovenaan, want dat is de keuze die je het vaakst nodig hebt.
+     */
     private void setMore(boolean open) {
         more.setVisibility(open ? View.VISIBLE : View.GONE);
+        if (open) stepWhen.open(true);
+        refreshRemindLine();
         refreshMoreToggle();
     }
 
-    /** Dichtgeklapt maar met een plek, ritme of omschrijving: dan is de knop blauw, zodat je ziet dat er iets staat. */
+    /** Dichtgeklapt maar met een plek, ritme, andere lijst of omschrijving: dan is de knop blauw, zodat je ziet dat er iets staat. */
     private void refreshMoreToggle() {
         boolean open = more.getVisibility() == View.VISIBLE;
-        boolean extras = repeat != QuickAddPlan.Repeat.NONE || place != null
+        boolean extras = repeat != QuickAddPlan.Repeat.NONE || place != null || !list.equalsIgnoreCase(openedList)
                 || !notes.getText().toString().trim().isEmpty();
         moreToggle.setText(open ? R.string.quick_less : R.string.quick_more);
         moreToggle.setSelected(!open && extras);
@@ -265,9 +364,7 @@ public class QuickAddActivity extends Activity {
         LocalDateTime now = LocalDateTime.now();
         title.setText(d.title);
         notes.setText(d.notes);
-        boolean hasNotes = !d.notes.trim().isEmpty();
-        notes.setVisibility(hasNotes ? View.VISIBLE : View.GONE);
-        notesToggle.setSelected(hasNotes);
+        stepNotes.open(!d.notes.trim().isEmpty());
         list = d.listFor(openedList);
         lists.add(list);
         remindAt = d.remindFor(QuickAddPlan.startReminder(fromToday, now), now);
@@ -285,8 +382,7 @@ public class QuickAddActivity extends Activity {
         Prefs.setQuickDraft(this, null);
         title.setText("");
         notes.setText("");
-        notes.setVisibility(View.GONE);
-        notesToggle.setSelected(false);
+        stepNotes.open(false);
         list = openedList;
         repeat = QuickAddPlan.Repeat.NONE;
         place = null;
@@ -336,18 +432,28 @@ public class QuickAddActivity extends Activity {
         boolean onToday = remindAt != null && remindAt.equals(t);
         boolean onTomorrow = remindAt != null && remindAt.equals(QuickAddPlan.tomorrow(now));
         boolean onWeek = remindAt != null && remindAt.equals(QuickAddPlan.nextWeek(now, firstDayOfWeek()));
-        boolean custom = remindAt != null && !onToday && !onTomorrow && !onWeek;
         today.setSelected(onToday);
         tomorrow.setSelected(onTomorrow);
         week.setSelected(onWeek);
-        pick.setSelected(custom);
         // De gekozen knop toont ook de tijd, zodat je ziet wanneer de herinnering komt.
         today.setText(withTime(R.string.quick_today, onToday));
         tomorrow.setText(withTime(R.string.quick_tomorrow, onTomorrow));
         week.setText(withTime(R.string.quick_next_week, onWeek));
-        pick.setText(custom ? SHOWN.format(remindAt) : getString(R.string.quick_pick));
+        // De stap zegt de herinnering in woorden: "Herinner me morgen 09:00".
+        stepWhen.show(remindAt != null, getString(remindAt != null ? R.string.quick_step_when_set : R.string.quick_step_when),
+                remindAt != null ? whenValue(now) : null, null);
         refreshRepeat(); // wekelijks en maandelijks noemen de dag van de herinnering
         refreshRemindLine();
+    }
+
+    /** De herinnering kort: "vandaag 15:00", "morgen 09:00" of "do 3 dec 09:00". */
+    private String whenValue(LocalDateTime now) {
+        String time = TIME.format(remindAt);
+        switch (QuickAddPlan.day(now, remindAt)) {
+            case TODAY: return getString(R.string.quick_value_today, time);
+            case TOMORROW: return getString(R.string.quick_value_tomorrow, time);
+            default: return DAY.format(remindAt) + " " + time;
+        }
     }
 
     private String withTime(int label, boolean on) {
@@ -407,8 +513,15 @@ public class QuickAddActivity extends Activity {
 
     private void refreshRepeat() {
         boolean on = repeat != QuickAddPlan.Repeat.NONE;
-        repeatChip.setSelected(on);
-        repeatChip.setText(on ? repeatLabel(repeat) : getString(R.string.quick_repeat));
+        stepRepeat.show(on, on ? "" : getString(R.string.quick_repeat), on ? repeatLabel(repeat) : null, null);
+        refreshMoreToggle();
+    }
+
+    /** De stap Omschrijving: de eerste regel als waarde. */
+    private void refreshNotes() {
+        String text = notes.getText().toString().trim();
+        boolean on = !text.isEmpty();
+        stepNotes.show(on, on ? "" : getString(R.string.quick_notes), on ? text.split("\n")[0] : null, null);
         refreshMoreToggle();
     }
 
@@ -427,21 +540,17 @@ public class QuickAddActivity extends Activity {
                 .show();
     }
 
-    /** De lijstknop: naam en bolletje in de lijstkleur (Inbox grijs), net als de pil in de widget. */
+    /**
+     * De stap "In (lijst)": de naam in de lijstkleur (Inbox grijs), net als de pil in de widget. Blauw rondje en kruisje
+     * alleen als je een andere lijst koos dan die van de widget.
+     */
     private void refreshList() {
-        listChip.setText(list);
         String hex = WidgetFilter.listColor(list, lists, Locale.getDefault());
         boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         int color = hex == null ? getColor(R.color.widget_muted)
                 : WidgetFilter.readable(Color.parseColor(hex), getColor(R.color.widget_pill) & 0xFFFFFF, dark);
-        Drawable[] d = listChip.getCompoundDrawablesRelative();
-        GradientDrawable dot = new GradientDrawable();
-        dot.setShape(GradientDrawable.OVAL);
-        dot.setColor(color);
-        int size = Math.round(10 * getResources().getDisplayMetrics().density);
-        dot.setSize(size, size);
-        listChip.setCompoundDrawablesRelativeWithIntrinsicBounds(dot, d[1], d[2], d[3]);
-        listChip.setTextColor(color);
+        stepList.show(!list.equalsIgnoreCase(openedList), getString(R.string.quick_step_in), list, color);
+        refreshMoreToggle();
     }
 
     /** Alle lijsten ophalen, ook lege en gedeelde die niet in de widgetcache staan. Mislukt het, dan blijft de cache. */
@@ -525,9 +634,9 @@ public class QuickAddActivity extends Activity {
 
     private void refreshPlace() {
         boolean on = place != null;
-        placeChip.setSelected(on);
-        placeChip.setText(on ? place.name : getString(R.string.quick_place));
-        placeRow.setVisibility(on ? View.VISIBLE : View.GONE);
+        stepPlace.show(on, getString(!on ? R.string.quick_step_place
+                : placeOnExit ? R.string.quick_step_leave : R.string.quick_step_arrive), on ? place.name : null, null);
+        stepPlace.open(on); // aankomst of vertrek kiezen
         placeEnter.setSelected(on && !placeOnExit);
         placeExit.setSelected(on && placeOnExit);
         refreshMoreToggle();

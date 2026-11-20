@@ -40,6 +40,8 @@ When the line under the title is too long, the end is cut off first, so the time
 - *2 changes waiting for connection · try again* (see below);
 - *Nothing planned for today · Add a task* (or *Nothing to do* / *Nothing in this list*): opens quick add.
 
+**Refresh** (the round arrow at the top) turns into a spinning circle while Tick fetches your tasks. After a few seconds at most the arrow is back: the list is up to date, or the line at the top says what went wrong (for example no connection). If the server takes longer, Tick keeps trying in the background and shows *Updated* or the error in a short message at the bottom of the screen.
+
 When the list hasn't been updated for more than an hour, a small *Updated 14:05* shows at the top. The time of the last update is also read out with the refresh button (for screen readers).
 
 ### Without a connection
@@ -56,14 +58,17 @@ Android notices a place a few minutes late, so by car or bike you would be past 
 - **Choose the list** with the button at the top. It starts on the widget's list (Inbox for *All*, *Today and overdue* and the shortcut).
 - **The reminder is always spelled out** under the title, for example *Reminder today at 15:00*, in 24-hour time on your phone's clock. From a *Today and overdue* widget the panel starts with a reminder at the next whole hour (after 23:00: right away), because otherwise the new task would not show up in that widget. Tap the line to pick another date and time, or **✕** to remove the reminder; the line then says the task will not show in *Today* (tap it to put the reminder back).
 
-**More options** opens the rest:
-- **set a reminder** with *Today* (the next whole hour), *Tomorrow* or *Next week* (09:00), or *Pick…* for any date and time. Tap the chosen button again to remove the reminder;
-- **add a place** with *Place*: one of your favorites, a place you used recently, your current location, or an address you search for. Then choose **On arrival** or **On leaving**. The radius is the favorite's, or 500 m on arrival and 200 m on leaving; a recent place keeps the radius and choice you used then. To move the pin, change the radius or add more places, open the task in the app afterwards. More about places: [Places](places.md);
-- **repeat** the task every day, every week or every other week on that weekday, every month on that day, or every year;
-- **add a description** with *Description*;
-- tick **Add another one after this** to keep the panel open, so you can type several tasks in a row. The list you chose stays and the keyboard stays open; the reminder, place, repeat and description start over. Tick remembers this choice.
+**More options** opens all options under each other, as a timeline like the one in the web app: a line with a small circle and icon per step, and a sentence that says what you chose (in bold blue, for example *Remind me **tomorrow 09:00***). The circle turns blue once a step is set, and **✕** clears it. The steps:
+- **Remind me…** opens right away, with **Pick day and time…** on top: a date and then a time. Under it, smaller, the shortcuts *Today* (the next whole hour), *Tomorrow* or *Next week* (09:00). Tap the chosen shortcut again to remove the reminder;
+- **Repeat** the task every day, every week or every other week on that weekday, every month on that day, or every year;
+- **Remind me at a place**: one of your favorites, a place you used recently, your current location, or an address you search for. Then choose **On arrival** or **On leaving**; the sentence says *When I arrive at …* or *When I leave …*. The radius is the favorite's, or 500 m on arrival and 200 m on leaving; a recent place keeps the radius and choice you used then. To move the pin, change the radius or add more places, open the task in the app afterwards. More about places: [Places](places.md);
+- **In** *list*: the list of the new task, in its color. Tap to pick another; **✕** goes back to the widget's list;
+- **Description**: tap to type one; the first line shows in the step;
+- under the steps, tick **Add another one after this** to keep the panel open, so you can type several tasks in a row. The list you chose stays and the keyboard stays open; the reminder, place, repeat and description start over. Tick remembers this choice.
 
-When *More options* is closed but you set a place, repeat or description, the button turns blue so you can see something is set.
+Sharing with someone, subtasks and attachments are not in quick add; open the task in the app for those.
+
+When *More options* is closed but you set a place, repeat, another list or a description, the button turns blue so you can see something is set. With *More options* open, the reminder line under the title is hidden, because the *Remind me* step says the same.
 
 **Closed by accident?** If you close the panel without adding (back, tapping outside it, switching apps), Tick keeps what you typed as a draft. The next time you open quick add, the title, description, place, repeat and reminder are back, with *Draft restored* and **Discard**; *More options* opens by itself when the draft uses them. Adding the task or tapping **Discard** removes the draft; so does clearing the title and description. Two rules keep a draft from ending up in the wrong place:
 - the draft only keeps its **list** if you picked that list yourself. Otherwise it goes to the list of the widget you tapped now. So a draft started in the *Work* widget and reopened from the *Groceries* widget goes to *Groceries*, unless you had picked another list (say *Home*) by hand: then it stays in *Home*;

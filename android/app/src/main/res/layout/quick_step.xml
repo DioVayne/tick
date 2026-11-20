@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Eén stap van de tijdlijn onder "Meer opties" (QuickAddActivity), zoals de invoerkaart van de webapp (steps.js):
+  links een lijn met een rondje en icoon (blauw als er iets gekozen is), rechts een zin met de gekozen waarde vet en
+  blauw, een kruisje om te wissen, en eronder (soms) de keuzes van deze stap.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:layout_width="32dp"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <View
+            android:id="@+id/step_line_top"
+            android:layout_width="2dp"
+            android:layout_height="8dp"
+            android:background="@color/widget_pill" />
+
+        <ImageView
+            android:id="@+id/step_icon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@drawable/step_dot"
+            android:importantForAccessibility="no"
+            android:padding="7dp"
+            android:tint="@color/step_icon" />
+
+        <View
+            android:id="@+id/step_line_bottom"
+            android:layout_width="2dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:minHeight="8dp"
+            android:background="@color/widget_pill" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="48dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/step_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="?android:attr/selectableItemBackground"
+                android:ellipsize="end"
+                android:gravity="center_vertical"
+                android:maxLines="2"
+                android:minHeight="48dp"
+                android:paddingEnd="8dp"
+                android:textColor="@color/widget_text"
+                android:textSize="15sp" />
+
+            <ImageButton
+                android:id="@+id/step_clear"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/quick_step_clear"
+                android:src="@drawable/ic_close"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/step_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="10dp"
+            android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>

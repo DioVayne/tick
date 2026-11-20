@@ -92,15 +92,19 @@ public class TaskWidgetProvider extends AppWidgetProvider {
         if (intent.getBooleanExtra(EXTRA_MANUAL, false)) {
             // Binnen de tik verversen (de app is dan actief), met als bevestiging de nieuwe tijd in de statusregel van
             // de lijst. Duurt het te lang, dan neemt een expedited job het over (een draad uit goAsync() kan bevriezen).
+            // Zolang dat duurt draait een rondje op de plek van de knop. updateAll bouwt de widget daarna helemaal opnieuw
+            // op (met de knop), ook bij een fout of zonder verbinding: het rondje blijft dus hooguit MANUAL_WAIT_MS staan.
             final Context app = context.getApplicationContext();
+            showBusy(context);
             Thread sync = new Thread(() -> Sync.refresh(app, true, true));
-            sync.start();
             try {
+                sync.start();
                 sync.join(MANUAL_WAIT_MS);
             } catch (InterruptedException ignored) {
                 Thread.currentThread().interrupt();
+            } finally {
+                updateAll(context);
             }
-            updateAll(context);
             if (sync.isAlive()) SyncJob.syncNow(context);
         } else {
             updateAll(context);
@@ -156,6 +160,16 @@ public class TaskWidgetProvider extends AppWidgetProvider {
         }).start();
     }
 
+    /** Alleen de kop bijwerken: de knop verversen wordt een draaiend rondje (de lijst blijft zoals hij is). */
+    private static void showBusy(Context context) {
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        int[] ids = manager.getAppWidgetIds(new ComponentName(context, TaskWidgetProvider.class));
+        RemoteViews rv = new RemoteViews(context.getPackageName(), R.layout.widget_tasks);
+        rv.setViewVisibility(R.id.btn_refresh, View.GONE);
+        rv.setViewVisibility(R.id.refresh_busy, View.VISIBLE);
+        manager.partiallyUpdateAppWidget(ids, rv);
+    }
+
     /** Bouwt alle widgets opnieuw op vanuit de opgeslagen lijst (direct, zonder netwerk). */
     static void updateAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
@@ -200,6 +214,9 @@ public class TaskWidgetProvider extends AppWidgetProvider {
         rv.setOnClickPendingIntent(R.id.btn_add, PendingIntent.getActivity(c, 1000 + widgetId, add,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
         rv.setOnClickPendingIntent(R.id.btn_refresh, manualRefreshIntent(c));
+        // Altijd de knop, nooit het rondje van showBusy: zo kan het rondje niet blijven hangen.
+        rv.setViewVisibility(R.id.btn_refresh, View.VISIBLE);
+        rv.setViewVisibility(R.id.refresh_busy, View.GONE);
         // De tijd van de laatste verversing staat niet meer in beeld (alleen als hij oud is, zie WidgetStatus), maar
         // een schermlezer hoort hem bij de knop.
         long last = Prefs.lastSync(c);

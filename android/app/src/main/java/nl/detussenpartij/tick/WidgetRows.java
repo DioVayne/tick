@@ -100,7 +100,8 @@ final class WidgetRows {
         rv.setViewLayoutWidth(R.id.check, look.touchDp(), TypedValue.COMPLEX_UNIT_DIP);
         rv.setViewLayoutHeight(R.id.check, look.touchDp(), TypedValue.COMPLEX_UNIT_DIP);
         int checkPad = Math.round(look.checkPadDp() * density);
-        rv.setViewPadding(R.id.check, checkPad, checkPad, checkPad, checkPad);
+        rv.setViewPadding(R.id.check, Math.round(look.checkPadStartDp() * density), checkPad,
+                Math.round(look.checkPadEndDp() * density), checkPad);
         rv.setTextViewTextSize(R.id.undo, TypedValue.COMPLEX_UNIT_SP, look.undoSp());
         // Op het tekstblok, niet op de rij: dan is een rij van één regel precies zo hoog als het tikvlak van het bolletje.
         int textPad = Math.round(look.textPadDp() * density);
