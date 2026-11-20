@@ -125,7 +125,6 @@
     <string name="quick_today">Today</string>
     <string name="quick_tomorrow">Tomorrow</string>
     <string name="quick_next_week">Next week</string>
-    <string name="quick_pick">Pick…</string>
     <string name="quick_repeat">Repeat</string>
     <string name="quick_repeat_none">No repeat</string>
     <string name="quick_repeat_daily">Every day</string>
@@ -139,7 +138,6 @@
     <string name="quick_added_named">Added: %s</string>
     <string name="quick_failed">Not added (%s). Your text is still here, so you can try again.</string>
     <string name="quick_place">Place</string>
-    <string name="quick_place_when">Notify</string>
     <string name="quick_place_enter">On arrival</string>
     <string name="quick_place_exit">On leaving</string>
     <string name="quick_place_here">My current location</string>
@@ -154,6 +152,17 @@
     <string name="quick_place_locating">Finding your location…</string>
     <string name="quick_place_no_location">Could not find your location. Is location on?</string>
     <string name="quick_place_no_permission">Tick may not use your location all the time yet, so this place will not notify you. Allow it in Tick on this phone.</string>
+    <string name="quick_pick_datetime">Pick day and time…</string>
+    <string name="quick_step_when">Remind me…</string>
+    <string name="quick_step_when_set">Remind me</string>
+    <string name="quick_step_place">Remind me at a place</string>
+    <string name="quick_step_arrive">When I arrive at</string>
+    <string name="quick_step_leave">When I leave</string>
+    <string name="quick_step_in">In</string>
+    <string name="quick_step_clear">Clear</string>
+    <string name="quick_value_today">today %s</string>
+    <string name="quick_value_tomorrow">tomorrow %s</string>
+    <string name="widget_refreshing">Refreshing…</string>
     <string name="quick_more">More options</string>
     <string name="quick_less">Fewer options</string>
     <string name="quick_remind_today">Reminder today at %s</string>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Knop "Kies dag en tijd" in de snelle taak: de eerste en duidelijkste keuze, met een blauwe rand. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#331F6FEB">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="22dp" />
+            <solid android:color="#141F6FEB" />
+            <stroke android:width="2dp" android:color="@color/accent" />
+        </shape>
+    </item>
+</ripple>

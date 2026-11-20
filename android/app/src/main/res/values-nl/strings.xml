@@ -125,7 +125,6 @@
     <string name="quick_today">Vandaag</string>
     <string name="quick_tomorrow">Morgen</string>
     <string name="quick_next_week">Volgende week</string>
-    <string name="quick_pick">Kies…</string>
     <string name="quick_repeat">Herhalen</string>
     <string name="quick_repeat_none">Niet herhalen</string>
     <string name="quick_repeat_daily">Elke dag</string>
@@ -139,7 +138,6 @@
     <string name="quick_added_named">Toegevoegd: %s</string>
     <string name="quick_failed">Niet toegevoegd (%s). Je tekst staat er nog, dus je kunt het opnieuw proberen.</string>
     <string name="quick_place">Plek</string>
-    <string name="quick_place_when">Melden</string>
     <string name="quick_place_enter">Bij aankomst</string>
     <string name="quick_place_exit">Bij vertrek</string>
     <string name="quick_place_here">Mijn huidige locatie</string>
@@ -154,6 +152,17 @@
     <string name="quick_place_locating">Je locatie opzoeken…</string>
     <string name="quick_place_no_location">Je locatie is niet gevonden. Staat locatie aan?</string>
     <string name="quick_place_no_permission">Tick mag je locatie nog niet altijd gebruiken, dus deze plek meldt niets. Sta het toe in Tick op deze telefoon.</string>
+    <string name="quick_pick_datetime">Kies dag en tijd…</string>
+    <string name="quick_step_when">Herinner me…</string>
+    <string name="quick_step_when_set">Herinner me</string>
+    <string name="quick_step_place">Herinner me op een plek</string>
+    <string name="quick_step_arrive">Als ik aankom bij</string>
+    <string name="quick_step_leave">Als ik vertrek bij</string>
+    <string name="quick_step_in">In</string>
+    <string name="quick_step_clear">Wissen</string>
+    <string name="quick_value_today">vandaag %s</string>
+    <string name="quick_value_tomorrow">morgen %s</string>
+    <string name="widget_refreshing">Bezig met verversen…</string>
     <string name="quick_more">Meer opties</string>
     <string name="quick_less">Minder opties</string>
     <string name="quick_remind_today">Herinnering vandaag om %s</string>

@@ -128,6 +128,21 @@ final class WidgetLook {
         return (touchDp() - (checkDp() - 10f)) / 2f;
     }
 
+    /**
+     * Ruimte links van het bolletje: 7 dp, zoals vóór het grotere tikvlak (2 dp rij + 5 dp rand). Het tikvlak blijft
+     * 48 dp breed; wat er links te veel was, staat nu rechts van het bolletje. Zo staat het rondje weer dicht bij de rand.
+     */
+    static final float CHECK_START_DP = 7;
+
+    float checkPadStartDp() {
+        return Math.min(CHECK_START_DP, checkPadDp());
+    }
+
+    /** Ruimte rechts van het bolletje: de rest van het tikvlak. */
+    float checkPadEndDp() {
+        return touchDp() - (checkDp() - 10f) - checkPadStartDp();
+    }
+
     /** Ruimte boven en onder het tekstblok: vast per weergave, plus de regelafstand uit de instellingen. */
     float textPadDp() {
         return (roomy ? 5 : 1) + spacing;

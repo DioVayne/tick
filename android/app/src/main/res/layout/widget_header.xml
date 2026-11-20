@@ -29,6 +29,18 @@
         android:padding="15dp"
         android:src="@drawable/ic_refresh" />
 
+    <!-- Tijdens verversen na een tik op de knop: een draaiend rondje op de plek van de knop (TaskWidgetProvider).
+         Elke volledige opbouw van de widget zet de knop terug, dus dit kan niet blijven staan. -->
+    <ProgressBar
+        android:id="@+id/refresh_busy"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:contentDescription="@string/widget_refreshing"
+        android:indeterminate="true"
+        android:indeterminateTint="@color/accent"
+        android:padding="14dp"
+        android:visibility="gone" />
+
     <ImageView
         android:id="@+id/btn_add"
         android:layout_width="48dp"

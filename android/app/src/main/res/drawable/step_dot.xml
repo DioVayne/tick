@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rondje van een stap in de tijdlijn van de snelle taak: grijs, of blauw als er iets gekozen is. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true">
+        <shape android:shape="oval">
+            <solid android:color="@color/accent" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/widget_tile" />
+            <stroke android:width="2dp" android:color="@color/widget_pill" />
+        </shape>
+    </item>
+</selector>

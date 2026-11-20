@@ -55,6 +55,11 @@ public class WidgetLookTest {
                 // Het zichtbare bolletje past in het tikvlak.
                 assertTrue(l.checkPadDp() >= 0f);
                 assertEquals(l.touchDp(), (l.checkDp() - 10f) + 2 * l.checkPadDp(), 0.001f);
+                // Links staat het rondje dicht bij de rand (hooguit 7 dp, zoals vroeger); de rest van het tikvlak
+                // staat rechts, zodat het tikvlak even breed blijft.
+                assertTrue(l.checkPadStartDp() <= WidgetLook.CHECK_START_DP);
+                assertTrue(l.checkPadEndDp() >= l.checkPadStartDp());
+                assertEquals(l.touchDp(), l.checkPadStartDp() + (l.checkDp() - 10f) + l.checkPadEndDp(), 0.001f);
             }
         }
     }
