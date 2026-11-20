@@ -20,26 +20,17 @@
         android:textSize="18sp"
         android:textStyle="bold" />
 
-    <!-- Knoppen: tikvlak 48 x 48 dp, het icoon zelf even groot als vroeger (de rest is binnenruimte). -->
+    <!-- Knoppen: tikvlak 48 x 48 dp, het icoon zelf even groot als vroeger (de rest is binnenruimte). Geen draaiend
+         rondje tijdens verversen: Android 16 houdt de update die het weer weghaalt soms tegen, dan blijft het draaien.
+         TaskWidgetProvider toont daarom een toast. -->
     <ImageView
         android:id="@+id/btn_refresh"
         android:layout_width="48dp"
         android:layout_height="48dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/refresh"
         android:padding="15dp"
         android:src="@drawable/ic_refresh" />
-
-    <!-- Tijdens verversen na een tik op de knop: een draaiend rondje op de plek van de knop (TaskWidgetProvider).
-         Elke volledige opbouw van de widget zet de knop terug, dus dit kan niet blijven staan. -->
-    <ProgressBar
-        android:id="@+id/refresh_busy"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:contentDescription="@string/widget_refreshing"
-        android:indeterminate="true"
-        android:indeterminateTint="@color/accent"
-        android:padding="14dp"
-        android:visibility="gone" />
 
     <ImageView
         android:id="@+id/btn_add"

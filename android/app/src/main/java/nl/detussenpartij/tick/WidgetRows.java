@@ -97,11 +97,11 @@ final class WidgetRows {
             rv.setViewLayoutWidth(iconId, look.iconDp(), TypedValue.COMPLEX_UNIT_DIP);
             rv.setViewLayoutHeight(iconId, look.iconDp(), TypedValue.COMPLEX_UNIT_DIP);
         }
-        rv.setViewLayoutWidth(R.id.check, look.touchDp(), TypedValue.COMPLEX_UNIT_DIP);
-        rv.setViewLayoutHeight(R.id.check, look.touchDp(), TypedValue.COMPLEX_UNIT_DIP);
-        int checkPad = Math.round(look.checkPadDp() * density);
-        rv.setViewPadding(R.id.check, Math.round(look.checkPadStartDp() * density), checkPad,
-                Math.round(look.checkPadEndDp() * density), checkPad);
+        rv.setViewLayoutWidth(R.id.check, look.checkWidthDp(), TypedValue.COMPLEX_UNIT_DIP);
+        rv.setViewLayoutHeight(R.id.check, look.checkHeightDp(), TypedValue.COMPLEX_UNIT_DIP);
+        int checkPad = Math.round(WidgetLook.CHECK_VPAD_DP * density);
+        rv.setViewPadding(R.id.check, Math.round(WidgetLook.CHECK_START_DP * density), checkPad,
+                Math.round(WidgetLook.CHECK_END_DP * density), checkPad);
         rv.setTextViewTextSize(R.id.undo, TypedValue.COMPLEX_UNIT_SP, look.undoSp());
         // Op het tekstblok, niet op de rij: dan is een rij van één regel precies zo hoog als het tikvlak van het bolletje.
         int textPad = Math.round(look.textPadDp() * density);

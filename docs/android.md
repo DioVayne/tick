@@ -40,7 +40,7 @@ When the line under the title is too long, the end is cut off first, so the time
 - *2 changes waiting for connection · try again* (see below);
 - *Nothing planned for today · Add a task* (or *Nothing to do* / *Nothing in this list*): opens quick add.
 
-**Refresh** (the round arrow at the top) turns into a spinning circle while Tick fetches your tasks. After a few seconds at most the arrow is back: the list is up to date, or the line at the top says what went wrong (for example no connection). If the server takes longer, Tick keeps trying in the background and shows *Updated* or the error in a short message at the bottom of the screen.
+**Refresh** (the round arrow at the top): a short message at the bottom of the screen says *Refreshing…*, and a few seconds later *Up to date ✓* or what went wrong (for example no connection). If the server takes longer, Tick keeps trying in the background and shows the result in the same kind of message.
 
 When the list hasn't been updated for more than an hour, a small *Updated 14:05* shows at the top. The time of the last update is also read out with the refresh button (for screen readers).
 

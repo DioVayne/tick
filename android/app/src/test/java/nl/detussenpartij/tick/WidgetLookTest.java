@@ -47,19 +47,14 @@ public class WidgetLookTest {
     }
 
     @Test
-    public void tikvlakkenMinstens48dpInElkeWeergave() {
+    public void bolletjeDichtBijRandEnTekst() {
         for (int font = WidgetLook.FONT_MIN; font <= WidgetLook.FONT_MAX; font++) {
             for (boolean roomy : new boolean[] {false, true}) {
                 WidgetLook l = new WidgetLook(font, 0, roomy);
-                assertTrue(l.touchDp() >= 48f);
-                // Het zichtbare bolletje past in het tikvlak.
-                assertTrue(l.checkPadDp() >= 0f);
-                assertEquals(l.touchDp(), (l.checkDp() - 10f) + 2 * l.checkPadDp(), 0.001f);
-                // Links staat het rondje dicht bij de rand (hooguit 7 dp, zoals vroeger); de rest van het tikvlak
-                // staat rechts, zodat het tikvlak even breed blijft.
-                assertTrue(l.checkPadStartDp() <= WidgetLook.CHECK_START_DP);
-                assertTrue(l.checkPadEndDp() >= l.checkPadStartDp());
-                assertEquals(l.touchDp(), l.checkPadStartDp() + (l.checkDp() - 10f) + l.checkPadEndDp(), 0.001f);
+                // Het tikvlak is het rondje plus een smalle rand: 7 dp links, 6 dp rechts, 5 dp boven en onder.
+                assertEquals(l.checkWidthDp(), 7f + l.checkVisibleDp() + 6f, 0.001f);
+                assertEquals(l.checkHeightDp(), l.checkVisibleDp() + 10f, 0.001f);
+                assertTrue(l.checkVisibleDp() >= 14f);
             }
         }
     }

@@ -118,29 +118,26 @@ final class WidgetLook {
         return Math.max(24f, font * 2.1f);
     }
 
-    /** Het tikvlak van het bolletje: minstens 48 x 48 dp. */
-    float touchDp() {
-        return Math.max(MIN_TOUCH_DP, checkDp());
-    }
-
-    /** Binnenruimte rond het bolletje, zodat het zichtbaar even groot blijft als vroeger (check min 5 dp rand). */
-    float checkPadDp() {
-        return (touchDp() - (checkDp() - 10f)) / 2f;
-    }
-
     /**
-     * Ruimte links van het bolletje: 7 dp, zoals vóór het grotere tikvlak (2 dp rij + 5 dp rand). Het tikvlak blijft
-     * 48 dp breed; wat er links te veel was, staat nu rechts van het bolletje. Zo staat het rondje weer dicht bij de rand.
+     * Ruimte rond het zichtbare bolletje: zoals vóór het grotere tikvlak (versie 1.13), want 48 dp gaf te veel lege ruimte
+     * links, rechts en boven en onder het rondje. Links 7 dp vanaf de rand van het tegeltje, rechts 6 dp tot de tekst,
+     * boven en onder 5 dp. Een tik net naast het rondje opent de taak (niets gaat ongemerkt weg).
      */
-    static final float CHECK_START_DP = 7;
+    static final float CHECK_START_DP = 7, CHECK_END_DP = 6, CHECK_VPAD_DP = 5;
 
-    float checkPadStartDp() {
-        return Math.min(CHECK_START_DP, checkPadDp());
+    /** Het zichtbare bolletje. */
+    float checkVisibleDp() {
+        return checkDp() - 10f;
     }
 
-    /** Ruimte rechts van het bolletje: de rest van het tikvlak. */
-    float checkPadEndDp() {
-        return touchDp() - (checkDp() - 10f) - checkPadStartDp();
+    /** Breedte van het tikvlak van het bolletje: rondje plus de ruimte links en rechts. */
+    float checkWidthDp() {
+        return CHECK_START_DP + checkVisibleDp() + CHECK_END_DP;
+    }
+
+    /** Hoogte van het tikvlak: rondje plus 5 dp boven en onder. */
+    float checkHeightDp() {
+        return checkVisibleDp() + 2 * CHECK_VPAD_DP;
     }
 
     /** Ruimte boven en onder het tekstblok: vast per weergave, plus de regelafstand uit de instellingen. */
