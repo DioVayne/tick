@@ -94,6 +94,8 @@
     <string name="pair_confirm_new">Deze telefoon gaat de Tick op %s gebruiken. Ga alleen verder als dat jouw Tick is.</string>
     <string name="pair_confirm_switch">Deze telefoon is verbonden met %1$s. Overstappen naar %2$s haalt de taken en locatiemeldingen van die Tick van deze telefoon.</string>
     <string name="pair_confirm_ok">Verbinden</string>
+    <string name="pair_relink_title">Deze telefoon opnieuw verbinden?</string>
+    <string name="pair_relink_text">De Tick-app gaat het account gebruiken waarmee je nu bent ingelogd op %s. Ga alleen verder als je dit zelf deed, in Tick op deze telefoon.</string>
     <string name="pair_loc_title">Locatiemeldingen</string>
     <string name="pair_loc_text">Tick kan je aan een taak herinneren als je aankomt bij een plek die je hebt opgeslagen, of er weggaat. Daarvoor gebruikt Tick je locatie. Je locatie blijft op deze telefoon: Tick stuurt je positie niet naar de server.\n\nAndroid vraagt zo om je locatie.</string>
     <string name="pair_loc_ok">Doorgaan</string>

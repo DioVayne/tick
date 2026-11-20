@@ -16,9 +16,19 @@ export const pairIntent = (pkg, code, base, fallback) => `intent://pair?code=${e
   + (fallback ? `S.browser_fallback_url=${encodeURIComponent(fallback)};` : '')
   + 'end';
 
+/** De Play-versie van de app (app.ticktodo.nl); ook in src/assetlinks.ts. */
+export const PLAY_PACKAGE = 'nl.ticktodo.app';
+
 /** Het package van de app uit document.referrer van een TWA-start (android-app://<package>/), of null. */
 export const packageFromReferrer = (referrer) =>
   /^android-app:\/\/([A-Za-z][\w]*(?:\.[A-Za-z][\w]*)+)(?:\/|$)/.exec(referrer ?? '')?.[1] ?? null;
+
+/**
+ * Alleen een bekende Tick-app mag een koppelcode krijgen: de officiële, de Play-versie of ANDROID_PACKAGE van een
+ * eigen build. Een andere app kan Tick openen met zichzelf als referrer; die krijgt nooit een code (en dus geen sleutel).
+ */
+export const trustedPackage = (pkg, configured) =>
+  !!pkg && (pkg === OFFICIAL_PACKAGE || pkg === PLAY_PACKAGE || (!!configured && pkg === configured));
 
 /** Opent de instellingen van de app (meldingen, locatie). */
 export const settingsIntent = (pkg) => `intent://settings#Intent;scheme=tick;package=${pkg};end`;

@@ -145,16 +145,25 @@ export async function claimInvites(env: Env, userId: string, by: { email: string
       `JOIN tasks t ON t.id = e.task_id WHERE ${where} AND e.expires_at > ?3 AND t.deleted_at IS NULL AND t.parent_id IS NULL ` +
       // Dezelfde controles als bij gewoon delen: een taak in een gedeelde lijst deel je via de lijst (alleen een kopie
       // kan los), en een kopie niet aan iemand die al een exemplaar in de groep heeft.
-      "AND t.user_id != ?1 AND (e.mode = 'copy' OR t.shared_list IS NULL) AND " + NOT_BLOCKED +
+      // De taak moet nog van de deler zijn: is hij intussen van een ander (uit een gedeelde lijst gesleept), dan
+      // vervalt de uitnodiging.
+      "AND t.user_id = e.from_user AND t.user_id != ?1 AND (e.mode = 'copy' OR t.shared_list IS NULL) AND " + NOT_BLOCKED +
       "AND NOT (e.mode = 'copy' AND t.copy_group IS NOT NULL AND EXISTS (SELECT 1 FROM tasks m WHERE m.user_id = ?1 AND m.copy_group = t.copy_group " +
       'AND m.parent_id IS NULL AND m.deleted_at IS NULL)) ON CONFLICT (task_id, to_user) DO NOTHING').bind(userId, key, now),
     db.prepare('INSERT INTO list_members (list_id, user_id, role, status, name, created_at) ' +
       "SELECT e.list_id, ?1, 'member', 'pending', o.name, e.created_at FROM email_invites e JOIN shared_lists l ON l.id = e.list_id " +
-      `JOIN list_members o ON o.list_id = e.list_id AND o.user_id = l.owner_id WHERE ${where} AND e.expires_at > ?3 AND l.owner_id != ?1 AND ` + NOT_BLOCKED +
+      `JOIN list_members o ON o.list_id = e.list_id AND o.user_id = l.owner_id WHERE ${where} AND e.expires_at > ?3 AND l.owner_id = e.from_user AND l.owner_id != ?1 AND ` + NOT_BLOCKED +
       'ON CONFLICT (list_id, user_id) DO NOTHING').bind(userId, key, now),
     db.prepare(`DELETE FROM email_invites WHERE ${where.replace('?2', '?1').replace('e.', '')}`).bind(key),
   ]);
 }
+
+/**
+ * Voor een uitnodiging aan een adres (alias `e`): de taak of lijst is nog van de deler. Zo niet (een lid sleepte de
+ * taak uit een gedeelde lijst, of de lijst ging over), dan geldt de uitnodiging niet meer en toont ook de mail niets.
+ */
+export const INVITE_STILL_OWNED = '(e.task_id IS NULL OR EXISTS (SELECT 1 FROM tasks x WHERE x.id = e.task_id AND x.user_id = e.from_user)) ' +
+  'AND (e.list_id IS NULL OR EXISTS (SELECT 1 FROM shared_lists y WHERE y.id = e.list_id AND y.owner_id = e.from_user))';
 
 /** De uitnodiging achter een code uit de mail (niet verlopen), met wie deelt en wat; null als de code niet (meer) werkt. */
 export async function inviteByCode(db: D1Database, code: string): Promise<{ id: string; email: string; from_name: string; title: string } | null> {
@@ -162,7 +171,7 @@ export async function inviteByCode(db: D1Database, code: string): Promise<{ id: 
   return db.prepare('SELECT e.id, e.email, u.name AS from_name, COALESCE(t.title, m.name) AS title FROM email_invites e ' +
     'JOIN users u ON u.id = e.from_user LEFT JOIN tasks t ON t.id = e.task_id ' +
     'LEFT JOIN shared_lists l ON l.id = e.list_id LEFT JOIN list_members m ON m.list_id = l.id AND m.user_id = l.owner_id ' +
-    'WHERE e.join_hash = ? AND e.expires_at > ?').bind(await hashKey(code), new Date().toISOString())
+    `WHERE e.join_hash = ? AND e.expires_at > ? AND ${INVITE_STILL_OWNED}`).bind(await hashKey(code), new Date().toISOString())
     .first<{ id: string; email: string; from_name: string; title: string }>();
 }
 

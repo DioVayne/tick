@@ -22,6 +22,22 @@ export type Payload = {
   failed?: { offline: string; auth: string; server: string };
 };
 
+/** Hoogstens zoveel push-abonnementen per persoon (de oudste vervallen); een mens heeft er een paar. */
+export const MAX_PUSH_SUBS = 20;
+/** Wachttijd per push of webhook: de cron loopt ze na elkaar af, dus één trage ontvanger mag hem niet ophouden. */
+const SEND_TIMEOUT_MS = 10_000;
+
+/** Een push-adres: https, zonder inloggegevens, niet te lang. De pushdienst van de browser kiest het adres. */
+export function validPushEndpoint(raw: unknown): boolean {
+  if (typeof raw !== 'string' || raw.length > 1000) return false;
+  try {
+    const u = new URL(raw);
+    return u.protocol === 'https:' && !u.username && !u.password;
+  } catch {
+    return false;
+  }
+}
+
 /** De vertaalde teksten voor een mislukte knop. */
 export function failedTexts(locale?: string): NonNullable<Payload['failed']> {
   return {
@@ -50,7 +66,8 @@ export function parseVapidKey(raw: string | undefined): JsonWebKey | null {
  * Geeft het aantal geslaagd en het aantal abonnementen terug.
  */
 export async function sendToAll(env: Env, userId: string, make: (locale: Locale) => Payload, defaultLocale: Locale): Promise<{ ok: number; total: number }> {
-  const subs = (await env.DB.prepare('SELECT endpoint,p256dh,auth,locale FROM push_subscriptions WHERE user_id = ?').bind(userId).all<Sub>()).results;
+  const subs = (await env.DB.prepare('SELECT endpoint,p256dh,auth,locale FROM push_subscriptions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?')
+    .bind(userId, MAX_PUSH_SUBS).all<Sub>()).results;
   if (!subs.length) return { ok: 0, total: 0 };
   const privateJWK = parseVapidKey(env.VAPID_PRIVATE_KEY);
   if (!privateJWK) {
@@ -70,11 +87,13 @@ export async function sendToAll(env: Env, userId: string, make: (locale: Locale)
         subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         message: { payload, adminContact: env.ADMIN_CONTACT, options: { urgency: 'high', ttl: 3600 } },
       });
-      const res = await fetch(endpoint, { method: 'POST', headers, body });
+      const res = await fetch(endpoint, { method: 'POST', headers, body, signal: AbortSignal.timeout(SEND_TIMEOUT_MS) });
+      // Het antwoord zelf lezen we niet: een ontvanger kan er van alles in zetten.
+      await res.body?.cancel().catch(() => {});
       if (res.ok) ok++;
       else if (res.status === 404 || res.status === 410) {
         await env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(s.endpoint).run();
-      } else console.warn('push', res.status, await res.text());
+      } else console.warn('push', res.status);
     } catch (e) {
       console.warn('push error', (e as Error).message);
     }
@@ -85,7 +104,8 @@ export async function sendToAll(env: Env, userId: string, make: (locale: Locale)
 /** Post de melding als JSON naar een webhook; true bij een 2xx-antwoord. */
 export async function postWebhook(url: string, payload: Payload): Promise<boolean> {
   try {
-    const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(SEND_TIMEOUT_MS) });
+    await res.body?.cancel().catch(() => {});
     return res.ok;
   } catch { return false; }
 }

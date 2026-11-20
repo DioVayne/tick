@@ -73,6 +73,7 @@ The deploy prints your URL. Logging in does not work yet: that needs the secrets
 | `TELEGRAM_BOT_TOKEN` | optional | The token of a Telegram bot (from @BotFather): `npx wrangler secret put TELEGRAM_BOT_TOKEN`. With `TELEGRAM_CHAT_ID` (see "Good to know") it sends you a message when email gets stuck |
 | `MAIL_PROVIDERS` | optional (var) | Which mail service sends: `resend` (default), `cloudflare`, or a list such as `cloudflare,resend` (the next one takes over when the previous fails). See "Switching to Cloudflare Email Service" in "Good to know" |
 | `MAIL_WARN_AT` | optional (var) | Number of emails in one day at which you get a message (default 70, once a day) |
+| `MAIL_DAILY_MAX` | optional (var) | At most this many emails in 24 hours for the whole Tick (default 90; `"0"` = no limit), so sign-ups can't use up your mail quota |
 | `TELEGRAM_CHAT_ID` | optional (var) | Your Telegram chat id, together with `TELEGRAM_BOT_TOKEN` (see "Good to know"). Check it with **Send test message** on `/admin/reports` |
 | `FALLBACK_WEBHOOK` | optional | Starting value for the administrator's webhook that receives a reminder as JSON when push did not arrive; in the app you can replace it, switch it off, or reset to this value. It does not apply to other accounts |
 
@@ -250,6 +251,6 @@ Open the app once online afterwards, so the service worker caches the new versio
 - **Backup:** **Settings → Data → Download backup** gives a JSON file with your tasks and places. Restoring merges by id and never deletes anything. Settings, keys and the password are not in it.
 - **Time zone:** changing it in the app keeps the clock time of open reminders and repeats (9:00 stays 9:00).
 - **Quick add on Android** keeps its own default of 09:00 for a date without a time; it does not follow the reminder time you set in the app.
-- **Rate limits:** the `namespace_id`s of `LOGIN_LIMITER` and `GEOCODE_LIMITER` only need to be unique within your Cloudflare account. Running two Tick instances on one account? Give the second one other numbers.
+- **Rate limits:** the `namespace_id`s of `LOGIN_LIMITER`, `GEOCODE_LIMITER` and the optional `GEOCODE_USER_LIMITER` (address searches per person) only need to be unique within your Cloudflare account. Running two Tick instances on one account? Give the second one other numbers.
 - **Local development:** `cp .dev.vars.example .dev.vars`, `npm run db:migrate:local`, `npm run dev`. With `DEV_AUTH_BYPASS=1` you skip the login on localhost.
 - **Moving from TickTick:** in the app, **Settings → Data → Import from TickTick** and pick the backup `.csv`. Importing again skips tasks that are already there. The script `node scripts/import-ticktick.mjs <backup.csv>` still works too: it writes `import.sql`, which you load with `npx wrangler d1 execute DB --remote --file import.sql`.

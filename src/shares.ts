@@ -134,8 +134,10 @@ sharesApi.post('/', async (c) => {
     id: crypto.randomUUID(), task_id: task.id, from_user: userId, to_user: toUser, mode: b.mode, status: 'pending',
     list: null, position: null, created_at: now(), responded_at: null,
   };
-  const res = await db.prepare('INSERT INTO task_shares (id, task_id, from_user, to_user, mode, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) ' +
-    'ON CONFLICT (task_id, to_user) DO NOTHING').bind(row.id, row.task_id, userId, toUser, row.mode, 'pending', row.created_at).run();
+  // Gekozen op naam (to_user) of met een getypt adres: dat bepaalt wat de eigenaar ziet zolang het openstaat (shareInfo).
+  const byEmail = typeof b.to_user === 'string' && b.to_user ? 0 : 1;
+  const res = await db.prepare('INSERT INTO task_shares (id, task_id, from_user, to_user, mode, status, created_at, by_email) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ' +
+    'ON CONFLICT (task_id, to_user) DO NOTHING').bind(row.id, row.task_id, userId, toUser, row.mode, 'pending', row.created_at, byEmail).run();
   if (!res.meta.changes) throw new HttpError(409, 'err.share_exists');
   // Een mislukte melding laat de uitnodiging staan; die is altijd in de app te zien.
   await inBackground(c, notifyInvite(c.env, row.id, toUser, c.get('user').name, task.title, row.mode, c.get('install').defaultLocale), 'uitnodiging');

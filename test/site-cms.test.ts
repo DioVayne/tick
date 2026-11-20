@@ -190,3 +190,21 @@ describe('website CMS worker', () => {
     expect(res.headers.get('etag')).toBe('"x"');
   });
 });
+
+describe('login rate-limit binding (LOGIN_LIMITER)', () => {
+  it('refuses with 429 before checking the password when the limiter says no', async () => {
+    const env = { ...makeEnv('geheim'), LOGIN_LIMITER: { limit: async () => ({ success: false }) } } as Env;
+    const { res, cookie } = await login(env, 'geheim');
+    expect(res.status).toBe(429);
+    expect(cookie).toBe('');
+  });
+
+  it('counts per IP and for everyone together', async () => {
+    const keys: string[] = [];
+    const limiter = { limit: async ({ key }: { key: string }) => { keys.push(key); return { success: true }; } };
+    const env = { ...makeEnv('geheim'), LOGIN_LIMITER: limiter } as Env;
+    expect((await login(env, 'geheim')).res.status).toBe(200);
+    expect(keys).toContain('alle');
+    expect(keys.some((k) => k.startsWith('ip:'))).toBe(true);
+  });
+});

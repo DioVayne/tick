@@ -2,7 +2,7 @@
 // eenmalige code in een intent-link (ook vanuit de browser op de telefoon), web push aanzetten en dubbele meldingen
 // signaleren.
 import { request } from './api.js';
-import { OFFICIAL_PACKAGE, RELEASES_URL, locationProblems, packageFromReferrer, pairIntent, problemKey, pushAction, settingsIntent, showLocationBar, startPushAction } from './applink.js';
+import { OFFICIAL_PACKAGE, RELEASES_URL, locationProblems, packageFromReferrer, pairIntent, problemKey, pushAction, settingsIntent, showLocationBar, startPushAction, trustedPackage } from './applink.js';
 import { t } from './i18n.js';
 import { enablePush, pushState, pushTurnedOff } from './push.js';
 import { wakeAndroidApp } from './places.js';
@@ -29,7 +29,8 @@ export function isInApp() {
 export function knownAppPackage() {
   try {
     const pkg = localStorage.getItem(PKG_KEY);
-    if (pkg) return pkg;
+    // Een eerder opgeslagen onbekend package telt niet (zie trustedPackage).
+    if (trustedPackage(pkg, CONFIG.androidPackage)) return pkg;
   } catch { /* geen opslag */ }
   return CONFIG.androidPackage || null;
 }
@@ -53,8 +54,9 @@ export function initAndroidApp(params, { openDevices } = {}) {
     try { sessionStorage.setItem(APP_KEY, 'android'); } catch { /* geen opslag */ }
   }
   // Welke app (officieel of een eigen build): alleen bij onze eigen start-URL, niet bij een link uit een andere app.
+  // En alleen een bekende Tick-app: een andere app kan deze URL ook openen, met zichzelf als referrer.
   const pkg = params.get('app') === 'android' ? packageFromReferrer(document.referrer) : null;
-  if (pkg) {
+  if (trustedPackage(pkg, CONFIG.androidPackage)) {
     try { localStorage.setItem(PKG_KEY, pkg); } catch { /* geen opslag */ }
   }
   const pair = params.get('pair') === '1';
