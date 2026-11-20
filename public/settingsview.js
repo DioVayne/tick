@@ -582,6 +582,9 @@ async function paintPush() {
   const ps = await pushState(S.reg);
   const blocked = !ps.supported || ps.permission === 'denied';
   const on = ps.subscribed && ps.permission === 'granted';
+  // In de Android-app geeft de telefoon de toestemming (Apps › Tick › Meldingen); zonder die toestemming bleef de
+  // vraag in oudere app-versies eeuwig hangen. Dan uitleg plus een knop naar de instellingen van de app.
+  const appNeedsPermission = isInApp() && ps.supported && ps.permission !== 'granted';
   const sw = /** @type {HTMLInputElement} */ (el('input', {
     type: 'checkbox', role: 'switch', class: 'set-switch', 'aria-label': t('set.push_label'), disabled: blocked,
   }));
@@ -592,7 +595,7 @@ async function paintPush() {
     sw.disabled = true;
     test.disabled = true;
     try {
-      await enablePush(S.reg);
+      await enablePush(S.reg, { timeoutMs: isInApp() ? 10_000 : undefined });
       const r = await request('POST', '/api/push/test', {});
       if (r.ok) toast(t('set.push_on_test'), 'ok'); else toast(t('push.enabled_test_missing'));
     } catch (e) { toast(t('push.setup_failed', { reason: e.message })); }
@@ -624,8 +627,17 @@ async function paintPush() {
     badgeRow(),
     ps.iosNeedsHomeScreen ? el('p', { class: 'hint' }, t('push.ios_hint'))
       : !ps.supported ? el('p', { class: 'hint' }, t('push.unsupported'))
-      : ps.permission === 'denied' ? el('p', { class: 'hint' }, t(isInApp() ? 'set.push_blocked_app' : 'set.push_blocked'))
+      : appNeedsPermission ? [el('p', { class: 'hint' }, t('set.push_blocked_app')), row('', btn(t('set.phone_settings'), openPhoneSettings))]
+      : ps.permission === 'denied' ? el('p', { class: 'hint' }, t('set.push_blocked'))
       : !on ? el('p', { class: 'hint' }, t('set.push_off_hint')) : null);
+}
+
+/** Terug in Tick (bijvoorbeeld uit de telefooninstellingen): de meldingen opnieuw tekenen, de toestemming kan veranderd zijn. */
+let pushWatched = false;
+function watchPushReturn() {
+  if (pushWatched) return;
+  pushWatched = true;
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.open && S.regChecked) paintPush(); });
 }
 
 /** Dagelijkse melding van verlopen taken: aan/uit en de tijd; geldt voor alle apparaten van deze persoon. */
@@ -1440,6 +1452,7 @@ export function openSettings({ push = true, section, view = 'main' } = {}) {
   if (section) reveal(section);
   paint('devices', note(t('set.loading')));
   const reg = getReg().then((r) => { S.reg = r; S.regChecked = true; if (S.open) paintPush(); });
+  watchPushReturn();
   Promise.all([reg, fetchSettings(), fetchAccount()]).then(() => { if (S.open) { paintHome(); paintDevices(); } });
 }
 
