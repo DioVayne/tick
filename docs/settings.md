@@ -18,7 +18,7 @@ Your favorite places: add, edit, delete. See [Places](places.md#favorite-places)
 Shown when linked calendars are switched on for your Tick. See [Linking your calendar](calendar.md).
 
 ## Notifications
-- **Notifications on this device** (this device): on or off for this browser, with **Send test notification**. While notifications are off here, the button reads **Turn on and send test notification**: it turns them on first. If they are blocked, a hint says where to allow them. In the Android app the phone gives the permission: when notifications for the Tick app are off, a hint and a **Phone settings** button appear (or go to Apps › Tick › Notifications); come back and tap the button again. On an iPhone, add Tick to your home screen first (see [iPhone and iPad](iphone.md)).
+- **Notifications on this device** (this device): on or off for this browser, with **Send test notification**. While notifications are off here, the button reads **Turn on and send test notification**: it turns them on first. If they are blocked, a hint says where to allow them. In the Android app the phone gives the permission: when notifications for the Tick app are off, a hint says where to turn them on: your phone's Settings › Apps › Tick › Notifications, with *Allow notifications* and every category below it on. Come back and tap the button again. On an iPhone, add Tick to your home screen first (see [iPhone and iPad](iphone.md)).
 - **Daily reminder for overdue tasks** (you, on all your devices): on or off, and its time. See [Reminders](reminders.md#overdue-tasks).
 - **Counter on the icon** (this device): the number of tasks due today, overdue included; red when something is overdue.
 

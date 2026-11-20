@@ -583,7 +583,7 @@ async function paintPush() {
   const blocked = !ps.supported || ps.permission === 'denied';
   const on = ps.subscribed && ps.permission === 'granted';
   // In de Android-app geeft de telefoon de toestemming (Apps › Tick › Meldingen); zonder die toestemming bleef de
-  // vraag in oudere app-versies eeuwig hangen. Dan uitleg plus een knop naar de instellingen van de app.
+  // vraag in oudere app-versies eeuwig hangen. Dan uitleg waar je dat aanzet ("Tick op deze telefoon" kan het niet).
   const appNeedsPermission = isInApp() && ps.supported && ps.permission !== 'granted';
   const sw = /** @type {HTMLInputElement} */ (el('input', {
     type: 'checkbox', role: 'switch', class: 'set-switch', 'aria-label': t('set.push_label'), disabled: blocked,
@@ -627,7 +627,7 @@ async function paintPush() {
     badgeRow(),
     ps.iosNeedsHomeScreen ? el('p', { class: 'hint' }, t('push.ios_hint'))
       : !ps.supported ? el('p', { class: 'hint' }, t('push.unsupported'))
-      : appNeedsPermission ? [el('p', { class: 'hint' }, t('set.push_blocked_app')), row('', btn(t('set.phone_settings'), openPhoneSettings))]
+      : appNeedsPermission ? el('p', { class: 'hint' }, t('set.push_blocked_app'))
       : ps.permission === 'denied' ? el('p', { class: 'hint' }, t('set.push_blocked'))
       : !on ? el('p', { class: 'hint' }, t('set.push_off_hint')) : null);
 }
