@@ -80,7 +80,14 @@ async function login(request, env) {
   // No password set: no admin at all.
   if (!env.ADMIN_PASSWORD || !env.CMS) return json({ fout: 'Het beheer is nog niet ingesteld.' }, 503);
 
-  const pogingKey = 'poging:' + (request.headers.get('cf-connecting-ip') || 'onbekend');
+  const ip = request.headers.get('cf-connecting-ip') || 'onbekend';
+  // De KV-teller hieronder is niet atomair (gelijktijdige pogingen tellen als één): met de rate-limit-binding LOGIN_LIMITER
+  // (wrangler.jsonc) telt elke poging, per IP en voor iedereen samen (er is maar één wachtwoord om te raden).
+  if (env.LOGIN_LIMITER) {
+    const [perIp, all] = await Promise.all([env.LOGIN_LIMITER.limit({ key: 'ip:' + ip }), env.LOGIN_LIMITER.limit({ key: 'alle' })]);
+    if (!perIp.success || !all.success) return json({ fout: 'Te veel pogingen. Probeer het over een minuut opnieuw.' }, 429);
+  }
+  const pogingKey = 'poging:' + ip;
   const pogingen = Number(await env.CMS.get(pogingKey)) || 0;
   if (pogingen >= MAX_POGINGEN) return json({ fout: 'Te veel pogingen. Probeer het over een kwartier opnieuw.' }, 429);
 

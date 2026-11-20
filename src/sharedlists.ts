@@ -115,6 +115,8 @@ export function detachStmts(db: D1Database, task: Pick<TaskRow, 'id'>, actorId: 
     db.prepare('UPDATE tasks SET user_id = ?1, list = ?2, updated_at = ?3 WHERE id = ?4 OR parent_id = ?4').bind(actorId, list, now(), task.id),
     db.prepare('UPDATE tasks SET position = ?, shared_list = NULL, claimed_by = NULL WHERE id = ?').bind(position, task.id),
     db.prepare('DELETE FROM task_shares WHERE task_id = ?').bind(task.id),
+    // Uitnodigingen aan adressen van de vorige eigenaar gelden niet voor de nieuwe.
+    db.prepare('DELETE FROM email_invites WHERE task_id = ? AND from_user != ?').bind(task.id, actorId),
     db.prepare(`DELETE FROM task_watch WHERE user_id != ?1 AND ${family}`).bind(actorId, task.id),
     db.prepare(`DELETE FROM reminder_sent WHERE user_id != ?1 AND ${family}`).bind(actorId, task.id),
   ];
@@ -204,7 +206,8 @@ export function transferListsStmts(db: D1Database, userId: string): D1PreparedSt
 export async function listSharing(db: D1Database, userId: string, open = false): Promise<Map<string, ListShare>> {
   // Op een openbare Tick ziet de eigenaar openstaande uitnodigingen als e-mailadres, plus die aan adressen zonder
   // account (user_id `mail:<id>`); zo ziet hij niet welke adressen een account hebben (zie shareInfo).
-  const userName = open ? "CASE WHEN m.status = 'pending' THEN u.email ELSE u.name END" : 'u.name';
+  // Gekozen op naam (by_email = 0): dan de naam, niet het adres dat de eigenaar nooit typte.
+  const userName = open ? "CASE WHEN m.status = 'pending' AND m.by_email = 1 THEN u.email ELSE u.name END" : 'u.name';
   const { results } = await db.prepare(
     'SELECT me.list_id, me.name AS list_name, me.role AS my_role, me.notify_done, l.owner_id, o.name AS owner_name, ' +
     `m.user_id, m.role, m.status, ${userName} AS user_name FROM list_members me JOIN shared_lists l ON l.id = me.list_id ` +
@@ -315,8 +318,9 @@ sharedListsApi.post('/', async (c) => {
     return c.json({ id: listId, list_id: listId, status: 'pending' }, 201);
   }
   const toUser = to.userId;
-  stmts.push(db.prepare("INSERT INTO list_members (list_id, user_id, role, status, name, created_at) VALUES (?, ?, 'member', 'pending', ?, ?) " +
-    'ON CONFLICT (list_id, user_id) DO NOTHING').bind(listId, toUser, name, ts));
+  const byEmail = typeof b.to_user === 'string' && b.to_user ? 0 : 1; // gekozen op naam of een getypt adres (listSharing)
+  stmts.push(db.prepare("INSERT INTO list_members (list_id, user_id, role, status, name, created_at, by_email) VALUES (?, ?, 'member', 'pending', ?, ?, ?) " +
+    'ON CONFLICT (list_id, user_id) DO NOTHING').bind(listId, toUser, name, ts, byEmail));
   const res = await db.batch(stmts);
   if (!res.at(-1)!.meta.changes) throw new HttpError(409, 'err.list_member_exists');
   const fromName = c.get('user').name;

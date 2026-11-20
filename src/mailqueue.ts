@@ -171,7 +171,9 @@ export async function buildQueued(env: Env, row: QueueRow, now = Date.now()): Pr
       const inv = await db.prepare('SELECT e.email, e.task_id, u.name AS from_name, COALESCE(tk.title, m.name) AS title FROM email_invites e ' +
         'JOIN users u ON u.id = e.from_user LEFT JOIN tasks tk ON tk.id = e.task_id ' +
         'LEFT JOIN shared_lists l ON l.id = e.list_id LEFT JOIN list_members m ON m.list_id = l.id AND m.user_id = l.owner_id ' +
-        'WHERE e.id = ? AND e.expires_at > ?').bind(row.ref, iso(now))
+        // Alleen zolang de taak of lijst nog van de deler is (zie INVITE_STILL_OWNED in src/invites.ts).
+        'WHERE e.id = ? AND e.expires_at > ? AND (e.task_id IS NULL OR tk.user_id = e.from_user) AND (e.list_id IS NULL OR l.owner_id = e.from_user)')
+        .bind(row.ref, iso(now))
         .first<{ email: string; task_id: string | null; from_name: string; title: string | null }>();
       if (!inv) return null;
       // Een unieke link voor deze uitnodiging; alleen de hash komt in de database (een nieuwe poging maakt een nieuwe).

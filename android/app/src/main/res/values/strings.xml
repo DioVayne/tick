@@ -94,6 +94,8 @@
     <string name="pair_confirm_new">This phone will use the Tick at %s. Only continue if that\'s your Tick.</string>
     <string name="pair_confirm_switch">This phone is connected to %1$s. Switching to %2$s removes that Tick\'s tasks and location reminders from this phone.</string>
     <string name="pair_confirm_ok">Connect</string>
+    <string name="pair_relink_title">Connect this phone again?</string>
+    <string name="pair_relink_text">The Tick app will use the account you are signed in with on %s right now. Only continue if you started this yourself, in Tick on this phone.</string>
     <string name="pair_loc_title">Location reminders</string>
     <string name="pair_loc_text">Tick can remind you of a task when you arrive at or leave a place you saved. For that Tick uses your location. Your location stays on this phone: Tick does not send your position to the server.\n\nAndroid will now ask for your location.</string>
     <string name="pair_loc_ok">Continue</string>

@@ -16,7 +16,7 @@ import { nextOccurrence } from '../public/repeat.js';
 import { installPrefsFrom, loadInstallPrefs, loadUserPrefs, requestLocale, type InstallPrefs, type Prefs, userSettingRows } from './prefs';
 import { findLoginUser, getUser, touchLastSeen, type User } from './users';
 import { inZone, localToUtcIso, type Zone } from './time';
-import { inBackground, runReminders, sendToAll } from './push';
+import { MAX_PUSH_SUBS, inBackground, runReminders, sendToAll, validPushEndpoint } from './push';
 import { localNow, runOverdue } from './overdue';
 import { settingsApi } from './settings-api';
 import { markReviewed, reviewApi } from './review';
@@ -63,6 +63,8 @@ export type Env = {
   INBOX_TOKEN?: string;
   LOGIN_LIMITER: RateLimit;
   GEOCODE_LIMITER: RateLimit;
+  /** Optioneel: adres zoeken per persoon (lager dan GEOCODE_LIMITER), zodat één persoon niet alles opmaakt. */
+  GEOCODE_USER_LIMITER?: RateLimit;
   FALLBACK_WEBHOOK?: string;
   DEV_AUTH_BYPASS?: string;
   /** IANA-tijdzone voor reminders zonder zone en voor ritmes, bijvoorbeeld Europe/Amsterdam. Standaard UTC. */
@@ -91,6 +93,8 @@ export type Env = {
   TELEGRAM_CHAT_ID?: string;
   /** Bij zoveel mails op één dag een bericht aan de eigenaar (geheel getal van minstens 1; standaard 70). */
   MAIL_WARN_AT?: string;
+  /** Hoogstens zoveel mails per 24 uur voor heel Tick (standaard 90; "0" = geen grens), zie reserveMail in src/mail.ts. */
+  MAIL_DAILY_MAX?: string;
   /** Binding `send_email` (Cloudflare Email Service) voor `MAIL_PROVIDERS=cloudflare`; optioneel. */
   EMAIL?: { send(m: { from: string; to: string; subject: string; text: string; html: string }): Promise<{ messageId: string }> };
   /** "true" = openbare Tick: iedereen kan zelf een account maken en accounts zien elkaar niet (standaard uit). */
@@ -175,6 +179,21 @@ app.use('*', async (c, next) => {
     const own = k === 'Content-Security-Policy' ? c.res.headers.get(k) : null;
     c.res.headers.set(k, own ? `${v}; ${own}` : v);
   }
+});
+
+/**
+ * Geen schrijfverzoek vanaf een andere site (CSRF), ook niet zonder cookie: anders kan een vreemde pagina je browser
+ * laten inloggen op het account van een ander (POST /login, /signup, /reset, /invite). Zonder Origin-header (de
+ * Android-app, Home Assistant, curl) mag het wel: zo'n verzoek komt niet uit een browser met jouw cookie.
+ */
+export function crossSite(method: string, origin: string | undefined, fetchSite: string | undefined, own: string): boolean {
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return false;
+  return (!!origin && origin !== own) || fetchSite === 'cross-site';
+}
+
+app.use('*', async (c, next) => {
+  if (crossSite(c.req.method, c.req.header('origin'), c.req.header('sec-fetch-site'), new URL(c.req.url).origin)) throw new HttpError(403, 'err.forbidden');
+  await next();
 });
 
 /** Statisch bestand; als kopie, want headers van een fetch-response zijn onveranderbaar. */
@@ -1356,12 +1375,18 @@ app.post('/api/inbox', async (c) => {
 
 app.post('/api/push/subscribe', async (c) => {
   const s = await body<{ endpoint: string; keys: { p256dh: string; auth: string }; locale?: string }>(c);
-  if (!s?.endpoint || !s.keys?.p256dh || !s.keys?.auth) throw new HttpError(400, 'err.invalid_subscription');
-  await c.env.DB.prepare(
-    'INSERT INTO push_subscriptions (endpoint,p256dh,auth,user_agent,created_at,locale,user_id) VALUES (?,?,?,?,?,?,?) ' +
-    'ON CONFLICT(endpoint) DO UPDATE SET p256dh=excluded.p256dh, auth=excluded.auth, user_agent=excluded.user_agent, ' +
-    'locale=COALESCE(excluded.locale, locale), user_id = excluded.user_id',
-  ).bind(s.endpoint, s.keys.p256dh, s.keys.auth, c.req.header('user-agent') ?? '', now(), s.locale === 'en' || s.locale === 'nl' ? s.locale : null, c.get('auth').userId).run();
+  if (!s?.endpoint || !s.keys?.p256dh || !s.keys?.auth || !validPushEndpoint(s.endpoint)) throw new HttpError(400, 'err.invalid_subscription');
+  const userId = c.get('auth').userId;
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      'INSERT INTO push_subscriptions (endpoint,p256dh,auth,user_agent,created_at,locale,user_id) VALUES (?,?,?,?,?,?,?) ' +
+      'ON CONFLICT(endpoint) DO UPDATE SET p256dh=excluded.p256dh, auth=excluded.auth, user_agent=excluded.user_agent, ' +
+      'created_at=excluded.created_at, locale=COALESCE(excluded.locale, locale), user_id = excluded.user_id',
+    ).bind(s.endpoint, s.keys.p256dh, s.keys.auth, c.req.header('user-agent') ?? '', now(), s.locale === 'en' || s.locale === 'nl' ? s.locale : null, userId),
+    // Hoogstens MAX_PUSH_SUBS per persoon: de oudste vervallen. Zo kan niemand de cron met duizenden adressen ophouden.
+    c.env.DB.prepare('DELETE FROM push_subscriptions WHERE user_id = ?1 AND endpoint NOT IN ' +
+      '(SELECT endpoint FROM push_subscriptions WHERE user_id = ?1 ORDER BY created_at DESC, endpoint LIMIT ?2)').bind(userId, MAX_PUSH_SUBS),
+  ]);
   return c.json({ ok: true });
 });
 
@@ -1429,6 +1454,10 @@ app.delete('/api/places/:id', async (c) => {
 app.get('/api/geocode', async (c) => {
   const q = (c.req.query('q') ?? '').trim();
   if (q.length < 2 || q.length > 200) throw new HttpError(400, 'err.query_length');
+  // Eerst per persoon (lager dan de gedeelde grens), dan de gedeelde grens voor Nominatim: zo houdt één persoon de
+  // zoekfunctie niet bezet voor iedereen.
+  const mine = c.env.GEOCODE_USER_LIMITER ? await c.env.GEOCODE_USER_LIMITER.limit({ key: 'geocode:' + c.get('auth').userId }) : { success: true };
+  if (!mine.success) throw new HttpError(429, 'err.geocode_busy');
   const { success } = await c.env.GEOCODE_LIMITER.limit({ key: 'geocode' });
   if (!success) throw new HttpError(429, 'err.geocode_busy');
   try {
@@ -1481,8 +1510,6 @@ export function cronSteps(env: Env, install: InstallPrefs, at: number): [string,
   ];
   // Mailwachtrij: elke minuut wat klaar staat (hooguit 50, oudste eerst); zonder mail is er niets te doen.
   if (mailEnabled(env)) steps.push(['mailwachtrij', () => deliverQueued(env, Date.now())]);
-  // Gekoppelde agenda's: elke 5 minuten een paar feeds die langer dan een uur niet opgehaald zijn.
-  if (calendarOn(env) && new Date(at).getUTCMinutes() % 5 === 0) steps.push(['agenda', () => refreshStaleFeeds(env, Date.now())]);
   if (new Date(at).getUTCMinutes() === 0) {
     steps.push(
       ['prullenbak', () => purgeTrash(env.DB, Date.now())],
@@ -1492,6 +1519,9 @@ export function cronSteps(env: Env, install: InstallPrefs, at: number): [string,
       ['bijlagen', () => sweepAttachments(env, Date.now())],
     );
   }
+  // Gekoppelde agenda's: elke 5 minuten een paar feeds die langer dan een uur niet opgehaald zijn. Als laatste: een
+  // agenda komt van buiten, dus een zware feed mag de stappen hierboven niet ophouden.
+  if (calendarOn(env) && new Date(at).getUTCMinutes() % 5 === 0) steps.push(['agenda', () => refreshStaleFeeds(env, Date.now())]);
   return steps;
 }
 

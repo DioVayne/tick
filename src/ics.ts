@@ -204,13 +204,22 @@ function timing(r: Raw, zone: string): { start: When; dur: number } | null {
   return { start, dur };
 }
 
+/** Hoogstens zoveel events uit één agenda; meer leest parseIcs niet. */
+export const MAX_RAW_EVENTS = 5000;
+/** Rekenbudget voor herhalingen in één agenda (stappen van occurrencesBetween, alle reeksen samen). */
+export const MAX_REPEAT_STEPS = 5000;
+/** Langer duurt een herhaalde afspraak voor het zoeken niet: anders telt een DTEND ver weg elke keer mee. */
+const MAX_SEARCH_DUR = 31 * 86_400_000;
+
 /**
  * De events die [from, to) raken, gesorteerd op begin, hoogstens `max`. `zone` is de zone van de gebruiker, voor hele
- * dagen en tijden zonder zone. Geannuleerde en "vrij"-events (TRANSP:TRANSPARENT) tellen niet.
+ * dagen en tijden zonder zone. Geannuleerde en "vrij"-events (TRANSP:TRANSPARENT) tellen niet. De agenda komt van
+ * buiten (en de cron deelt de rekentijd met iedereen): hoogstens MAX_RAW_EVENTS events en MAX_REPEAT_STEPS herhalingen.
  */
 export function parseIcs(text: string, o: { from: number; to: number; zone: string; max?: number }): CalEvent[] {
   const zone = validZone(o.zone) ? o.zone : 'UTC';
-  const raws = readEvents(text);
+  const raws = readEvents(text).slice(0, MAX_RAW_EVENTS);
+  let budget = MAX_REPEAT_STEPS;
   // Uitzonderingen per reeks: welke keren vervangen of geschrapt zijn.
   const replaced = new Map<string, Set<number>>();
   for (const r of raws) {
@@ -234,7 +243,7 @@ export function parseIcs(text: string, o: { from: number; to: number; zone: stri
       add(r.summary, start.ms, dur, start.allDay);
       continue;
     }
-    if (start.ms >= o.to) continue;
+    if (start.ms >= o.to || budget <= 0) continue;
     const tr = translateRule(r.rrule, start);
     if (!tr) continue;
     const skip = new Set(replaced.get(r.uid) ?? []);
@@ -246,8 +255,10 @@ export function parseIcs(text: string, o: { from: number; to: number; zone: stri
     }
     const iso = new Date(start.ms).toISOString();
     const times = inTz(start.zone, () => (tr.count === null
-      ? occurrencesBetween(tr.rule, iso, o.from - dur, o.to, 400)
-      : occurrencesBetween(tr.rule, iso, start.ms, o.to, Math.min(tr.count, 1000))));
+      ? occurrencesBetween(tr.rule, iso, o.from - Math.min(dur, MAX_SEARCH_DUR), o.to, Math.min(400, budget))
+      : occurrencesBetween(tr.rule, iso, start.ms, o.to, Math.min(tr.count, 1000, budget))));
+    // Elke gevonden keer is een stap; een lege uitkomst kost er ook een.
+    budget -= Math.max(times.length, 1);
     for (const ms of times) if (!skip.has(ms)) add(r.summary, ms, dur, start.allDay);
   }
   out.sort((a, b) => a.start - b.start || a.end - b.end);

@@ -14,7 +14,7 @@ import org.json.JSONArray;
 
 /**
  * tick://pair?code=…&base=…: de PWA geeft een eenmalige koppelcode en haar adres door (vanuit de app, of vanuit de
- * browser op de telefoon). Is het adres nieuw of anders, dan vraagt de app eerst of dat klopt. Doorzichtig: de app
+ * browser op de telefoon). Is het adres nieuw of anders, of is de app al gekoppeld, dan vraagt de app eerst of dat klopt. Doorzichtig: de app
  * wisselt de code op de achtergrond in voor een sleutel, vraagt zo nodig om locatie, meldingen en de batterij
  * (PairSteps) en sluit; daarna staat de TWA (of de browser) er weer. Mislukt het, dan toont de PWA zelf een knop om het opnieuw te proberen.
  */
@@ -38,7 +38,19 @@ public class PairActivity extends Activity {
             return;
         }
         if (TickAddress.sameOrigin(current, base)) {
-            redeem(code, base, false);
+            // Nog niet gekoppeld: meteen. Al gekoppeld: eerst vragen. Een koppellink kan ook van een ander komen (een
+            // webpagina, een bericht) en zou de app anders stil aan diens account hangen.
+            if (Prefs.token(this).isEmpty()) {
+                redeem(code, base, false);
+                return;
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.pair_relink_title)
+                    .setMessage(getString(R.string.pair_relink_text, TickAddress.host(base)))
+                    .setPositiveButton(R.string.pair_confirm_ok, (dlg, w) -> redeem(code, base, false))
+                    .setNegativeButton(android.R.string.cancel, (dlg, w) -> finish())
+                    .setOnCancelListener(dlg -> finish())
+                    .show();
             return;
         }
         // Een andere (of eerste) Tick: eerst vragen. Zo kan een willekeurige link de app niet naar een andere server sturen.

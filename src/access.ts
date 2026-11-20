@@ -87,15 +87,15 @@ export type ShareInfo = {
 export async function shareInfo(db: D1Database, userId: string, taskId?: string, open = false): Promise<Map<string, ShareInfo>> {
   // Vanaf de (weinige) deelrijen werken, niet vanaf alle taken van de eigenaar: shares zijn altijd op een hoofdtaak.
   const scope = taskId ? 's.task_id = ?2' : `(t.user_id = ?1 OR s.task_id IN ${SHARED_TO_ME})`;
-  type Row = { id: string; task_id: string; to_user: string; status: 'pending' | 'accepted'; name: string; email: string | null; owner_id: string; owner_name: string };
+  type Row = { id: string; task_id: string; to_user: string; status: 'pending' | 'accepted'; name: string; email: string | null; owner_id: string; owner_name: string; by_email: number };
   const stmts = [db.prepare(
-    'SELECT s.id, s.task_id, s.to_user, s.status, u.name, u.email, o.id AS owner_id, o.name AS owner_name FROM task_shares s ' +
+    'SELECT s.id, s.task_id, s.to_user, s.status, u.name, u.email, o.id AS owner_id, o.name AS owner_name, s.by_email FROM task_shares s ' +
     "JOIN users u ON u.id = s.to_user JOIN tasks t ON t.id = s.task_id JOIN users o ON o.id = t.user_id WHERE s.mode = 'shared' AND " + scope +
     ' ORDER BY s.created_at, s.id',
   ).bind(userId, ...(taskId ? [taskId] : []))];
   if (open) {
     stmts.push(db.prepare(
-      "SELECT e.id, e.task_id, 'mail:' || e.id AS to_user, 'pending' AS status, e.email AS name, e.email, o.id AS owner_id, o.name AS owner_name " +
+      "SELECT e.id, e.task_id, 'mail:' || e.id AS to_user, 'pending' AS status, e.email AS name, e.email, o.id AS owner_id, o.name AS owner_name, 1 AS by_email " +
       "FROM email_invites e JOIN users o ON o.id = e.from_user WHERE e.from_user = ?1 AND e.mode = 'shared' AND e.task_id IS NOT NULL AND e.expires_at > ?2" +
       (taskId ? ' AND e.task_id = ?3' : '') + ' ORDER BY e.created_at, e.id',
     ).bind(userId, new Date().toISOString(), ...(taskId ? [taskId] : [])));
@@ -108,8 +108,10 @@ export async function shareInfo(db: D1Database, userId: string, taskId?: string,
     let info = out.get(r.task_id);
     if (!info) out.set(r.task_id, info = { owner: { id: r.owner_id, name: r.owner_name }, members: [] });
     const pending = open && r.status === 'pending';
-    // Openstaand op een openbare Tick: adres en `mail:<share_id>`, met of zonder account erachter.
-    info.members.push({ share_id: r.id, user_id: pending ? `mail:${r.id}` : r.to_user, name: pending ? r.email ?? r.name : r.name, status: r.status });
+    // Openstaand op een openbare Tick: het getypte adres en `mail:<share_id>`, met of zonder account erachter. Gekozen op
+    // naam (by_email = 0): de naam, want het adres typte de eigenaar niet en mag hij niet leren.
+    const shown = pending && r.by_email ? r.email ?? r.name : r.name;
+    info.members.push({ share_id: r.id, user_id: pending ? `mail:${r.id}` : r.to_user, name: shown, status: r.status });
   }
   // Voor een taak waar je alleen ontvanger bent zonder toegang (scope met taskId) hoort er niets in.
   if (taskId) {

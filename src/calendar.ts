@@ -193,6 +193,11 @@ export async function refreshStaleFeeds(env: Env, now = Date.now()): Promise<num
   const cutoff = new Date(now - CRON_STALE_MS).toISOString();
   const { results } = await env.DB.prepare('SELECT * FROM calendar_feeds WHERE fetched_at IS NULL OR fetched_at < ? ORDER BY fetched_at LIMIT ?')
     .bind(cutoff, CRON_BATCH).all<FeedRow>();
+  // Eerst als opgehaald markeren: loopt een feed vast (of breekt de cron af), dan komt hij niet elke keer vooraan.
+  if (results.length) {
+    await env.DB.prepare('UPDATE calendar_feeds SET fetched_at = ? WHERE id IN (SELECT value FROM json_each(?))')
+      .bind(new Date(now).toISOString(), JSON.stringify(results.map((f) => f.id))).run();
+  }
   const zones = new Map<string, string>();
   for (const f of results) {
     let zone = zones.get(f.user_id);

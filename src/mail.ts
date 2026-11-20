@@ -142,10 +142,21 @@ export async function recipientHash(email: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** Standaard voor `MAIL_DAILY_MAX`: net onder de 100 per dag van het gratis plan van Resend. */
+const MAIL_DAILY_DEFAULT = 90;
+
+/** `MAIL_DAILY_MAX` als geheel getal (0 = geen grens), anders 90. */
+export function mailDailyMax(env: Pick<Env, 'MAIL_DAILY_MAX'>): number {
+  const raw = env.MAIL_DAILY_MAX?.trim() ?? '';
+  const n = /^\d+$/.test(raw) ? Number(raw) : NaN;
+  return Number.isSafeInteger(n) ? n : MAIL_DAILY_DEFAULT;
+}
+
 /**
- * Reserveert een plek voor een mail aan `userId`, binnen de grenzen per account (per soort) en per ontvanger (als
- * opgegeven); er is geen grens voor heel Tick. Eén INSERT … SELECT … WHERE, zodat twee gelijktijdige aanvragen niet
- * allebei slagen. Ruimt oude rijen op. Een volle ontvanger telt als `'account_limit'`.
+ * Reserveert een plek voor een mail aan `userId`, binnen de grenzen per account (per soort), per ontvanger (als
+ * opgegeven) en voor heel Tick (`MAIL_DAILY_MAX` per 24 uur, zodat anonieme aanmeldingen het mailtegoed van de eigenaar
+ * niet opmaken). Eén INSERT … SELECT … WHERE, zodat twee gelijktijdige aanvragen niet allebei slagen. Ruimt oude rijen
+ * op. Elke volle grens telt als `'account_limit'`: de mail gaat dan niet weg.
  */
 export async function reserveMail(db: D1Database, env: Env, kind: string, userId: string, now = Date.now(), o: MailLimits = {}):
   Promise<{ id: string } | 'account_limit'> {
@@ -154,15 +165,17 @@ export async function reserveMail(db: D1Database, env: Env, kind: string, userId
   const perDay = o.perDay ?? ACCOUNT_PER_DAY;
   const hash = o.recipient ? await recipientHash(o.recipient) : null;
   const perRecipient = o.recipientPerDay ?? 1;
+  const kinds = JSON.stringify(MAIL_KINDS);
   const [, insert] = await db.batch([
     db.prepare('DELETE FROM mail_log WHERE sent_at < ?').bind(iso(now - 2 * DAY)),
     db.prepare(`INSERT INTO mail_log (id, kind, user_id, sent_at, recipient_hash) SELECT ?1, ?2, ?3, ?4, ?8
       WHERE (SELECT COUNT(*) FROM mail_log WHERE user_id = ?3 AND kind = ?2 AND sent_at > ?5) = 0
         AND (SELECT COUNT(*) FROM mail_log WHERE user_id = ?3 AND kind = ?2 AND sent_at > ?6) < ?7
-        AND (?8 IS NULL OR (SELECT COUNT(*) FROM mail_log WHERE kind = ?2 AND recipient_hash = ?8 AND sent_at > ?6) < ?9)`)
-      .bind(id, kind, userId, iso(now), iso(now - gap), iso(now - DAY), perDay, hash, perRecipient),
+        AND (?8 IS NULL OR (SELECT COUNT(*) FROM mail_log WHERE kind = ?2 AND recipient_hash = ?8 AND sent_at > ?6) < ?9)
+        AND (?10 = 0 OR (SELECT COUNT(*) FROM mail_log WHERE kind IN (SELECT value FROM json_each(?11)) AND sent_at > ?6) < ?10)`)
+      .bind(id, kind, userId, iso(now), iso(now - gap), iso(now - DAY), perDay, hash, perRecipient, mailDailyMax(env), kinds),
   ]);
-  // De enige weigeringen zijn de grenzen per account en per ontvangend adres.
+  // De enige weigeringen zijn de grenzen per account, per ontvangend adres en voor heel Tick.
   if (insert.meta.changes !== 1) return 'account_limit';
   // Een gereserveerde mail wordt altijd verstuurd (de wachtrij): hier al kijken of het aantal van vandaag hoog wordt.
   background(warnMailCount(env, now));

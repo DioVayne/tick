@@ -66,7 +66,8 @@ export async function copiesFor(db: D1Database, userId: string, rows: Access[], 
   if (invited.length) {
     stmts.push(db.prepare(
       // Op een openbare Tick als e-mailadres, met de uitnodigingen aan adressen zonder account erbij (zie shareInfo).
-      `SELECT task_id, name FROM (SELECT s.task_id, ${open ? 'u.email' : 'u.name'} AS name, s.created_at, s.id FROM task_shares s ` +
+      // Gekozen op naam (by_email = 0): de naam, niet een adres dat de eigenaar niet typte.
+      `SELECT task_id, name FROM (SELECT s.task_id, ${open ? 'CASE WHEN s.by_email = 1 THEN u.email ELSE u.name END' : 'u.name'} AS name, s.created_at, s.id FROM task_shares s ` +
       "JOIN users u ON u.id = s.to_user WHERE s.mode = 'copy' AND s.status = 'pending' AND s.task_id IN (SELECT value FROM json_each(?1)) " +
       (open ? "UNION ALL SELECT e.task_id, e.email, e.created_at, e.id FROM email_invites e WHERE e.mode = 'copy' " +
         'AND e.task_id IN (SELECT value FROM json_each(?1)) AND e.expires_at > ?2 ' : '') +
