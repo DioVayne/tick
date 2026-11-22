@@ -45,6 +45,20 @@ export async function enablePush(reg, { timeoutMs = ASK_TIMEOUT_MS } = {}) {
 }
 
 /**
+ * Aanzetten en meteen een testmelding sturen: de route van "Aanzetten en testmelding sturen" in Instellingen en van de
+ * knop in de balk "Zet meldingen aan" (pushnudge.js). In de Android-app hooguit 10 s wachten: daar kan de vraag hangen.
+ * Gooit een Error met een leesbare tekst als aanzetten mislukt.
+ * @param {ServiceWorkerRegistration | null} reg
+ * @param {boolean} inApp
+ * @returns {Promise<boolean>} of de testmelding is verstuurd
+ */
+export async function turnOnAndTest(reg, inApp) {
+  await enablePush(reg, { timeoutMs: inApp ? 10_000 : undefined });
+  const r = await request('POST', '/api/push/test', {});
+  return !!r.ok;
+}
+
+/**
  * Meldt deze browser af, bij de server en in de browser zelf. De browser meldt zich ook af als de server faalt
  * (anders blijven er meldingen komen, bijvoorbeeld na uitloggen); de fout van de server gaat daarna door.
  */

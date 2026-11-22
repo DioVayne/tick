@@ -9,6 +9,7 @@ import { closeCalendar, hideCalendar, isCalendarOpen, openCalendar, refreshCalen
 import { closeSettings, hideSettings, isSettingsOpen, openSettings, paintMe } from './settingsview.js';
 import { closeHelp, hideHelp, isHelpOpen, openHelp } from './help.js';
 import { closeManager, hideManager, isManagerOpen, openManager, refreshManager } from './manager.js';
+import { startPushNudge } from './pushnudge.js';
 import { closeDrawer, onListContext, selectDone, selectList, selectTrash, setupSidebar } from './sidebar.js';
 import { init, lists, load, on, refreshInvites, state } from './store.js';
 import { parseHash } from './route.js';
@@ -153,6 +154,7 @@ initAndroidApp(params, { openDevices: () => openSettings() }); // haalt ?app en 
 const updateLocationBar = startLocationBar({ hasLocationTasks: () => state.open.some((t) => t.location), openDevices: () => openSettings() });
 on('change', updateLocationBar);
 startVerifyBar();
+startPushNudge();
 startDriveMode();
 if (params.has('add')) $('#add-title').focus();
 // Uit een uitnodigingsmelding: de balk met Accepteren en Weigeren in beeld.

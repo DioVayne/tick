@@ -37,6 +37,8 @@ To see which tasks the number stands for, look at the top of the list: a bar **D
 ## Notifications on your devices
 Turn notifications on per device under **⚙ Settings → Notifications**, and use *Send test notification* to check.
 
+Save a reminder on a device where notifications are still off, and a bar appears at the top of your list: *Notifications are off*. **Turn on notifications** does the same as *Turn on and send test notification* in Settings. If your phone or browser blocks notifications, the bar explains where to allow them instead. **Not now** hides it on this device for 30 days; once notifications are on, it does not come back. If you turned notifications off yourself in Settings, the bar leaves you alone. A place reminder only brings up the bar in the Android app, because only the app notifies you at a place. In an Android work profile, the bar and the permission are separate from your personal profile.
+
 - **Android:** the [Android app](android.md) shows notifications as Tick, and adds place reminders.
 - **iPhone and iPad:** notifications only work when Tick is on the home screen: Share → *Add to Home Screen*, then open Tick from there. See [iPhone and iPad](iphone.md).
 - **Desktop:** any modern browser.

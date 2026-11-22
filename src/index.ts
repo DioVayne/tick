@@ -693,6 +693,12 @@ function normRemind(v: unknown, z: Zone): string | null {
 // testFeatures ook voor de Android-app (Features.java), die /config.js niet leest.
 app.get('/api/config', (c) => c.json({ vapidPublicKey: c.env.VAPID_PUBLIC_KEY, testFeatures: testFeatures(c.env) }));
 
+/** PLAY_STORE_URL als het een https-link is, anders null (dan toont de app geen link). */
+const playStoreUrl = (env: Env): string | null => {
+  const url = env.PLAY_STORE_URL?.trim() ?? '';
+  return /^https:\/\/\S+$/.test(url) ? url : null;
+};
+
 // Instellingen voor de PWA als module, zodat de service worker ze met de shell cachet (offline de juiste taal en zone).
 app.get('/config.js', async (c) => {
   const { timeZone, reminderTime, weekStart, defaultLocale, driveMode, tickmanager, reviewNewDays, reviewSeenDays } = c.get('prefs');
@@ -703,6 +709,8 @@ app.get('/config.js', async (c) => {
     attachments: !!c.env.FILES, maxUploadMb: maxUpload(c.env) / 1024 / 1024,
     maxAccountMb: c.env.FILES && maxAccount(c.env) !== null ? maxAccount(c.env)! / 1024 / 1024 : null,
     calendarFeeds: calendarOn(c.env), testFeatures: testFeatures(c.env),
+    // Link naar Google Play in de plekdialoog buiten de Android-app; alleen een https-link, anders niets.
+    playStoreUrl: playStoreUrl(c.env),
     openSignup: openSignup(c.env), emailVerified: !!user.email_verified_at, verifyBy: verifyBy(c.env, user),
     // Wachttekst bij de bevestigingsbalk: alleen op een openbare Tick, en alleen als er mails wachten.
     mailDelayed: openSignup(c.env) && !user.email_verified_at ? await mailBacklog(c.env.DB).catch(() => false) : false,

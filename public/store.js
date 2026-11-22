@@ -29,7 +29,7 @@ export const state = {
   serverLists: [], extraLists: /** @type {string[]} */ ([]), offline: false, pending: 0,
 };
 
-const listeners = { change: [], error: [] };
+const listeners = { change: [], error: [], reminder: [] };
 export const on = (event, fn) => listeners[event].push(fn);
 const changed = () => listeners.change.forEach((fn) => fn());
 const report = (msg) => listeners.error.forEach((fn) => fn(msg));
@@ -227,6 +227,11 @@ export function toHttp(op) {
 
 async function mutate(op) {
   await enqueue(op);
+  // Een eigen wijziging die een herinnering op tijd of plek zet: de balk "Zet meldingen aan" (pushnudge.js) kijkt mee.
+  if ((op.type === 'create' || op.type === 'update') && (op.body.remind_at || op.body.location)) {
+    const place = !!op.body.location;
+    listeners.reminder.forEach((fn) => fn({ place }));
+  }
   return load();
 }
 

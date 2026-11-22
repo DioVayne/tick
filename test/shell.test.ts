@@ -1,7 +1,8 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it, vi } from 'vitest';
 import { STRINGS } from '../public/i18n.js';
-import { BASE, call, callAs, createUser } from './helpers';
+import { BASE, call, callAs, callWith, createUser } from './helpers';
+import type { Env } from '../src/index';
 const D1Prepare = env.DB.prepare;
 
 describe('instellingen en vertaalde shell', () => {
@@ -17,6 +18,14 @@ describe('instellingen en vertaalde shell', () => {
     expect(text).toContain('"reminderTime":"09:00"');
     expect(text).toContain('"weekStart":"mon"');
     expect(text).toContain('"defaultLocale":"en"');
+  });
+
+  it('/config.js: playStoreUrl alleen met een https-link in PLAY_STORE_URL', async () => {
+    const u = await createUser();
+    const cfg = async (url?: string) => (await (await callWith({ ...env, PLAY_STORE_URL: url } as Env, '/config.js', { cookie: u.cookie })).text());
+    expect(await cfg(undefined)).toContain('"playStoreUrl":null');
+    expect(await cfg('javascript:alert(1)')).toContain('"playStoreUrl":null');
+    expect(await cfg(' https://play.google.com/store/apps/details?id=nl.ticktodo.app ')).toContain('"playStoreUrl":"https://play.google.com/store/apps/details?id=nl.ticktodo.app"');
   });
 
   it('/config.js vereist inlog', async () => {

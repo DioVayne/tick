@@ -3,6 +3,8 @@ import { t } from './i18n.js';
 import { ask } from './dialog.js';
 import { MAX_PLACES, PHONE_MAX, RADIUS, deletePlace, formatRadius, geocode, loadPlaces, placesOf, renamePlace, savePlace, updatePlace } from './places.js';
 import { el, toast } from './render.js';
+import { inAndroidApp } from './next.js';
+import CONFIG from './settings.js';
 
 // Schermvullend kaartscherm om een plek voor een taak te kiezen, of (vanuit de instellingen) een favoriete plek toe te
 // voegen of te wijzigen. De pin staat vast in het midden; je schuift de kaart eronder.
@@ -131,6 +133,10 @@ function buildScreen(L, { loc, place, watched = 0 }, resolve) {
   const othersBox = el('div', { class: 'chips favs others', role: 'group', 'aria-label': t('map.also_at') });
   const othersSec = el('section', { class: 'mapsec', hidden: true }, el('h3', { class: 'maph' }, t('map.also_at')), othersBox);
   const multiNote = el('p', { class: 'mapnote', hidden: true });
+  // Buiten de Android-app: zeggen dat plekmeldingen alleen via de app op een Android-telefoon komen (zie places.md en
+  // "Wat werkt waar" op de website). De link naar Google Play alleen als PLAY_STORE_URL is ingesteld.
+  const webNote = inAndroidApp() ? null : el('p', { class: 'mapnote mapweb' }, t('map.web_note'),
+    CONFIG.playStoreUrl ? [' ', el('a', { href: CONFIG.playStoreUrl, target: '_blank', rel: 'noopener' }, t('map.web_play'))] : null);
   const limitNote = el('p', { class: 'mapnote warn', hidden: true });
   const actions = managing
     ? [el('button', { type: 'button', onclick: saveManaged }, t('map.save')),
@@ -155,7 +161,7 @@ function buildScreen(L, { loc, place, watched = 0 }, resolve) {
         managing ? null : el('section', { class: 'mapsec' },
           el('h3', { class: 'maph' }, t('map.when')),
           el('div', { class: 'seg', role: 'group', 'aria-label': t('map.when') }, enterBtn, exitBtn),
-          whenNote, multiNote),
+          whenNote, webNote, multiNote),
         managing ? null : othersSec,
         el('section', { class: 'mapsec' },
           el('h3', { class: 'maph' }, el('span', {}, t('map.radius')), radiusValue),

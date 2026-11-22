@@ -3,7 +3,7 @@
 A task can have a place: Tick notifies you when you **arrive** there or when you **leave**. The shopping list at the supermarket, the parcel as you step out the door.
 
 > [!NOTE]
-> Place reminders need the [Android app](android.md). You can set a place in the web app on any device, but only an Android phone with the app notifies you.
+> Place reminders need the [Android app](android.md). You can set a place in the web app on any device, but only an Android phone with the app notifies you. Outside the app, the map says so under *When to notify*, with a link to Google Play when the Tick you use has one (`PLAY_STORE_URL`, see [SETUP.md](../SETUP.md)).
 
 ## Setting a place
 Open a task and tap **Location**. A map opens:

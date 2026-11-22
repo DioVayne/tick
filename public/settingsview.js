@@ -6,7 +6,7 @@ import { connectApp, isInApp, openPhoneSettings } from './androidapp.js';
 import { ask } from './dialog.js';
 import { icon } from './icons.js';
 import { dateLocale, errorText, t } from './i18n.js';
-import { disablePush, enablePush, forgetPush, pushState, resubscribeLocale } from './push.js';
+import { disablePush, forgetPush, pushState, resubscribeLocale, turnOnAndTest } from './push.js';
 import { getTimeZone, setDefaultTime, setTimeZone, setWeekStart } from './repeat.js';
 import { $, el, render, toast } from './render.js';
 import CONFIG, { setLanguage } from './settings.js';
@@ -595,9 +595,7 @@ async function paintPush() {
     sw.disabled = true;
     test.disabled = true;
     try {
-      await enablePush(S.reg, { timeoutMs: isInApp() ? 10_000 : undefined });
-      const r = await request('POST', '/api/push/test', {});
-      if (r.ok) toast(t('set.push_on_test'), 'ok'); else toast(t('push.enabled_test_missing'));
+      if (await turnOnAndTest(S.reg, isInApp())) toast(t('set.push_on_test'), 'ok'); else toast(t('push.enabled_test_missing'));
     } catch (e) { toast(t('push.setup_failed', { reason: e.message })); }
     paintPush();
     paintDevices();

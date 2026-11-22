@@ -89,7 +89,8 @@
     // Only for a Tick open to strangers (like a hosted app): "true" lets anyone create an account on /signup, and
     // accounts can no longer see each other (sharing goes by email address). Set up email (above) first. Default off.
     // "OPEN_SIGNUP": "true",
-    // With OPEN_SIGNUP: a Google Play link for the invitation email (optional).
+    // A Google Play link (optional, https): the invitation email mentions it (with OPEN_SIGNUP), and the place dialog
+    // in the web app links to it, because place reminders need the Android app. Leave it out while the app is not in Play.
     // "PLAY_STORE_URL": "https://play.google.com/store/apps/details?id=com.example.tick",
     // With OPEN_SIGNUP: with how many different people one account can share (default 3; the administrator has no limit).
     // "FREE_SHARE_PEOPLE": "3",
