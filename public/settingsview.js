@@ -1,6 +1,7 @@
 // Instellingenpagina: een eigen weergave in de middenkolom (#main), met een eigen stap in de geschiedenis zodat
 // terug (ook de Android-terugknop) en Esc hem sluiten. 📱-delen gelden voor dit apparaat en werken offline;
 // 🏠-delen gelden voor de hele installatie en tonen offline de laatst bekende waarde, uitgeschakeld.
+import { demoAdminRow } from './demoadmin.js';
 import { Offline, request } from './api.js';
 import { connectApp, isInApp, openPhoneSettings } from './androidapp.js';
 import { ask } from './dialog.js';
@@ -1247,7 +1248,9 @@ function paintAdvanced() {
   const lang = select(t('set.default_lang'), [['en', t('set.lang_en')], ['nl', t('set.lang_nl')]], s.defaultLocale,
     (v) => save({ defaultLocale: v }, () => { lang.value = current().defaultLocale; }), off);
   // De standaardtaal geldt voor de hele installatie: alleen de beheerder.
-  paint('advanced', CONFIG.isAdmin ? row(t('set.default_lang'), lang, homeNote(t('set.default_lang_note'))) : null);
+  paint('advanced', CONFIG.isAdmin ? row(t('set.default_lang'), lang, homeNote(t('set.default_lang_note'))) : null,
+    // Demo zonder account (public/demoadmin.js): alleen de beheerder, alleen met DEMO = "true".
+    CONFIG.demoAdmin ? demoAdminRow(row, seg) : null);
   paintWebhook();
   paintKeys();
 }

@@ -42,6 +42,7 @@ import { mcpApi } from './mcp';
 import { calendarApi, calendarOn, refreshStaleFeeds } from './calendar';
 import { firstFree, futureBusy } from './clash';
 import { testFeatures } from './features';
+import { demoAllowed, demoApi, demoGate, demoPages, purgeDemos } from './demo';
 import { taskIcs } from '../public/ics.js';
 
 export type Env = {
@@ -107,6 +108,10 @@ export type Env = {
   CALENDAR_FEEDS?: string;
   /** Testfeatures die op deze Tick aanstaan, komma's ertussen (src/features.ts); leeg = geen. */
   TEST_FEATURES?: string;
+  /** "true" = demo zonder account op /demo (src/demo.ts); standaard uit. De beheerder zet hem daarnaast aan/uit in Instellingen. */
+  DEMO?: string;
+  /** Hoogstens zoveel demo's tegelijk (standaard 200). */
+  DEMO_MAX?: string;
 };
 
 export type TaskRow = {
@@ -225,6 +230,7 @@ for (const [path, lang] of [['/terms', 'en'], ['/voorwaarden', 'nl']] as const) 
 app.route('/', linkPages);
 app.route('/', forgotPages);
 app.route('/', signupPages);
+app.route('/', demoPages);
 for (const path of loginAssets) app.get(path, asset);
 
 app.post('/login', async (c) => {
@@ -288,6 +294,8 @@ app.use('*', async (c, next) => {
     await touchLastSeen(c.env.DB, user);
     c.set('auth', auth);
     c.set('user', user);
+    // Een demo-account (src/demo.ts) mag alleen taken en lijsten; verlopen = uitgelogd.
+    if (user.demo_until || user.demo_of) await demoGate(c, user);
     if (asset) {
       await next();
       return;
@@ -331,6 +339,7 @@ app.route('/admin', adminPages);
 app.route('/api', attachmentsApi);
 app.route('/api/background', backgroundApi);
 app.route('/api/calendar', calendarApi);
+app.route('/api/demo', demoApi);
 // De MCP-tools roepen deze app zelf aan (met dezelfde sleutel); pas bij een request, dus alle routes staan er dan.
 app.route('/mcp', mcpApi((req, env, ctx) => Promise.resolve(app.fetch(req, env, ctx))));
 
@@ -715,6 +724,8 @@ app.get('/config.js', async (c) => {
     playStoreUrl: playStoreUrl(c.env),
     openSignup: openSignup(c.env), emailVerified: !!user.email_verified_at, verifyBy: verifyBy(c.env, user),
     // Wachttekst bij de bevestigingsbalk: alleen op een openbare Tick, en alleen als er mails wachten.
+    // Demo zonder account (src/demo.ts): de demobalk, en voor de beheerder het blok in Instellingen.
+    demo: !!user.demo_until, demoAdmin: user.role === 'admin' && demoAllowed(c.env),
     mailDelayed: openSignup(c.env) && !user.email_verified_at ? await mailBacklog(c.env.DB).catch(() => false) : false,
   };
   return c.body(`export default ${JSON.stringify(config)};
@@ -836,7 +847,7 @@ app.post('/api/tasks', async (c) => {
   return c.json(await createTask(c.env, userId, c.get('prefs'), b, 'app', id ?? undefined), 201);
 });
 
-async function createTask(env: Env, userId: string, z: Zone, b: Record<string, unknown>, source: string, id: string = crypto.randomUUID()) {
+export async function createTask(env: Env, userId: string, z: Zone, b: Record<string, unknown>, source: string, id: string = crypto.randomUUID()) {
   const title = cleanTitle(b.title);
   const description = cleanDescription(b.description);
   const parent = await checkParent(env.DB, userId, b.parent_id);
@@ -1529,6 +1540,8 @@ export function cronSteps(env: Env, install: InstallPrefs, at: number): [string,
       ['bijlagen', () => sweepAttachments(env, Date.now())],
     );
   }
+  // Demo's zonder account: elke 10 minuten de verlopen weg (src/demo.ts).
+  if (new Date(at).getUTCMinutes() % 10 === 0) steps.push(['demo', () => purgeDemos(env, Date.now())]);
   // Gekoppelde agenda's: elke 5 minuten een paar feeds die langer dan een uur niet opgehaald zijn. Als laatste: een
   // agenda komt van buiten, dus een zware feed mag de stappen hierboven niet ophouden.
   if (calendarOn(env) && new Date(at).getUTCMinutes() % 5 === 0) steps.push(['agenda', () => refreshStaleFeeds(env, Date.now())]);

@@ -17,6 +17,7 @@ import { normName } from './lists.js';
 import { startBadge, updateBadge } from './badge.js';
 import { startDriveMode } from './driveview.js';
 import { startVerifyBar } from './verifybar.js';
+import { startDemoBar } from './demobar.js';
 import { onAgenda, startAgenda } from './agenda.js';
 
 on('change', () => { render(); refreshCalendar(); updateBadge(); });
@@ -154,6 +155,7 @@ initAndroidApp(params, { openDevices: () => openSettings() }); // haalt ?app en 
 const updateLocationBar = startLocationBar({ hasLocationTasks: () => state.open.some((t) => t.location), openDevices: () => openSettings() });
 on('change', updateLocationBar);
 startVerifyBar();
+startDemoBar();
 startPushNudge();
 startDriveMode();
 if (params.has('add')) $('#add-title').focus();

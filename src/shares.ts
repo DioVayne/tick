@@ -30,7 +30,7 @@ async function hasCopyInGroup(db: D1Database, taskId: string, userId: string): P
 export async function findRecipient(db: D1Database, to: string): Promise<string> {
   const byEmail = await db.prepare('SELECT id FROM users WHERE email = ?').bind(to).first<{ id: string }>();
   if (byEmail) return byEmail.id;
-  const { results } = await db.prepare('SELECT id FROM users WHERE lower(trim(name)) = lower(?) LIMIT 2').bind(to).all<{ id: string }>();
+  const { results } = await db.prepare('SELECT id FROM users WHERE lower(trim(name)) = lower(?) AND demo_until IS NULL LIMIT 2').bind(to).all<{ id: string }>();
   if (!results.length) throw new HttpError(404, 'err.share_user_unknown');
   if (results.length > 1) throw new HttpError(409, 'err.share_user_ambiguous');
   return results[0].id;
@@ -39,7 +39,7 @@ export async function findRecipient(db: D1Database, to: string): Promise<string>
 /** De ontvanger uit een verzoek: uit de keuzelijst komt een id (`to_user`), getypt een naam of e-mailadres (`to`). */
 export async function recipientOf(db: D1Database, b: Record<string, unknown>): Promise<string> {
   if (typeof b.to_user === 'string' && b.to_user) {
-    const u = await db.prepare('SELECT id FROM users WHERE id = ?').bind(b.to_user).first<{ id: string }>();
+    const u = await db.prepare('SELECT id FROM users WHERE id = ? AND demo_until IS NULL').bind(b.to_user).first<{ id: string }>();
     if (!u) throw new HttpError(404, 'err.share_user_unknown');
     return u.id;
   }
@@ -150,7 +150,7 @@ sharesApi.post('/', async (c) => {
  */
 sharesApi.get('/people', async (c) => {
   if (openSignup(c.env)) return c.json(await knownPeople(c.env.DB, c.get('auth').userId));
-  const { results } = await c.env.DB.prepare('SELECT id, name FROM users WHERE id != ? ORDER BY lower(name), id')
+  const { results } = await c.env.DB.prepare('SELECT id, name FROM users WHERE id != ? AND demo_until IS NULL ORDER BY lower(name), id')
     .bind(c.get('auth').userId).all<{ id: string; name: string }>();
   return c.json(results);
 });

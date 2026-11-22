@@ -36,6 +36,7 @@ LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM push_subscriptions GROUP BY user_i
 LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM api_keys WHERE kind = 'full' GROUP BY user_id) k ON k.user_id = u.id
 LEFT JOIN (SELECT owner_id, COUNT(*) AS n FROM shared_lists GROUP BY owner_id) so ON so.owner_id = u.id
 LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM list_members WHERE role = 'member' AND status = 'accepted' GROUP BY user_id) sj ON sj.user_id = u.id
+WHERE u.demo_until IS NULL -- demo's (src/demo.ts) tellen niet mee
 ORDER BY u.created_at, u.id`;
 
 usersApi.get('/', async (c) => {

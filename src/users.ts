@@ -18,6 +18,10 @@ export type User = {
   verify_deadline: string | null;
   /** Geschorst door de beheerder (na een melding); NULL = niet geschorst. */
   suspended_at: string | null;
+  /** Demo zonder account (src/demo.ts): tot wanneer hij loopt; NULL = een gewoon account. */
+  demo_until: string | null;
+  /** Het meespeel-account ("Sam") van deze demo; NULL bij elk ander account. */
+  demo_of: string | null;
 };
 
 export async function getUser(db: D1Database, id: string): Promise<User | null> {

@@ -297,4 +297,4 @@ export function verifyPage(locale: string | undefined, done: boolean): string {
 }
 
 /** Bestanden die de loginpagina zonder inlog nodig heeft. */
-export const loginAssets = ['/login.css', '/login.js', '/accountlink.js', '/forgot.js', '/signup.js', '/icon.svg', '/next.js', '/theme.js'];
+export const loginAssets = ['/login.css', '/login.js', '/accountlink.js', '/forgot.js', '/signup.js', '/icon.svg', '/next.js', '/theme.js', '/demo.js'];

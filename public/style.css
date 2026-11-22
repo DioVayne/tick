@@ -1174,3 +1174,8 @@ html[data-drive] body.task-open .dback { min-height: 52px; }
 .set-cal-help summary { cursor: pointer; color: var(--link); font-size: .875rem; }
 .set-cal-help p { margin: 6px 0; color: var(--muted); font-size: .8125rem; }
 .share-dialog .share-now { margin: 0; font-size: .875rem; color: inherit; line-height: 1.4; }
+
+/* Demo zonder account (public/demobar.js): het formulier "Je taken houden". */
+.demo-keep input { display: block; width: 100%; box-sizing: border-box; margin: 0 0 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.demo-keep .error { margin: 0 0 12px; color: var(--danger); }
+.demo-keep .error:empty { display: none; }

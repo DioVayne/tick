@@ -10,6 +10,7 @@ How to use Tick, one page per topic. Installing Tick is in [SETUP.md](../SETUP.m
 | [Linking your calendar](calendar.md) | Linking Google, Outlook or iCloud with a secret iCal address, free moments in the reminder menu and the Tickmanager, busy blocks in the calendar, a notification when a new appointment clashes with a task, Add to calendar |
 | [Places](places.md) | Reminders on arrival or on leaving, more than one place per task, favorite places, the radius, notifying again, on time on the road, the safety net and the log |
 | [Driving mode](driving-mode.md) | The bigger, simpler view while you drive, Not now and Never, adding and editing on the road |
+| [Trying Tick without an account](demo.md) | The demo: sample tasks and a shared list, what a demo can't do, how long it lasts, keeping your tasks, turning it on |
 | [Creating your own account](signup.md) | On an open Tick: making an account, confirming your email address, the 30 days, sharing by email |
 | [Reporting and blocking](reporting.md) | On an open Tick: reporting a shared task, list, file or invitation, blocking someone, what the administrator can do |
 | [Sharing](sharing.md) | Accounts for your household and a forgotten password, sharing a list, sharing a task or a copy, sharing on an open Tick, seeing how far others are |

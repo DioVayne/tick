@@ -60,4 +60,5 @@ How many accounts this Tick has and how many were active this week, with **All a
 ## Advanced
 - **Keys:** for the Android app (*full*) and automations (*inbox*). A key is shown once; revoke it here and it stops working at once. A phone or automation key can never change your password, settings or keys.
 - **Default language** of this Tick (administrator): for the fallback webhook and devices without a language.
+- **Demo without an account** (administrator, only when the Tick offers a demo): off, or how long a demo lasts, and how many are running. See [Trying Tick without an account](demo.md).
 - **Fallback webhook:** see [Integrations](integrations.md#fallback-webhook).

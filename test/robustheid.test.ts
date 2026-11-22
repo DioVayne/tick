@@ -221,7 +221,9 @@ describe('cron-schema', () => {
     const { installPrefsFrom } = await import('../src/prefs');
     const names = (iso: string) => cronSteps(env, installPrefsFrom(env), Date.parse(iso)).map(([n]) => n);
     // De agenda als laatste: een feed van buiten mag het opruimen niet ophouden.
-    expect(names('2030-01-01T10:00:30Z')).toEqual(['reminders', 'verlopen', 'prullenbak', 'onbevestigd', 'bijlagen', 'agenda']);
+    expect(names('2030-01-01T10:00:30Z')).toEqual(['reminders', 'verlopen', 'prullenbak', 'onbevestigd', 'bijlagen', 'demo', 'agenda']);
+    // Demo's zonder account (src/demo.ts) elke 10 minuten.
+    expect(names('2030-01-01T10:10:00Z')).toEqual(['reminders', 'verlopen', 'demo', 'agenda']);
     // Gekoppelde agenda's elke 5 minuten (een paar feeds per keer).
     expect(names('2030-01-01T10:05:00Z')).toEqual(['reminders', 'verlopen', 'agenda']);
     expect(names('2030-01-01T10:03:00Z')).toEqual(['reminders', 'verlopen']);
