@@ -3,7 +3,7 @@ import type { AppEnv, TaskRow } from './index';
 import { HttpError } from './errors';
 import { sessionOnly } from './guards';
 import { normalizeRule, zonedParts } from '../public/repeat.js';
-import { inZone, localToUtcIso } from './time';
+import { inZone } from './time';
 import type { User } from './users';
 import { readTickTickText, tickTickRows } from '../public/ticktick.js';
 import { attachStmts, listOf, type ListRef } from './sharedlists';
@@ -214,7 +214,7 @@ export async function mergeTasks(db: D1Database, userId: string, tasks: unknown[
  * taak daar (`attachStmts`): anders ziet alleen jij hem. Niet een taak die al per taak gedeeld is; die kan er ook
  * niet in gesleept worden. Per taak één batch-deel, zodat een taak nooit half in de lijst komt.
  */
-async function attachImported(db: D1Database, userId: string, ids: string[]): Promise<void> {
+export async function attachImported(db: D1Database, userId: string, ids: string[]): Promise<void> {
   const refs = new Map<string, ListRef | null>();
   const parts: D1PreparedStatement[][] = [];
   for (let i = 0; i < ids.length; i += 50) {
@@ -233,37 +233,3 @@ async function attachImported(db: D1Database, userId: string, ids: string[]): Pr
   const per = Math.max(1, Math.floor(50 / (parts[0]?.length || 1)));
   for (let i = 0; i < parts.length; i += per) await db.batch(parts.slice(i, i + per).flat());
 }
-
-const MAX_TICKTICK = 10 * 1024 * 1024;
-/** TickTick-backup (CSV) importeren; bestaande ids blijven ongemoeid (INSERT OR IGNORE). */
-importApi.post('/ticktick', async (c) => {
-  const text = await c.req.text();
-  if (text.length > MAX_TICKTICK) throw new HttpError(400, 'err.ticktick_invalid');
-  const rows = readTickTickText(text);
-  if (!rows.length) throw new HttpError(400, 'err.ticktick_invalid');
-  const userId = c.get('auth').userId;
-  // Een hele dag krijgt de eigen "Herinnering zonder tijd" in de eigen zone (localToUtcIso, synchroon in tickTickRows).
-  const prefs = c.get('prefs');
-  const { tasks: rowsOut, skipped, repeats } = tickTickRows(rows, tickTickPrefix(c.get('user')), {
-    allDay: (ymd: string) => localToUtcIso(ymd, prefs),
-  });
-  const db = c.env.DB;
-  // Een ouder die al bij een ander account bestaat (INSERT OR IGNORE laat hem daar staan), of die niet in dit bestand
-  // en niet bij jezelf staat: dan wordt het kind een gewone taak, anders hangt het onder de taak van een ander.
-  const inFile = new Set(rowsOut.map((t) => t.id));
-  const parentOwners = await ownersOf(db, 'tasks', [...new Set(rowsOut.map((t) => t.parent_id).filter((p): p is string => !!p))]);
-  const tasks = rowsOut.map((t) => {
-    if (!t.parent_id) return t;
-    const owner = parentOwners.get(t.parent_id);
-    const ok = owner === userId || (owner === undefined && inFile.has(t.parent_id));
-    return ok ? t : { ...t, parent_id: null };
-  });
-  const stmts = tasks.map((t) => db.prepare(
-    `INSERT OR IGNORE INTO tasks (id, user_id, title, description, list, parent_id, position, remind_at, notified, done, done_at, source, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'import', ?, ?)`,
-  ).bind(t.id, userId, t.title, t.description, t.list, t.parent_id, t.position, t.remind_at, t.notified ? 1 : 0, t.done ? 1 : 0, t.done_at,
-    t.created_at, t.created_at));
-  const added = await insertBatched(db, stmts);
-  // Een tijd die al voorbij is, staat als gemeld (`notified`): anders komt er na de import een melding per verlopen taak.
-  return c.json({ added, existing: tasks.length - added, skipped, repeats });
-});

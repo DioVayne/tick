@@ -72,7 +72,7 @@ An orange button shows how many are waiting. Pinned, repeating and planned tasks
   </tr>
 </table>
 
-And: a [home-screen widget](docs/android.md) on Android, pinning, search, notes in markdown with checklists, a trash that keeps tasks for 30 days, a daily nudge for overdue tasks, [TickTick import](docs/settings.md), English and Dutch, and an [MCP server](docs/integrations.md) so Claude can manage your tasks.
+And: a [home-screen widget](docs/android.md) on Android, pinning, search, notes in markdown with checklists, a trash that keeps tasks for 30 days, a daily nudge for overdue tasks, [import from TickTick and Todoist](docs/importing.md), English and Dutch, and an [MCP server](docs/integrations.md) so Claude can manage your tasks.
 
 <sub>The screenshots use made-up demo tasks. How they are made: [docs/screenshots/src](docs/screenshots/src/README.md).</sub>
 
@@ -98,7 +98,7 @@ Claude asks a few questions (language, time zone, Android app or not), sets ever
 - **[Driving mode](docs/driving-mode.md):** when Tick notices you are driving, a bigger, simpler view with nearby tasks first; *Not now* or *Never*.
 - **[Android app](docs/android.md):** place reminders (on time on the road too), a resizable home-screen widget (tick off with 3 seconds to undo, quick add, a list or *Today* per widget), notifications as Tick instead of Chrome, and an update check. [Download it](https://github.com/DioVayne/tick/releases/latest/download/Tick.apk).
 - **[iPhone and iPad](docs/iphone.md):** Tick on your home screen from Safari, with notifications (iOS 16.4 or newer); no reminders by place.
-- **[Settings](docs/settings.md):** theme, colour theme (such as *Retro 70s*) and your own background photo, text size, language per device, time zone, password, keys, your devices, backup and restore, and TickTick import. After the install you rarely need the config again.
+- **[Settings](docs/settings.md):** theme, colour theme (such as *Retro 70s*) and your own background photo, text size, language per device, time zone, password, keys, your devices, backup and restore, and importing from TickTick or Todoist. After the install you rarely need the config again.
 - **[Integrations](docs/integrations.md):** an MCP server so Claude can manage your tasks, an inbox API for automations, a Home Assistant package, and a fallback webhook.
 - Desktop layout with a sidebar and a detail panel; a full-screen task view on mobile. Confetti when you tick off a task (not when your device asks for reduced motion).
 - English and Dutch; your own time zone.

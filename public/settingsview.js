@@ -26,6 +26,7 @@ import { reloadBusy } from './agenda.js';
 import { summarize } from './accounts.js';
 import { accountsPage } from './accountsview.js';
 import { newsBlock } from './whatsnew.js';
+import { importRows } from './importview.js';
 
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
@@ -1061,25 +1062,6 @@ async function restoreBackup() {
   } catch (e) { toast(t('set.restore_failed', { reason: offlineText(e) })); }
 }
 
-async function importTickTick() {
-  const text = await pickFile('.csv,text/csv');
-  if (text === null) return;
-  try {
-    let res;
-    try {
-      res = await fetch('/api/import/ticktick', { method: 'POST', headers: { 'content-type': 'text/csv' }, body: text });
-    } catch { throw new Offline(t('set.online_only')); }
-    if (res.status === 401) { location.href = '/login'; return; }
-    const r = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(errorText(r, res.statusText));
-    const done = t('set.ticktick_done', { added: fmtNum(r.added), existing: fmtNum(r.existing), skipped: fmtNum(r.skipped) });
-    // Herhalingen komen niet mee (public/ticktick.js); zeg hoeveel taken er een hadden.
-    const repeats = !(r.repeats > 0) ? '' : r.repeats === 1 ? t('set.ticktick_repeats_one') : t('set.ticktick_repeats_count', { count: fmtNum(r.repeats) });
-    toast(repeats ? `${done}. ${repeats}` : done, 'ok');
-    load();
-  } catch (e) { toast(t('set.ticktick_failed', { reason: offlineText(e) })); }
-}
-
 // ---------- 🚚 Verhuizen (src/move.ts) ----------
 
 /** Oude Tick: een verhuiscode maken en tonen, met de stappen voor de nieuwe Tick. */
@@ -1216,7 +1198,7 @@ function paintData() {
   paint('data',
     row(t('set.backup'), btn(t('set.download'), downloadBackup, { disabled: off }), homeNote(t('set.backup_note') + (CONFIG.attachments ? ' · ' + t('set.backup_no_files') : ''))),
     row(t('set.restore'), btn(t('set.choose_file'), restoreBackup, { disabled: off }), homeNote(t('set.restore_note'))),
-    row(t('set.ticktick'), btn(t('set.import_csv'), importTickTick, { disabled: off }), homeNote(t('set.ticktick_note'))),
+    ...importRows({ row, btn, homeNote, modal, off, fmtNum, fmtDate, offlineText }),
     row(t('set.move_in'), btn(t('set.move_in_button'), moveIn, { disabled: off }), homeNote(t('set.move_in_note'))),
     row(t('set.move'), btn(t('set.move_button'), moveOut, { disabled: off }), homeNote(t('set.move_note'))),
     CONFIG.attachments ? storageRow() : null);

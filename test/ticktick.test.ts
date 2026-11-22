@@ -32,7 +32,7 @@ afterEach(async () => {
 
 describe('TickTick-import', () => {
   it('importeert, en opnieuw importeren laat bestaande taken met rust', async () => {
-    expect(await json<any>(await importCsv(CSV))).toEqual({ added: 4, existing: 0, skipped: 1, repeats: 0 });
+    expect(await json<any>(await importCsv(CSV))).toMatchObject({ added: 4, existing: 0, skipped: 1 });
     const parent = await get('ttA1');
     expect(parent).toMatchObject({
       title: 'Ouder, met komma', description: 'Regel 1\nregel (2)\nstap', list: 'Werk', parent_id: null, position: 1024,
@@ -44,7 +44,7 @@ describe('TickTick-import', () => {
     expect(await get('ttA5')).toBeNull();
 
     await call('/api/tasks/ttA1', { method: 'PATCH', json: { title: 'Gewijzigd in Tick' } });
-    expect(await json<any>(await importCsv(CSV))).toEqual({ added: 0, existing: 4, skipped: 1, repeats: 0 });
+    expect(await json<any>(await importCsv(CSV))).toMatchObject({ added: 0, existing: 4, skipped: 1 });
     expect((await get('ttA1')).title).toBe('Gewijzigd in Tick');
   });
 
@@ -88,12 +88,12 @@ describe('TickTick-import', () => {
       row({ Title: 'Verlopen', 'Due Date': '2020-01-05T10:00:00+0000', taskId: 'A10', projectKind: 'TASK' }),
       row({ Title: 'Straks', 'Due Date': '2099-01-05T10:00:00+0000', taskId: 'A11', projectKind: 'TASK' }),
     ].join('\n');
-    expect(await json<any>(await importCsv(csv))).toEqual({ added: 2, existing: 0, skipped: 0, repeats: 0 });
+    expect(await json<any>(await importCsv(csv))).toMatchObject({ added: 2, existing: 0, skipped: 0 });
     expect(await get('ttA10')).toMatchObject({ remind_at: '2020-01-05T10:00:00.000Z', notified: 1 });
     expect(await get('ttA11')).toMatchObject({ remind_at: '2099-01-05T10:00:00.000Z', notified: 0 });
   });
 
-  it('hele dag: de eigen zone en "Herinnering zonder tijd"; herhalingen worden geteld', async () => {
+  it('hele dag: de eigen zone en "Herinnering zonder tijd"; een herhaling komt mee', async () => {
     const b = await createUser();
     await userSettingStmt(env.DB, b.id, 'timezone', 'America/New_York').run();
     await userSettingStmt(env.DB, b.id, 'reminder_time', '07:30').run();
@@ -104,7 +104,7 @@ describe('TickTick-import', () => {
       row({ Title: 'Wekelijks', 'Due Date': '2099-01-22T10:00:00+0000', Repeat: 'RRULE:FREQ=WEEKLY;INTERVAL=1', taskId: 'A13', projectKind: 'TASK' }),
     ].join('\n');
     const res = await callAs(b.cookie, '/api/import/ticktick', { method: 'POST', body: csv });
-    expect(await json<any>(res)).toEqual({ added: 2, existing: 0, skipped: 0, repeats: 1 });
+    expect(await json<any>(res)).toMatchObject({ added: 2, existing: 0, skipped: 0, lost: { repeats: 0 } });
     const p = `tt${b.id.slice(0, 8)}-`;
     // 21 januari 07:30 in New York (-05:00) = 12:30 UTC
     expect(await get(`${p}A12`)).toMatchObject({ remind_at: '2099-01-21T12:30:00.000Z', notified: 0 });

@@ -1179,3 +1179,9 @@ html[data-drive] body.task-open .dback { min-height: 52px; }
 .demo-keep input { display: block; width: 100%; box-sizing: border-box; margin: 0 0 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
 .demo-keep .error { margin: 0 0 12px; color: var(--danger); }
 .demo-keep .error:empty { display: none; }
+
+/* Importeren uit een andere app (importview.js): knoppen naast elkaar en het voorbeeld. */
+.set-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.import-preview ul { margin: 4px 0 10px; padding-left: 20px; }
+.import-preview h3 { font-size: .95rem; margin: 12px 0 2px; }
+.import-lists { max-height: 30vh; overflow: auto; }

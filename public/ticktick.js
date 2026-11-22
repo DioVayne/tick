@@ -1,9 +1,9 @@
-// TickTick-backup (CSV) inlezen. Geen imports: gedeeld door de Worker en scripts/import-ticktick.mjs.
+// TickTick-backup (CSV) inlezen. Puur: gedeeld door de Worker, het voorbeeld in de app (importview.js) en scripts/import-ticktick.mjs.
+import { noLoss, oneLevel, rruleToTick, withLines } from './importkit.js';
 
-/**
- * @typedef {{ id: string, title: string, description: string, list: string, parent_id: string | null,
- *   position: number, remind_at: string | null, notified: boolean, done: boolean, done_at: string | null, created_at: string }} ImportTask
- */
+/** @typedef {import('./importkit.js').ImportTask} ImportTask */
+/** @typedef {import('./importkit.js').Lost} Lost */
+/** @typedef {import('./importkit.js').Priority} Priority */
 
 /** Eenvoudige CSV-parser: aanhalingstekens, komma's en regeleinden binnen velden.
  * @param {string} s
@@ -143,6 +143,9 @@ const clean = (s) => s.replace(/\r\n?/g, '\n').replace(/\\([()\[\]#*_>.\-!+])/g,
 /** TickTick-status: 0 open, 1 afgerond, 2 gearchiveerd (oudere exports: 2 afgerond), -1 "niet doen". */
 const DONE_STATUS = new Set(['1', '2', '-1']);
 
+/** TickTick-prioriteit: 5 hoog, 3 middel, 1 laag, 0 geen. @type {Record<string, Priority>} */
+const PRIORITY = { 5: 'high', 3: 'medium', 1: 'low' };
+
 /**
  * Zet TickTick-rijen om naar taken, ouders eerst (voor de foreign key).
  *
@@ -150,52 +153,49 @@ const DONE_STATUS = new Set(['1', '2', '-1']);
  * die de hele dag duurt (`Is All Day`), wordt die dag op de standaardtijd: `opts.allDay(JJJJ-MM-DD)` als de aanroeper
  * hem meegeeft (de Worker: zone en "Herinnering zonder tijd" van de gebruiker), anders 09:00 in de `Timezone` van de rij.
  * Een tijd die al voorbij is, krijgt `notified: true`: na de import komt er dan niet voor elke verlopen taak een melding.
- * Afgeronde taken krijgen geen tijd. `Repeat` komt niet mee; `repeats` telt de open taken die er een hadden.
+ * Afgeronde taken krijgen geen tijd.
+ *
+ * Herhaling: een `Repeat` die Tick kent (rruleToTick) wordt `repeat_rule` van een open hoofdtaak met een tijd; anders
+ * telt hij in `lost.repeats`. Prioriteit: een regel onderaan de notitie (`opts.priority` geeft de tekst, in de taal van
+ * de gebruiker), en een open taak met hoge prioriteit wordt vastgepind. Subtaken van subtaken hangen onder de hoofdtaak.
  * @param {Record<string, string>[]} all
  * @param {string} [prefix] voorvoegsel voor de ids
- * @param {{ allDay?: (ymd: string) => string | null, now?: number }} [opts]
- * @returns {{ tasks: ImportTask[], skipped: number, repeats: number }} */
+ * @param {{ allDay?: (ymd: string) => string | null, now?: number, priority?: (p: Priority) => string }} [opts]
+ * @returns {{ tasks: ImportTask[], skipped: number, lost: Lost }} */
 export function tickTickRows(all, prefix = 'tt', opts = {}) {
   const now = opts.now ?? Date.now();
   const kept = all.filter((r) => r.projectKind === 'TASK' || !r.projectKind);
   const rows = kept.filter((r) => r.Title.trim());
   const skipped = kept.length - rows.length;
-  let repeats = 0;
+  const lost = noLoss();
   const ids = new Set(rows.map((r) => r.taskId));
-  // Een ouder zonder titel wordt niet geïmporteerd; zijn kinderen krijgen dan parent null.
-  /** @param {Record<string, string>} r */
-  const parentOf = (r) => (r.parentId && ids.has(r.parentId) ? r.parentId : '');
   /** @type {ImportTask[]} */
-  const tasks = [];
-  // Op diepte: een rij komt pas na zijn ouder (foreign key).
-  const emitted = new Set();
-  let rest = rows;
-  while (rest.length) {
-    let ready = rest.filter((r) => !parentOf(r) || emitted.has(parentOf(r)));
-    const cycle = ready.length === 0; // kringverwijzing: los maken
-    if (cycle) ready = rest;
-    for (const r of ready) {
-      emitted.add(r.taskId);
-      const done = DONE_STATUS.has(r.Status);
-      const created = iso(r['Created Time']) ?? new Date().toISOString();
-      const remind = done ? null : dueOf(r, opts.allDay);
-      if (!done && r.Repeat?.trim()) repeats++;
-      tasks.push({
-        id: `${prefix}${r.taskId}`,
-        title: r.Title,
-        description: clean(r.Content),
-        list: r['List Name'] || 'Inbox',
-        parent_id: parentOf(r) && !cycle ? `${prefix}${parentOf(r)}` : null,
-        position: Number(r.Order) || 0,
-        remind_at: remind,
-        notified: remind !== null && Date.parse(remind) <= now,
-        done,
-        done_at: done ? iso(r['Completed Time']) ?? created : null,
-        created_at: created,
-      });
+  const tasks = rows.map((r) => {
+    const done = DONE_STATUS.has(r.Status);
+    const created = iso(r['Created Time']) ?? new Date().toISOString();
+    const remind = done ? null : dueOf(r, opts.allDay);
+    let rule = null;
+    if (!done && r.Repeat?.trim()) {
+      rule = remind ? rruleToTick(r.Repeat) : null;
+      if (!rule) lost.repeats++;
     }
-    const set = new Set(ready);
-    rest = rest.filter((r) => !set.has(r));
-  }
-  return { tasks, skipped, repeats };
+    const prio = PRIORITY[r.Priority?.trim() ?? ''];
+    return {
+      id: `${prefix}${r.taskId}`,
+      title: r.Title,
+      description: withLines(clean(r.Content), [prio && opts.priority ? opts.priority(prio) : '']),
+      list: r['List Name'] || 'Inbox',
+      // Een ouder zonder titel wordt niet geïmporteerd; zijn kinderen worden dan hoofdtaak.
+      parent_id: r.parentId && ids.has(r.parentId) ? `${prefix}${r.parentId}` : null,
+      position: Number(r.Order) || 0,
+      remind_at: remind,
+      notified: remind !== null && Date.parse(remind) <= now,
+      done,
+      done_at: done ? iso(r['Completed Time']) ?? created : null,
+      created_at: created,
+      repeat_rule: rule,
+      pinned: prio === 'high' && !done,
+    };
+  });
+  return { tasks: oneLevel(tasks, lost), skipped, lost };
 }

@@ -77,16 +77,18 @@ describe('TickTick-import: vervaldatum zonder herinnering', () => {
     expect(one({ 'Due Date': 'morgen' }).remind_at).toBeNull();
   });
 
-  it('telt de open taken met een herhaling (die komt niet mee)', () => {
+  it('een herhaling die Tick kent komt mee; de rest telt als verloren', () => {
     const rows = [
       { ...base, Title: 'Elke week', taskId: 'R1', Repeat: 'RRULE:FREQ=WEEKLY;INTERVAL=1', 'Due Date': '2026-10-20T10:00:00+0000' },
       { ...base, Title: 'Klaar, herhaalde', taskId: 'R2', Repeat: 'RRULE:FREQ=DAILY', Status: '2' },
       { ...base, Title: '', taskId: 'R3', Repeat: 'RRULE:FREQ=DAILY' }, // zonder titel: niet geïmporteerd
       { ...base, Title: 'Gewoon', taskId: 'R4' },
+      { ...base, Title: 'Vijf keer', taskId: 'R5', Repeat: 'RRULE:FREQ=DAILY;COUNT=5', 'Due Date': '2026-10-20T10:00:00+0000' },
     ];
     const out = tickTickRows(rows, 'tt', { now: NOW });
-    expect(out.repeats).toBe(1);
-    expect(out.tasks.find((t) => t.id === 'ttR1')!.remind_at).toBe('2026-10-20T10:00:00.000Z');
+    expect(out.lost.repeats).toBe(1);
+    expect(out.tasks.find((t) => t.id === 'ttR1')).toMatchObject({ remind_at: '2026-10-20T10:00:00.000Z', repeat_rule: 'FREQ=WEEKLY' });
+    expect(out.tasks.find((t) => t.id === 'ttR5')).toMatchObject({ remind_at: '2026-10-20T10:00:00.000Z', repeat_rule: null });
     expect(out.skipped).toBe(1);
   });
 
@@ -94,6 +96,6 @@ describe('TickTick-import: vervaldatum zonder herinnering', () => {
     const { 'Is All Day': _a, Timezone: _z, Repeat: _r, ...old } = base;
     const out = tickTickRows([{ ...old, Title: 'Oud', taskId: 'O1', 'Due Date': '2026-10-20T10:00:00+0000' }], 'tt', { now: NOW });
     expect(out.tasks[0].remind_at).toBe('2026-10-20T10:00:00.000Z');
-    expect(out.repeats).toBe(0);
+    expect(out.lost.repeats).toBe(0);
   });
 });

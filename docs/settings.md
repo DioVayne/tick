@@ -52,9 +52,7 @@ How many accounts this Tick has and how many were active this week, with **All a
 - **Backup of all your tasks** (**Download**): a file with your own tasks and places (completed tasks included). Not included: settings, keys, tasks others shared with you, and the files of attachments.
 - **Restore a backup** (**Choose file**): shows what is in the file first, then merges by task: tasks in the file overwrite the same task here and deleted ones come back. Nothing is deleted.
 - **Get tasks from TickTick** (**Import .csv**): upload the CSV of a TickTick backup. Importing the same file again skips what is already there and keeps your changes. A row with a date Tick can't read is still imported, without that date.
-  - **Dates:** an open task with a due date gets that date as its reminder, also when it had no reminder in TickTick. A due date with a time keeps that time; an all-day due date lands on that day (as TickTick had it) at your **Reminder without a time**, in your own time zone. A due date that has already passed comes in as overdue, without a notification for each one. Completed tasks come in without a date.
-  - **Not imported:** repeat rules (the task comes in once, on its next due date; set the repeat again in Tick; after the import Tick says how many tasks had one), tags, priority, and notes (only tasks are imported).
-- **Move here from another Tick** and **Move to another Tick:** take your whole account to another Tick, with settings, attachments and calendars, using a moving code. See [Moving to another Tick](moving.md).
+- **Get tasks from another app** (**TickTick** or **Todoist**): pick the export of your old app. You see a preview of what comes in first, and **Undo last import** moves the whole import to the trash again. Repeats, notes and priority come along where Tick can. See [Moving from another app](importing.md).
 - **Storage** (only when attachments are set up): how much room your photos and files take, and the limit if your Tick sets one (`MAX_ACCOUNT_MB`). When it is full, delete some attachments to make room.
 
 ## Advanced
