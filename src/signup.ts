@@ -15,6 +15,7 @@ import { inBackground, type Locale } from './push';
 import { background, tellOwner } from './telegram';
 import { getUser, type User } from './users';
 import { deleteAccount } from './users-api';
+import { tryWelcomeTask } from './welcome';
 
 /**
  * Een openbare Tick (`OPEN_SIGNUP` = "true"): iedereen kan zelf een account maken, accounts zien elkaar niet, en delen
@@ -95,6 +96,7 @@ signupPages.post('/signup', async (c) => {
   // aanmeldingen), pas als het account er is en zonder dat de aanmelder erop wacht.
   const hundred = Math.floor(slot.count / 100) * 100;
   if (hundred >= 100) background(tellOwner(c.env, 'signups', { count: String(hundred) }, 'once', now));
+  await tryWelcomeTask(c.env, id, c.get('lang')); // de uitleg-taak met subtaken (src/welcome.ts)
   if (join) await claimInvites(c.env, id, { inviteId: join.id });
   if (confirmed) await claimEmailInvites(c.env, id); // ook uitnodigingen van anderen aan dit adres
   c.header('Set-Cookie', await sessionCookie(c.env, (await getUser(db, id))!));

@@ -6,6 +6,7 @@ import { sessionCookie } from './auth';
 import { linkPage } from './login';
 import { hashPassword } from './password';
 import { getUser } from './users';
+import { tryWelcomeTask } from './welcome';
 import { markVerified } from './signup';
 import { hashKey, newKey } from './keys';
 
@@ -86,6 +87,7 @@ linkPages.post('/invite/:code', async (c) => {
     if (/UNIQUE constraint failed/.test((e as Error).message)) throw new HttpError(409, 'err.email_taken');
     throw e;
   }
+  await tryWelcomeTask(c.env, id, c.get('lang')); // de uitleg-taak met subtaken (src/welcome.ts)
   c.header('Set-Cookie', await sessionCookie(c.env, (await getUser(db, id))!));
   return c.json({ ok: true }, 201);
 });

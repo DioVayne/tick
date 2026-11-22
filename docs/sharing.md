@@ -3,7 +3,7 @@
 ## Accounts
 One Tick can have several accounts, for example everyone in your household. Each person has their own tasks, lists, places and settings.
 
-The administrator (whoever installed Tick) invites people under **⚙ Settings → Accounts → + Invite someone**. That gives a one-time link, valid for 7 days, to send by any app you like. The other person opens it and picks a name, email address and password.
+The administrator (whoever installed Tick) invites people under **⚙ Settings → Accounts → + Invite someone**. That gives a one-time link, valid for 7 days, to send by any app you like. The other person opens it and picks a name, email address and password. Their new account starts with the task **Welcome to Tick 👋** in the Inbox, with subtasks that explain the main features (see [Creating your own account](signup.md#creating-an-account)).
 
 Forgot a password? If the administrator has set up email, tap **Forgot password?** on the login page and enter your email address: you get an email with a link (valid for 1 hour) to choose a new password. No email? Check your spam folder (when it is very busy, an email can take a while to arrive); you can ask for a new link after 5 minutes. Otherwise the administrator makes a **Reset link** (valid for 1 hour) at that account and sends it to you. Email links are only for members, not for the administrator. The administrator's own lost password is covered under "Good to know" in [SETUP.md](../SETUP.md#good-to-know).
 
