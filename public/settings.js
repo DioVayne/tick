@@ -62,6 +62,6 @@ if (document.documentElement.lang !== getLocale()) applyI18n(document);
  * @type {{ locale: 'en' | 'nl', defaultLocale: 'en' | 'nl', timeZone: string, reminderTime: string, weekStart: 'mon' | 'sun', driveMode: boolean,
  *   tickmanager: boolean, reviewNewDays: number, reviewSeenDays: number,
  *   androidPackage: string | null, playStoreUrl?: string | null, userId: string, userName: string, isAdmin: boolean,
- *   openSignup: boolean, emailVerified: boolean, verifyBy: string | null, mailDelayed?: boolean }}
+ *   openSignup: boolean, emailVerified: boolean, verifyBy: string | null, mailDelayed?: boolean, newsSeen?: string | null }}
  */
 export default CONFIG;

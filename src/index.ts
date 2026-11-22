@@ -701,9 +701,11 @@ const playStoreUrl = (env: Env): string | null => {
 
 // Instellingen voor de PWA als module, zodat de service worker ze met de shell cachet (offline de juiste taal en zone).
 app.get('/config.js', async (c) => {
-  const { timeZone, reminderTime, weekStart, defaultLocale, driveMode, tickmanager, reviewNewDays, reviewSeenDays } = c.get('prefs');
+  const { timeZone, reminderTime, weekStart, defaultLocale, driveMode, tickmanager, reviewNewDays, reviewSeenDays, newsSeen } = c.get('prefs');
   const user = c.get('user');
   const config = {
+    // Wat is er nieuw: zonder rij telt de dag van aanmelden, zodat een nieuw account geen stipje krijgt voor oudere versies.
+    newsSeen: newsSeen ?? (user.created_at ? user.created_at.slice(0, 10) : null),
     locale: c.get('lang'), defaultLocale, timeZone, reminderTime, weekStart, driveMode, tickmanager, reviewNewDays, reviewSeenDays, androidPackage: c.env.ANDROID_PACKAGE || null,
     userId: user.id, userName: user.name, isAdmin: user.role === 'admin',
     attachments: !!c.env.FILES, maxUploadMb: maxUpload(c.env) / 1024 / 1024,

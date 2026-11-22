@@ -24,6 +24,7 @@ import { setDriveMode } from './driveview.js';
 import { reloadBusy } from './agenda.js';
 import { summarize } from './accounts.js';
 import { accountsPage } from './accountsview.js';
+import { newsBlock } from './whatsnew.js';
 
 const RECENT_MS = 7 * 86_400_000;
 const MIN_PASSWORD = 8;
@@ -1354,6 +1355,7 @@ function build() {
   S.parts = {};
   const root = el('div', { id: 'settings', class: 'settings' },
     el('button', { type: 'button', class: 'set-back', onclick: () => closeSettings() }, t('set.back')),
+    el('div', { class: 'set-list set-news-list' }, newsBlock()),
     group(t('set.group_use'), displayBlock(), block('place', t('set.places'), 'places'),
       CONFIG.calendarFeeds ? block('calendar', t('set.calendar'), 'calendar') : null),
     group(t('set.group_you'),

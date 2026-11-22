@@ -37,6 +37,8 @@ export type UserPrefs = {
   reviewNewDays: number;
   /** Een al bekeken taak komt na zoveel dagen terug (1-365, standaard 30); rij `review_seen_days`. */
   reviewSeenDays: number;
+  /** Nieuwste versie van "Wat is er nieuw" (YYYY-MM-DD) die deze persoon zag (public/whatsnew.js); null = nog geen rij. */
+  newsSeen: string | null;
 };
 
 export type Prefs = InstallPrefs & UserPrefs;
@@ -56,6 +58,9 @@ export const validZone = (tz: string | undefined | null): tz is string => {
     return false;
   }
 };
+
+/** Een dag als YYYY-MM-DD. */
+export const validDay = (s: string | undefined | null): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
 export const validTime = (s: string | undefined | null): s is string => !!s && /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
 
@@ -111,6 +116,7 @@ export async function loadUserPrefs(env: Env, user: Pick<User, 'id' | 'role'>, r
     tickmanager: row.get('tickmanager') !== 'off',
     reviewNewDays: days(row.get('review_new_days'), 14),
     reviewSeenDays: days(row.get('review_seen_days'), 30),
+    newsSeen: validDay(row.get('news_seen')) ? row.get('news_seen')! : null,
   };
 }
 

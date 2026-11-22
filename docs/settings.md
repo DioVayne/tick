@@ -2,6 +2,9 @@
 
 Everything is under **⚙ Settings** in the sidebar. Your name at the top of the sidebar is a shortcut to **Account**: tap it and Settings opens with that part already open. Some settings belong to **this device** only, some to **you** (all your devices), and a few to the **whole Tick** (administrator only). Offline, the settings page opens but shows the last known values for what can only change online.
 
+## What's new
+At the top of Settings: what changed in Tick recently, per version (named after the day it went live), in a few short sentences, so you don't have to visit the website. While there is something you haven't seen yet, a dot shows next to **Settings** in the sidebar (on a phone: on the menu button) and next to **What's new**. Opening it removes the dot on all your devices. A new account starts without a dot: only versions after you signed up count as new.
+
 ## Display (this device)
 - **Language:** automatic, English or Nederlands; one tap switches. Error messages and the login page on this device follow it too. Notifications come in the language of the device they go to.
 - **Theme:** automatic, light or dark.

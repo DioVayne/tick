@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from './index';
 import { HttpError } from './errors';
 import { sessionOnly } from './guards';
-import { settingStmt, userSettingStmt, type Prefs } from './prefs';
+import { settingStmt, userSettingStmt, validDay, type Prefs } from './prefs';
 import { postWebhook } from './push';
 import { shiftWallClock } from './time';
 import { translate } from '../public/i18n.js';
@@ -14,9 +14,9 @@ const MAX_WEBHOOK = 2000;
 
 /** Het antwoord van de API; de URL uit FALLBACK_WEBHOOK is een secret en gaat nooit mee (alleen dat hij er is). */
 function view(p: Prefs) {
-  const { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background, driveMode, tickmanager, reviewNewDays, reviewSeenDays } = p;
+  const { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background, driveMode, tickmanager, reviewNewDays, reviewSeenDays, newsSeen } = p;
   const fallbackWebhook = fallbackFromEnv ? null : p.fallbackWebhook;
-  return { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackWebhook, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background, driveMode, tickmanager, reviewNewDays, reviewSeenDays };
+  return { timeZone, reminderTime, overdueTime, weekStart, defaultLocale, fallbackWebhook, fallbackFromEnv, fallbackOverride, fallbackEnvSet, background, driveMode, tickmanager, reviewNewDays, reviewSeenDays, newsSeen };
 }
 
 const validZone = (tz: unknown): tz is string => {
@@ -114,6 +114,12 @@ settingsApi.patch('/', async (c) => {
     if (typeof v !== 'number' || !Number.isInteger(v) || v < 1 || v > 365) throw new HttpError(400, 'err.invalid_review_days');
     next[field] = v;
     writes.push([key, String(v)]);
+  }
+  if ('newsSeen' in body) {
+    // "Wat is er nieuw" gezien (public/whatsnew.js): de datum van de nieuwste versie.
+    if (typeof body.newsSeen !== 'string' || !validDay(body.newsSeen)) throw new HttpError(400, 'err.invalid_news_seen');
+    next.newsSeen = body.newsSeen;
+    writes.push(['news_seen', body.newsSeen]);
   }
   if ('defaultLocale' in body) {
     if (c.get('user').role !== 'admin') throw new HttpError(403, 'err.admin_only');
