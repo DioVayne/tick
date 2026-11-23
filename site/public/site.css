@@ -463,7 +463,6 @@ table.www { width: 100%; border-collapse: collapse; font-size: 15px; line-height
   .stack { gap: 18px; }
   .site-head .bar { padding: 14px 16px; gap: 12px; }
   .logo { font-size: 20px; }
-  .head-cta { padding: 10px 14px; font-size: 14px; }
   .head-cta { display: none; }
   .hero .wrap { padding-top: 32px; padding-bottom: 72px; }
   .hero-copy { gap: 18px; }
