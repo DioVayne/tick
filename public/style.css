@@ -619,6 +619,8 @@ a.menu-item { display: block; text-decoration: none; }
 /* testfeature hatrigger: een trigger in het menu, met "laatst …" eronder */
 .ha-item { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; white-space: normal; }
 .ha-item svg { flex: none; width: 18px; height: 18px; color: #18bcf2; }
+.ha-person { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.dialog .ha-person input[type="checkbox"] { flex: none; width: 20px; height: 20px; min-height: 0; margin: 0; padding: 0; accent-color: var(--accent); }
 .ha-item small { order: 2; flex-basis: 100%; padding-left: 26px; color: var(--muted); font-weight: 400; font-size: .8125rem; }
 button.ghost.mgr-agenda { display: inline-flex; align-items: center; gap: 6px; border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--link); font-weight: 600; }
 

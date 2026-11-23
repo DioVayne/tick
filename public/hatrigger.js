@@ -72,7 +72,7 @@ export function haStep(task, { done, owner, opener, onChange }) {
           item.setAttribute('aria-checked', String(ids.has(trig.id)));
           save(task.id, [...ids], onChange);
         },
-      }, icon('bolt'), el('span', {}, trig.name), el('small', {}, trig.last ? t('hatrigger.last', { when: fmt(trig.last) }) : t('hatrigger.never')));
+      }, icon('bolt'), el('span', {}, trig.name), el('small', {}, trig.owner ? t('hatrigger.from', { name: trig.owner.name }) : trig.last ? t('hatrigger.last', { when: fmt(trig.last) }) : t('hatrigger.never')));
       return item;
     });
     return [

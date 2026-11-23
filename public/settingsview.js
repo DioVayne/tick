@@ -2,6 +2,8 @@
 // terug (ook de Android-terugknop) en Esc hem sluiten. 📱-delen gelden voor dit apparaat en werken offline;
 // 🏠-delen gelden voor de hele installatie en tonen offline de laatst bekende waarde, uitgeschakeld.
 import { demoAdminRow } from './demoadmin.js';
+import { haOn } from './hatrigger.js'; // testfeature hatrigger
+import { paintHaSettings } from './hatriggersettings.js'; // testfeature hatrigger
 import { Offline, request } from './api.js';
 import { connectApp, isInApp, openPhoneSettings } from './androidapp.js';
 import { ask } from './dialog.js';
@@ -303,6 +305,8 @@ function paintHome() {
   paintData();
   paintAdvanced();
   paintCalendar();
+  // testfeature hatrigger: het blok Home Assistant, met de bouwstenen van deze pagina.
+  if (haOn()) paintHaSettings({ paint: (...n) => paint('hatrigger', ...n), sub: S.parts['hatrigger-sub'], online: S.online, row, note, btn, modal, ago });
   if (S.regChecked) paintPush(); // de rij voor verlopen taken hangt aan de instellingen; ook zonder service worker
 }
 
@@ -1353,6 +1357,7 @@ function build() {
     group(t('set.group_admin'),
       CONFIG.isAdmin ? block('users', t('set.accounts'), 'accounts') : null,
       block('data', t('set.data'), 'data'),
+      haOn() ? block('bolt', t('hatrigger.settings'), 'hatrigger') : null, // testfeature hatrigger
       advancedBlock()));
   return root;
 }

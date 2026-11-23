@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { AppEnv, Env } from './index';
 import { HttpError } from './errors';
 import { testFeature } from './features';
+import { sessionOnly } from './guards';
 import { userSettingStmt } from './prefs';
 import { inBackground, notifyUser, reminderPayload, type Locale } from './push';
 import { translate } from '../public/i18n.js';
@@ -11,10 +12,14 @@ import { translate } from '../public/i18n.js';
  * het lijstje triggers ("Sam komt thuis", "Zon onder") met PUT /triggers en vuurt er een af met POST /fire. In het
  * taakpaneel kies je bij een taak een of meer triggers; de eerste die afgaat geeft één melding, net als een plek.
  * Daarna is de taak "gemeld" tot je op Opnieuw melden tikt, de triggers wijzigt, of een herhalende taak doorschuift.
+ * In Instellingen → Home Assistant deel je triggers met mensen met wie je al een lijst of taak deelt.
  *
- * Geen migratie (regel voor testfeatures): alles staat in twee rijen van `user_settings`:
+ * Geen migratie (regel voor testfeatures): alles staat in rijen van `user_settings`:
  * - `hatrigger:triggers`: [{ id, name, entity, last }] (HA schrijft het lijstje, `last` = laatst afgegaan);
  * - `hatrigger:tasks`: { taskId: { ids, fired, rep } } (`fired` = wanneer gemeld, `rep` = de keer van een herhalende taak);
+ *   een gedeelde trigger staat erin als `<eigenaar>.<trigger>`;
+ * - `hatrigger:share`: { all, per: { triggerId: [userId] } } met wie je je triggers deelt; de ontvanger ziet ze zonder
+ *   "laatst afgegaan" (dat zou verraden wanneer iemand thuiskomt);
  * - `hatrigger:seen`: wanneer HA (een full-sleutel) laatst iets liet horen. De integratie meldt zich elke 6 uur. Is dat
  *   langer dan STALE_DAYS geleden (integratie weg, sleutel ingetrokken), dan toont Tick de triggers niet meer; de rijen
  *   blijven staan, dus komt HA terug, dan is alles er weer.
@@ -23,6 +28,7 @@ export const HATRIGGER = 'hatrigger';
 const ROW_TRIGGERS = 'hatrigger:triggers';
 const ROW_TASKS = 'hatrigger:tasks';
 const ROW_SEEN = 'hatrigger:seen';
+const ROW_SHARE = 'hatrigger:share';
 export const STALE_DAYS = 21;
 /** Zo vaak hoogstens `seen` bijwerken: elke aanroep schrijven is zonde. */
 const SEEN_EVERY_MS = 60 * 60_000;
@@ -33,6 +39,9 @@ const MAX_NAME = 60;
 export type HaTrigger = { id: string; name: string; entity: string | null; last: string | null };
 export type HaTaskLink = { ids: string[]; fired: string | null; rep: string | null };
 type Links = Record<string, HaTaskLink>;
+/** Per trigger met wie hij gedeeld is, of alles met iedereen (`all`). Los van het lijstje, dat HA telkens overschrijft. */
+export type HaShare = { all: boolean; per: Record<string, string[]> };
+type Person = { id: string; name: string };
 
 async function readRow<T>(env: Env, userId: string, key: string, empty: T): Promise<T> {
   const row = await env.DB.prepare('SELECT value FROM user_settings WHERE user_id = ? AND key = ?').bind(userId, key).first<{ value: string }>();
@@ -41,10 +50,14 @@ async function readRow<T>(env: Env, userId: string, key: string, empty: T): Prom
 }
 const readTriggers = (env: Env, userId: string) => readRow<HaTrigger[]>(env, userId, ROW_TRIGGERS, []);
 const readLinks = (env: Env, userId: string) => readRow<Links>(env, userId, ROW_TASKS, {});
+const readShare = (env: Env, userId: string) => readRow<HaShare>(env, userId, ROW_SHARE, { all: false, per: {} });
 const writeTriggers = (env: Env, userId: string, list: HaTrigger[]) => userSettingStmt(env.DB, userId, ROW_TRIGGERS, list.length ? JSON.stringify(list) : null);
 const writeLinks = (env: Env, userId: string, links: Links) => userSettingStmt(env.DB, userId, ROW_TASKS, Object.keys(links).length ? JSON.stringify(links) : null);
 
 const validId = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(v);
+/** Een eigen trigger, of een gedeelde als `<eigenaar>.<trigger>`. */
+const validLinkId = (v: unknown): v is string => typeof v === 'string' && /^([0-9a-f-]{36}\.)?[A-Za-z0-9_-]{1,64}$/.test(v);
+const sharedId = (owner: string, triggerId: string) => `${owner}.${triggerId}`;
 
 /** Het lijstje van HA, schoon: geldige id's, een naam van 1 tot 60 tekens, elke id één keer, hoogstens 50. */
 export function cleanTriggers(raw: unknown, old: HaTrigger[]): HaTrigger[] {
@@ -66,6 +79,58 @@ export function cleanTriggers(raw: unknown, old: HaTrigger[]): HaTrigger[] {
 /** Staat de taak klaar om te melden? Nog niet gemeld, of een herhalende taak die sindsdien doorschoof. */
 export const armed = (link: HaTaskLink, repeatAt: string | null) => !link.fired || (!!repeatAt && repeatAt !== link.rep);
 
+/** Is HA te lang stil? Zonder `seen` (nog nooit met een sleutel, zoals lokaal testen) niet. */
+export const stale = (seen: string | null, now = Date.now()) => !!seen && now - Date.parse(seen) > STALE_DAYS * 86_400_000;
+
+// ---------- delen met huisgenoten ----------
+
+/**
+ * Met wie je mag delen: wie al een taak met je deelt (geaccepteerd, beide kanten op) of samen met jou in een gedeelde
+ * lijst zit. Wie de een de ander blokkeerde, valt af. De relatie is wederzijds.
+ */
+export async function partners(env: Env, userId: string): Promise<Person[]> {
+  return (await env.DB.prepare(
+    `SELECT id, name FROM users WHERE id != ?1 AND id IN (
+       SELECT to_user FROM task_shares WHERE from_user = ?1 AND status = 'accepted'
+       UNION SELECT from_user FROM task_shares WHERE to_user = ?1 AND status = 'accepted'
+       UNION SELECT m2.user_id FROM list_members m1 JOIN list_members m2 ON m2.list_id = m1.list_id
+         WHERE m1.user_id = ?1 AND m1.status = 'accepted' AND m2.status = 'accepted')
+     AND id NOT IN (SELECT blocked_id FROM blocks WHERE user_id = ?1 UNION SELECT user_id FROM blocks WHERE blocked_id = ?1)
+     ORDER BY name COLLATE NOCASE`,
+  ).bind(userId).all<Person>()).results;
+}
+
+/** Wie deze trigger krijgt: iedereen (alles gedeeld) of de gekozen mensen, altijd binnen de huidige partners. */
+const recipients = (share: HaShare, triggerId: string, ok: Set<string>) =>
+  (share.all ? [...ok] : (share.per[triggerId] ?? []).filter((id) => ok.has(id)));
+
+export type SharedTrigger = { id: string; name: string; entity: null; last: null; owner: Person };
+
+/** Triggers die anderen met mij delen, zonder "laatst afgegaan"; niet van iemand wiens HA al weken stil is. */
+async function sharedWithMe(env: Env, me: string): Promise<SharedTrigger[]> {
+  const mine = await partners(env, me);
+  if (!mine.length) return [];
+  const rows = (await env.DB.prepare(
+    'SELECT user_id, key, value FROM user_settings WHERE key IN (?, ?, ?) AND user_id IN (SELECT value FROM json_each(?))',
+  ).bind(ROW_TRIGGERS, ROW_SHARE, ROW_SEEN, JSON.stringify(mine.map((p) => p.id))).all<{ user_id: string; key: string; value: string }>()).results;
+  const out: SharedTrigger[] = [];
+  for (const owner of mine) {
+    const get = <T>(key: string, empty: T): T => {
+      const r = rows.find((x) => x.user_id === owner.id && x.key === key);
+      try { return r ? JSON.parse(r.value) as T : empty; } catch { return empty; }
+    };
+    const share = get<HaShare>(ROW_SHARE, { all: false, per: {} });
+    if (!share.all && !Object.values(share.per).some((ids) => ids.includes(me))) continue;
+    if (stale(get<string | null>(ROW_SEEN, null))) continue;
+    for (const t of get<HaTrigger[]>(ROW_TRIGGERS, [])) {
+      if (share.all || share.per[t.id]?.includes(me)) out.push({ id: sharedId(owner.id, t.id), name: t.name, entity: null, last: null, owner });
+    }
+  }
+  return out;
+}
+
+// ---------- routes ----------
+
 export const haTriggerApi = new Hono<AppEnv>();
 
 // Zonder de testfeature bestaat dit niet. Een sessie of een full-sleutel (de HA-integratie); inbox-sleutels komen hier
@@ -74,9 +139,6 @@ haTriggerApi.use('*', async (c, next) => {
   if (!testFeature(c.env, HATRIGGER)) throw new HttpError(404, 'err.not_found');
   await next();
 });
-
-/** Is HA te lang stil? Zonder `seen` (nog nooit met een sleutel, zoals lokaal testen) niet. */
-export const stale = (seen: string | null, now = Date.now()) => !!seen && now - Date.parse(seen) > STALE_DAYS * 86_400_000;
 
 // Een request met een full-sleutel is HA (of een ander script met die sleutel): onthoud dat hij er nog is.
 haTriggerApi.use('*', async (c, next) => {
@@ -89,11 +151,14 @@ haTriggerApi.use('*', async (c, next) => {
 });
 
 haTriggerApi.get('/', async (c) => {
-  const userId = c.get('auth').userId;
+  const auth = c.get('auth');
+  const userId = auth.userId;
   const [triggers, tasks, seen] = await Promise.all([readTriggers(c.env, userId), readLinks(c.env, userId), readRow<string | null>(c.env, userId, ROW_SEEN, null)]);
-  // HA is al weken stil: in de app geen triggers meer tonen (ze gaan toch niet af). HA zelf krijgt alles.
-  if (c.get('auth').kind !== 'token' && stale(seen)) return c.json({ triggers: [], tasks: {}, seen, stale: true });
-  return c.json({ triggers, tasks, seen, stale: false });
+  // HA zelf krijgt alleen zijn eigen lijstje.
+  if (auth.kind === 'token') return c.json({ triggers, tasks, seen, stale: false });
+  // Mijn HA is al weken stil: mijn eigen triggers niet meer tonen (ze gaan toch niet af). Gedeelde wel.
+  const own = stale(seen) ? [] : triggers;
+  return c.json({ triggers: [...own, ...await sharedWithMe(c.env, userId)], tasks, seen, stale: stale(seen) });
 });
 
 /**
@@ -114,13 +179,13 @@ haTriggerApi.put('/tasks/:id', async (c) => {
   const userId = c.get('auth').userId;
   const taskId = c.req.param('id');
   const body = await c.req.json<{ ids?: unknown }>().catch(() => ({} as { ids?: unknown }));
-  if (!Array.isArray(body.ids) || !body.ids.every(validId)) throw new HttpError(400, 'err.hatrigger_invalid');
+  if (!Array.isArray(body.ids) || !body.ids.every(validLinkId)) throw new HttpError(400, 'err.hatrigger_invalid');
   // Alleen je eigen hoofdtaak: van een ander zijn taak (of een subtaak) kun je de melding niet regelen.
   const task = await c.env.DB.prepare('SELECT id, repeat_at FROM tasks WHERE id = ? AND user_id = ? AND parent_id IS NULL AND deleted_at IS NULL')
     .bind(taskId, userId).first<{ id: string; repeat_at: string | null }>();
   if (!task) throw new HttpError(404, 'err.not_found');
-  const [triggers, links] = await Promise.all([readTriggers(c.env, userId), readLinks(c.env, userId)]);
-  const known = new Set(triggers.map((t) => t.id));
+  const [triggers, shared, links] = await Promise.all([readTriggers(c.env, userId), sharedWithMe(c.env, userId), readLinks(c.env, userId)]);
+  const known = new Set([...triggers.map((t) => t.id), ...shared.map((t) => t.id)]);
   const ids = [...new Set(body.ids as string[])].filter((id) => known.has(id));
   if (ids.length) {
     if (!links[taskId] && Object.keys(links).length >= MAX_TASKS) throw new HttpError(400, 'err.hatrigger_too_many', { max: MAX_TASKS });
@@ -130,29 +195,17 @@ haTriggerApi.put('/tasks/:id', async (c) => {
   return c.json({ task: taskId, link: links[taskId] ?? null });
 });
 
-/**
- * HA meldt dat een trigger afging. Elke open taak met die trigger die nog klaarstaat, krijgt één melding (de eigenaar en
- * wie de taak gedeeld kreeg), en is daarna gemeld. Taken die weg zijn, gaan uit de lijst.
- */
-haTriggerApi.post('/fire', async (c) => {
-  const userId = c.get('auth').userId;
-  const body = await c.req.json<{ id?: unknown }>().catch(() => ({} as { id?: unknown }));
-  if (!validId(body.id)) throw new HttpError(400, 'err.hatrigger_invalid');
-  const id = body.id;
-  const [triggers, links] = await Promise.all([readTriggers(c.env, userId), readLinks(c.env, userId)]);
-  const trigger = triggers.find((t) => t.id === id);
-  if (!trigger) throw new HttpError(404, 'err.hatrigger_unknown');
-  const now = new Date().toISOString();
-  trigger.last = now;
+type FireRow = { id: string; title: string; description: string; done: number; deleted_at: string | null; repeat_at: string | null };
 
-  const candidates = Object.entries(links).filter(([, l]) => l.ids.includes(id)).map(([taskId]) => taskId);
-  const rows = candidates.length
-    ? (await c.env.DB.prepare('SELECT id, title, description, done, deleted_at, repeat_at FROM tasks WHERE user_id = ? AND id IN (SELECT value FROM json_each(?))')
-      .bind(userId, JSON.stringify(candidates))
-      .all<{ id: string; title: string; description: string; done: number; deleted_at: string | null; repeat_at: string | null }>()).results
-    : [];
+/** Eén persoon: elke open taak die op `linkId` wacht en nog klaarstaat, wordt gemeld. Geeft het opslaan en die taken. */
+async function fireFor(env: Env, userId: string, linkId: string, now: string): Promise<{ save: D1PreparedStatement | null; fire: FireRow[] }> {
+  const links = await readLinks(env, userId);
+  const candidates = Object.entries(links).filter(([, l]) => l.ids.includes(linkId)).map(([taskId]) => taskId);
+  if (!candidates.length) return { save: null, fire: [] };
+  const rows = (await env.DB.prepare('SELECT id, title, description, done, deleted_at, repeat_at FROM tasks WHERE user_id = ? AND id IN (SELECT value FROM json_each(?))')
+    .bind(userId, JSON.stringify(candidates)).all<FireRow>()).results;
   const byId = new Map(rows.map((r) => [r.id, r]));
-  const fire: typeof rows = [];
+  const fire: FireRow[] = [];
   for (const taskId of candidates) {
     const t = byId.get(taskId);
     if (!t) { delete links[taskId]; continue; } // definitief weg
@@ -163,21 +216,99 @@ haTriggerApi.post('/fire', async (c) => {
     link.rep = t.repeat_at;
     fire.push(t);
   }
-  await c.env.DB.batch([writeTriggers(c.env, userId, triggers), writeLinks(c.env, userId, links)]);
+  return { save: writeLinks(env, userId, links), fire };
+}
 
-  if (fire.length) {
+/**
+ * HA meldt dat een trigger afging. Mijn taken die erop wachten, en die van wie ik hem deel, krijgen elk één melding
+ * (aan de eigenaar van de taak en wie die taak gedeeld kreeg); daarna zijn ze gemeld.
+ */
+haTriggerApi.post('/fire', async (c) => {
+  const userId = c.get('auth').userId;
+  const body = await c.req.json<{ id?: unknown }>().catch(() => ({} as { id?: unknown }));
+  if (!validId(body.id)) throw new HttpError(400, 'err.hatrigger_invalid');
+  const id = body.id;
+  const [triggers, share] = await Promise.all([readTriggers(c.env, userId), readShare(c.env, userId)]);
+  const trigger = triggers.find((t) => t.id === id);
+  if (!trigger) throw new HttpError(404, 'err.hatrigger_unknown');
+  const now = new Date().toISOString();
+  trigger.last = now;
+
+  const others = share.all || Object.keys(share.per).length
+    ? recipients(share, id, new Set((await partners(c.env, userId)).map((p) => p.id))) : [];
+  const results = await Promise.all([
+    fireFor(c.env, userId, id, now).then((r) => ({ who: userId, ...r })),
+    ...others.map((who) => fireFor(c.env, who, sharedId(userId, id), now).then((r) => ({ who, ...r }))),
+  ]);
+  await c.env.DB.batch([writeTriggers(c.env, userId, triggers), ...results.flatMap((r) => (r.save ? [r.save] : []))]);
+
+  const fired = results.flatMap((r) => r.fire);
+  if (fired.length) {
     const prefs = c.get('prefs');
     const shares = (await c.env.DB.prepare(
       "SELECT task_id, to_user FROM task_shares WHERE status = 'accepted' AND mode = 'shared' AND task_id IN (SELECT value FROM json_each(?))",
-    ).bind(JSON.stringify(fire.map((t) => t.id))).all<{ task_id: string; to_user: string }>()).results;
-    const make = (t: (typeof fire)[number]) => (locale: Locale) => ({
+    ).bind(JSON.stringify(fired.map((t) => t.id))).all<{ task_id: string; to_user: string }>()).results;
+    const make = (t: FireRow) => (locale: Locale) => ({
       ...reminderPayload(t, locale),
       body: translate(locale, 'hatrigger.push_body', { name: trigger.name }),
       tag: `hatrigger-${t.id}`,
     });
-    const sends = fire.flatMap((t) => [userId, ...shares.filter((s) => s.task_id === t.id).map((s) => s.to_user)]
-      .map((who) => notifyUser(c.env, who, make(t), prefs.defaultLocale)));
+    const sends = results.flatMap((r) => r.fire.flatMap((t) => [...new Set([r.who, ...shares.filter((s) => s.task_id === t.id).map((s) => s.to_user)])]
+      .map((who) => notifyUser(c.env, who, make(t), prefs.defaultLocale))));
     await inBackground(c, Promise.all(sends), 'hatrigger');
   }
-  return c.json({ trigger: trigger.name, notified: fire.map((t) => t.id) });
+  return c.json({ trigger: trigger.name, notified: results[0].fire.map((t) => t.id), shared: fired.length - results[0].fire.length });
+});
+
+// ---------- instellingen (alleen met een sessie) ----------
+
+async function settingsOf(env: Env, userId: string) {
+  const [triggers, share, seen, people] = await Promise.all([
+    readTriggers(env, userId), readShare(env, userId), readRow<string | null>(env, userId, ROW_SEEN, null), partners(env, userId),
+  ]);
+  const ok = new Set(people.map((p) => p.id));
+  return {
+    seen, stale: stale(seen), all: share.all, partners: people,
+    triggers: triggers.map((t) => ({ ...t, share: (share.per[t.id] ?? []).filter((who) => ok.has(who)) })),
+  };
+}
+
+haTriggerApi.get('/settings', sessionOnly, async (c) => c.json(await settingsOf(c.env, c.get('auth').userId)));
+
+/**
+ * Delen instellen: `all` (alles met iedereen) en/of `per` (per trigger de gekozen mensen; een lege lijst = niet gedeeld).
+ * Wie hierdoor voor het eerst triggers van mij krijgt, hoort dat één keer met een melding.
+ */
+haTriggerApi.put('/share', sessionOnly, async (c) => {
+  const userId = c.get('auth').userId;
+  const body = await c.req.json<{ all?: unknown; per?: unknown }>().catch(() => ({} as { all?: unknown; per?: unknown }));
+  const [triggers, old, people] = await Promise.all([readTriggers(c.env, userId), readShare(c.env, userId), partners(c.env, userId)]);
+  const ok = new Set(people.map((p) => p.id));
+  const known = new Set(triggers.map((t) => t.id));
+  const next: HaShare = { all: old.all, per: { ...old.per } };
+  if (body.all !== undefined) {
+    if (typeof body.all !== 'boolean') throw new HttpError(400, 'err.hatrigger_invalid');
+    next.all = body.all;
+  }
+  if (body.per !== undefined) {
+    if (!body.per || typeof body.per !== 'object' || Array.isArray(body.per)) throw new HttpError(400, 'err.hatrigger_invalid');
+    for (const [tid, who] of Object.entries(body.per as Record<string, unknown>)) {
+      if (!known.has(tid) || !Array.isArray(who) || !who.every((w) => typeof w === 'string' && ok.has(w))) throw new HttpError(400, 'err.hatrigger_invalid');
+      if (who.length) next.per[tid] = [...new Set(who as string[])]; else delete next.per[tid];
+    }
+  }
+  // Triggers die uit HA verdwenen: hun keuze hoeft niet te blijven.
+  for (const tid of Object.keys(next.per)) if (!known.has(tid)) delete next.per[tid];
+  await userSettingStmt(c.env.DB, userId, ROW_SHARE, next.all || Object.keys(next.per).length ? JSON.stringify(next) : null).run();
+
+  const count = (s: HaShare, who: string) => triggers.filter((t) => recipients(s, t.id, ok).includes(who)).length;
+  const fresh = people.filter((p) => count(old, p.id) === 0 && count(next, p.id) > 0);
+  if (fresh.length) {
+    const me = c.get('user').name;
+    const prefs = c.get('prefs');
+    await inBackground(c, Promise.all(fresh.map((p) => notifyUser(c.env, p.id, (locale) => ({
+      title: 'Tick', body: translate(locale, 'hatrigger.shared_push', { name: me, n: count(next, p.id) }), url: '/', tag: `hatrigger-share-${userId}`,
+    }), prefs.defaultLocale))), 'hatrigger delen');
+  }
+  return c.json(await settingsOf(c.env, userId));
 });

@@ -66,7 +66,7 @@ describe('hatrigger: triggers uit Home Assistant', () => {
     expect((await state(a)).tasks[id]).toMatchObject({ ids: ['sam_thuis', 'zon_onder'], fired: null });
 
     const first = await (await fire(a, 'zon_onder')).json() as { notified: string[]; trigger: string };
-    expect(first).toEqual({ trigger: 'Zon onder', notified: [id] });
+    expect(first).toEqual({ trigger: 'Zon onder', notified: [id], shared: 0 });
     const s = await state(a);
     expect(s.tasks[id].fired).toBeTruthy();
     expect(s.triggers.find((x) => x.id === 'zon_onder')!.last).toBeTruthy();
@@ -122,6 +122,45 @@ describe('hatrigger: triggers uit Home Assistant', () => {
     const back = await state(u) as State & { stale: boolean };
     expect(back.stale).toBe(false);
     expect(back.tasks[id].ids).toEqual(['licht']);
+  });
+
+  it('delen: alleen met wie je al een taak deelt; de ontvanger kiest hem en krijgt de melding', async () => {
+    const dio = await createUser({ name: 'Dio' });
+    const alex = await createUser({ name: 'Alex' });
+    const vreemd = await createUser({ name: 'Vreemd' });
+    await req(dio, '/api/hatrigger/triggers', 'PUT', { triggers: [{ id: 'sam_thuis', name: 'Sam komt thuis' }, { id: 'licht', name: 'Badkamerlicht aan' }] });
+    // Nog niemand om mee te delen.
+    expect((await (await req(dio, '/api/hatrigger/settings')).json() as { partners: unknown[] }).partners).toEqual([]);
+    expect((await req(dio, '/api/hatrigger/share', 'PUT', { per: { sam_thuis: [alex.id] } })).status).toBe(400);
+    // Dio deelt een taak met Alex (geaccepteerd): nu zijn ze partners, de vreemde niet.
+    const gedeeld = await task(dio, 'Boodschappen');
+    await env.DB.prepare("INSERT INTO task_shares (id, task_id, from_user, to_user, mode, status, created_at) VALUES (?, ?, ?, ?, 'shared', 'accepted', ?)")
+      .bind(crypto.randomUUID(), gedeeld, dio.id, alex.id, new Date().toISOString()).run();
+    const set = await (await req(dio, '/api/hatrigger/share', 'PUT', { per: { sam_thuis: [alex.id] } })).json() as { triggers: { id: string; share: string[] }[]; partners: { name: string }[] };
+    expect(set.partners.map((p) => p.name)).toEqual(['Alex']);
+    expect(set.triggers.find((x) => x.id === 'sam_thuis')!.share).toEqual([alex.id]);
+    expect((await req(dio, '/api/hatrigger/share', 'PUT', { per: { sam_thuis: [vreemd.id] } })).status).toBe(400);
+
+    // Alex ziet alleen de gedeelde trigger, met de eigenaar en zonder "laatst".
+    const shared = `${dio.id}.sam_thuis`;
+    const alexState = await (await req(alex, '/api/hatrigger')).json() as { triggers: { id: string; name: string; last: null; owner: { name: string } }[] };
+    expect(alexState.triggers).toEqual([{ id: shared, name: 'Sam komt thuis', entity: null, last: null, owner: { id: dio.id, name: 'Dio' } }]);
+    expect((await state(vreemd)).triggers).toEqual([]);
+
+    const huiswerk = await task(alex, 'Vraag naar huiswerk');
+    expect((await req(alex, `/api/hatrigger/tasks/${huiswerk}`, 'PUT', { ids: [shared, `${dio.id}.licht`] })).status).toBe(200);
+    expect((await state(alex)).tasks[huiswerk].ids).toEqual([shared]); // licht is niet met haar gedeeld
+    const res = await (await fire(dio, 'sam_thuis')).json() as { notified: string[]; shared: number };
+    expect(res).toMatchObject({ notified: [], shared: 1 });
+    expect((await state(alex)).tasks[huiswerk].fired).toBeTruthy();
+
+    // Alles delen: nu ook het licht. Uit: Alex ziet niets meer.
+    await req(dio, '/api/hatrigger/share', 'PUT', { all: true });
+    expect((await state(alex)).triggers.map((x) => x.id).sort()).toEqual([`${dio.id}.licht`, shared].sort());
+    await req(dio, '/api/hatrigger/share', 'PUT', { all: false, per: { sam_thuis: [] } });
+    expect((await state(alex)).triggers).toEqual([]);
+    // Een sleutel mag niet aan het delen komen.
+    expect((await call('/api/hatrigger/settings', { auth: INBOX })).status).toBe(403);
   });
 
   it('stale: zonder teken van leven (nog nooit een sleutel) niet', () => {
