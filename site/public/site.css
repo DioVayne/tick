@@ -44,7 +44,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--pin); outline-offset: 3px; border-radius: 4px; }
 h1, h2, h3, p, ul { margin: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.skip { position: absolute; left: 16px; top: -60px; z-index: 10; background: var(--pin); color: var(--slate); padding: 10px 16px; border-radius: 10px; font-weight: 600; text-decoration: none; }
+.skip { position: absolute; left: 16px; top: -60px; z-index: 60; background: var(--pin); color: var(--slate); padding: 10px 16px; border-radius: 10px; font-weight: 600; text-decoration: none; }
 .skip:focus { top: 12px; }
 
 /* Bands */
@@ -122,6 +122,12 @@ h2, .h2 { font-size: 46px; line-height: 1.08; font-weight: 700; letter-spacing: 
 .lang, .head-login { font-size: 15px; font-weight: 600; padding: 10px 4px; }
 .head-cta { text-decoration: none; background: var(--pin); color: var(--slate); font-weight: 600; font-size: 15px; padding: 11px 20px; border-radius: 999px; white-space: nowrap; }
 .head-cta:hover { background: #fbbf24; }
+.lang { display: inline-flex; align-items: center; }
+.flag { display: block; border-radius: 3px; box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
+.head-feat { display: none; text-decoration: none; color: var(--ink-soft); font-size: 15px; font-weight: 600; padding: 10px 4px; }
+.head-feat:hover { color: var(--ink); }
+.hero-more { font-size: 16px; font-weight: 600; }
+.hero-more a { color: var(--pin); text-underline-offset: 4px; }
 
 /* ---------- Hero ---------- */
 .hero .wrap { padding-top: 56px; padding-bottom: 112px; }
@@ -448,6 +454,10 @@ table.www { width: 100%; border-collapse: collapse; font-size: 15px; line-height
 /* ---------- Narrow screens ---------- */
 @media (max-width: 1080px) {
   .main-nav { display: none; }
+  /* Without the menu, "Functies" sits in the header, which stays at the top while you scroll. */
+  .head-feat { display: inline-block; }
+  .site-head { position: sticky; top: 0; z-index: 50; }
+  html { scroll-padding-top: 80px; }
   .site-head .bar { justify-content: space-between; }
   .site-head .spacer { flex: 1; }
 }

@@ -56,6 +56,14 @@ describe('website ticktodo.nl', () => {
     expect(detailsIds(page('en/index.html'))).toEqual(nl.map(toEn));
   });
 
+  it('the hero link names the real number of features', () => {
+    for (const [rel, re] of [['index.html', /alle (\d+) functies/], ['en/index.html', /all (\d+) features/]] as const) {
+      const text = page(rel);
+      const tiles = (text.match(/<details class="feat"/g) ?? []).length;
+      expect(Number(re.exec(text)?.[1]), rel).toBe(tiles);
+    }
+  });
+
   it('every id on a page is unique, and every #link points to one', () => {
     for (const rel of ['index.html', 'en/index.html']) {
       const text = page(rel);
