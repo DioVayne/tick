@@ -315,3 +315,87 @@ if (ios || android) {
     row.prepend(play);
   });
 }
+
+// ---------- Tick moment in the hero: three tasks tick themselves off, one after the other ----------
+// Tap it to play again. With reduced motion the first task simply stands ticked off.
+function mountTickline(root) {
+  const tasks = [...root.querySelectorAll('.tl-task')];
+  if (!tasks.length) return;
+  if (reduceMotion.matches) { tasks[0].classList.add('is-done'); return; }
+  root.classList.add('is-live');
+  let timers = [];
+  const later = (ms, fn) => timers.push(setTimeout(fn, ms));
+  const burst = (box) => {
+    for (let i = 0; i < 10; i++) {
+      const dot = document.createElement('i');
+      dot.className = 'tl-burst';
+      dot.style.setProperty('--a', `${i * 36 + (i % 2) * 14}deg`);
+      dot.addEventListener('animationend', () => dot.remove());
+      box.append(dot);
+    }
+  };
+  const play = () => {
+    timers.forEach(clearTimeout);
+    timers = [];
+    root.querySelectorAll('.tl-burst').forEach((b) => b.remove());
+    tasks.forEach((t, i) => { t.classList.remove('is-done', 'is-out'); t.classList.toggle('is-on', i === 0); });
+    let at = 1000;
+    tasks.forEach((task, i) => {
+      later(at, () => { task.classList.add('is-done'); burst(task.querySelector('.tl-box')); });
+      if (i === tasks.length - 1) return;
+      at += 1600;
+      later(at, () => { task.classList.replace('is-on', 'is-out'); tasks[i + 1].classList.add('is-on'); });
+      at += 800;
+    });
+  };
+  root.addEventListener('click', play);
+  play();
+}
+document.querySelectorAll('[data-tickline]').forEach(mountTickline);
+
+// ---------- Scroll reveal: blocks below the fold slide up softly as they come into view ----------
+// Only what is not yet on screen gets hidden, so nothing visible ever blinks; without this file everything shows.
+function mountReveal() {
+  if (reduceMotion.matches || !('IntersectionObserver' in window)) return;
+  const items = [];
+  const add = (el, delay = 0) => {
+    // Elements with a transform of their own (tilted photos) keep it: leave them be.
+    if (!el || getComputedStyle(el).transform !== 'none') return;
+    if (el.getBoundingClientRect().top < window.innerHeight) return;
+    items.push([el, delay]);
+  };
+  document.querySelectorAll('main section.band:not(.hero) .wrap').forEach((wrap) => {
+    [...wrap.children].forEach((child) => {
+      if (child.matches('.feats')) {
+        // Tiles one after the other within their row.
+        const cols = getComputedStyle(child).gridTemplateColumns.split(' ').length || 1;
+        child.querySelectorAll(':scope > .feat > .tile').forEach((tile, i) => add(tile, (i % cols) * 70));
+      } else if (child.matches('.cards3')) {
+        [...child.children].forEach((card, i) => add(card, i * 90));
+      } else if (child.matches('.faq-list')) {
+        [...child.children].forEach((qa, i) => add(qa, Math.min(i, 6) * 40));
+      } else {
+        add(child);
+      }
+    });
+  });
+  if (!items.length) return;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      io.unobserve(e.target);
+      const el = e.target;
+      el.classList.add('is-in');
+      // Afterwards the element is itself again (its own hover and transitions).
+      const done = () => { el.classList.remove('reveal', 'is-in'); el.style.removeProperty('--d'); };
+      el.addEventListener('transitionend', (ev) => { if (ev.target === el && ev.propertyName === 'transform') done(); });
+      setTimeout(done, 1600);
+    });
+  }, { rootMargin: '0px 0px -8% 0px' });
+  items.forEach(([el, delay]) => {
+    el.classList.add('reveal');
+    if (delay) el.style.setProperty('--d', `${delay}ms`);
+    io.observe(el);
+  });
+}
+mountReveal();
