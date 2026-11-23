@@ -1,0 +1,102 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect Tick",
+        "description": "Connect Home Assistant to your Tick. In Tick: Settings → Advanced → Keys → New key, access \"Full access\", named for example \"Home Assistant\". Paste that key here. Revoking the key in Tick disconnects Home Assistant at once.",
+        "data": {
+          "url": "Address of your Tick",
+          "api_key": "Key"
+        },
+        "data_description": {
+          "url": "For example https://tick.example.com",
+          "api_key": "Starts with tick_. Tick shows it only once."
+        }
+      },
+      "reauth_confirm": {
+        "title": "New key for Tick",
+        "description": "Tick no longer accepts the key for {url}. Make a new one in Tick (Settings → Advanced → Keys) and paste it here.",
+        "data": {
+          "api_key": "Key"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Tick does not accept this key. Check that it is a key with full access and that it was not revoked.",
+      "not_enabled": "This Tick does not have Home Assistant triggers switched on yet.",
+      "cannot_connect": "Could not reach Tick at this address."
+    },
+    "abort": {
+      "already_configured": "This Tick is already connected.",
+      "reauth_successful": "The new key works."
+    }
+  },
+  "config_subentries": {
+    "trigger": {
+      "entry_type": "Trigger",
+      "initiate_flow": {
+        "user": "Add trigger",
+        "reconfigure": "Change trigger"
+      },
+      "step": {
+        "user": {
+          "title": "Add trigger",
+          "description": "A trigger is a moment you can pick for a task in Tick, like \"Sam comes home\" or \"The sun sets\". Give it a name as you want to read it in Tick, then choose what Home Assistant watches. Leave the entity empty for a trigger that only goes off from its button or your own automation.",
+          "data": {
+            "name": "Name in Tick",
+            "entity_id": "Watch"
+          },
+          "data_description": {
+            "name": "Short and clear: who or what, and what happens. For example \"Sam comes home\", \"Sunset\", \"Bathroom light on\".",
+            "entity_id": "A person, the sun, a light, a door sensor… Optional."
+          }
+        },
+        "state": {
+          "title": "When does \"{name}\" go off?",
+          "description": "Choose the state {entity} has to change to. Tick is told the moment it changes to this state.",
+          "data": {
+            "to_state": "Changes to"
+          }
+        },
+        "reconfigure": {
+          "title": "Change trigger",
+          "description": "Tasks in Tick keep this trigger, also with a new name.",
+          "data": {
+            "name": "Name in Tick",
+            "entity_id": "Watch"
+          },
+          "data_description": {
+            "name": "Short and clear: who or what, and what happens.",
+            "entity_id": "Leave empty for a trigger that only goes off from its button or your own automation."
+          }
+        },
+        "reconfigure_state": {
+          "title": "When does \"{name}\" go off?",
+          "description": "Choose the state {entity} has to change to.",
+          "data": {
+            "to_state": "Changes to"
+          }
+        }
+      },
+      "error": {
+        "name_length": "Give a name of 1 to 60 characters.",
+        "name_taken": "There is already a trigger with this name."
+      },
+      "abort": {
+        "reconfigure_successful": "The trigger has been changed."
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "fire": {
+        "name": "Go off now"
+      }
+    },
+    "sensor": {
+      "last_fired": {
+        "name": "Last gone off"
+      }
+    }
+  }
+}

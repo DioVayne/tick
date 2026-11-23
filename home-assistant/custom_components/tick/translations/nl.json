@@ -1,0 +1,102 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tick koppelen",
+        "description": "Koppel Home Assistant aan je Tick. In Tick: Instellingen → Geavanceerd → Sleutels → Nieuwe sleutel, toegang \"Volledige toegang\", met als naam bijvoorbeeld \"Home Assistant\". Plak die sleutel hier. Trek je de sleutel in Tick in, dan is Home Assistant meteen ontkoppeld.",
+        "data": {
+          "url": "Adres van je Tick",
+          "api_key": "Sleutel"
+        },
+        "data_description": {
+          "url": "Bijvoorbeeld https://tick.voorbeeld.nl",
+          "api_key": "Begint met tick_. Tick toont hem maar één keer."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Nieuwe sleutel voor Tick",
+        "description": "Tick accepteert de sleutel voor {url} niet meer. Maak een nieuwe in Tick (Instellingen → Geavanceerd → Sleutels) en plak hem hier.",
+        "data": {
+          "api_key": "Sleutel"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Tick accepteert deze sleutel niet. Kijk of het een sleutel met volledige toegang is en of hij niet is ingetrokken.",
+      "not_enabled": "Op deze Tick staan de Home Assistant-triggers nog niet aan.",
+      "cannot_connect": "Tick is op dit adres niet bereikbaar."
+    },
+    "abort": {
+      "already_configured": "Deze Tick is al gekoppeld.",
+      "reauth_successful": "De nieuwe sleutel werkt."
+    }
+  },
+  "config_subentries": {
+    "trigger": {
+      "entry_type": "Trigger",
+      "initiate_flow": {
+        "user": "Trigger toevoegen",
+        "reconfigure": "Trigger wijzigen"
+      },
+      "step": {
+        "user": {
+          "title": "Trigger toevoegen",
+          "description": "Een trigger is een moment dat je in Tick bij een taak kiest, zoals \"Sam komt thuis\" of \"De zon gaat onder\". Geef hem een naam zoals je hem in Tick wilt lezen, en kies wat Home Assistant in de gaten houdt. Laat je dat leeg, dan gaat de trigger alleen af met zijn knop of vanuit je eigen automatisering.",
+          "data": {
+            "name": "Naam in Tick",
+            "entity_id": "In de gaten houden"
+          },
+          "data_description": {
+            "name": "Kort en duidelijk: wie of wat, en wat er gebeurt. Bijvoorbeeld \"Sam komt thuis\", \"Zon gaat onder\", \"Badkamerlicht aan\".",
+            "entity_id": "Een persoon, de zon, een lamp, een deursensor… Mag leeg."
+          }
+        },
+        "state": {
+          "title": "Wanneer gaat \"{name}\" af?",
+          "description": "Kies de toestand waar {entity} naartoe moet gaan. Tick hoort het op het moment dat hij in deze toestand komt.",
+          "data": {
+            "to_state": "Wordt"
+          }
+        },
+        "reconfigure": {
+          "title": "Trigger wijzigen",
+          "description": "Taken in Tick houden deze trigger, ook met een nieuwe naam.",
+          "data": {
+            "name": "Naam in Tick",
+            "entity_id": "In de gaten houden"
+          },
+          "data_description": {
+            "name": "Kort en duidelijk: wie of wat, en wat er gebeurt.",
+            "entity_id": "Leeg laten voor een trigger die alleen afgaat met zijn knop of vanuit je eigen automatisering."
+          }
+        },
+        "reconfigure_state": {
+          "title": "Wanneer gaat \"{name}\" af?",
+          "description": "Kies de toestand waar {entity} naartoe moet gaan.",
+          "data": {
+            "to_state": "Wordt"
+          }
+        }
+      },
+      "error": {
+        "name_length": "Geef een naam van 1 tot 60 tekens.",
+        "name_taken": "Er is al een trigger met deze naam."
+      },
+      "abort": {
+        "reconfigure_successful": "De trigger is gewijzigd."
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "fire": {
+        "name": "Nu laten afgaan"
+      }
+    },
+    "sensor": {
+      "last_fired": {
+        "name": "Laatst afgegaan"
+      }
+    }
+  }
+}
