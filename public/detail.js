@@ -18,7 +18,7 @@ import { staleCount } from './sidebar.js';
 import { addSubtask, claimedByOther, findDone, remove, sharedOf, snooze, state, sync, toggleDone, update, updateQueued, watchTask } from './store.js';
 import { openReportDialog, reportableTask } from './report.js';
 import { fillShareBox, openShareDialog, shareNames } from './share.js';
-import { openMenu, openWhenMenu, step } from './steps.js';
+import { duringNote, openMenu, openWhenMenu, step } from './steps.js';
 import { googleCalendarUrl } from './ics.js';
 
 // Detailpaneel (desktop) en taakscherm (mobiel): één opbouw per gekozen taak, daarna alleen bijwerken.
@@ -683,6 +683,7 @@ function drawRail(t) {
     // Afgerond: alleen wat er was, geen lege zinnen.
     done && !remindAt ? null : step({
       kind: 'when', icon: 'bell', on: !!remindAt, past, lead: tr(remindAt ? 'add.when_set' : 'add.when'), value: remindAt ? fmt(remindAt) : null,
+      note: remindAt && !done && !past ? duringNote(remindAt) : null,
       open: opener('when', v.pickWhen),
       actions: done || !remindAt ? [] : [{ label: tr('push.snooze'), run: v.snoozeRemind }, clear(v.clearRemind, tr('detail.remove_reminder'))],
     }),

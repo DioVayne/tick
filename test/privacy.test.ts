@@ -27,7 +27,7 @@ describe('openbare privacypagina', () => {
     const html = await (await page('nl')).text();
     expect(html).toContain(translate('nl', 'priv.calendar_title'));
     expect(html).toContain(translate('nl', 'priv.calendar'));
-    expect(translate('en', 'priv.calendar')).toMatch(/title and the start and end time.*14 days.*encrypted.*Unlinking/s);
+    expect(translate('en', 'priv.calendar')).toMatch(/title and the start and end time.*6 weeks.*encrypted.*Unlinking/s);
     expect(privacyPage('nl', null)).not.toContain(translate('nl', 'priv.calendar_title'));
     expect(privacyPage('nl', null, undefined, [], false, true)).toContain(translate('nl', 'priv.calendar'));
   });

@@ -1,6 +1,6 @@
 // Gekoppelde agenda's: geheime iCal-adressen (Google, Outlook, iCloud) die Tick elk uur ophaalt, zodat de planner vrije
 // momenten kan voorstellen. De URL is een geheim: versleuteld in D1 (AES-GCM, sleutel afgeleid van SESSION_SECRET),
-// nooit in een antwoord of in de logs. Per afspraak alleen titel en tijden, voor 14 dagen vooruit, bij elke keer
+// nooit in een antwoord of in de logs. Per afspraak alleen titel en tijden, voor 6 weken vooruit (de agenda-kiezer kan zo ver kijken), bij elke keer
 // ophalen vervangen. Uit met CALENDAR_FEEDS = "false" (dan bestaat niets hiervan).
 import { Hono } from 'hono';
 import type { AppEnv, Env } from './index';
@@ -11,7 +11,7 @@ import { parseIcs } from './ics';
 import { loadUserPrefs } from './prefs';
 import { getUser } from './users';
 
-export const WINDOW_DAYS = 14;
+export const WINDOW_DAYS = 42;
 const DAY = 86_400_000;
 /** Ophalen bij het openen van de app: alleen als het langer geleden is dan dit. */
 export const OPEN_STALE_MS = 15 * 60_000;
@@ -175,7 +175,7 @@ export async function refreshFeed(env: Env, feed: FeedRow, timeZone: string, now
 const feedsOf = async (db: D1Database, userId: string) =>
   (await db.prepare('SELECT * FROM calendar_feeds WHERE user_id = ? ORDER BY created_at, id').bind(userId).all<FeedRow>()).results;
 
-/** De afspraken van vandaag (in UTC min een dag) tot 14 dagen vooruit, met de namen van de feeds. */
+/** De afspraken van vandaag (in UTC min een dag) tot WINDOW_DAYS vooruit, met de namen van de feeds. */
 async function eventsOf(db: D1Database, userId: string, feeds: FeedRow[], now = Date.now()) {
   const from = new Date(now - DAY).toISOString();
   const to = new Date(now + WINDOW_DAYS * DAY).toISOString();

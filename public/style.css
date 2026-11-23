@@ -611,6 +611,77 @@ a.menu-item { display: block; text-decoration: none; }
 .when-chip.on { border-color: var(--accent); }
 .when-note { padding: 4px 10px 6px; color: var(--muted); font-size: .75rem; }
 .menu.sheet .when-chip { min-height: 44px; }
+/* Kies in je agenda: tweede regel onder Kies dag en tijd, alleen met een gekoppelde agenda */
+.when-agenda { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; margin: 0 2px 4px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--link); font-weight: 600; white-space: normal; }
+.when-agenda svg { flex: none; width: 18px; height: 18px; }
+.when-agenda small { flex-basis: 100%; padding-left: 26px; color: var(--muted); font-weight: 400; font-size: .8125rem; }
+button.ghost.mgr-agenda { display: inline-flex; align-items: center; gap: 6px; border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--link); font-weight: 600; }
+
+/* Agenda-kiezer (agendapick.js): breed een venster met 7 dagen, smal een sheet van onderen met 3 dagen en vegen.
+   Vrij en suggestie zijn dezelfde knop (rand, tint, tijd erin), alleen de kleur verschilt; een afspraak is grijs en
+   gedempt en blijft te kiezen; een taak met een herinnering is alleen grijze tekst (geen kader: niet zelf klikbaar). */
+.apick { position: fixed; inset: 40px 0; display: flex; flex-direction: column; width: min(960px, calc(100vw - 32px)); max-width: none; height: auto; max-height: none; margin: 0 auto; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); box-shadow: 0 10px 40px var(--shadow); --apick-rowh: 26px; --apick-timew: 52px; --apick-cols: 7; }
+.apick:not([open]) { display: none; }
+.apick::backdrop { background: var(--scrim); }
+.apick.sheet { inset: auto 0 0; width: 100%; max-width: 100%; margin: 0; height: 88dvh; border-width: 1px 0 0; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom); --apick-rowh: 28px; --apick-timew: 44px; --apick-cols: 3; }
+.apick-top { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 4px 8px 4px 16px; border-bottom: 1px solid var(--line); }
+.apick-title { flex: 1; font-size: 1rem; }
+.apick-nav { display: flex; align-items: center; gap: 2px; color: var(--muted); font-size: .8125rem; }
+.apick-arrow, .apick-close { display: grid; place-items: center; width: 40px; height: 40px; min-height: 40px; padding: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 1.125rem; }
+.apick-arrow:hover, .apick-close:hover { background: var(--hover); color: var(--text); }
+.apick.sheet .apick-close { width: 44px; height: 44px; }
+.apick-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scroll-snap-type: x mandatory; scroll-padding-left: var(--apick-timew); scrollbar-width: thin; }
+.apick:not(.sheet) .apick-scroll { scroll-snap-type: none; }
+.apick-grid { position: relative; display: grid; grid-template-columns: var(--apick-timew) repeat(var(--apick-days, 14), calc((var(--apick-vw, 900px) - var(--apick-timew)) / var(--apick-cols))) 88px; }
+.apick-corner, .apick-day, .apick-morehead { position: sticky; top: 0; z-index: 4; grid-row: 1; background: var(--card); border-bottom: 1px solid var(--line); }
+.apick-corner { left: 0; z-index: 6; grid-column: 1; }
+.apick-day, .apick-morehead, .apick-col, .apick-tail { grid-column: var(--apick-col); }
+.apick-day { min-width: 0; padding: 6px 4px; text-align: center; scroll-snap-align: start; }
+.apick-wd { display: block; color: var(--muted); font-size: .75rem; }
+.apick-day.weekend .apick-wd { color: color-mix(in srgb, var(--accent) 55%, var(--muted)); }
+.apick-dn { display: inline-grid; place-items: center; min-width: 28px; height: 28px; border-radius: 14px; font-weight: 600; font-size: .9375rem; }
+.apick-day.today .apick-dn { background: var(--accent); color: var(--accent-text); }
+.apick-mo { margin-left: 4px; color: var(--muted); font-size: .75rem; }
+.apick-allday { display: block; margin: 4px 2px 0; padding: 1px 6px; border-radius: 4px; background: var(--fill); color: var(--muted); font-size: .6875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.apick-morehead { border-left: 1px solid var(--line); }
+.apick-more { display: flex; flex-direction: column; align-items: center; gap: 2px; width: calc(100% - 12px); min-height: 0; margin: 6px; padding: 8px 4px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: 10px; background: var(--card); color: var(--link); font-size: .8125rem; font-weight: 600; }
+.apick-more:hover { background: var(--hover); }
+.apick-more small { color: var(--muted); font-weight: 400; font-size: .6875rem; }
+.apick-times { position: sticky; left: 0; z-index: 3; grid-column: 1; grid-row: 2; background: var(--card); }
+.apick-t { height: var(--apick-rowh); padding-right: 6px; text-align: right; color: var(--muted); font-size: .6875rem; line-height: 1; transform: translateY(-.4em); }
+.apick-t:first-child { transform: none; padding-top: 2px; }
+.apick-col { position: relative; display: flex; flex-direction: column; grid-row: 2; min-width: 0; border-left: 1px solid var(--line); }
+.apick-col.weekend { background: color-mix(in srgb, var(--fill) 45%, var(--card)); }
+.apick-tail { grid-row: 2; border-left: 1px solid var(--line); }
+.apick-slot { flex: none; display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; height: var(--apick-rowh); min-height: 0; margin: 0; padding: 0 4px; overflow: hidden; border: 0; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); border-radius: 0; background: transparent; color: transparent; font-size: .75rem; white-space: nowrap; }
+.apick-slot.hour { border-top-color: var(--line); }
+.apick-slot.past { background: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--line) 80%, transparent) 5px 6px); }
+.apick-slot.free, .apick-slot.tip, .apick-slot.picked { position: relative; z-index: 1; margin: 1px 3px; width: calc(100% - 6px); height: calc(var(--apick-rowh) - 2px); border-radius: 6px; font-weight: 500; }
+.apick-slot.free { border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); background: color-mix(in srgb, var(--accent) 6%, var(--card)); color: color-mix(in srgb, var(--link) 75%, var(--muted)); }
+.apick-slot.free.night { border-color: color-mix(in srgb, var(--accent) 18%, var(--line)); background: color-mix(in srgb, var(--accent) 3%, var(--card)); }
+.apick-slot.free:hover, .apick-slot.free:focus-visible { z-index: 2; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--card)); color: var(--link); font-weight: 600; }
+.apick-slot.tip { border: 1px solid color-mix(in srgb, var(--bell) 60%, transparent); background: color-mix(in srgb, var(--bell) 16%, var(--card)); color: color-mix(in srgb, var(--bell) 75%, var(--text)); font-weight: 600; }
+.apick-slot.tip:hover, .apick-slot.tip:focus-visible { border-color: var(--bell); background: color-mix(in srgb, var(--bell) 26%, var(--card)); }
+.apick-slot.tip .apick-tm::before { content: "\2605  "; }
+.apick-slot.picked { z-index: 2; background: var(--accent); color: var(--accent-text); font-weight: 600; }
+.apick-slot.busy { position: relative; z-index: 2; border-top-color: transparent; }
+.apick-slot.busy:hover, .apick-slot.busy:focus-visible { margin: 1px 3px; width: calc(100% - 6px); height: calc(var(--apick-rowh) - 2px); justify-content: flex-end; border: 1px dashed var(--accent); border-radius: 6px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--link); font-weight: 600; }
+.apick-slot:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.apick-tk { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-weight: 400; font-style: italic; font-size: .6875rem; }
+.apick-slot.picked .apick-tk { color: inherit; }
+.apick-ev { position: absolute; z-index: 1; top: calc(var(--apick-rowh) * var(--top) + 1px); height: calc(var(--apick-rowh) * var(--len) - 2px); left: calc(3px + (100% - 6px) * var(--lane) / var(--lanes)); width: calc((100% - 6px) / var(--lanes) - 2px); overflow: hidden; padding: 2px 6px; border-left: 3px solid color-mix(in srgb, var(--muted) 45%, transparent); border-radius: 5px; background: var(--fill); color: var(--muted); font-size: .6875rem; line-height: 1.25; pointer-events: none; }
+.apick-ev b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: color-mix(in srgb, var(--muted) 85%, var(--text)); }
+.apick-ev span { opacity: .85; }
+.apick-now { position: absolute; z-index: 3; left: 0; right: 0; top: calc(var(--apick-rowh) * var(--top)); height: 2px; background: var(--danger); pointer-events: none; }
+.apick-now::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+.apick-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 8px 12px 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: .75rem; }
+.apick-lg { display: inline-flex; align-items: center; gap: 5px; }
+.apick-sw { display: inline-block; width: 14px; height: 10px; border-radius: 3px; }
+.apick-sw.free { border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); background: color-mix(in srgb, var(--accent) 6%, var(--card)); }
+.apick-sw.busy { border-left: 3px solid color-mix(in srgb, var(--muted) 45%, transparent); background: var(--fill); }
+.apick-sw.tip { border: 1px solid color-mix(in srgb, var(--bell) 60%, transparent); background: color-mix(in srgb, var(--bell) 16%, var(--card)); }
+.apick-other { margin-left: auto; min-height: 36px; padding: 4px 8px; border-radius: 8px; background: transparent; color: var(--link); font-size: .8125rem; }
+.apick-other:hover { background: var(--hover); }
 .menu-head { padding: 6px 10px 2px; color: var(--muted); font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
 .menu-cancel { justify-content: center; text-align: center; color: var(--muted); }
 .menu-input { margin: 2px 0; padding: 6px 8px; font-size: .875rem; }

@@ -3,6 +3,9 @@
 import CONFIG from './settings.js';
 import { request, Offline } from './api.js';
 import { openDatePicker } from './datepicker.js';
+import { busyNow } from './agenda.js';
+import { openAgendaPicker } from './agendapick.js';
+import { icon } from './icons.js';
 import { t } from './i18n.js';
 import { suggest } from './planner.js';
 import { $, el, fromLocalInput, render, toast } from './render.js';
@@ -140,10 +143,16 @@ function showCard() {
     const dateBtn = el('button', { type: 'button', class: 'ghost', onclick: () => openDatePicker(dateBtn, '', (value) => {
       if (value) pick(fromLocalInput(value)); // Wissen: niets ingepland, de kaart blijft
     }) }, t('mgr.pick_date'));
+    // Met een gekoppelde agenda: hetzelfde rooster als bij de herinnering (agendapick.js).
+    const agendaBtn = busyNow() ? el('button', { type: 'button', class: 'ghost mgr-agenda', onclick: () => openAgendaPicker(agendaBtn, '', (value) => {
+      const iso = fromLocalInput(value);
+      if (iso) pick(iso);
+    }) }, icon('agenda'), t('when.agenda')) : null;
     actions.replaceChildren(
       // Uit de agenda: vrije momenten; een vast voorstel op een afspraak zegt wat er dan staat.
       ...slots.map((s) => el('button', { type: 'button', class: 'ghost mgr-slot' + (s.busy ? ' busy' : ''), onclick: () => pick(s.at) },
         s.label, s.busy ? el('small', {}, t('planner.busy', { title: s.busy })) : null)),
+      agendaBtn,
       dateBtn,
       el('button', { type: 'button', class: 'ghost', onclick: drawActions }, t('dialog.cancel')));
     /** @type {HTMLElement | null} */ (actions.firstElementChild)?.focus();

@@ -31,6 +31,7 @@ const PATHS = {
   eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   bolt: 'M13 2 4 14h7l-1 8 9-12h-7l1-8z',
   calendar: 'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M8 3v4M16 3v4',
+  agenda: 'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M10 10v10M15 10v10M4 15h16',
   // Voor de helppagina (help.js): zoeken, afvinken, afgerond (zelfde vorm als in index.html), slepen, vegen, ongedaan maken,
   // toetsenbord en handleiding.
   search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4',

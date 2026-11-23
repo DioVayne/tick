@@ -3,8 +3,9 @@ import { icon } from './icons.js';
 import { el, fromLocalInput, toLocalInput } from './render.js';
 import { openDatePicker } from './datepicker.js';
 import { showMenu } from './popover.js';
-import { freeFrom, quickWhen, whenText } from './planner.js';
+import { busyAt, freeFrom, quickWhen, whenText } from './planner.js';
 import { busyNow } from './agenda.js';
+import { openAgendaPicker } from './agendapick.js';
 
 // De tijdlijn van de invoerkaart (composer.js) en het detailpaneel (detail.js): per eigenschap een zin met een gekleurde
 // stip ("Herinner me morgen 09:00", "In Inbox"). Hier staan de stap zelf, het keuzemenu en het korte herinneringsmenu,
@@ -114,6 +115,14 @@ export function openWhenMenu(anchor, current, set, { note, onDismiss } = {}) {
       class: 'menu-item when-pick', type: 'button', role: 'menuitem',
       onclick: () => choose(null, () => openDatePicker(anchor, current, (value) => set(value ?? ''), { quick: false, note })),
     }, icon('calendar'), el('span', {}, t('when.pick'))),
+    // Met een gekoppelde agenda: het rooster met dagkolommen (agendapick.js); "Andere dag of tijd" daar opent de datumkiezer.
+    busy ? el('button', {
+      class: 'menu-item when-agenda', type: 'button', role: 'menuitem',
+      onclick: () => choose(null, () => openAgendaPicker(anchor, current, set, {
+        onDismiss,
+        onOther: () => openDatePicker(anchor, current, (value) => set(value ?? ''), { quick: false, note }),
+      })),
+    }, icon('agenda'), el('span', {}, t('when.agenda')), el('small', {}, t('when.agenda_sub'))) : null,
     values.length ? el('div', { class: 'when-head', role: 'presentation' }, t('when.quick')) : null,
     values.length ? el('div', { class: 'when-chips', role: 'presentation' }, ...values.map((value) => el('button', {
       class: 'menu-item when-chip' + (current === value ? ' on' : ''), type: 'button', role: 'menuitem',
@@ -121,4 +130,18 @@ export function openWhenMenu(anchor, current, set, { note, onDismiss } = {}) {
     }, label(value)))) : null,
     busy ? el('div', { class: 'when-note', role: 'presentation' }, t('when.from_calendar')) : null,
   ], onDismiss);
+}
+
+/**
+ * "tijdens Overleg" als een herinnering op een afspraak uit een gekoppelde agenda valt (dat mag; het is alleen een
+ * opmerking bij de stap), anders null. `value` is 'YYYY-MM-DDTHH:MM' of een ISO-moment.
+ * @param {string | null | undefined} value
+ * @returns {string | null}
+ */
+export function duringNote(value) {
+  const busy = busyNow();
+  if (!value || !busy) return null;
+  const iso = value.length <= 16 ? fromLocalInput(value) : value;
+  const hit = iso ? busyAt(Date.parse(iso), busy, 60_000) : null;
+  return hit ? t('when.during', { title: hit.title || t('cal.busy') }) : null;
 }

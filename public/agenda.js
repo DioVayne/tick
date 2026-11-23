@@ -1,4 +1,4 @@
-// Gekoppelde agenda's in de app: de afspraken van de komende 14 dagen (alleen titel en tijden) in het geheugen, voor de
+// Gekoppelde agenda's in de app: de afspraken van de komende 6 weken (alleen titel en tijden) in het geheugen, voor de
 // planner, het herinneringsmenu en de kalender. Bij het openen van de app (en terug na een kwartier) vraagt de app de
 // server de feeds te verversen. Zonder CALENDAR_FEEDS of zonder gekoppelde agenda: null, en niets verandert.
 import CONFIG from './settings.js';

@@ -6,7 +6,7 @@ import { openListPicker } from './listpicker.js';
 import { openMap } from './map.js';
 import { placeShort, watchedPlaces } from './places.js';
 import { describeRule } from './repeat.js';
-import { closeStepMenu, menuOpen, openMenu, openWhenMenu, step as railStep } from './steps.js';
+import { closeStepMenu, duringNote, menuOpen, openMenu, openWhenMenu, step as railStep } from './steps.js';
 import { addFiles, attachmentsOn } from './attachments.js';
 import { inviteToTask, people } from './share.js';
 import { selectTask } from './detail.js';
@@ -154,10 +154,11 @@ const done = () => { draw(); back(); };
  * @param {(anchor: HTMLElement) => void} onOpen
  * @param {(() => void) | null} onClear
  * @param {HTMLElement | null} [body]
+ * @param {string | null} [note] kleine tekst achter de waarde ("tijdens Overleg")
  */
-function step(kind, ico, on, lead, value, onOpen, onClear, body = null) {
+function step(kind, ico, on, lead, value, onOpen, onClear, body = null, note = null) {
   const clear = on && onClear ? { label: t('detail.clear'), run: () => { onClear(); done(); } } : null;
-  return railStep({ kind, icon: ico, on, lead, value, open: onOpen, actions: [clear], body, expanded: body ? true : undefined });
+  return railStep({ kind, icon: ico, on, lead, value, note, open: onOpen, actions: [clear], body, expanded: body ? true : undefined });
 }
 
 function sync() {
@@ -174,7 +175,7 @@ function draw() {
   const steps = [
     g ? railStep({ kind: 'when', icon: 'bell', on: true, lead: t('add.when_set'), value: fmt(/** @type {string} */ (fromLocalInput(g.value))), note: t('quickdate.note'), open: pickWhen,
       actions: [{ label: t('quickdate.ignore'), run: () => { ignored = g.match; done(); } }] }) :
-    step('when', 'bell', !!v.remind, t(v.remind ? 'add.when_set' : 'add.when'), v.remind ? fmt(remindIso()) : null, pickWhen, () => { v.remind = ''; }),
+    step('when', 'bell', !!v.remind, t(v.remind ? 'add.when_set' : 'add.when'), v.remind ? fmt(remindIso()) : null, pickWhen, () => { v.remind = ''; }, null, duringNote(v.remind)),
     step('repeat', 'repeat', !!v.repeat, v.repeat ? '' : t('add.repeat'), v.repeat ? describeRule(v.repeat, remindIso() ?? new Date().toISOString()) : null, pickRepeat, () => { v.repeat = null; }),
     step('place', 'place', !!loc, loc ? t(loc.trigger === 'exit' ? 'add.leave' : 'add.arrive') : t('add.place'), loc ? placeShort(loc) : null, pickPlace, () => { v.location = null; }),
     step('list', 'folder', list !== defaultList(), t('add.in'), list, pickList, v.list ? () => { v.list = null; } : null),

@@ -1,11 +1,11 @@
 # Linking your calendar
 
-Tick can read your online calendar (Google, Outlook, iCloud or any other calendar with an iCal address). It then knows when you're busy and suggests free moments for your tasks: in the reminder menu, in the Tickmanager's **Schedule**, and as grey blocks in the 📅 Calendar. Tick only reads your calendar; it never changes it. To put a task *in* your calendar, use **Add to calendar** (below).
+Tick can read your online calendar (Google, Outlook, iCloud or any other calendar with an iCal address). It then knows when you're busy and suggests free moments for your tasks: in the reminder menu, in the Tickmanager's **Schedule**, and as grey blocks in the 📅 Calendar. With **Pick in your calendar** you see your days side by side and tap a half hour. Tick only reads your calendar; it never changes it. To put a task *in* your calendar, use **Add to calendar** (below).
 
 ## Linking a calendar
 1. Find the secret iCal address of your calendar (see below) and copy it.
 2. In Tick, open **Settings › Calendars**, paste the address, give it a name if you like (for example *Work* or *Home*) and tap **Link calendar**.
-3. Tick fetches it right away. Under the name you see how many appointments it found in the next 14 days and when it last updated, or why it could not fetch it.
+3. Tick fetches it right away. Under the name you see how many appointments it found in the next 6 weeks and when it last updated, or why it could not fetch it.
 
 You can link up to 10 calendars, for example your work and your private calendar. **Unlink** removes the calendar and everything Tick fetched from it.
 
@@ -19,7 +19,7 @@ You can link up to 10 calendars, for example your work and your private calendar
 Anyone who has the address can see your calendar, so treat it like a password. Tick stores it encrypted, never shows it again (only the name and the website it comes from) and never writes it to a log. Don't share it with others.
 
 ## What Tick fetches
-- Only the **title**, **start** and **end** of each appointment (and whether it lasts all day), for **today and the next 14 days**. Descriptions, locations and attendees are not read or kept.
+- Only the **title**, **start** and **end** of each appointment (and whether it lasts all day), for **today and the next 6 weeks**. Descriptions, locations and attendees are not read or kept.
 - Tick fetches each calendar about **once an hour**, and when you open the app if the last time was more than 15 minutes ago. Every fetch replaces the previous copy. If a fetch fails, the previous copy stays and the settings show the error.
 - Appointments marked as *free* (in Outlook: *Show as: Free*) and cancelled appointments are skipped. Repeating appointments work, including exceptions; a repeat pattern Tick doesn't understand is skipped.
 - Unlinking a calendar, or deleting your account, removes everything Tick fetched at once. Calendar appointments are not part of the backup download.
@@ -35,7 +35,19 @@ Free moments fall between 08:00 and 22:00 in your time zone, on any day: Tick do
 Where you see them:
 - **The reminder menu** (tap *Remind me* on a task): the quick choices (today, tomorrow, next week) move to the first free moment that day, so they never land on an appointment. A day without any free moment until 22:00 is left out. The menu then says *Suggestions based on your calendar*.
 - **Tickmanager › Schedule:** the free moments come first; *Tomorrow* and *Next week* show **Busy: …** when they clash.
+- **Pick in your calendar** (below): the same suggestions as yellow half hours with a ★ among your days.
 - **📅 Calendar:** your appointments appear as grey, slanted rows (in the agenda, with their times) and grey bars (in the month view), next to your tasks. An appointment that runs over several days, or past midnight, shows on every day it covers. You can't open them in Tick.
+
+## Pick in your calendar
+With a calendar linked, the reminder menu has a second line under *Pick day and time*: **Pick in your calendar**. The Tickmanager's **Schedule** has the same button. It opens your days side by side:
+- On a phone you see **3 days** and swipe for more; on a computer **7 days**, with arrows for the previous and next week. It starts with two weeks; **More days** at the end adds two weeks at a time, up to 6 weeks.
+- Each day runs from 00:00 to 24:00 in half hours. It opens an hour before now (not before 06:00, unless it's the middle of the night), or at the time you picked before.
+- **Appointments** are grey, with their title. An all-day appointment is a small strip above the day.
+- **Free half hours** are blue buttons with the time. The **suggestions** (the first free moment, a free evening and a free weekend moment) are the same buttons in yellow with a ★.
+- A **task that already has a reminder** shows as grey text in its half hour. It doesn't block anything.
+- **Tap a half hour** and that's the time: the picker closes and the card or panel shows *Remind me …*. Tap the reminder again to pick another time; your choice is blue.
+- You can also pick a half hour **during an appointment** (hover or focus shows it). Tick never blocks it; the reminder then says *during …* with the appointment's title.
+- Half hours that have already started can't be picked. **Other day or time…** at the bottom opens the normal date picker.
 
 ## When a new appointment clashes with a task
 When a **new** appointment shows up in a linked calendar at the moment of one of your reminders, Tick sends a notification: *Calendar clash: <task>*, with the appointment and its time. It has two buttons:
