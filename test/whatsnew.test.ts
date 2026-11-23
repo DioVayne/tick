@@ -30,8 +30,13 @@ describe('Wat is er nieuw: de lijst (public/news.js)', () => {
   it('een zin met `when` alleen waar die functie aan staat; hooguit SHOWN versies', () => {
     const off = visibleNews({ calendarFeeds: false }).flatMap((v) => v.items);
     const on = visibleNews({ calendarFeeds: true }).flatMap((v) => v.items);
-    expect(off).not.toContain('news.20261112.clash');
-    expect(on).toContain('news.20261112.clash');
+    // De zinnen met `when` in de versies die nu in beeld zijn: alleen waar de functie aan staat.
+    const conditional = NEWS.slice(0, SHOWN).flatMap((v) => v.items).filter((i) => typeof i !== 'string').map((i) => (i as { key: string }).key);
+    for (const key of conditional) {
+      expect(off).not.toContain(key);
+      expect(on).toContain(key);
+    }
+    expect(off.length + conditional.length).toBe(on.length);
     expect(visibleNews({}).length).toBeLessThanOrEqual(SHOWN);
   });
 

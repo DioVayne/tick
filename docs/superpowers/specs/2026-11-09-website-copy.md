@@ -425,19 +425,15 @@ Wie je geblokkeerd hebt, staat onder **Instellingen › Account › Geblokkeerde
 
 Op een Tick die je zelf host voor je huishouden bestaan deze knoppen niet. Daar ken je elkaar.
 
-### Importeren uit TickTick
+### Importeren uit TickTick of Todoist
 - **Anker:** `#ticktick`
-- **Tegel:** Overstappen van TickTick · Neem je taken mee.
+- **Tegel:** Overstappen van TickTick of Todoist · Neem je taken mee.
 - **Lees meer:**
-Kom je van TickTick? Maak daar een back-up. Dat geeft een CSV-bestand. In Tick ga je naar **Instellingen › Data** en kies je het bestand bij *Taken uit TickTick halen*.
+Kom je van TickTick of Todoist? Maak daar een export: bij TickTick een back-up (.csv), bij Todoist een project (.csv) of de hele back-up (.zip). In Tick ga je naar **Instellingen › Gegevens** en kies je de app.
 
-Tick zet je taken erin en laat zien hoeveel er nieuw waren, hoeveel er al stonden en hoeveel er werden overgeslagen. Importeer je hetzelfde bestand nog een keer, dan slaat Tick over wat er al is en houdt het je wijzigingen.
+Je ziet eerst wat er binnenkomt: hoeveel taken, welke lijsten, en wat niet mee kan. Pas als je op *Importeren* tikt, zet Tick ze erin.
 
-De vervaldatum van een open taak wordt je herinnering; een hele dag komt op je standaardtijd. Verlopen taken komen binnen zonder een stapel meldingen. Herhalingen komen niet mee; Tick zegt hoeveel taken er een hadden.
-
-Het bestand mag tot 10 MB zijn.
-
-Van een andere app overstappen? Dat heb ik nog niet gebouwd. TickTick was de app die ik zelf gebruikte.
+Herhalingen en notities komen mee. Prioriteit wordt een regel in de notitie, en hoge prioriteit wordt vastgepind. Spijt? Met *Laatste import ongedaan maken* gaat alles in één keer naar de prullenbak.
 
 ### Back-up
 - **Anker:** `#back-up`
@@ -525,7 +521,7 @@ Kolommen:
 | Melden en blokkeren | ✓ | ✓ | ✓ op app.ticktodo.nl | ✓ | — (alleen op een open Tick) | <!-- reporting.md "On a Tick for your own household these buttons don't exist" -->
 | Tickmanager | ✓ | ✓ | ✓ | ✓ | ✓ | <!-- tickmanager.md -->
 | Foto's en bestanden | ✓ (100 MB per account) | ✓ | ✓ | ✓ | als je ze aanzet | <!-- tasks-and-lists.md "Attachments (optional)"; 100 MB = MAX_ACCOUNT_MB op app.ticktodo.nl (beheernotitie, niet in docs) -->
-| Back-up en TickTick-import | ✓ | ✓ | ✓ | ✓ | ✓ | <!-- settings.md "Data"; in de apps via het instellingenscherm van de webapp -->
+| Back-up en importeren | ✓ | ✓ | ✓ | ✓ | ✓ | <!-- settings.md "Data"; in de apps via het instellingenscherm van de webapp -->
 | Thema's, taal en tijdzone | ✓ | ✓ | ✓ | ✓ | ✓ | <!-- settings.md -->
 | Claude (MCP), inbox-API, Home Assistant | ✓ | ✓ | ✓ | ✓ | ✓ | <!-- integrations.md; werkt via de server met een sleutel, niet via een app. Zie twijfels over app.ticktodo.nl -->
 | Updates | vanzelf | via Google Play | app meldt een nieuwe versie | vanzelf | zelf bijwerken (*"update Tick"* in Claude Code) | <!-- android.md "Getting it"; iphone.md "It updates itself"; README "Updating later" -->
@@ -624,8 +620,8 @@ Ja. De code staat op GitHub (DioVayne/tick), onder de MIT-licentie. Je zet het o
 **Wat als Dio ermee stopt?**
 Dan hoor je dat minstens 30 dagen van tevoren, zodat je je taken kunt downloaden. En omdat Tick open source is, verdwijnt het niet: je kunt het zelf hosten, of iemand anders doet het. Ik ben het overigens niet van plan. Ik gebruik het zelf elke dag.
 
-**Kan ik over van TickTick?**
-Ja. Maak in TickTick een back-up (CSV) en importeer die onder **Instellingen › Data**. Vervaldatums worden herinneringen; herhalingen komen niet mee.
+**Kan ik over van TickTick of Todoist?**
+Ja. Maak een export in je oude app en kies in Tick **Instellingen › Gegevens › Taken uit een andere app halen**. Je ziet eerst wat er binnenkomt. Lijsten, subtaken, notities, datums en de meeste herhalingen komen mee; een hoge prioriteit wordt een vastgezette taak. Bevalt het niet? Met **Ongedaan maken** haal je de hele import in één keer weg.
 
 **Is mijn gegevens kwijt als mijn telefoon stuk gaat?**
 Nee. Je taken staan op de server en op je apparaten. Log in op een nieuw apparaat en alles is er weer.
@@ -1055,19 +1051,15 @@ The people you blocked are under **Settings › Account › Blocked people**. Yo
 
 On a Tick you host yourself for your household, these buttons don't exist. There you know each other.
 
-### Import from TickTick
+### Import from TickTick or Todoist
 - **Anchor:** `#ticktick`
-- **Tile:** Moving from TickTick · Bring your tasks along.
+- **Tile:** Moving from TickTick or Todoist · Bring your tasks along.
 - **Read more:**
-Coming from TickTick? Make a backup there. That gives you a CSV file. In Tick, go to **Settings › Data** and pick the file at *Get tasks from TickTick*.
+Coming from TickTick or Todoist? Make an export there: in TickTick a backup (.csv), in Todoist a project (.csv) or the full backup (.zip). In Tick, go to **Settings › Data** and pick the app.
 
-Tick adds your tasks and shows how many were new, how many were already there and how many were skipped. Import the same file again and Tick skips what's already there and keeps your changes.
+You see what comes in first: how many tasks, which lists, and what can't come along. Only when you tap *Import* does Tick add them.
 
-The due date of an open task becomes your reminder; an all-day one lands at your default time. Overdue tasks come in without a pile of notifications. Repeats don't come along; Tick tells you how many tasks had one.
-
-The file can be up to 10 MB.
-
-Moving from another app? I haven't built that yet. TickTick was the app I used myself.
+Repeats and notes come along. Priority becomes a line in the note, and high priority is pinned. Changed your mind? *Undo last import* moves everything to the trash in one go.
 
 ### Backup
 - **Anchor:** `#backup`
@@ -1157,7 +1149,7 @@ Columns:
 | Reporting and blocking | ✓ | ✓ | ✓ at app.ticktodo.nl | ✓ | — (only on an open Tick) |
 | Tickmanager | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Photos and files | ✓ (100 MB per account) | ✓ | ✓ | ✓ | if you turn them on |
-| Backup and TickTick import | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Backup and importing | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Themes, language and time zone | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Claude (MCP), inbox API, Home Assistant | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Updates | automatic | through Google Play | the app tells you about a new version | automatic | update it yourself (*"update Tick"* in Claude Code) |
@@ -1256,8 +1248,8 @@ Yes. The code is on GitHub (DioVayne/tick), under the MIT licence. You put it on
 **What if Dio stops?**
 Then you'll hear at least 30 days in advance, so you can download your tasks. And because Tick is open source, it doesn't disappear: you can host it yourself, or someone else does. I'm not planning to, by the way. I use it every day.
 
-**Can I move from TickTick?**
-Yes. Make a backup (CSV) in TickTick and import it under **Settings › Data**. Due dates become reminders; repeats don't come along.
+**Can I move from TickTick or Todoist?**
+Yes. Make an export in your old app and choose **Settings › Data › Get tasks from another app** in Tick. You see what comes in first. Lists, subtasks, notes, dates and most repeats come along; a high priority becomes a pinned task. Not happy? **Undo** removes the whole import in one go.
 
 **Do I lose my data if my phone breaks?**
 No. Your tasks are on the server and on your devices. Log in on a new device and everything is back.
