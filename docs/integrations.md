@@ -4,7 +4,7 @@
 Tick has an MCP server at `/mcp`, so Claude Code or Claude Desktop can manage your tasks: list and search them, show your lists, add, change, tick off, reopen, snooze and delete (to the trash). Claude uses a *full* key of its own, which you can revoke at any time; it cannot reach your settings, keys or password. Setting it up: [SETUP.md, step 12](../SETUP.md#12-optional-claude-mcp).
 
 ## Inbox API for automations
-`POST /api/inbox` adds a task, for example from a shortcut, a script or an email rule. Make a key under **⚙ Settings → Advanced → Keys → New key**, kind *Inbox*; that key can only add tasks.
+`POST /api/inbox` adds a task, for example from a shortcut, a script or an email rule. Make a key under **⚙ Settings → Advanced → Keys → New key**, kind *Inbox*; that key can only add tasks. The address of your Tick is at the top of **Keys**, with a Copy button; the dialog of a new key shows it too.
 
 ```bash
 curl -X POST https://tick.example.com/api/inbox \

@@ -8,7 +8,7 @@
 
 /** Nieuwste eerst; hooguit MAX_ITEMS zinnen per versie (test/whatsnew.test.ts controleert dat). @type {{ date: string, items: NewsItem[] }[]} */
 export const NEWS = [
-  { date: '2026-11-23', items: ['news.20261123.import', { key: 'news.20261123.agenda', when: (c) => !!c.calendarFeeds }] },
+  { date: '2026-11-23', items: ['news.20261123.import', { key: 'news.20261123.agenda', when: (c) => !!c.calendarFeeds }, 'news.20261123.address'] },
   { date: '2026-11-22', items: ['news.20261122.whatsnew', 'news.20261122.welcome', 'news.20261122.pushbar', 'news.20261122.help'] },
   { date: '2026-11-20', items: ['news.20261120.quickdate', 'news.20261120.testpush', 'news.20261120.security', 'news.20261120.android'] },
   { date: '2026-11-19', items: ['news.20261119.repeat', 'news.20261119.repeat_end', 'news.20261119.share3'] },

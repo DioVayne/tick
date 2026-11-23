@@ -1304,7 +1304,8 @@ async function newKey() {
   if (!key) return;
   await modal({
     title: t('set.new_key'),
-    body: [el('p', {}, t('set.key_once', { name: key.name })), secret(t('set.key'), key.key)],
+    // Het adres erbij: een koppeling (Home Assistant, Claude) vraagt om allebei.
+    body: [el('p', {}, t('set.key_once', { name: key.name })), secret(t('set.key'), key.key), secret(t('set.tick_address'), location.origin)],
     buttons: [{ label: t('set.done'), value: 'ok' }],
   });
   paintKeys();
@@ -1331,7 +1332,8 @@ async function paintKeys() {
     rows = [note(offlineText(e))];
   }
   if (!S.open) return;
-  paint('keys', ...rows, row('', add));
+  // Bovenaan het adres van deze Tick, om te kopiëren voor een koppeling (Home Assistant, Claude, een script).
+  paint('keys', secret(t('set.tick_address'), location.origin), note(t('set.tick_address_note')), ...rows, row('', add));
 }
 
 // ---------- openen en sluiten ----------
