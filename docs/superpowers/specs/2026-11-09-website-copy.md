@@ -140,7 +140,7 @@ Een taak inplannen gaat makkelijker als je weet wanneer je kunt. Koppel je onlin
 
 **Details:**
 - Werkt met Google Agenda, Outlook, iCloud en elke agenda met een iCal-adres. Tot 10 agenda's.
-- Tick haalt alleen titel, begin en eind op, van vandaag en de komende 14 dagen. Geen omschrijving, locatie of deelnemers.
+- Tick haalt alleen titel, begin en eind op, van vandaag en de komende 6 weken. Geen omschrijving, locatie of deelnemers.
 - Ongeveer elk uur bijgewerkt. Het geheime adres wordt versleuteld bewaard en nooit meer getoond.
 - Vrije momenten vallen tussen 08:00 en 22:00, op elke dag. Tick gaat niet uit van kantooruren.
 - Je afspraken staan als grijze blokken in je **Kalender**, naast je taken.
@@ -241,7 +241,7 @@ Tik op een taak om hem te openen en de tijd te veranderen.
 - **Lees meer:**
 Koppel je online agenda met het geheime iCal-adres. Dat werkt met Google Agenda, Outlook, iCloud en elke agenda die zo'n adres heeft. In Tick ga je naar **Instellingen › Agenda's**, plak je het adres en tik je op **Agenda koppelen**. Tot tien agenda's, bijvoorbeeld *Werk* en *Thuis*.
 
-Tick haalt ongeveer elk uur je afspraken op: alleen titel, begin en eind, van vandaag en de komende 14 dagen. Omschrijvingen, locaties en deelnemers leest Tick niet. Afspraken die op *vrij* staan en afgezegde afspraken slaat het over.
+Tick haalt ongeveer elk uur je afspraken op: alleen titel, begin en eind, van vandaag en de komende 6 weken. Omschrijvingen, locaties en deelnemers leest Tick niet. Afspraken die op *vrij* staan en afgezegde afspraken slaat het over.
 
 Daarna stelt Tick vrije momenten voor, in het herinneringsmenu onder *Vrij in je agenda* en in de Tickmanager. Het eerste vrije halfuur, de eerste vrije avond en een moment in het weekend. Staat er al iets op een voorgestelde tijd, dan zegt Tick **Bezet:** met de titel erbij.
 
@@ -251,6 +251,19 @@ Andersom: **Zet in je agenda** maakt een afspraak van 30 minuten op de tijd van 
 
 *Op app.ticktodo.nl staat agenda koppelen nog uit.*
 
+
+### Kies in je agenda
+Tegel: 🗓️ **Kies in je agenda** · label *Eigen Tick* · "Zie je dagen naast elkaar en tik op een halfuur." (EN: *Pick in your calendar* · *Own Tick* · "See your days side by side and tap a half hour.")
+
+Heb je een agenda gekoppeld, dan staat er in het herinneringsmenu een tweede regel: **Kies in je agenda**. Je ziet je dagen naast elkaar, van boven naar beneden in halve uren. Op een telefoon drie dagen en vegen voor meer, op een computer een hele week.
+
+Je afspraken staan er grijs in, met hun titel. De suggesties van Tick zijn gele halve uren met een ster; de andere vrije halve uren zijn blauwe knopjes. Een taak die al een herinnering heeft, staat als grijze tekst in zijn halfuur.
+
+Tik op een halfuur en dat is de tijd. Ook tijdens een afspraak mag het: Tick blokkeert niets, de herinnering zegt dan *tijdens* met de naam van de afspraak. Opnieuw kiezen kan altijd. Je kijkt twee weken vooruit, met **Meer dagen** tot zes weken. Ook in de Tickmanager bij **Inplannen**.
+
+*Werkt met Agenda koppelen, dus nu alleen op een eigen Tick.*
+
+Schermafbeelding: `nl-pick-calendar.webp` / `en-pick-calendar.webp` (de kiezer op een telefoon, licht).
 ### Subtaken
 - **Anker:** `#subtaken`
 - **Tegel:** Subtaken · 2/4 klaar, gewoon in je lijst.
