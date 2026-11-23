@@ -11,7 +11,7 @@ You can link up to 10 calendars, for example your work and your private calendar
 
 ### Where to find the address
 - **Google Calendar:** on a computer, open Settings (the gear), choose your calendar under *Settings for my calendars*, then *Integrate calendar* › **Secret address in iCal format**. (Not the public address: that one only works for a public calendar.)
-- **Outlook.com or Microsoft 365:** Settings › Calendar › *Shared calendars* › **Publish a calendar**. Choose the calendar and *Can view all details*, click **Publish** and copy the **ICS** link.
+- **Outlook.com or Microsoft 365:** Settings › Calendar › *Shared calendars* › **Publish a calendar**. Choose the calendar and *Can view all details* (or *Can view when I'm busy* if you don't want Tick to see even the titles: it then only gets busy times), click **Publish** and copy the **ICS** link.
 - **iCloud:** in the Calendar app on your iPhone, tap ⓘ next to the calendar, turn on **Public Calendar** and tap *Share Link*. Note that this link is public rather than secret: anyone who has it can see the calendar.
 - **Other calendars:** look for "iCal", "ICS", "subscribe" or "publish". Addresses starting with `webcal://` work too.
 

@@ -1347,3 +1347,7 @@ Ook 2026-11-11: tegel en verhaal *Meerdere plekken* (#meerdere-plekken / #more-p
 
 ## 2026-11-23: agenda koppelen op app.ticktodo.nl
 Agenda koppelen staat nu ook op app.ticktodo.nl aan (Data safety in Play bijgewerkt). Op de site: label *Eigen Tick* weg bij Agenda koppelen en Kies in je agenda, "Nog niet helemaal af" en de alinea "nog niet af" weg, "Dat deel is nog in de maak" weg, in Wat werkt waar Agenda koppelen op ja (webapp, Play, iPhone), en bij Zelf hosten de zin "agenda koppelen werkt daar al, al is het nog niet af" weg.
+
+
+## 2026-11-23: Agenda koppelen, verhaal en schermafbeelding
+Dio wilde een voorbeeld van hoe het werkt in plaats van de instellingen, en de privacy-angst wegnemen. Schermafbeelding nu `nl-calendar-busy.webp` / `en-calendar-busy.webp` (Kalender › Agenda met taken en grijze afspraken). Regel op de tegel: "Je afspraken naast je taken. Tick kijkt alleen mee." Het verhaal heeft drie vette kopjes: *Wat Tick wel en niet ziet* (titel, begin, eind; zes weken; geen omschrijving, locatie, deelnemers), *Tick kijkt alleen mee* (niets zetten, veranderen of wissen; niet gedeeld, geen reclame; elke ronde vervangt de vorige kopie), *Jij houdt de sleutel* (adres versleuteld, nooit getoond; ontkoppelen wist alles; niet in de back-up; Outlook *Kan zien wanneer ik bezet ben* geeft alleen bezette tijden). Daarna hoe je koppelt en Zet in je agenda. EN gelijk.
