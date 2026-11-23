@@ -11,7 +11,7 @@ import { closeSettings, hideSettings, isSettingsOpen, openSettings, paintMe } fr
 import { closeHelp, hideHelp, isHelpOpen, openHelp } from './help.js';
 import { closeManager, hideManager, isManagerOpen, openManager, refreshManager } from './manager.js';
 import { startPushNudge } from './pushnudge.js';
-import { closeDrawer, onListContext, selectDone, selectList, selectTrash, setupSidebar } from './sidebar.js';
+import { closeDrawer, jumps, onListContext, selectDone, selectList, selectTrash, setupSidebar } from './sidebar.js';
 import { init, lists, load, on, refreshInvites, state } from './store.js';
 import { parseHash } from './route.js';
 import { normName } from './lists.js';
@@ -254,6 +254,17 @@ window.addEventListener('popstate', (e) => {
     return;
   }
   if (leavingView) { leavingView = false; render(); return; } // van Afgerond of de prullenbak naar een lijst gekozen
+  // Terug na een sprong via een lijstpilletje (zie jumpToList in sidebar.js): naar de weergave van vóór de sprong.
+  if (jumps.length > (e.state?.jump ?? 0)) {
+    let from = jumps[0];
+    while (jumps.length > (e.state?.jump ?? 0)) from = /** @type {typeof from} */ (jumps.pop());
+    hideSettings(); hideCalendar(); hideHelp(); hideManager();
+    selectTask(e.state?.task ?? null, { push: false });
+    if (from.showDone) selectDone();
+    else if (from.showTrash) selectTrash();
+    else selectList(from.list === null || from.list === 'Inbox' || lists().some((l) => l.name === from.list) ? from.list : null);
+    return;
+  }
   // Een bladwijzer of getypt adres in de open app: een nieuwe stap met een adres dat render.js niet schreef.
   const route = location.hash && e.state?.hash !== location.hash ? parseHash(location.hash) : null;
   if (route) { viewStep = false; goTo(route); return; }
@@ -318,6 +329,23 @@ $('#side').addEventListener('click', (e) => {
   if (isHelpOpen()) closeHelp();
   if (isManagerOpen()) closeManager();
   const toView = b.id === 'btn-trash' || b.id === 'btn-done';
+  // Na een sprong via een lijstpilletje: de sprongstappen gaan mee terug, zodat terug daarna niet in een oude weergave belandt.
+  const jumped = jumps.length;
+  jumps.length = 0;
+  if (jumped && !popping) {
+    const steps = jumped + (viewStep && !toView ? 1 : 0) + (history.state?.task ? 1 : 0);
+    if (state.selected) selectTask(null, { push: false });
+    if (toView && !viewStep) {
+      viewFrom = state.list;
+      viewStep = true;
+      afterPop = () => { history.pushState({ view: true }, ''); render(); };
+    } else {
+      if (!toView) viewStep = false;
+      leavingView = true;
+    }
+    history.go(-steps);
+    return;
+  }
   // Afgerond en de prullenbak zijn een eigen stap: terug (ook de Android-terugknop) gaat naar de lijst ervoor, niet de app uit.
   if (toView && !viewStep) {
     viewFrom = state.list;

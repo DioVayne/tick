@@ -1,5 +1,6 @@
 import CONFIG from './settings.js';
 import { t } from './i18n.js';
+import { selectTask } from './detail.js';
 import { $, el, render } from './render.js';
 import { icon } from './icons.js';
 import { listColor, pillTarget } from './lists.js';
@@ -41,6 +42,22 @@ export function selectList(name) {
 }
 
 /**
+ * Sprongen via een lijstpilletje, oudste eerst: de weergave waar je vandaan kwam. Elke sprong is een eigen stap in de
+ * geschiedenis ({ jump: n }), zodat terug (ook de Android-terugknop) naar Alle, Afgerond of de vorige lijst gaat in
+ * plaats van de app te sluiten. app.js zet bij terug de weergave terug en ruimt de stappen op bij een klik in de zijbalk.
+ * @type {{ list: string | null, showDone: boolean, showTrash: boolean }[]}
+ */
+export const jumps = [];
+
+/** Naar de lijst van een pilletje, met een stap in de geschiedenis terug naar waar je was. */
+export function jumpToList(name) {
+  jumps.push({ list: state.list, showDone: state.showDone, showTrash: state.showTrash });
+  if (state.selected) selectTask(null, { push: false }); // net als een lijst kiezen in de zijbalk: het paneel gaat dicht
+  history.pushState({ jump: jumps.length }, '');
+  selectList(name);
+}
+
+/**
  * De lijst van een taak als pilletje in de kleur van die lijst. Waar het kan, is het een knop die die lijst opent
  * (zonder de taak te openen of af te vinken); anders, of als je al in die lijst staat, alleen een label.
  * @param {string} name
@@ -52,7 +69,7 @@ export function listPill(name, names = listNames()) {
   const pill = target
     ? el('button', {
       class: 'lpill', type: 'button', title: label, 'aria-label': label,
-      onclick: (e) => { e.stopPropagation(); selectList(target); },
+      onclick: (e) => { e.stopPropagation(); jumpToList(target); },
     }, name)
     : el('span', { class: 'lpill' }, name);
   const color = listColor(name, names);
