@@ -194,6 +194,16 @@ function mountTickmanager(root) {
 }
 document.querySelectorAll('.tm').forEach(mountTickmanager);
 
+// ---------- Buttons: on an iPhone or iPad the app button explains the home screen instead ----------
+// iPadOS presents itself as a Mac, so a Mac with a touch screen counts too.
+const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+if (ios) {
+  document.querySelectorAll('[data-cta="play"][data-ios-text]').forEach((a) => {
+    a.textContent = a.dataset.iosText;
+    a.href = a.dataset.iosHref;
+  });
+}
+
 // ---------- Buttons: on an Android phone the app from Google Play comes first ----------
 // The HTML puts the demo first (computer, iPhone, no JS). On Android the Play button becomes the yellow one, with the
 // demo next to it.
