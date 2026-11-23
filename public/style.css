@@ -623,7 +623,7 @@ button.ghost.mgr-agenda { display: inline-flex; align-items: center; gap: 6px; b
 .apick { position: fixed; inset: 40px 0; display: flex; flex-direction: column; width: min(960px, calc(100vw - 32px)); max-width: none; height: auto; max-height: none; margin: 0 auto; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); box-shadow: 0 10px 40px var(--shadow); --apick-rowh: 26px; --apick-timew: 52px; --apick-cols: 7; }
 .apick:not([open]) { display: none; }
 .apick::backdrop { background: var(--scrim); }
-.apick.sheet { inset: auto 0 0; width: 100%; max-width: 100%; margin: 0; height: 88dvh; border-width: 1px 0 0; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom); --apick-rowh: 28px; --apick-timew: 44px; --apick-cols: 3; }
+.apick.sheet { inset: auto 0 0; width: 100%; max-width: 100%; margin: 0; height: 88dvh; border-width: 1px 0 0; border-radius: 16px 16px 0 0; --apick-rowh: 28px; --apick-timew: 44px; --apick-cols: 3; }
 .apick-top { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 4px 8px 4px 16px; border-bottom: 1px solid var(--line); }
 .apick-title { flex: 1; font-size: 1rem; }
 .apick-nav { display: flex; align-items: center; gap: 2px; color: var(--muted); font-size: .8125rem; }
@@ -674,14 +674,20 @@ button.ghost.mgr-agenda { display: inline-flex; align-items: center; gap: 6px; b
 .apick-ev span { opacity: .85; }
 .apick-now { position: absolute; z-index: 3; left: 0; right: 0; top: calc(var(--apick-rowh) * var(--top)); height: 2px; background: var(--danger); pointer-events: none; }
 .apick-now::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
-.apick-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 8px 12px 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: .75rem; }
-.apick-lg { display: inline-flex; align-items: center; gap: 5px; }
+.apick-foot { display: flex; align-items: center; gap: 8px 16px; padding: 8px 12px 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: .75rem; }
+.apick.sheet .apick-foot { flex-direction: column; align-items: stretch; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+.apick-legend { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; }
+.apick.sheet .apick-legend { flex-wrap: nowrap; justify-content: space-between; gap: 8px; overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
+.apick-lg { display: inline-flex; align-items: center; gap: 5px; flex: none; }
 .apick-sw { display: inline-block; width: 14px; height: 10px; border-radius: 3px; }
 .apick-sw.free { border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); background: color-mix(in srgb, var(--accent) 6%, var(--card)); }
 .apick-sw.busy { border-left: 3px solid color-mix(in srgb, var(--muted) 45%, transparent); background: var(--fill); }
 .apick-sw.tip { border: 1px solid color-mix(in srgb, var(--bell) 60%, transparent); background: color-mix(in srgb, var(--bell) 16%, var(--card)); }
-.apick-other { margin-left: auto; min-height: 36px; padding: 4px 8px; border-radius: 8px; background: transparent; color: var(--link); font-size: .8125rem; }
-.apick-other:hover { background: var(--hover); }
+/* Andere dag of tijd: een echte knop (rand in de accentkleur, icoon), smal over de hele breedte */
+.apick-other { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 6px 14px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, var(--card)); color: var(--link); font-size: .875rem; font-weight: 600; }
+.apick-other svg { width: 18px; height: 18px; }
+.apick-other:hover, .apick-other:focus-visible { background: color-mix(in srgb, var(--accent) 16%, var(--card)); }
+.apick.sheet .apick-other { min-height: 44px; }
 .menu-head { padding: 6px 10px 2px; color: var(--muted); font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
 .menu-cancel { justify-content: center; text-align: center; color: var(--muted); }
 .menu-input { margin: 2px 0; padding: 6px 8px; font-size: .875rem; }

@@ -10,6 +10,7 @@ import { whenText } from './planner.js';
 import { backCloses, narrow } from './popover.js';
 import { getTimeZone } from './repeat.js';
 import { el, fromLocalInput, toLocalInput } from './render.js';
+import { icon } from './icons.js';
 import { state } from './store.js';
 
 /**
@@ -52,12 +53,14 @@ export function openAgendaPicker(anchor, current, onPick, { onOther, onDismiss }
         el('button', { type: 'button', class: 'apick-arrow', 'aria-label': t('apick.next'), onclick: () => go(1) }, '›')) : null,
       el('button', { type: 'button', class: 'apick-close', 'aria-label': t('apick.close'), onclick: () => finish(null) }, '✕')),
     scroll,
+    // Onderaan: een korte legenda (smal op één regel, zonder iets weg te laten) en "Andere dag of tijd" als echte knop.
     el('div', { class: 'apick-foot' },
-      el('span', { class: 'apick-lg' }, el('i', { class: 'apick-sw free' }), t('apick.free')),
-      busy ? el('span', { class: 'apick-lg' }, el('i', { class: 'apick-sw busy' }), t('apick.busy')) : null,
-      tips.size ? el('span', { class: 'apick-lg' }, el('i', { class: 'apick-sw tip' }), t('apick.tip')) : null,
-      el('span', { class: 'apick-lg' }, el('i', { class: 'apick-tk' }, '· ' + t('apick.task_word')), ' ', t('apick.task')),
-      onOther ? el('button', { type: 'button', class: 'apick-other', onclick: () => finish(null, onOther) }, t('apick.other')) : null));
+      el('div', { class: 'apick-legend' },
+        el('span', { class: 'apick-lg' }, el('i', { class: 'apick-sw free' }), t('apick.free')),
+        busy ? el('span', { class: 'apick-lg' }, el('i', { class: 'apick-sw busy' }), t('apick.busy')) : null,
+        tips.size ? el('span', { class: 'apick-lg' }, el('i', { class: 'apick-sw tip' }), t('apick.tip')) : null,
+        el('span', { class: 'apick-lg' }, el('i', { class: 'apick-tk' }, '· ' + t('apick.task_word')), ' ', t('apick.task'))),
+      onOther ? el('button', { type: 'button', class: 'apick-other', onclick: () => finish(null, onOther) }, icon('calendar'), t('apick.other')) : null));
 
   function draw() {
     const days = gridDays(now, count);
