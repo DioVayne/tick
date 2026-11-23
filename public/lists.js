@@ -17,6 +17,20 @@ export const sameName = (a, b) => collator('accent').compare(String(a).trim(), S
 /** De bestaande schrijfwijze van een lijst, of undefined. */
 export const findList = (names, name) => names.find((n) => sameName(n, name));
 
+/**
+ * Welke lijst een klik op het lijstpilletje van een taak opent, of null (dan is het pilletje alleen een label).
+ * Alleen een lijst die de gebruiker zelf in de zijbalk heeft (eigen of gedeeld met hem), en niet de lijst waar hij al staat.
+ * @param {string} name de lijst van de taak
+ * @param {string[]} names de lijsten van de gebruiker
+ * @param {{ list: string | null, showDone?: boolean, showTrash?: boolean }} view
+ */
+export function pillTarget(name, names, view) {
+  const known = findList(names, name);
+  if (!known) return null;
+  if (!view.showDone && !view.showTrash && view.list != null && sameName(view.list, known)) return null;
+  return known;
+}
+
 // Hoofdletterongevoelig sorteren, maar bij gelijke letters een vaste volgorde ("Werk" voor "werk").
 const byName = (a, b) => collator('base').compare(a, b) || (a < b ? -1 : a > b ? 1 : 0);
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyListOp, findList, mergeLists, normName, sameName } from '../public/lists.js';
+import { applyListOp, findList, mergeLists, normName, pillTarget, sameName } from '../public/lists.js';
 
 const t = (id: string, list: string, extra: Record<string, unknown> = {}) => ({ id, list, done: false, parent_id: null, ...extra });
 
@@ -41,5 +41,22 @@ describe('lijstnamen', () => {
     expect(out).toEqual([
       { name: 'Inbox', open: 0 }, { name: 'Boodschappen', open: 0, id: 'L1', shared }, { name: 'Werk', open: 0, id: 'L2' },
     ]);
+  });
+});
+
+describe('lijstpilletje', () => {
+  const names = ['Inbox', 'Werk', 'Thuis (gedeeld)'];
+  it('opent de lijst waar de taak in staat, in de schrijfwijze van de zijbalk', () => {
+    expect(pillTarget('werk', names, { list: null })).toBe('Werk');
+    expect(pillTarget('Thuis (gedeeld)', names, { list: null })).toBe('Thuis (gedeeld)');
+  });
+  it('geen knop voor een lijst die de gebruiker niet heeft', () => {
+    expect(pillTarget('Van een ander', names, { list: null })).toBeNull();
+  });
+  it('geen knop als je al in die lijst staat; in Afgerond of de prullenbak wel', () => {
+    expect(pillTarget('Werk', names, { list: 'Werk' })).toBeNull();
+    expect(pillTarget('Werk', names, { list: 'Werk', showDone: true })).toBe('Werk');
+    expect(pillTarget('Werk', names, { list: 'Werk', showTrash: true })).toBe('Werk');
+    expect(pillTarget('Werk', names, { list: 'Inbox' })).toBe('Werk');
   });
 });

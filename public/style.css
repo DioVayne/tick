@@ -241,6 +241,9 @@ textarea.title-edit { display: block; min-width: 0; min-height: 0; margin: 0; bo
 .lpill { flex: none; max-width: 40%; margin-left: auto; padding: 1px 8px; border-radius: 999px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem;
   color: color-mix(in srgb, var(--lc, var(--muted)) 70%, var(--text)); background: color-mix(in srgb, var(--lc, var(--muted)) 18%, transparent); }
 .lpill + .pinned { margin-left: 0; }
+/* Als knop opent het pilletje zijn lijst: zelfde vorm, met hand en een iets vollere kleur bij aanwijzen. */
+button.lpill { min-height: 0; border: 0; line-height: inherit; font-family: inherit; cursor: pointer; }
+button.lpill:hover, button.lpill:focus-visible { background: color-mix(in srgb, var(--lc, var(--muted)) 32%, transparent); color: var(--text); }
 .meta .bell.past { color: var(--danger); }
 .net { margin: 0 0 6px; font-size: .8125rem; color: var(--muted); text-align: center; }
 .net.offline { color: var(--bell); }

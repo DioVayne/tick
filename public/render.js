@@ -4,10 +4,9 @@ import { bindTitle, renderDetail, selectTask, titleOf } from './detail.js';
 import { autoGrow } from './editor.js';
 import { icon } from './icons.js';
 import { dateLocale, t, t as tr } from './i18n.js'; // tr waar t al een taak is
-import { listColor } from './lists.js';
 import { plainText } from './markdown.js';
 import { toHash } from './route.js';
-import { renderSidebar } from './sidebar.js';
+import { listPill, renderSidebar } from './sidebar.js';
 import { UNDO_MS, claimedByOther, listNames, lists, sharedOf, state, toggleDone, update } from './store.js';
 import { renderTrash, shareLabel, shareNames } from './trash.js';
 import { renderInvites } from './share.js';
@@ -220,7 +219,7 @@ function taskItem(t, children) {
       : el('button', { class: 'title', 'aria-current': selected ? 'true' : false, onclick: (e) => openTask(e, t.id) }, ...highlight(t.title)),
     done ? null : subCount(t),
     // Waar taken uit meer lijsten samen staan (Alle, Afgerond): de lijst als pilletje in zijn kleur. Subtaken volgen hun hoofdtaak.
-    !t.parent_id && (!state.list || state.showDone) ? listPill(t.list) : null,
+    !t.parent_id && (!state.list || state.showDone) ? listPill(t.list, pillNames ??= listNames()) : null,
     // Rechts in de rij; een klik maakt de taak los.
     t.pinned && !t.parent_id && !done
       ? el('button', { class: 'pinned', type: 'button', title: tr('render.pinned'), 'aria-label': tr('render.pinned'), onclick: () => update(t.id, { pinned: false }) }, icon('pin', 'sm'))
@@ -279,12 +278,6 @@ function taskItem(t, children) {
 
 // De lijstnamen voor de kleuren: één keer per render, niet per taak.
 let pillNames = null;
-function listPill(name) {
-  const pill = el('span', { class: 'lpill' }, name);
-  const color = listColor(name, pillNames ??= listNames());
-  if (color) pill.style.setProperty('--lc', color); // CSSOM: geen style-attribuut (CSP)
-  return pill;
-}
 
 /** De taken zonder parent in de lijst zelf: een subtaak zonder haar parent staat los. */
 function topTasks(tasks) {

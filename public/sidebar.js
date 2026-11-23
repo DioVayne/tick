@@ -2,9 +2,9 @@ import CONFIG from './settings.js';
 import { t } from './i18n.js';
 import { $, el, render } from './render.js';
 import { icon } from './icons.js';
-import { listColor } from './lists.js';
+import { listColor, pillTarget } from './lists.js';
 import { reviewPrefsOf } from './review.js';
-import { createList, lists, load, loadTrash, staleNow, state } from './store.js';
+import { createList, listNames, lists, load, loadTrash, staleNow, state } from './store.js';
 import { swipedAway } from './swipe.js';
 
 /** Tickmanager: aantal oude taken nu (0 als hij uit staat), zonder een taak die net weggeveegd is (zoals de pagina). */
@@ -38,6 +38,26 @@ export function selectList(name) {
   state.showTrash = false;
   closeDrawer();
   render();
+}
+
+/**
+ * De lijst van een taak als pilletje in de kleur van die lijst. Waar het kan, is het een knop die die lijst opent
+ * (zonder de taak te openen of af te vinken); anders, of als je al in die lijst staat, alleen een label.
+ * @param {string} name
+ * @param {string[]} [names] de lijstnamen, als de aanroeper ze al heeft
+ */
+export function listPill(name, names = listNames()) {
+  const target = pillTarget(name, names, state);
+  const label = target ? t('render.open_list', { list: target }) : null;
+  const pill = target
+    ? el('button', {
+      class: 'lpill', type: 'button', title: label, 'aria-label': label,
+      onclick: (e) => { e.stopPropagation(); selectList(target); },
+    }, name)
+    : el('span', { class: 'lpill' }, name);
+  const color = listColor(name, names);
+  if (color) pill.style.setProperty('--lc', color); // CSSOM: geen style-attribuut (CSP)
+  return pill;
 }
 
 export function selectDone() {

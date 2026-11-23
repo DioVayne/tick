@@ -5,8 +5,8 @@ import { confetti, isCouple } from './confetti.js';
 import { selectTask } from './detail.js';
 import { icon } from './icons.js';
 import { t } from './i18n.js';
-import { listColor } from './lists.js';
 import { checkOff, el, fmt, render } from './render.js';
+import { listPill } from './sidebar.js';
 import { claimedByOther, listNames, state } from './store.js';
 
 const OPEN_KEY = 'tick.dueOpen';
@@ -15,14 +15,12 @@ function setOpen(open) {
   try { if (open) localStorage.setItem(OPEN_KEY, '1'); else localStorage.removeItem(OPEN_KEY); } catch { /* geen opslag */ }
 }
 
-/** Eén taak in de strook: vinkje, titel (opent de taak), de lijst als pilletje en de herinnering. */
+/** Eén taak in de strook: vinkje, titel (opent de taak), de lijst als pilletje (opent de lijst) en de herinnering. */
 function dueItem(task, today, names) {
   const late = Date.parse(task.remind_at) < today;
   const past = Date.parse(task.remind_at) < Date.now();
   const locked = claimedByOther(task);
-  const pill = el('span', { class: 'lpill' }, task.list);
-  const color = listColor(task.list, names);
-  if (color) pill.style.setProperty('--lc', color); // CSSOM: geen style-attribuut (CSP)
+  const pill = listPill(task.list, names); // een klik opent die lijst
   return el('li', { class: 'due-item' },
     el('div', { class: 'row' },
       el('button', {
