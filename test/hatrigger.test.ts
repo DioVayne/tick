@@ -1,7 +1,9 @@
 import { env } from 'cloudflare:workers';
+import { createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { callWith, createUser, INBOX, call } from './helpers';
-import { armed, cleanTriggers } from '../src/hatrigger';
+import worker from '../src/index';
+import { BASE, callWith, createUser, INBOX, call } from './helpers';
+import { armed, cleanTriggers, stale, STALE_DAYS } from '../src/hatrigger';
 
 // Testfeature hatrigger: triggers uit Home Assistant bij een taak (src/hatrigger.ts).
 const on = { ...env, TEST_FEATURES: 'hatrigger' };
@@ -13,6 +15,15 @@ const state = async (u: User) => (await req(u, '/api/hatrigger')).json() as Prom
 const task = async (u: User, title: string, extra: Record<string, unknown> = {}) =>
   ((await (await req(u, '/api/tasks', 'POST', { title, ...extra })).json()) as { id: string }).id;
 const fire = async (u: User, id: string) => req(u, '/api/hatrigger/fire', 'POST', { id });
+/** Zoals de HA-integratie: met een full-sleutel. */
+async function asHa(key: string, path: string, method = 'GET', json?: unknown) {
+  const headers = new Headers({ authorization: `Bearer ${key}` });
+  if (json !== undefined) headers.set('content-type', 'application/json');
+  const ctx = createExecutionContext();
+  const res = await worker.fetch(new Request(BASE + path, { method, headers, body: json === undefined ? undefined : JSON.stringify(json) }), on, ctx);
+  await waitOnExecutionContext(ctx);
+  return res;
+}
 
 describe('hatrigger: triggers uit Home Assistant', () => {
   let a: User;
@@ -88,6 +99,32 @@ describe('hatrigger: triggers uit Home Assistant', () => {
     await req(a, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['zon_onder'] });
     await req(a, '/api/hatrigger/triggers', 'PUT', { triggers: [{ id: 'sam_thuis', name: 'Sam komt thuis' }] });
     expect((await state(a)).tasks[id]).toBeUndefined();
+  });
+
+  it('weken niets van HA gehoord: de app ziet geen triggers meer; komt HA terug, dan wel', async () => {
+    const u = await createUser({ name: 'Cas' });
+    const key = ((await (await req(u, '/api/keys', 'POST', { name: 'Home Assistant', kind: 'full' })).json()) as { key: string }).key;
+    expect((await asHa(key, '/api/hatrigger/triggers', 'PUT', { triggers: [{ id: 'licht', name: 'Badkamerlicht aan' }] })).status).toBe(200);
+    const id = await task(u, 'Ventilator');
+    await req(u, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['licht'] });
+    expect((await state(u)).triggers).toHaveLength(1);
+
+    const old = new Date(Date.now() - (STALE_DAYS + 1) * 86_400_000).toISOString();
+    await env.DB.prepare("UPDATE user_settings SET value = ? WHERE user_id = ? AND key = 'hatrigger:seen'").bind(JSON.stringify(old), u.id).run();
+    const hidden = await state(u) as State & { stale: boolean };
+    expect(hidden).toMatchObject({ triggers: [], tasks: {}, stale: true });
+    // HA zelf krijgt alles nog, en zijn teken van leven maakt het weer zichtbaar.
+    const ha = await (await asHa(key, '/api/hatrigger')).json() as State;
+    expect(ha.triggers).toHaveLength(1);
+    const back = await state(u) as State & { stale: boolean };
+    expect(back.stale).toBe(false);
+    expect(back.tasks[id].ids).toEqual(['licht']);
+  });
+
+  it('stale: zonder teken van leven (nog nooit een sleutel) niet', () => {
+    expect(stale(null)).toBe(false);
+    expect(stale(new Date().toISOString())).toBe(false);
+    expect(stale('2026-01-01T00:00:00.000Z', Date.parse('2026-03-01T00:00:00.000Z'))).toBe(true);
   });
 
   it('armed: een herhalende taak die doorschoof, staat weer klaar', () => {

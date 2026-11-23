@@ -14,11 +14,18 @@ import { translate } from '../public/i18n.js';
  *
  * Geen migratie (regel voor testfeatures): alles staat in twee rijen van `user_settings`:
  * - `hatrigger:triggers`: [{ id, name, entity, last }] (HA schrijft het lijstje, `last` = laatst afgegaan);
- * - `hatrigger:tasks`: { taskId: { ids, fired, rep } } (`fired` = wanneer gemeld, `rep` = de keer van een herhalende taak).
+ * - `hatrigger:tasks`: { taskId: { ids, fired, rep } } (`fired` = wanneer gemeld, `rep` = de keer van een herhalende taak);
+ * - `hatrigger:seen`: wanneer HA (een full-sleutel) laatst iets liet horen. De integratie meldt zich elke 6 uur. Is dat
+ *   langer dan STALE_DAYS geleden (integratie weg, sleutel ingetrokken), dan toont Tick de triggers niet meer; de rijen
+ *   blijven staan, dus komt HA terug, dan is alles er weer.
  */
 export const HATRIGGER = 'hatrigger';
 const ROW_TRIGGERS = 'hatrigger:triggers';
 const ROW_TASKS = 'hatrigger:tasks';
+const ROW_SEEN = 'hatrigger:seen';
+export const STALE_DAYS = 21;
+/** Zo vaak hoogstens `seen` bijwerken: elke aanroep schrijven is zonde. */
+const SEEN_EVERY_MS = 60 * 60_000;
 export const MAX_TRIGGERS = 50;
 export const MAX_TASKS = 300;
 const MAX_NAME = 60;
@@ -68,10 +75,25 @@ haTriggerApi.use('*', async (c, next) => {
   await next();
 });
 
+/** Is HA te lang stil? Zonder `seen` (nog nooit met een sleutel, zoals lokaal testen) niet. */
+export const stale = (seen: string | null, now = Date.now()) => !!seen && now - Date.parse(seen) > STALE_DAYS * 86_400_000;
+
+// Een request met een full-sleutel is HA (of een ander script met die sleutel): onthoud dat hij er nog is.
+haTriggerApi.use('*', async (c, next) => {
+  const auth = c.get('auth');
+  if (auth.kind === 'token') {
+    const seen = await readRow<string | null>(c.env, auth.userId, ROW_SEEN, null);
+    if (!seen || Date.now() - Date.parse(seen) > SEEN_EVERY_MS) await userSettingStmt(c.env.DB, auth.userId, ROW_SEEN, JSON.stringify(new Date().toISOString())).run();
+  }
+  await next();
+});
+
 haTriggerApi.get('/', async (c) => {
   const userId = c.get('auth').userId;
-  const [triggers, tasks] = await Promise.all([readTriggers(c.env, userId), readLinks(c.env, userId)]);
-  return c.json({ triggers, tasks });
+  const [triggers, tasks, seen] = await Promise.all([readTriggers(c.env, userId), readLinks(c.env, userId), readRow<string | null>(c.env, userId, ROW_SEEN, null)]);
+  // HA is al weken stil: in de app geen triggers meer tonen (ze gaan toch niet af). HA zelf krijgt alles.
+  if (c.get('auth').kind !== 'token' && stale(seen)) return c.json({ triggers: [], tasks: {}, seen, stale: true });
+  return c.json({ triggers, tasks, seen, stale: false });
 });
 
 /** HA stuurt het hele lijstje (na koppelen en na elke wijziging). Een trigger die weg is, gaat ook uit de taken. */

@@ -8,7 +8,7 @@ one or more of them for a task; the first one that goes off gives one notificati
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
@@ -17,7 +17,7 @@ from homeassistant.core import Event, EventStateChangedData, HomeAssistant, call
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.util import dt as dt_util
 
 from .api import TickAuthError, TickClient, TickError, TickNotEnabled
@@ -35,6 +35,10 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.BUTTON, Platform.SENSOR]
+
+# Tick hides the triggers in the app when Home Assistant has been silent for weeks (integration removed, key revoked).
+# A sign of life every few hours keeps them visible while this integration runs.
+HEARTBEAT = timedelta(hours=6)
 
 
 @dataclass
@@ -112,6 +116,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: TickConfigEntry) -> bool
             hass.async_create_task(data.async_fire(sub_id))
 
         entry.async_on_unload(async_track_state_change_event(hass, [entity_id], _changed))
+
+    async def _heartbeat(_now: datetime) -> None:
+        try:
+            await client.async_state()
+        except TickAuthError:
+            entry.async_start_reauth(hass)
+        except TickError as err:
+            _LOGGER.debug("Tick: no sign of life sent: %s", err)
+
+    entry.async_on_unload(async_track_time_interval(hass, _heartbeat, HEARTBEAT))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # Adding, changing or removing a trigger: set up again, so Tick gets the new list.
