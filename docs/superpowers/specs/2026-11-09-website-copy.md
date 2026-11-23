@@ -1336,3 +1336,5 @@ Hero (bovenregel, intro, voetnoot), plek-voetnoot, twee nieuwe vragen (16 en 17)
 Ook 2026-11-11: tegel en verhaal *Meerdere plekken* (#meerdere-plekken / #more-places, met schermafbeelding nl-/en-places.webp), rij *Meerdere plekken per taak* in Wat werkt waar, en vraag 18 *Kan Tick me waarschuwen bij elke supermarkt?*. Teksten staan in de HTML; ontwerp in [2026-11-11-meerdere-plekken.md](2026-11-11-meerdere-plekken.md).
 
 2026-11-20: tegel en verhaal *Datum uit je tekst* (#datum-uit-tekst / #date-from-text, met schermafbeelding nl-/en-quickdate.webp), rij *Datum uit je tekst* in Wat werkt waar (Android: deels, niet bij snel toevoegen en de widget), vraag 10 nu *Ja*, en de regel "haalt geen datum uit wat je typt" weg uit Invoerkaart en Waar Tick minder is. Teksten staan in de HTML.
+
+2026-11-23: tegel en verhaal *Deel naar Tick* (#delen-naar-tick / #share-to-tick, met schermafbeelding nl-/en-share-in.webp), in Wat werkt waar de cel Browser bij *Snel toevoegen en delen vanuit andere apps* nu deels (delen, als app geïnstalleerd vanuit Chrome op Android), en vraag 20 *Kan ik vanaf mijn iPhone een pagina naar Tick delen?* (nee). Teksten staan in de HTML.
