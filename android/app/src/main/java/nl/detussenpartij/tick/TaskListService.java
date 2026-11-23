@@ -52,6 +52,25 @@ public class TaskListService extends RemoteViewsService {
         /** Leest alleen de opgeslagen lijst, dus direct. Het ophalen van de server gebeurt in Sync.refresh. */
         @Override
         public void onDataSetChanged() {
+            try {
+                load();
+            } catch (RuntimeException e) {
+                // Een fout hier liet de lijst in de launcher voorgoed op "laden" staan (de widget reageerde dan niet
+                // meer, ook niet na een verversing). Dan liever een lege lijst met een melding; de volgende keer opnieuw.
+                android.util.Log.w("Tick", "Widgetlijst laden mislukt", e);
+                items.clear();
+                tickedAt.clear();
+                entries = new ArrayList<>();
+                rows = null;
+                try {
+                    decideStatus();
+                } catch (RuntimeException ignored) {
+                    status = WidgetStatus.decide(true, false, 0, false, false, true, 0, 0);
+                }
+            }
+        }
+
+        private void load() {
             items.clear();
             tickedAt.clear();
             view = Prefs.widgetView(ctx, widgetId);
@@ -158,12 +177,22 @@ public class TaskListService extends RemoteViewsService {
 
         @Override
         public RemoteViews getViewAt(int position) {
-            if (position < head()) return statusRow();
-            position -= head();
-            if (rows == null || position >= entries.size()) return new RemoteViews(ctx.getPackageName(), R.layout.widget_item);
-            WidgetSections.Entry e = entries.get(position);
-            if (e.header) return rows.section(e.section);
-            return rows.task(items.get(e.task), tickedAt.get(e.task), e.groupEnd);
+            try {
+                if (position < head()) return statusRow();
+                position -= head();
+                if (rows == null || position < 0 || position >= entries.size()) return blank();
+                WidgetSections.Entry e = entries.get(position);
+                if (e.header) return rows.section(e.section);
+                return rows.task(items.get(e.task), tickedAt.get(e.task), e.groupEnd);
+            } catch (RuntimeException e) {
+                // Een fout in één rij mag de lijst (en het proces) niet laten vastlopen.
+                android.util.Log.w("Tick", "Widgetrij " + position + " mislukt", e);
+                return blank();
+            }
+        }
+
+        private RemoteViews blank() {
+            return new RemoteViews(ctx.getPackageName(), R.layout.widget_item);
         }
 
         @Override
@@ -185,7 +214,7 @@ public class TaskListService extends RemoteViewsService {
         public long getItemId(int position) {
             if (position < head()) return Long.MIN_VALUE; // melding
             position -= head();
-            if (position >= entries.size()) return position;
+            if (position < 0 || position >= entries.size()) return position;
             WidgetSections.Entry e = entries.get(position);
             if (e.header) return Long.MIN_VALUE + 1 + e.section; // kopje: vast per groep
             return items.get(e.task).optString("id").hashCode();

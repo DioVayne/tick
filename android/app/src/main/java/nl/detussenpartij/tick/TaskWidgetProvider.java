@@ -62,8 +62,8 @@ public class TaskWidgetProvider extends AppWidgetProvider {
     /**
      * Ververst elke 5 minuten, maar zuinig: een niet-wakkermakende, onnauwkeurige alarm.
      * Die wekt de telefoon nooit zelf; hij gaat af wanneer het toestel toch al wakker is
-     * (scherm aan, ontgrendeld) en wordt in Doze vanzelf uitgesteld. Na een herstart roept
-     * Android onUpdate aan, waardoor het alarm opnieuw wordt gezet.
+     * (scherm aan, ontgrendeld) en wordt in Doze vanzelf uitgesteld. Na een herstart of app-update zet
+     * BootReceiver (repair) het opnieuw; onUpdate doet dat ook, maar komt na een update niet altijd.
      */
     private static void scheduleRefresh(Context context) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
@@ -181,8 +181,28 @@ public class TaskWidgetProvider extends AppWidgetProvider {
     static void updateAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         int[] ids = manager.getAppWidgetIds(new ComponentName(context, TaskWidgetProvider.class));
-        for (int id : ids) manager.updateAppWidget(id, build(context, id));
+        for (int id : ids) {
+            // Eén widget die niet op te bouwen is, mag de andere niet tegenhouden.
+            try {
+                manager.updateAppWidget(id, build(context, id));
+            } catch (RuntimeException e) {
+                Log.w("Tick", "Widget " + id + " opbouwen mislukt", e);
+            }
+        }
         manager.notifyAppWidgetViewDataChanged(ids, R.id.list);
+    }
+
+    /**
+     * Na een app-update of herstart (BootReceiver): alle widgets opnieuw opbouwen met verse tikacties en lijstkoppeling,
+     * en het verversalarm opnieuw zetten. Android roept onUpdate na een update niet altijd aan (AfterRestart).
+     */
+    static void repair(Context context) {
+        try {
+            updateAll(context);
+        } catch (RuntimeException e) {
+            Log.w("Tick", "Widgets herstellen mislukt", e);
+        }
+        scheduleRefresh(context);
     }
 
     /** De kop van een widget: de lijstnaam, "Vandaag" of (bij Alles) de naam van de app. */
