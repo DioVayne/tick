@@ -194,25 +194,29 @@ function mountTickmanager(root) {
 }
 document.querySelectorAll('.tm').forEach(mountTickmanager);
 
-// ---------- Buttons: on an iPhone or iPad the app button explains the home screen instead ----------
-// iPadOS presents itself as a Mac, so a Mac with a touch screen counts too.
+// ---------- Buttons per device ----------
+// The HTML has three buttons for a computer (and for no JS): the demo, an account in the browser, the app on Google Play.
+// On a phone there is one real way to start plus the demo, so the account button goes (you make it in the app, or
+// after the demo):
+// - iPhone/iPad: the demo stays first, the app button explains the home screen instead.
+// - Android: the app from Google Play becomes the yellow button, the demo comes second.
+// iPadOS presents itself as a Mac, so a Mac with a touch screen counts as iOS too.
 const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-if (ios) {
-  document.querySelectorAll('[data-cta="play"][data-ios-text]').forEach((a) => {
-    a.textContent = a.dataset.iosText;
-    a.href = a.dataset.iosHref;
-  });
-}
-
-// ---------- Buttons: on an Android phone the app from Google Play comes first ----------
-// The HTML puts the demo first (computer, iPhone, no JS). On Android the Play button becomes the yellow one, with the
-// demo next to it.
-if (/Android/i.test(navigator.userAgent)) {
+const android = /Android/i.test(navigator.userAgent);
+if (ios || android) {
   document.querySelectorAll('[data-ctas]').forEach((row) => {
     const play = row.querySelector('[data-cta="play"]');
     const demo = row.querySelector('[data-cta="demo"]');
+    row.querySelector('[data-cta="signup"]')?.remove();
     if (!play || !demo) return;
+    if (ios) {
+      play.textContent = play.dataset.iosText;
+      play.href = play.dataset.iosHref;
+      return;
+    }
     const arrow = demo.querySelector('svg');
+    demo.textContent = demo.dataset.androidText;
+    play.textContent = play.dataset.androidText;
     demo.classList.replace('btn-pin', 'btn-ghost');
     play.classList.replace('btn-ghost', 'btn-pin');
     if (arrow) play.append(' ', arrow);
