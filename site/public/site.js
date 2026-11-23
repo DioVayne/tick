@@ -33,6 +33,98 @@ document.querySelectorAll('details.feat').forEach((d) => {
   });
 });
 
+// ---------- Feature stories: open and close smoothly ----------
+// The story grows from its tile (height, padding, fade) and its screenshot settles in with a soft zoom. Closing runs
+// the same in reverse before the <details> really closes. To animate the old story closed while the new one opens,
+// this takes over the one-open-per-group rule from the name attribute (the HTML keeps it for when this file can't run).
+// Web Animations only (CSSOM), so the CSP needs no 'unsafe-inline'. With reduced motion nothing changes.
+const featAnim = new WeakMap(); // details -> { anim, closing }
+function storyAnimating(d) { return featAnim.has(d); }
+function featGap(d) {
+  // Modern layout: the story is its own row in the grid, so the row gap above it appears at once; fold it in.
+  if (!CSS.supports('selector(::details-content)')) return 0;
+  const grid = d.parentElement;
+  return grid ? parseFloat(getComputedStyle(grid).rowGap) || 0 : 0;
+}
+function animateStory(d, opening) {
+  const story = d.querySelector(':scope > .story');
+  if (!story) { d.open = opening; return; }
+  const prev = featAnim.get(d);
+  // From where it is now, also when the other direction was still running.
+  const fromH = prev ? story.getBoundingClientRect().height : null;
+  if (prev) { prev.anim.cancel(); prev.img?.cancel(); }
+  if (opening) d.open = true;
+  const cs = getComputedStyle(story);
+  const full = { height: story.offsetHeight + 'px', paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, marginTop: cs.marginTop, opacity: 1 };
+  const gap = featGap(d);
+  const shut = { height: '0px', paddingTop: '0px', paddingBottom: '0px', marginTop: `calc(${cs.marginTop} - ${gap}px)`, opacity: 0 };
+  const from = opening ? { ...shut } : { ...full };
+  if (fromH != null) Object.assign(from, { height: fromH + 'px', opacity: opening ? 0.4 : 1 });
+  story.classList.add('is-anim');
+  const anim = story.animate([from, opening ? full : shut], {
+    duration: opening ? 420 : 300,
+    easing: opening ? 'cubic-bezier(.2, .8, .2, 1)' : 'cubic-bezier(.4, 0, .6, 1)',
+    fill: 'forwards', // closing: stay shut until the <details> is really closed
+  });
+  const shot = story.querySelector('.story-shot img');
+  const img = opening && shot ? shot.animate(
+    [{ opacity: 0, transform: 'translateY(12px) scale(.94)' }, { opacity: 1, transform: 'none' }],
+    { duration: 520, delay: 90, easing: 'cubic-bezier(.2, .8, .2, 1)', fill: 'backwards' },
+  ) : null;
+  const entry = { anim, img, closing: !opening };
+  featAnim.set(d, entry);
+  anim.onfinish = () => {
+    if (featAnim.get(d) !== entry) return;
+    featAnim.delete(d);
+    if (!opening) d.open = false;
+    anim.cancel();
+    story.classList.remove('is-anim');
+  };
+  return anim;
+}
+// Keep the clicked tile where it is on the screen while a story above it closes.
+function holdInPlace(el, ms) {
+  const top0 = el.getBoundingClientRect().top;
+  const end = performance.now() + ms + 50;
+  document.documentElement.classList.add('no-anchor');
+  const step = () => {
+    const dy = el.getBoundingClientRect().top - top0;
+    if (Math.abs(dy) > 0.5) window.scrollBy(0, dy);
+    if (performance.now() < end) requestAnimationFrame(step);
+    else document.documentElement.classList.remove('no-anchor');
+  };
+  requestAnimationFrame(step);
+}
+if (!reduceMotion.matches && 'animate' in Element.prototype) {
+  const feats = [...document.querySelectorAll('details.feat')];
+  feats.forEach((d) => {
+    const group = d.getAttribute('name');
+    if (group) { d.dataset.group = group; d.removeAttribute('name'); }
+  });
+  const others = (d) => feats.filter((o) => o !== d && o.open && o.dataset.group && o.dataset.group === d.dataset.group);
+  feats.forEach((d) => {
+    const summary = d.querySelector(':scope > summary');
+    summary?.addEventListener('click', (e) => {
+      if (reduceMotion.matches) return; // switched on while the page was open: let the browser toggle
+      e.preventDefault();
+      const entry = featAnim.get(d);
+      const opening = entry ? entry.closing : !d.open;
+      if (opening) {
+        const closing = others(d).filter((o) => !featAnim.get(o)?.closing);
+        const above = closing.some((o) => o.compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING);
+        closing.forEach((o) => animateStory(o, false));
+        if (above) holdInPlace(summary, 300);
+      }
+      animateStory(d, opening);
+    });
+    // Opened another way (a #link, find-in-page): still only one open per group, without the animation.
+    d.addEventListener('toggle', () => {
+      if (!d.open) return;
+      others(d).forEach((o) => { if (!storyAnimating(o)) o.open = false; });
+    });
+  });
+}
+
 // Browsers without the name attribute on <details>: keep one open per group by hand.
 if (!('name' in HTMLDetailsElement.prototype)) {
   document.querySelectorAll('details[name]').forEach((d) => {

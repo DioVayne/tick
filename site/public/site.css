@@ -308,6 +308,16 @@ button.box::after { content: ""; position: absolute; inset: -11px; } /* 44px tou
 .story-shot { grid-column: 1 / span 4; grid-row: 2; margin: 8px 0 0; align-self: start; }
 .story-shot img { display: block; width: 220px; max-width: 100%; border-radius: 22px; background: #ffffff; box-shadow: 0 0 0 6px var(--slate), 0 14px 30px rgba(15, 23, 42, .22); margin-left: 6px; }
 .tile h3 .emoji { margin-right: 8px; font-weight: 400; }
+/* While a story opens or closes (site.js), its contents stay inside the shrinking box. */
+.story.is-anim { overflow: hidden; }
+html.no-anchor { overflow-anchor: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .tile { transition: background-color .25s, color .25s, box-shadow .25s, transform .25s cubic-bezier(.2, .8, .2, 1); }
+  .tile:hover { transform: translateY(-2px); }
+  .tile:active { transform: translateY(0) scale(.99); }
+  .feat[open] > .tile .emoji { display: inline-block; animation: emoji-pop .5s cubic-bezier(.3, 1.6, .5, 1); }
+}
+@keyframes emoji-pop { 0% { transform: scale(.6) rotate(-12deg); } 60% { transform: scale(1.15) rotate(6deg); } 100% { transform: none; } }
 .story-b code { font-family: var(--mono); font-size: .9em; background: var(--chip); padding: 1px 5px; border-radius: 4px; }
 /* Fallback (no ::details-content): the open tile takes the full row, its story right under it. */
 .feat[open] { grid-column: 1 / -1; }
