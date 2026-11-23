@@ -4,7 +4,7 @@ How to use Tick, one page per topic. Installing Tick is in [SETUP.md](../SETUP.m
 
 | Page | What it covers |
 |---|---|
-| [Tasks and lists](tasks-and-lists.md) | Adding tasks, a date in your text, subtasks, lists, pinning, dragging and swiping, search, notes, attachments, the trash |
+| [Tasks and lists](tasks-and-lists.md) | Adding tasks, a date in your text, sharing a web page to Tick, subtasks, lists, pinning, dragging and swiping, search, notes, attachments, the trash |
 | [Tickmanager](tickmanager.md) | The round along old tasks: what counts as old, the orange button, the four choices, skipping lists, the settings |
 | [Reminders](reminders.md) | Reminders by time, repeating, the overdue nudge, the calendar, notifications on each device |
 | [Linking your calendar](calendar.md) | Linking Google, Outlook or iCloud with a secret iCal address, free moments in the reminder menu and the Tickmanager, busy blocks in the calendar, a notification when a new appointment clashes with a task, Add to calendar |

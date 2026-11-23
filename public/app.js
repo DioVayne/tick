@@ -3,7 +3,8 @@ import { initAndroidApp, offerAppSync, startLocationBar } from './androidapp.js'
 import { t } from './i18n.js';
 import { closeTask, detailReady, flushPending, onManagerStart, openWhenSoon, selectTask } from './detail.js';
 import { openListMenu } from './listmenu.js';
-import { initComposer, refreshComposer } from './composer.js';
+import { initComposer, prefillComposer, refreshComposer } from './composer.js';
+import { clearShareParams, fromShare } from './sharein.js';
 import { $, el, render, status, toast } from './render.js';
 import { closeCalendar, hideCalendar, isCalendarOpen, openCalendar, refreshCalendar } from './calendarview.js';
 import { closeSettings, hideSettings, isSettingsOpen, openSettings, paintMe } from './settingsview.js';
@@ -159,6 +160,12 @@ startDemoBar();
 startPushNudge();
 startDriveMode();
 if (params.has('add')) $('#add-title').focus();
+// Gedeeld vanuit een andere app (share_target in manifest.webmanifest): de invoerkaart ingevuld, opslaan doe je zelf.
+const shared = fromShare(params);
+if (shared) {
+  clearShareParams();
+  prefillComposer(shared.title, shared.description);
+}
 // Uit een uitnodigingsmelding: de balk met Accepteren en Weigeren in beeld.
 const openShare = params.get('share');
 const openListInvite = params.get('listInvite');

@@ -23,6 +23,19 @@ You can also type the day and time in the title, the way you would say it: *call
 
 Only the card in the app does this. Quick add and the widget in the [Android app](android.md) do not read dates from your text.
 
+### Sharing a web page to Tick
+Found something you want to do later, such as a recipe, an article or a product? Share it to Tick from the share menu of your browser or another app. Tick opens with the card already filled in:
+- the **title** is the name of the page (or the text you shared, its first line when there are more);
+- the **link** goes into the description, where you can tap it later;
+- a date in the shared text is picked up as described above, so *Concert tickets on sale friday* gets a reminder on Friday.
+
+Nothing is saved yet: check the card, change what you like, and tap **Add**. This also works without a connection.
+
+Where Tick shows up in the share menu:
+- **Android:** in the [Android app](android.md#quick-add-and-sharing-to-tick); or, without the app, after you install the web app from Chrome (*Add to home screen* or *Install app*).
+- **Chromebook:** after you install Tick as an app from Chrome (the install icon in the address bar). On Windows and Mac, browsers do not offer this for web apps yet.
+- **iPhone and iPad:** no. Safari does not let a home-screen app appear in the share menu. Copy the link and paste it into a new task instead.
+
 Sharing and attachments are sent once the task is on your Tick, so they need a connection. Offline, Tick adds the task and tells you to add those from the task later.
 
 Open a task to give it a reminder, a place, notes, subtasks or attachments. On a wide screen the task opens in a panel on the right (drag its edge to make it wider or narrower); on a phone it fills the screen and **‹** or the back button takes you back. Title and notes save while you type.

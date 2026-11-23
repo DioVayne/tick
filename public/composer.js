@@ -110,6 +110,20 @@ export function refreshComposer() {
   draw();
 }
 
+/**
+ * Delen naar Tick (sharein.js): de kaart open met titel en omschrijving ingevuld; opslaan doe je zelf.
+ * @param {string} title
+ * @param {string} description
+ */
+export function prefillComposer(title, description) {
+  reset();
+  input.value = title;
+  v.description = description;
+  if (description) more = true;
+  draw();
+  input.focus();
+}
+
 function addLocalFiles(files) {
   v.files.push(...files);
   more = true;

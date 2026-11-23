@@ -21,7 +21,7 @@ If you change your mind later, notifications for Tick are also in the iPhone's o
 ## What the iPhone cannot do
 Apple gives a home-screen app less room than the [Android app](android.md) has. On an iPhone or iPad there is:
 - **no place reminders:** you can set a [place](places.md) on a task, but only an Android phone with the app notifies you when you arrive or leave;
-- **no widget** and no quick add from the share menu of other apps.
+- **no widget**, and Tick is not in the share menu of other apps (Safari does not allow that for a home-screen app). To keep a web page as a task, copy its link and paste it into a new task.
 
 Everything else (tasks, lists, reminders, the calendar, sharing, [driving mode](driving-mode.md)) works the same as in the browser.
 

@@ -74,6 +74,8 @@ When *More options* is closed but you set a place, repeat, another list or a des
 - the draft only keeps its **list** if you picked that list yourself. Otherwise it goes to the list of the widget you tapped now. So a draft started in the *Work* widget and reopened from the *Groceries* widget goes to *Groceries*, unless you had picked another list (say *Home*) by hand: then it stays in *Home*;
 - the draft only keeps its **reminder** if you set or removed it yourself, and only if that time has not passed. Otherwise the panel starts with its usual reminder (from *Today*: the next whole hour).
 
+**Sharing to Tick:** share a web page from Chrome or another app and pick Tick. The panel opens with the name of the page as the title and the link in the description (tap *Description* to see it); shared text without a page name becomes the title, with any links in the description. Nothing is added until you tap **Add**. Quick add does not read a date from the shared text; the web app does (see [Sharing a web page to Tick](tasks-and-lists.md#sharing-a-web-page-to-tick)).
+
 A draft is kept for a week. *Share* from another app always starts with the shared text and leaves an earlier draft alone. Logging in as someone else removes the draft.
 
 Adding also works without a connection: the task shows up in the widget at once and goes to Tick when the phone is online again (see [Without a connection](#without-a-connection)).

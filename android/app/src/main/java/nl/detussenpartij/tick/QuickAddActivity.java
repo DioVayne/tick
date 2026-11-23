@@ -208,8 +208,17 @@ public class QuickAddActivity extends Activity {
         loadFavorites();
         resetWhen();
 
-        String shared = getIntent().getStringExtra(Intent.EXTRA_TEXT);
-        if (shared != null) title.setText(shared.trim());
+        // Delen vanuit een andere app: paginatitel (onderwerp) als titel, de link in de omschrijving (SharedText).
+        // Sommige apps sturen opgemaakte tekst (CharSequence): getStringExtra zou dan null geven.
+        CharSequence sharedText = getIntent().getCharSequenceExtra(Intent.EXTRA_TEXT);
+        CharSequence sharedSubject = getIntent().getCharSequenceExtra(Intent.EXTRA_SUBJECT);
+        String shared = sharedText == null ? null : sharedText.toString();
+        SharedText fromShare = SharedText.of(sharedSubject == null ? null : sharedSubject.toString(), shared);
+        if (fromShare != null) {
+            title.setText(fromShare.title);
+            // De stap Omschrijving toont de eerste regel (de link); tik erop om alles te zien.
+            if (!fromShare.description.isEmpty()) notes.setText(fromShare.description);
+        }
         draftsOn = shared == null;
         // Eén regel voor de toets Versturen op het toetsenbord, maar lange titels lopen door over meer regels.
         title.setHorizontallyScrolling(false);

@@ -7,6 +7,11 @@
   "background_color": "#1e1e1e",
   "theme_color": "#1e1e1e",
   "lang": "en",
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": { "title": "shared_title", "text": "shared_text", "url": "shared_url" }
+  },
   "shortcuts": [
     { "name": "New task", "url": "/?add=1", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
   ],
