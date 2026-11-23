@@ -17,6 +17,10 @@ class TickAuthError(TickError):
     """The key is wrong or was revoked in Tick."""
 
 
+class TickUnknownTrigger(TickError):
+    """Tick does not know this trigger id (the list has not reached Tick yet)."""
+
+
 class TickNotEnabled(TickError):
     """This Tick does not have Home Assistant triggers switched on."""
 
@@ -55,6 +59,8 @@ class TickClient:
                     raise TickAuthError(f"Tick refused the key ({res.status})")
                 if res.status == 404 and path == "/api/hatrigger":
                     raise TickNotEnabled("Home Assistant triggers are not switched on in this Tick")
+                if res.status == 404 and path == "/api/hatrigger/fire":
+                    raise TickUnknownTrigger("Tick does not know this trigger yet")
                 if res.status >= 400:
                     raise TickError(f"Tick answered {res.status} on {method} {path}")
                 return await res.json(content_type=None)

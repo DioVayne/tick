@@ -84,7 +84,7 @@ export function haStep(task, { done, owner, opener, onChange }) {
   });
 
   // Al gemeld: een regel eronder met "Opnieuw melden" (zelfde triggers opnieuw opslaan zet hem klaar).
-  const fired = !!link && !armed(link, task);
+  const fired = !!link && chosen.length > 0 && !armed(link, task);
   const sub = fired && !done ? el('div', { class: 'loc-sub' }, el('span', {}, t('detail.already_notified'), ' · ',
     el('button', { class: 'linkbtn', type: 'button', onclick: () => save(task.id, link.ids, onChange) }, t('detail.rearm_location')))) : null;
 

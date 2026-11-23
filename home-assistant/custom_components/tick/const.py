@@ -12,6 +12,10 @@ SUBENTRY_TRIGGER = "trigger"
 CONF_NAME = "name"
 CONF_ENTITY_ID = "entity_id"
 CONF_TO_STATE = "to_state"
+# Optional conditions: only after the entity stayed in the state this long (seconds), and only between two times.
+CONF_FOR = "for"
+CONF_AFTER = "after"
+CONF_BEFORE = "before"
 
 # Fired on the event bus after Tick handled a trigger: {trigger, name, notified}.
 EVENT_TRIGGER_FIRED = "tick_trigger_fired"

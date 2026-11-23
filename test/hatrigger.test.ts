@@ -94,11 +94,14 @@ describe('hatrigger: triggers uit Home Assistant', () => {
     expect((await req(a, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: 'zon_onder' })).status).toBe(400);
   });
 
-  it('een trigger die uit HA verdwijnt, gaat ook uit de taken', async () => {
+  it('een lijstje zonder een trigger wist de keuze niet; komt hij terug, dan werkt hij weer', async () => {
     const id = await task(a, 'Ventilator');
     await req(a, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['zon_onder'] });
     await req(a, '/api/hatrigger/triggers', 'PUT', { triggers: [{ id: 'sam_thuis', name: 'Sam komt thuis' }] });
-    expect((await state(a)).tasks[id]).toBeUndefined();
+    expect((await state(a)).tasks[id].ids).toEqual(['zon_onder']);
+    expect((await fire(a, 'zon_onder')).status).toBe(404); // onbekend: gaat niet af
+    await req(a, '/api/hatrigger/triggers', 'PUT', { triggers: [{ id: 'sam_thuis', name: 'Sam komt thuis' }, { id: 'zon_onder', name: 'Zon onder' }] });
+    expect((await (await fire(a, 'zon_onder')).json() as { notified: string[] }).notified).toContain(id);
   });
 
   it('weken niets van HA gehoord: de app ziet geen triggers meer; komt HA terug, dan wel', async () => {

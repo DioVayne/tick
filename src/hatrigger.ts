@@ -96,18 +96,16 @@ haTriggerApi.get('/', async (c) => {
   return c.json({ triggers, tasks, seen, stale: false });
 });
 
-/** HA stuurt het hele lijstje (na koppelen en na elke wijziging). Een trigger die weg is, gaat ook uit de taken. */
+/**
+ * HA stuurt het hele lijstje (na koppelen en na elke wijziging). De keuzes bij taken blijven staan, ook voor een
+ * trigger die (even) niet in het lijstje staat: een onbekende id toont de app niet en gaat nooit af, en komt hij terug,
+ * dan werkt hij weer. Zo kan een lijstje dat te laat binnenkomt nooit keuzes wissen.
+ */
 haTriggerApi.put('/triggers', async (c) => {
   const userId = c.get('auth').userId;
   const body = await c.req.json<{ triggers?: unknown }>().catch(() => ({} as { triggers?: unknown }));
-  const [old, links] = await Promise.all([readTriggers(c.env, userId), readLinks(c.env, userId)]);
-  const triggers = cleanTriggers(body.triggers, old);
-  const known = new Set(triggers.map((t) => t.id));
-  for (const [taskId, link] of Object.entries(links)) {
-    link.ids = link.ids.filter((id) => known.has(id));
-    if (!link.ids.length) delete links[taskId];
-  }
-  await c.env.DB.batch([writeTriggers(c.env, userId, triggers), writeLinks(c.env, userId, links)]);
+  const triggers = cleanTriggers(body.triggers, await readTriggers(c.env, userId));
+  await writeTriggers(c.env, userId, triggers).run();
   return c.json({ triggers });
 });
 

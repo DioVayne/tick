@@ -18,6 +18,8 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    DurationSelector,
+    DurationSelectorConfig,
     EntitySelector,
     EntitySelectorConfig,
     StateSelector,
@@ -25,12 +27,16 @@ from homeassistant.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
+    TimeSelector,
 )
 
 from .api import TickAuthError, TickClient, TickError, TickNotEnabled, normalize_url
 from .const import (
+    CONF_AFTER,
     CONF_API_KEY,
+    CONF_BEFORE,
     CONF_ENTITY_ID,
+    CONF_FOR,
     CONF_NAME,
     CONF_TO_STATE,
     CONF_URL,
@@ -39,6 +45,31 @@ from .const import (
 )
 
 KEY_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+
+
+def _seconds(duration: Any) -> int:
+    """{hours, minutes, seconds} from the duration selector as seconds (0 = no wait)."""
+    if not isinstance(duration, dict):
+        return 0
+    return int(duration.get("days", 0)) * 86400 + int(duration.get("hours", 0)) * 3600 + int(duration.get("minutes", 0)) * 60 + int(duration.get("seconds", 0))
+
+
+def _duration(seconds: Any) -> dict[str, int] | None:
+    if not seconds:
+        return None
+    s = int(seconds)
+    return {"hours": s // 3600, "minutes": s % 3600 // 60, "seconds": s % 60}
+
+
+def _conditions(user_input: dict[str, Any]) -> dict[str, Any]:
+    """The optional conditions of the state step, without the empty ones."""
+    out: dict[str, Any] = {}
+    if hold := _seconds(user_input.get(CONF_FOR)):
+        out[CONF_FOR] = hold
+    for key in (CONF_AFTER, CONF_BEFORE):
+        if user_input.get(key):
+            out[key] = str(user_input[key])
+    return out
 
 
 async def _check(flow: ConfigFlow, url: str, key: str) -> str | None:
@@ -80,6 +111,30 @@ class TickConfigFlow(ConfigFlow, domain=DOMAIN):
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Another address for this Tick (moved, or a new domain), and the key that goes with it."""
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            url = normalize_url(user_input[CONF_URL])
+            host = urlparse(url).hostname or url
+            error = await _check(self, url, user_input[CONF_API_KEY])
+            if error is None:
+                return self.async_update_reload_and_abort(
+                    entry, unique_id=host, title=host,
+                    data_updates={CONF_URL: url, CONF_API_KEY: user_input[CONF_API_KEY].strip()},
+                )
+            errors["base"] = error
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_URL, default=(user_input or {}).get(CONF_URL, entry.data[CONF_URL])): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.URL)
+                ),
+                vol.Required(CONF_API_KEY): KEY_SELECTOR,
+            }
+        )
+        return self.async_show_form(step_id="reconfigure", data_schema=schema, errors=errors)
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
         """The key stopped working (revoked in Tick): ask for a new one."""
@@ -144,12 +199,17 @@ class TriggerFlow(ConfigSubentryFlow):
         self._entity_id = user_input.get(CONF_ENTITY_ID) or None
         return {}
 
-    def _state_schema(self, current: str | None) -> vol.Schema:
+    def _state_schema(self, current: dict[str, Any]) -> vol.Schema:
         return vol.Schema(
             {
-                vol.Required(CONF_TO_STATE, description={"suggested_value": current}): StateSelector(
+                vol.Required(CONF_TO_STATE, description={"suggested_value": current.get(CONF_TO_STATE)}): StateSelector(
                     StateSelectorConfig(entity_id=self._entity_id)
-                )
+                ),
+                vol.Optional(CONF_FOR, description={"suggested_value": _duration(current.get(CONF_FOR))}): DurationSelector(
+                    DurationSelectorConfig(enable_day=False)
+                ),
+                vol.Optional(CONF_AFTER, description={"suggested_value": current.get(CONF_AFTER)}): TimeSelector(),
+                vol.Optional(CONF_BEFORE, description={"suggested_value": current.get(CONF_BEFORE)}): TimeSelector(),
             }
         )
 
@@ -172,11 +232,11 @@ class TriggerFlow(ConfigSubentryFlow):
         if user_input is not None:
             return self.async_create_entry(
                 title=self._name,
-                data={CONF_ENTITY_ID: self._entity_id, CONF_TO_STATE: str(user_input[CONF_TO_STATE])},
+                data={CONF_ENTITY_ID: self._entity_id, CONF_TO_STATE: str(user_input[CONF_TO_STATE]), **_conditions(user_input)},
             )
         return self.async_show_form(
             step_id="state",
-            data_schema=self._state_schema(None),
+            data_schema=self._state_schema({}),
             description_placeholders={"name": self._name, "entity": self._entity_id or ""},
         )
 
@@ -203,11 +263,13 @@ class TriggerFlow(ConfigSubentryFlow):
                 self._get_entry(),
                 sub,
                 title=self._name,
-                data={CONF_ENTITY_ID: self._entity_id, CONF_TO_STATE: str(user_input[CONF_TO_STATE])},
+                data={CONF_ENTITY_ID: self._entity_id, CONF_TO_STATE: str(user_input[CONF_TO_STATE]), **_conditions(user_input)},
             )
+        # Same entity: everything as it was; another entity: its states differ, the conditions stay.
         same = sub.data.get(CONF_ENTITY_ID) == self._entity_id
+        current = dict(sub.data) if same else {k: v for k, v in sub.data.items() if k in (CONF_FOR, CONF_AFTER, CONF_BEFORE)}
         return self.async_show_form(
             step_id="reconfigure_state",
-            data_schema=self._state_schema(sub.data.get(CONF_TO_STATE) if same else None),
+            data_schema=self._state_schema(current),
             description_placeholders={"name": self._name, "entity": self._entity_id or ""},
         )

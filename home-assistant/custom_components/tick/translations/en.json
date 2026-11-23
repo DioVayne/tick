@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect Tick",
-        "description": "Connect Home Assistant to your Tick. In Tick: Settings → Advanced → Keys → New key, access \"Full access\", named for example \"Home Assistant\". Paste that key here. Revoking the key in Tick disconnects Home Assistant at once.",
+        "description": "Connect Home Assistant to your Tick. In Tick: Settings → Advanced → Keys → New key, access \"Full access\", named for example \"Home Assistant\". Paste that key here. Revoking the key in Tick disconnects Home Assistant at once. The address is in the same place in Tick, with a Copy button.",
         "data": {
           "url": "Address of your Tick",
           "api_key": "Key"
@@ -19,6 +19,14 @@
         "data": {
           "api_key": "Key"
         }
+      },
+      "reconfigure": {
+        "title": "Change the connection",
+        "description": "A new address for your Tick, with a key made in that Tick (Settings → Advanced → Keys shows the address with a Copy button). The triggers stay.",
+        "data": {
+          "url": "Address of your Tick",
+          "api_key": "Key"
+        }
       }
     },
     "error": {
@@ -28,7 +36,8 @@
     },
     "abort": {
       "already_configured": "This Tick is already connected.",
-      "reauth_successful": "The new key works."
+      "reauth_successful": "The new key works.",
+      "reconfigure_successful": "The connection has been changed."
     }
   },
   "config_subentries": {
@@ -41,21 +50,30 @@
       "step": {
         "user": {
           "title": "Add trigger",
-          "description": "A trigger is a moment you can pick for a task in Tick, like \"Sam comes home\" or \"The sun sets\". Give it a name as you want to read it in Tick, then choose what Home Assistant watches. Leave the entity empty for a trigger that only goes off from its button or your own automation.",
+          "description": "A trigger is a moment you can pick for a task in Tick, like \"Sam comes home\" or \"The sun sets\". Give it a name as you want to read it in Tick, then choose what Home Assistant watches. On the next screen you choose the state (for example Home or On) and, if you like, conditions. Leave the entity empty for a trigger that only goes off from its button or your own automation.",
           "data": {
             "name": "Name in Tick",
             "entity_id": "Watch"
           },
           "data_description": {
             "name": "Short and clear: who or what, and what happens. For example \"Sam comes home\", \"Sunset\", \"Bathroom light on\".",
-            "entity_id": "A person, the sun, a light, a door sensor… Optional."
+            "entity_id": "A person, the sun, a light, a door sensor… Optional. Next: the state."
           }
         },
         "state": {
           "title": "When does \"{name}\" go off?",
-          "description": "Choose the state {entity} has to change to. Tick is told the moment it changes to this state.",
+          "description": "Choose the state {entity} has to change to, and optionally when it counts.",
           "data": {
-            "to_state": "Changes to"
+            "to_state": "Changes to",
+            "for": "Only after it stayed so for",
+            "after": "Only from",
+            "before": "Only until"
+          },
+          "data_description": {
+            "to_state": "Tick is told the moment it changes to this state.",
+            "for": "Optional. For example 5 minutes: a short visit or a light that is on for a moment does not count.",
+            "after": "Optional. Before this time it does not go off.",
+            "before": "Optional. From this time it does not go off. From 22:00 until 06:00 works over midnight."
           }
         },
         "reconfigure": {
@@ -72,9 +90,18 @@
         },
         "reconfigure_state": {
           "title": "When does \"{name}\" go off?",
-          "description": "Choose the state {entity} has to change to.",
+          "description": "Choose the state {entity} has to change to, and optionally when it counts.",
           "data": {
-            "to_state": "Changes to"
+            "to_state": "Changes to",
+            "for": "Only after it stayed so for",
+            "after": "Only from",
+            "before": "Only until"
+          },
+          "data_description": {
+            "to_state": "Tick is told the moment it changes to this state.",
+            "for": "Optional. For example 5 minutes: a short visit or a light that is on for a moment does not count.",
+            "after": "Optional. Before this time it does not go off.",
+            "before": "Optional. From this time it does not go off. From 22:00 until 06:00 works over midnight."
           }
         }
       },
@@ -90,12 +117,12 @@
   "entity": {
     "button": {
       "fire": {
-        "name": "Go off now"
+        "name": "Fire now"
       }
     },
     "sensor": {
       "last_fired": {
-        "name": "Last gone off"
+        "name": "Last fired"
       }
     }
   }

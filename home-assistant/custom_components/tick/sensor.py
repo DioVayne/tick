@@ -10,7 +10,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import TickConfigEntry
-from .const import CONF_ENTITY_ID, CONF_TO_STATE, SUBENTRY_TRIGGER, signal_fired
+from .const import CONF_AFTER, CONF_BEFORE, CONF_ENTITY_ID, CONF_FOR, CONF_TO_STATE, SUBENTRY_TRIGGER, signal_fired
 from .entity import TickTriggerEntity
 
 
@@ -20,7 +20,13 @@ async def async_setup_entry(
     """One sensor per trigger."""
     for subentry in entry.get_subentries_of_type(SUBENTRY_TRIGGER):
         sensor = TickLastFiredSensor(entry.runtime_data, subentry, "last_fired")
-        sensor.watch = (subentry.data.get(CONF_ENTITY_ID), subentry.data.get(CONF_TO_STATE))
+        sensor.watch = {
+            "entity_id": subentry.data.get(CONF_ENTITY_ID),
+            "to_state": subentry.data.get(CONF_TO_STATE),
+            "for_seconds": subentry.data.get(CONF_FOR),
+            "after": subentry.data.get(CONF_AFTER),
+            "before": subentry.data.get(CONF_BEFORE),
+        }
         async_add_entities([sensor], config_subentry_id=subentry.subentry_id)
 
 
@@ -29,16 +35,15 @@ class TickLastFiredSensor(TickTriggerEntity, SensorEntity):
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:history"
-    watch: tuple[str | None, str | None] = (None, None)
+    watch: dict[str, str | int | None] = {}
 
     @property
     def native_value(self) -> datetime | None:
         return self._data.last.get(self._subentry_id)
 
     @property
-    def extra_state_attributes(self) -> dict[str, str | None]:
-        entity_id, to_state = self.watch
-        return {"entity_id": entity_id, "to_state": to_state}
+    def extra_state_attributes(self) -> dict[str, str | int | None]:
+        return {k: v for k, v in self.watch.items() if v}
 
     async def async_added_to_hass(self) -> None:
         @callback
