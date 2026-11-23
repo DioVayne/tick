@@ -117,9 +117,9 @@ h2, .h2 { font-size: 46px; line-height: 1.08; font-weight: 700; letter-spacing: 
 .logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font-weight: 700; font-size: 22px; }
 .logo svg { flex: none; }
 .main-nav { display: flex; gap: 28px; flex: 1; font-size: 16px; flex-wrap: wrap; }
-.main-nav a, .lang { text-decoration: none; color: var(--ink-soft); }
-.main-nav a:hover, .lang:hover { color: var(--ink); text-decoration: underline; text-decoration-color: var(--pin); text-decoration-thickness: 2px; text-underline-offset: 5px; }
-.lang { font-size: 15px; font-weight: 600; padding: 10px 4px; }
+.main-nav a, .lang, .head-login { text-decoration: none; color: var(--ink-soft); }
+.main-nav a:hover, .lang:hover, .head-login:hover { color: var(--ink); text-decoration: underline; text-decoration-color: var(--pin); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+.lang, .head-login { font-size: 15px; font-weight: 600; padding: 10px 4px; }
 .head-cta { text-decoration: none; background: var(--pin); color: var(--slate); font-weight: 600; font-size: 15px; padding: 11px 20px; border-radius: 999px; white-space: nowrap; }
 .head-cta:hover { background: #fbbf24; }
 
@@ -464,6 +464,7 @@ table.www { width: 100%; border-collapse: collapse; font-size: 15px; line-height
   .site-head .bar { padding: 14px 16px; gap: 12px; }
   .logo { font-size: 20px; }
   .head-cta { padding: 10px 14px; font-size: 14px; }
+  .head-login { display: none; }
   .hero .wrap { padding-top: 32px; padding-bottom: 72px; }
   .hero-copy { gap: 18px; }
   .btn { width: 100%; justify-content: center; }

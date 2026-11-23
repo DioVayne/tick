@@ -193,3 +193,19 @@ function mountTickmanager(root) {
   });
 }
 document.querySelectorAll('.tm').forEach(mountTickmanager);
+
+// ---------- Buttons: on an Android phone the app from Google Play comes first ----------
+// The HTML puts the demo first (computer, iPhone, no JS). On Android the Play button becomes the yellow one, with the
+// demo next to it.
+if (/Android/i.test(navigator.userAgent)) {
+  document.querySelectorAll('[data-ctas]').forEach((row) => {
+    const play = row.querySelector('[data-cta="play"]');
+    const demo = row.querySelector('[data-cta="demo"]');
+    if (!play || !demo) return;
+    const arrow = demo.querySelector('svg');
+    demo.classList.replace('btn-pin', 'btn-ghost');
+    play.classList.replace('btn-ghost', 'btn-pin');
+    if (arrow) play.append(' ', arrow);
+    row.prepend(play);
+  });
+}
