@@ -148,7 +148,7 @@ Een taak inplannen gaat makkelijker als je weet wanneer je kunt. Koppel je onlin
 - Ontkoppelen wist alles wat Tick ophaalde.
 
 <!-- LET OP: Agenda koppelen staat op app.ticktodo.nl (en dus in de Play-app) nog uit. Zet deze sectie pas live als het daar aan staat, of zet er de regel onder: -->
-*Agenda koppelen staat op app.ticktodo.nl nog niet aan. Op een eigen Tick werkt het al. **Zet in je agenda** werkt overal.*
+*Agenda koppelen werkt sinds 2026-11-23 ook op app.ticktodo.nl. **Zet in je agenda** werkt overal.*
 
 ### 3.4 Tickmanager
 
@@ -253,7 +253,7 @@ Andersom: **Zet in je agenda** maakt een afspraak van 30 minuten op de tijd van 
 
 
 ### Kies in je agenda
-Tegel: 🗓️ **Kies in je agenda** · label *Eigen Tick* · "Zie je dagen naast elkaar en tik op een halfuur." (EN: *Pick in your calendar* · *Own Tick* · "See your days side by side and tap a half hour.")
+Tegel: 🗓️ **Kies in je agenda** · geen label · "Zie je dagen naast elkaar en tik op een halfuur." (EN: *Pick in your calendar* · "See your days side by side and tap a half hour.")
 
 Heb je een agenda gekoppeld, dan staat er in het herinneringsmenu een tweede regel: **Kies in je agenda**. Je ziet je dagen naast elkaar, van boven naar beneden in halve uren. Op een telefoon drie dagen en vegen voor meer, op een computer een hele week.
 
@@ -261,7 +261,7 @@ Je afspraken staan er grijs in, met hun titel. De suggesties van Tick zijn gele 
 
 Tik op een halfuur en dat is de tijd. Ook tijdens een afspraak mag het: Tick blokkeert niets, de herinnering zegt dan *tijdens* met de naam van de afspraak. Opnieuw kiezen kan altijd. Je kijkt twee weken vooruit, met **Meer dagen** tot zes weken. Ook in de Tickmanager bij **Inplannen**.
 
-*Werkt met Agenda koppelen, dus nu alleen op een eigen Tick.*
+*Werkt als je een agenda gekoppeld hebt (zie Agenda koppelen).*
 
 Schermafbeelding: `nl-pick-calendar.webp` / `en-pick-calendar.webp` (de kiezer op een telefoon, licht).
 ### Subtaken
@@ -1343,3 +1343,7 @@ Ook 2026-11-11: tegel en verhaal *Meerdere plekken* (#meerdere-plekken / #more-p
 2026-11-20: tegel en verhaal *Datum uit je tekst* (#datum-uit-tekst / #date-from-text, met schermafbeelding nl-/en-quickdate.webp), rij *Datum uit je tekst* in Wat werkt waar (Android: deels, niet bij snel toevoegen en de widget), vraag 10 nu *Ja*, en de regel "haalt geen datum uit wat je typt" weg uit Invoerkaart en Waar Tick minder is. Teksten staan in de HTML.
 
 2026-11-23: tegel en verhaal *Deel naar Tick* (#delen-naar-tick / #share-to-tick, met schermafbeelding nl-/en-share-in.webp), in Wat werkt waar de cel Browser bij *Snel toevoegen en delen vanuit andere apps* nu deels (delen, als app geïnstalleerd vanuit Chrome op Android), en vraag 20 *Kan ik vanaf mijn iPhone een pagina naar Tick delen?* (nee). Teksten staan in de HTML.
+
+
+## 2026-11-23: agenda koppelen op app.ticktodo.nl
+Agenda koppelen staat nu ook op app.ticktodo.nl aan (Data safety in Play bijgewerkt). Op de site: label *Eigen Tick* weg bij Agenda koppelen en Kies in je agenda, "Nog niet helemaal af" en de alinea "nog niet af" weg, "Dat deel is nog in de maak" weg, in Wat werkt waar Agenda koppelen op ja (webapp, Play, iPhone), en bij Zelf hosten de zin "agenda koppelen werkt daar al, al is het nog niet af" weg.
