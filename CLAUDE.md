@@ -17,6 +17,7 @@ Use the skill `setup-tick` (`.claude/skills/setup-tick/SKILL.md`); it follows [S
   - a tile with emoji and an expandable story with a screenshot, in "Alle functies";
   - a row in the "Wat werkt waar" table when it differs between web, Android, iPhone and self-hosted;
   - an FAQ entry if it raises an obvious question.
+  - **Screenshots:** a change that alters what a screen looks like also gets new screenshots in `site/public/img/app/` for every tile or story that shows that screen (NL `nl-*.webp` and EN `en-*.webp`), with an updated `alt` in both pages. Check each one: it shows the feature, matches the current app, is readable on a phone, has no personal data, and the EN one is in English. How to make them: "Screenshots" in the Website section of `ARCHITECTURE.md`. If you can't make a good one (e.g. Android-only), say so to the owner.
   Same CSP rules as the PWA. `test/site.test.ts` checks that NL and EN match; a new section anchor goes into its NL→EN map. The copy lives in `docs/superpowers/specs/2026-11-09-website-copy.md`. Never promise what the app doesn't do.
   - **The site texts are edited live** by the owner via `/beheer` (mini-CMS, see `ARCHITECTURE.md`). An edit in KV wins over the HTML, so git can lag behind what is live. Before changing site texts, write the live edits back into the HTML with `site/cms-sync.mjs` (`--site-dir <deploy folder>`): first a dry run, then `--write`; commit, deploy the site, and only then `--clear` (removes from KV exactly the keys that now equal the HTML). Then make your change in the HTML. Report the script's "let op: alleen NL/EN aangepast" lines to the owner with a proposal for the other language; don't translate on your own.
   - A new text block gets `data-edit="key"` + `data-edit-label="Dutch name"`; the EN page uses the same key with `en-` in front. Never nest them, and don't put them on text a script fills in. Renaming or removing a key orphans its saved edit (the page falls back to the HTML).
@@ -37,7 +38,7 @@ The owner can ask for a feature to be a **test feature** first: it only runs on 
 1. Code + `public/i18n.js` (en + nl) + a migration if needed.
 2. Tests; `npm run typecheck` and `npm test`.
 3. User guide page in `docs/` (+ row in `docs/README.md`); `ARCHITECTURE.md` if the build changes.
-4. Website: tile, story, table, FAQ (NL + EN).
+4. Website: tile, story, table, FAQ, screenshots (NL + EN); also renew screenshots of screens the change altered.
 5. Commit and push to GitHub; deploy the app and the website.
 6. Play line: what (if anything) has to happen in Google Play.
 
