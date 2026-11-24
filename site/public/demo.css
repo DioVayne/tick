@@ -155,14 +155,14 @@
 .tdemo-awn-a { fill: var(--tdemo-pin); }
 .tdemo-awn-b { fill: var(--tdemo-awning); }
 
-/* The place circle: scaled via --tdemo-fs (set by JS) so it can grow smoothly. */
+/* The place circle: moved via --tdemo-fx/--tdemo-fy (set by JS) so it can glide from the shop
+   (on arrival) to the house (on leaving). */
 .tdemo-fence {
   fill: var(--tdemo-fence);
   stroke: var(--tdemo-pin-strong);
   stroke-width: 2;
   stroke-dasharray: 6 6;
-  vector-effect: non-scaling-stroke;
-  transform: scale(var(--tdemo-fs, .625));
+  transform: translate(var(--tdemo-fx, 440px), var(--tdemo-fy, 178px));
   transition: transform .6s cubic-bezier(.3, .7, .2, 1), fill .3s;
 }
 .tdemo.is-inside .tdemo-fence { fill: var(--tdemo-fence-in); }
@@ -181,7 +181,7 @@
   font-weight: 600;
   white-space: nowrap;
   pointer-events: none;
-  transition: left .6s cubic-bezier(.3, .7, .2, 1);
+  transition: left .6s cubic-bezier(.3, .7, .2, 1), top .6s cubic-bezier(.3, .7, .2, 1);
 }
 
 .tdemo-route { fill: none; stroke: var(--tdemo-muted); stroke-width: 2; stroke-dasharray: 2 7; stroke-linecap: round; opacity: .55; }
@@ -199,8 +199,6 @@
 .tdemo-bag { fill: var(--tdemo-pin); stroke: #1e293b; stroke-width: 1.2; stroke-linejoin: round; }
 .tdemo-milk { fill: #ffffff; stroke: #1e293b; stroke-width: 1; opacity: 0; transition: opacity .3s; }
 .tdemo.has-milk .tdemo-milk { opacity: 1; }
-.tdemo-bikepart { fill: none; stroke: var(--tdemo-walker); stroke-width: 2; stroke-linejoin: round; opacity: 0; transition: opacity .3s; }
-.tdemo.is-bike .tdemo-bikepart { opacity: 1; }
 
 /* Invitation: soft pulsing yellow ring until the first interaction. */
 .tdemo-ring { fill: none; stroke: var(--tdemo-pin-strong); stroke-width: 3; opacity: 0; }
@@ -352,8 +350,8 @@
 .tdemo-reset { margin-left: auto; border: 1.5px solid var(--tdemo-border); background: transparent; color: var(--tdemo-muted); }
 .tdemo-reset:hover { color: var(--tdemo-text); border-color: var(--tdemo-muted); }
 
-.tdemo-bike { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; font-weight: 500; }
-.tdemo-bike input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.tdemo-mode { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; font-weight: 500; }
+.tdemo-mode input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
 .tdemo-switch {
   position: relative;
   width: 40px;
@@ -374,11 +372,11 @@
   box-shadow: 0 1px 3px rgba(15, 23, 42, .3);
   transition: transform .25s;
 }
-.tdemo-bike input:checked + .tdemo-switch { background: var(--tdemo-pin-strong); }
-.tdemo-bike input:checked + .tdemo-switch::after { transform: translateX(16px); }
+.tdemo-mode input:checked + .tdemo-switch { background: var(--tdemo-pin-strong); }
+.tdemo-mode input:checked + .tdemo-switch::after { transform: translateX(16px); }
 
 .tdemo-walk:focus-visible, .tdemo-reset:focus-visible, .tdemo-btn:focus-visible,
-.tdemo-bike input:focus-visible + .tdemo-switch {
+.tdemo-mode input:focus-visible + .tdemo-switch {
   outline: 2.5px solid var(--tdemo-focus);
   outline-offset: 2px;
 }

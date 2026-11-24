@@ -1,6 +1,9 @@
 // Tick hero demo "Loop naar de winkel" / "Walk to the shop".
 // Drag (or walk) the little figure into the circle around the supermarket and
 // a Tick notification appears, just like a place reminder in the Android app.
+// The switch "Bij vertrek" / "On leaving" moves the circle to the house: walking
+// out of it gives the notification, like a place reminder on leaving.
+// Both work in every Android build (Google Play and GitHub).
 // No dependencies, no build step, CSP-safe (no inline styles or scripts).
 // Usage: <div class="tdemo" data-tick-demo data-hint="…" …></div> + this module.
 
@@ -10,35 +13,37 @@ const G = {
   start: { x: 114, y: 220 },  // on the grass beside the house, not on its door
   door: { x: 470, y: 220 },   // in front of the shop window (beside the dark door)
   walkY: 220,                 // the pavement the walker follows
-  fence: { x: 440, y: 178 },  // centre of the place
-  rWalk: 80, rBike: 128,      // circle radius on foot / by bike
+  shop: { x: 440, y: 178 },   // centre of the place on arrival
+  home: { x: 65, y: 180 },    // centre of the place on leaving (the start is inside it)
+  r: 80,                      // circle radius ("200 m")
   min: { x: 12, y: 44 }, max: { x: 548, y: 334 },
-  speedWalk: 130, speedBike: 260, // units per second
+  speed: 130,                 // units per second
 };
 
 // English fallbacks; the page supplies its own texts via data-* attributes.
 const DEFAULTS = {
   hint: 'Drag me to the shop',
   walk: 'Walk there',
-  ride: 'Ride there',
   // Same wording as the Android app (android/.../values/strings.xml: loc_arrived, loc_almost, done).
   arrived: '📍 Arrived at the supermarket',
-  arrivedBike: '📍 Almost at the supermarket',
+  left: '📍 Left Home', // loc_left
   task: 'Buy milk',
+  taskLeave: 'Drop off the parcel',
   doneLabel: 'Complete',
   dismissLabel: 'Swipe away notification',
   afterDone: 'Milk in the bag. Ticked off.',
+  afterDoneLeave: 'Ticked off. The parcel comes along.',
   afterDismiss: 'Swiped away? It comes back as soon as you are there again.',
-  bike: 'By bike',
-  bikeNote: 'By bike: a heads-up a little earlier',
+  afterDismissLeave: 'Swiped away? It comes back the next time you leave.',
+  leave: 'On leaving',
+  leaveNote: 'Now Tick speaks up when you leave. Drag me out of the house.',
   radius: '200 m',
-  radiusBike: '400 m',
   reset: 'Start over',
   footnote: 'Notifications at a place work in the Android app.',
   app: 'Tick',
   now: 'now',
   icon: 'img/icon.svg',
-  ariaMap: 'Small map with a house, a street and a supermarket with a circle around it.',
+  ariaMap: 'Small map with a house, a street and a supermarket. A circle marks the place of the reminder.',
   ariaWalker: 'Walker. Use the arrow keys or drag to walk into the circle; Enter walks to the shop.',
   ariaNotification: 'Notification from Tick',
 };
@@ -77,14 +82,13 @@ const MAP = `
 <rect class="tdemo-window" x="460" y="152" width="38" height="30" rx="3"/>
 <rect class="tdemo-doorway" x="428" y="154" width="24" height="48" rx="3"/>
 <path class="tdemo-door-split" d="M440 156V202"/>
-<g transform="translate(440 178)"><circle class="tdemo-fence" r="128"/></g>
+<circle class="tdemo-fence" r="80"/>
 <path class="tdemo-route" d="M114 220H470"/>
 <g class="tdemo-walker" tabindex="0" role="button" transform="translate(114 220)">
   <circle class="tdemo-hit" cy="-16" r="28"/>
   <g transform="translate(0 -16)"><circle class="tdemo-ring" r="20"/></g>
   <circle class="tdemo-focus" cy="-16" r="25"/>
   <ellipse class="tdemo-shadow" rx="9" ry="2.5"/>
-  <g class="tdemo-bikepart"><circle cx="-9" cy="-6" r="6"/><circle cx="9" cy="-6" r="6"/><path d="M-9 -6L-2 -14H6L9 -6M-2 -14L0 -6"/></g>
   <g transform="translate(0 -12)"><line class="tdemo-leg tdemo-leg-a" x1="0" y1="0" x2="-2" y2="11"/><line class="tdemo-leg tdemo-leg-b" x1="0" y1="0" x2="2" y2="11"/></g>
   <rect class="tdemo-body" x="-5" y="-27" width="10" height="17" rx="5"/>
   <circle class="tdemo-head" cy="-32" r="5.5"/>
@@ -114,10 +118,10 @@ const TEMPLATE = `
 <p class="tdemo-sr" aria-live="polite"></p>
 <div class="tdemo-controls">
   <button type="button" class="tdemo-walk"></button>
-  <label class="tdemo-bike">
+  <label class="tdemo-mode">
     <input type="checkbox" role="switch">
     <span class="tdemo-switch" aria-hidden="true"></span>
-    <span class="tdemo-bike-text"></span>
+    <span class="tdemo-mode-text"></span>
   </label>
   <button type="button" class="tdemo-reset"></button>
 </div>
@@ -143,7 +147,8 @@ export function mountDemo(root) {
   const status = $('.tdemo-status');
   const sr = $('.tdemo-sr');
   const walkBtn = $('.tdemo-walk');
-  const bikeInput = $('.tdemo-bike input');
+  const modeInput = $('.tdemo-mode input');
+  const notifTask = $('.tdemo-notif-task');
   const doneBtn = $('.tdemo-done');
   const closeBtn = $('.tdemo-close');
   const notifText = $('.tdemo-notif-text');
@@ -155,28 +160,32 @@ export function mountDemo(root) {
   $('.tdemo-notif-icon').src = t('icon');
   $('.tdemo-notif-app').textContent = t('app');
   $('.tdemo-notif-now').textContent = t('now');
-  $('.tdemo-notif-task').textContent = t('task');
   doneBtn.textContent = t('doneLabel');
   closeBtn.setAttribute('aria-label', t('dismissLabel'));
   closeBtn.title = t('dismissLabel');
-  $('.tdemo-bike-text').textContent = t('bike');
+  $('.tdemo-mode-text').textContent = t('leave');
   $('.tdemo-reset').textContent = t('reset');
   $('.tdemo-foot').textContent = t('footnote');
 
-  const s = { x: G.start.x, y: G.start.y, facing: 1, inside: false, done: false, bike: false, open: false, anim: 0, drag: null };
+  // leave: the reminder is "on leaving" home instead of "on arrival" at the shop.
+  const s = { x: G.start.x, y: G.start.y, facing: 1, inside: false, done: false, leave: false, open: false, anim: 0, drag: null };
   let closeTimer = 0, stepTimer = 0, checkTimer = 0;
 
-  const radius = () => (s.bike ? G.rBike : G.rWalk);
+  const centre = () => (s.leave ? G.home : G.shop);
+  const task = () => (s.leave ? t('taskLeave') : t('task'));
   const setStatus = (text) => { status.textContent = text; };
   const announce = (text) => { sr.textContent = ''; setTimeout(() => { sr.textContent = text; }, 60); };
 
-  // Circle size and label position live in custom properties (CSP-safe).
+  // Circle and label position live in custom properties (CSP-safe). The label sits on the
+  // side of the circle that faces the walk: left of the shop, right of the house.
   function drawFence() {
-    const r = radius();
-    fence.style.setProperty('--tdemo-fs', String(r / G.rBike));
-    fenceLabel.style.setProperty('--tdemo-lx', `${((G.fence.x - r) / G.w) * 100}%`);
-    fenceLabel.style.setProperty('--tdemo-ly', `${(G.fence.y / G.h) * 100}%`);
-    fenceLabel.textContent = s.bike ? t('radiusBike') : t('radius');
+    const c = centre();
+    fence.style.setProperty('--tdemo-fx', `${c.x}px`);
+    fence.style.setProperty('--tdemo-fy', `${c.y}px`);
+    const lx = s.leave ? c.x + G.r : c.x - G.r;
+    fenceLabel.style.setProperty('--tdemo-lx', `${(lx / G.w) * 100}%`);
+    fenceLabel.style.setProperty('--tdemo-ly', `${(c.y / G.h) * 100}%`);
+    fenceLabel.textContent = t('radius');
   }
 
   function place(x, y) {
@@ -188,17 +197,19 @@ export function mountDemo(root) {
     check();
   }
 
-  // Geofence: fire on entering, re-arm on leaving (a little slack against jitter).
+  // Geofence with a little slack against jitter. On arrival it fires on entering and
+  // re-arms on leaving; on leaving it is the other way round.
   function check() {
-    const d = Math.hypot(s.x - G.fence.x, s.y - G.fence.y);
-    const r = radius();
-    if (!s.inside && d <= r) {
+    const c = centre();
+    const d = Math.hypot(s.x - c.x, s.y - c.y);
+    if (!s.inside && d <= G.r) {
       s.inside = true;
       root.classList.add('is-inside');
-      if (!s.done) openNotif();
-    } else if (s.inside && d > r + 6) {
+      if (!s.leave && !s.done) openNotif();
+    } else if (s.inside && d > G.r + 6) {
       s.inside = false;
       root.classList.remove('is-inside');
+      if (s.leave && !s.done) openNotif();
     }
   }
 
@@ -210,12 +221,12 @@ export function mountDemo(root) {
       void notif.offsetWidth;
       notif.classList.add('is-bump');
     }
-    // On the road (bike) the app says "Almost at …", on foot "Arrived at …".
-    notifText.textContent = s.bike ? t('arrivedBike') : t('arrived');
+    // Same wording as the app: "Arrived at …" or "Left …".
+    notifText.textContent = s.leave ? t('left') : t('arrived');
     s.open = true;
     notif.inert = false;
     root.classList.add('is-notified');
-    announce(`${t('app')}: ${t('task')}. ${notifText.textContent}`);
+    announce(`${t('app')}: ${task()}. ${notifText.textContent}`);
   }
 
   // instant: hide without the slide (after a sideways swipe it is already off-screen).
@@ -235,7 +246,7 @@ export function mountDemo(root) {
   // Swiping away (or ×): gone for now, back on the next arrival, like the real app.
   function dismiss(instant = false) {
     closeNotif(instant);
-    setStatus(t('afterDismiss'));
+    setStatus(s.leave ? t('afterDismissLeave') : t('afterDismiss'));
   }
 
   function interacted() {
@@ -267,7 +278,7 @@ export function mountDemo(root) {
     let last = performance.now();
     root.classList.add('is-walking');
     const frame = (now) => {
-      let dist = (s.bike ? G.speedBike : G.speedWalk) * (Math.min(50, now - last) / 1000);
+      let dist = G.speed * (Math.min(50, now - last) / 1000);
       last = now;
       while (dist > 0 && i < pts.length) {
         const p = pts[i];
@@ -281,10 +292,11 @@ export function mountDemo(root) {
     s.anim = requestAnimationFrame(frame);
   }
 
-  // Button and circle follow the mode: "Walk there" on foot, "Ride there" by bike.
+  // Circle and task follow the mode: the shop on arrival, the house on leaving.
   function applyMode() {
-    root.classList.toggle('is-bike', s.bike);
-    walkBtn.textContent = s.bike ? t('ride') : t('walk');
+    root.classList.toggle('is-leave', s.leave);
+    walkBtn.textContent = t('walk');
+    notifTask.textContent = task();
     drawFence();
   }
 
@@ -294,11 +306,12 @@ export function mountDemo(root) {
     clearTimeout(checkTimer);
     closeNotif();
     s.done = false;
-    s.inside = false;
+    s.inside = s.leave; // the start is inside the circle round the house
     s.facing = 1;
     doneBtn.disabled = false;
     notif.classList.remove('is-done', 'is-bump');
-    root.classList.remove('is-inside', 'has-milk', 'is-dragging');
+    root.classList.remove('has-milk', 'is-dragging');
+    root.classList.toggle('is-inside', s.inside);
     applyMode();
     // Jump home facing the shop (place() would otherwise turn it towards home).
     s.x = G.start.x; s.y = G.start.y;
@@ -306,8 +319,8 @@ export function mountDemo(root) {
   }
 
   function reset() {
-    s.bike = false;
-    bikeInput.checked = false;
+    s.leave = false;
+    modeInput.checked = false;
     newTrip();
     root.classList.add('is-fresh');
     setStatus(t('hint'));
@@ -361,8 +374,8 @@ export function mountDemo(root) {
     s.done = true;
     doneBtn.disabled = true;
     notif.classList.add('is-done');
-    root.classList.add('has-milk');
-    setStatus(t('afterDone'));
+    if (!s.leave) root.classList.add('has-milk');
+    setStatus(s.leave ? t('afterDoneLeave') : t('afterDone'));
     closeTimer = setTimeout(closeNotif, reduceMotion.matches ? 1200 : 1700);
   });
 
@@ -400,12 +413,11 @@ export function mountDemo(root) {
   notif.addEventListener('pointerup', endSwipe);
   notif.addEventListener('pointercancel', endSwipe);
 
-  // By bike: bigger circle, so the reminder comes earlier. Switching mode starts a
-  // new trip from home, so you see the notification arrive (earlier) on the way.
-  bikeInput.addEventListener('change', () => {
-    s.bike = bikeInput.checked;
+  // On leaving: the circle moves to the house. Switching mode starts a new trip from home.
+  modeInput.addEventListener('change', () => {
+    s.leave = modeInput.checked;
     newTrip();
-    setStatus(s.bike ? t('bikeNote') : t('hint'));
+    setStatus(s.leave ? t('leaveNote') : t('hint'));
   });
 
   applyMode();
