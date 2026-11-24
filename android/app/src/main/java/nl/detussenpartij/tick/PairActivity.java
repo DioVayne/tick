@@ -174,11 +174,11 @@ public class PairActivity extends Activity {
         else askBatteryAndFinish();
     }
 
-    /** Na het koppelen ook de batterijvraag: zonder vrijstelling verversen widget en locatiemeldingen op sommige telefoons niet. */
+    /** Na het koppelen ook de batterij: zonder vrijstelling verversen widget en locatiemeldingen op sommige telefoons niet. */
     private void askBatteryAndFinish() {
-        // De Play-app heeft geen systeemvraag; ongevraagd de instellingen openen na het koppelen zou verwarren.
-        if (Battery.canPrompt()) Battery.ask(this);
-        finish();
+        if (isFinishing() || isDestroyed()) return;
+        // De systeemvraag, of in de Play-app uitleg per merk met een knop naar de instellingen (zie Battery.afterPair).
+        Battery.afterPair(this, this::finish);
     }
 
     private static void failed(Context app) {

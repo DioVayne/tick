@@ -7,12 +7,15 @@ On your phone, [download Tick.apk](https://github.com/DioVayne/tick/releases/lat
 
 The app checks GitHub once a day for a new version and notifies you; **Search for updates** in *Tick on this phone* checks right away.
 
-There is also a Google Play version (package `nl.ticktodo.app`, in testing). It starts on app.ticktodo.nl, the hosted Tick; to use your own Tick in it, open **Phone settings → Change address**. Moving your tasks along is in [Moving to another Tick](moving.md). Play keeps it up to date, so it has no GitHub update check. It also leaves out [On time on the road](#on-time-on-the-road), and **Turn off battery restriction** opens the app's settings (choose *Battery*, then *Unrestricted*) instead of asking directly. The two versions are separate apps and can be installed side by side; use one of them.
+There is also a Google Play version (package `nl.ticktodo.app`, in testing). It starts on app.ticktodo.nl, the hosted Tick; to use your own Tick in it, open **Phone settings → Change address**. Moving your tasks along is in [Moving to another Tick](moving.md). Play keeps it up to date, so it has no GitHub update check. It also leaves out [On time on the road](#on-time-on-the-road), and **Turn off battery restriction** opens the app's settings (choose *Battery*, then *Unrestricted*) instead of asking directly; right after linking it explains this once, with the steps for your phone. The two versions are separate apps and can be installed side by side; use one of them.
 
 ## Linking
 After you log in, the app links itself to your account with a one-time code and asks for permission for notifications and location. Before each Android question it explains what the permission is for; your location stays on the phone. If that does not happen, tap **Link** in the bar in the app. Logging in as someone else in the app links it to that account and clears the previous person's data from the phone.
 
 For place reminders, allow location **all the time**. *Tick on this phone* (the shortcut **Phone settings**, or **⚙ Settings → Devices**) shows whether notifications and location work, and **⚙ Settings → Devices** shows it for each of your phones.
+
+### Battery saving
+To save battery, Android can hold Tick back in the background. Reminders at a set time are not affected (they come through Google's push service), but place notifications can come late or not at all and the widget may not refresh. *Tick on this phone* says whether Android holds Tick back. **Turn off battery restriction** fixes the main switch. Below it, **Battery settings on your …** lists the steps for your brand of phone (Samsung, Xiaomi, Redmi and POCO, OnePlus, Oppo and realme, vivo, Huawei and Honor, or other): some brands have extra settings, such as Samsung's *Deep sleeping apps* or Xiaomi's *Autostart*, that the main switch does not cover. The list is open while Android still holds Tick back.
 
 ## The widget
 Add the Tick widget to your home screen. Each widget has its own settings (they open when you add it, or long-press the widget and choose its settings; **Widget settings** in *Tick on this phone* asks which widget first). You choose:
@@ -83,6 +86,6 @@ Adding also works without a connection: the task shows up in the widget at once 
 A date here uses 09:00, not your own reminder time.
 
 ## When something does not work
-- **No place notifications:** check in *Tick on this phone* that location is allowed all the time and that battery saving does not stop the app. The **Location notification log** there shows what happened and usually why a notification did not come; see [Places, When a notification does not come](places.md#when-a-notification-does-not-come).
+- **No place notifications:** check in *Tick on this phone* that location is allowed all the time and that battery saving does not stop the app (see [Battery saving](#battery-saving)). The **Location notification log** there shows what happened and usually why a notification did not come; see [Places, When a notification does not come](places.md#when-a-notification-does-not-come).
 - **The widget says "not linked":** the key was revoked (for example under **⚙ Settings → Devices**). Open the app and link again.
 - **Notifications twice:** if Chrome on the same phone also has notifications on, turn them off there; the app offers this hint once.

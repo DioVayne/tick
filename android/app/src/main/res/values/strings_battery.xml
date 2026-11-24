@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Batterij (Battery.java, BatteryPlan.java): uitleg per merk in "Tick on this phone" en na het koppelen (Play-app). -->
+<resources>
+    <string name="battery_brand_toggle">Battery settings on your %1$s</string>
+    <string name="battery_dialog_title">Battery saving</string>
+    <string name="battery_dialog_text">Some phones stop Tick in the background to save battery. Location notifications then come late or not at all, and the widget does not refresh. Reminders at a set time are not affected.\n\nOn your %1$s:\n%2$s</string>
+    <string name="battery_dialog_open">Open settings</string>
+    <string name="battery_dialog_later">Later</string>
+    <string name="battery_open_settings">Open Tick\'s app settings</string>
+    <string name="battery_steps_samsung">1. Settings → Apps → Tick → Battery: choose Unrestricted.\n2. Settings → Battery → Background usage limits: make sure Tick is not under Sleeping apps or Deep sleeping apps. Add it to Never sleeping apps.\nThe names can differ a little per version.</string>
+    <string name="battery_steps_xiaomi">1. Settings → Apps → Manage apps → Tick: turn on Autostart.\n2. Same screen → Battery saver: choose No restrictions.\n3. Open recent apps and lock Tick (press and hold the card, or pull it down), so cleaning up does not stop it.\nThe names can differ a little per version (MIUI or HyperOS).</string>
+    <string name="battery_steps_oneplus">1. Settings → Apps → Tick → Battery usage: turn on Allow background activity (and Allow auto launch, if it is there).\n2. In recent apps, lock Tick so cleaning up does not stop it.\nThe names can differ a little per version.</string>
+    <string name="battery_steps_vivo">1. Settings → Battery → Background power consumption management → Tick: choose Allow high background power consumption.\n2. Settings → Apps → Tick → Permissions: turn on Autostart, if it is there.\nThe names can differ a little per version.</string>
+    <string name="battery_steps_huawei">1. Settings → Battery → App launch → Tick: turn off Manage automatically.\n2. In the window that opens, turn on Auto-launch, Secondary launch and Run in background.\nThe names can differ a little per version.</string>
+    <string name="battery_steps_other">1. Settings → Apps → Tick → App battery usage (or Battery): choose Unrestricted.\n2. Check that notifications for Tick are on, including Location notifications.\nThe names can differ a little per phone.</string>
+</resources>

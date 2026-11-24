@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Batterij (Battery.java, BatteryPlan.java): uitleg per merk in "Tick op deze telefoon" en na het koppelen (Play-app). -->
+<resources>
+    <string name="battery_brand_toggle">Batterij-instellingen op je %1$s</string>
+    <string name="battery_dialog_title">Batterijbesparing</string>
+    <string name="battery_dialog_text">Sommige telefoons stoppen Tick op de achtergrond om batterij te sparen. Plekmeldingen komen dan te laat of niet, en de widget ververst niet. Herinneringen op een tijd hebben hier geen last van.\n\nOp je %1$s:\n%2$s</string>
+    <string name="battery_dialog_open">Instellingen openen</string>
+    <string name="battery_dialog_later">Later</string>
+    <string name="battery_open_settings">App-instellingen van Tick openen</string>
+    <string name="battery_steps_samsung">1. Instellingen → Apps → Tick → Batterij: kies Onbeperkt.\n2. Instellingen → Batterij → Limieten achtergrondgebruik: zorg dat Tick niet bij Apps in slaapstand of Apps in diepe slaapstand staat. Zet hem bij Apps die nooit in slaapstand gaan.\nDe namen kunnen per versie iets verschillen.</string>
+    <string name="battery_steps_xiaomi">1. Instellingen → Apps → Apps beheren → Tick: zet Autostart aan.\n2. Zelfde scherm → Batterijbesparing: kies Geen beperkingen.\n3. Open de recente apps en zet Tick vast (houd de kaart ingedrukt of trek hem omlaag), zodat opruimen hem niet stopt.\nDe namen kunnen per versie iets verschillen (MIUI of HyperOS).</string>
+    <string name="battery_steps_oneplus">1. Instellingen → Apps → Tick → Batterijgebruik: zet Activiteit op de achtergrond toestaan aan (en Automatisch starten toestaan, als dat er staat).\n2. Zet Tick vast in de recente apps, zodat opruimen hem niet stopt.\nDe namen kunnen per versie iets verschillen.</string>
+    <string name="battery_steps_vivo">1. Instellingen → Batterij → Beheer stroomverbruik op achtergrond → Tick: kies Hoog stroomverbruik op achtergrond toestaan.\n2. Instellingen → Apps → Tick → Rechten: zet Autostart aan, als dat er staat.\nDe namen kunnen per versie iets verschillen.</string>
+    <string name="battery_steps_huawei">1. Instellingen → Batterij → App starten → Tick: zet Automatisch beheren uit.\n2. In het venster dat opent: zet Automatisch starten, Secundair starten en Op achtergrond uitvoeren aan.\nDe namen kunnen per versie iets verschillen.</string>
+    <string name="battery_steps_other">1. Instellingen → Apps → Tick → Batterijgebruik van app (of Batterij): kies Onbeperkt.\n2. Controleer dat meldingen van Tick aanstaan, ook Locatiemeldingen.\nDe namen kunnen per telefoon iets verschillen.</string>
+</resources>

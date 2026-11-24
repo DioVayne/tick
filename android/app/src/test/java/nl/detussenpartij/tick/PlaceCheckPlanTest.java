@@ -4,22 +4,9 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-/** Testfeature "placecheck": merk herkennen en de uitslag van de proefmelding. */
+/** Testfeature "placecheck": de uitslag van de proefmelding. */
 public class PlaceCheckPlanTest {
     private static final long T = 1_000_000;
-
-    @Test
-    public void herkentMerkenOokViaBrand() {
-        assertEquals(PlaceCheckPlan.Brand.XIAOMI, PlaceCheckPlan.brand("Xiaomi", "Redmi"));
-        assertEquals(PlaceCheckPlan.Brand.XIAOMI, PlaceCheckPlan.brand("", "POCO"));
-        assertEquals(PlaceCheckPlan.Brand.SAMSUNG, PlaceCheckPlan.brand("samsung", "samsung"));
-        assertEquals(PlaceCheckPlan.Brand.ONEPLUS, PlaceCheckPlan.brand("OnePlus", "OnePlus"));
-        assertEquals(PlaceCheckPlan.Brand.ONEPLUS, PlaceCheckPlan.brand("realme", "realme"));
-        assertEquals(PlaceCheckPlan.Brand.VIVO, PlaceCheckPlan.brand("vivo", "iQOO"));
-        assertEquals(PlaceCheckPlan.Brand.HUAWEI, PlaceCheckPlan.brand("HONOR", "HONOR"));
-        assertEquals(PlaceCheckPlan.Brand.OTHER, PlaceCheckPlan.brand("Google", "google"));
-        assertEquals(PlaceCheckPlan.Brand.OTHER, PlaceCheckPlan.brand(null, null));
-    }
 
     @Test
     public void uitslagVanDeProef() {

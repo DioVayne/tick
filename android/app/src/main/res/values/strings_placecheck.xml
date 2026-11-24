@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Testfeature "placecheck" (PlaceCheck.java): proefmelding en uitleg per merk in "Tick on this phone". -->
+<!-- Testfeature "placecheck" (PlaceCheck.java): proefmelding in "Tick on this phone". -->
 <resources>
     <string name="placecheck_title">Check place notifications</string>
     <string name="placecheck_help">Tap the button, lock your phone and wait. After 15 seconds Tick sends a test notification, the same kind you get at a place. This checks that notifications get through on a locked screen. It does not check your location.</string>
@@ -8,19 +8,11 @@
     <string name="placecheck_status_none">No test yet.</string>
     <string name="placecheck_status_waiting">Waiting for the test notification…</string>
     <string name="placecheck_status_blocked">Last test: the notification could not be shown, because notifications for Tick or Location notifications are off.</string>
-    <string name="placecheck_status_missing">Last test: no notification arrived. Your phone probably stops Tick in the background. Follow the steps below and test again.</string>
+    <string name="placecheck_status_missing">Last test: no notification arrived. Your phone probably stops Tick in the background. Follow the battery steps above and test again.</string>
     <string name="placecheck_status_arrived_locked">Last test: arrived %1$s, with the screen locked. Place notifications can get through.</string>
     <string name="placecheck_status_arrived_unlocked">Last test: arrived %1$s, but the screen was not locked. Test again with the screen locked.</string>
     <string name="placecheck_on_time">on time</string>
     <string name="placecheck_late">%1$d seconds late</string>
     <string name="placecheck_notification_title">Tick test notification</string>
     <string name="placecheck_notification_text">This is how a place notification arrives. Tap to see the result.</string>
-    <string name="placecheck_brand_title">On your %1$s</string>
-    <string name="placecheck_open_settings">Open Tick\'s app settings</string>
-    <string name="placecheck_steps_samsung">1. Settings → Apps → Tick → Battery: choose Unrestricted.\n2. Settings → Battery → Background usage limits: make sure Tick is not under Sleeping apps or Deep sleeping apps. Add it to Never sleeping apps.\nThe names can differ a little per version.</string>
-    <string name="placecheck_steps_xiaomi">1. Settings → Apps → Manage apps → Tick: turn on Autostart.\n2. Same screen → Battery saver: choose No restrictions.\n3. Open recent apps and lock Tick (press and hold the card, or pull it down), so cleaning up does not stop it.\nThe names can differ a little per version (MIUI or HyperOS).</string>
-    <string name="placecheck_steps_oneplus">1. Settings → Apps → Tick → Battery usage: turn on Allow background activity (and Allow auto launch, if it is there).\n2. In recent apps, lock Tick so cleaning up does not stop it.\nThe names can differ a little per version.</string>
-    <string name="placecheck_steps_vivo">1. Settings → Battery → Background power consumption management → Tick: choose Allow high background power consumption.\n2. Settings → Apps → Tick → Permissions: turn on Autostart, if it is there.\nThe names can differ a little per version.</string>
-    <string name="placecheck_steps_huawei">1. Settings → Battery → App launch → Tick: turn off Manage automatically.\n2. In the window that opens, turn on Auto-launch, Secondary launch and Run in background.\nThe names can differ a little per version.</string>
-    <string name="placecheck_steps_other">1. Settings → Apps → Tick → App battery usage (or Battery): choose Unrestricted.\n2. Check that notifications for Tick are on, including Location notifications.\nThe names can differ a little per phone.</string>
 </resources>

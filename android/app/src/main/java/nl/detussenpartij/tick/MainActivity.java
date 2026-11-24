@@ -46,6 +46,7 @@ public class MainActivity extends Activity {
     private TextView addressStatus;
     private TextView batteryStatus;
     private Button battery;
+    private Battery.Help batteryHelp;
     private PlaceCheck placeCheck; // testfeature placecheck
 
     /**
@@ -184,6 +185,7 @@ public class MainActivity extends Activity {
         batteryStatus = new TextView(this);
         batteryStatus.setPadding(0, (int) (4 * d), 0, (int) (12 * d));
         root.addView(batteryStatus);
+        batteryHelp = Battery.addHelp(this, root);
 
         placeCheck = PlaceCheck.addTo(this, root); // testfeature placecheck
 
@@ -288,6 +290,7 @@ public class MainActivity extends Activity {
         boolean free = Battery.unrestricted(this);
         batteryStatus.setText(free ? R.string.battery_status_free : R.string.battery_status_limited);
         battery.setVisibility(free ? View.GONE : View.VISIBLE);
+        batteryHelp.refresh(free);
     }
 
     private boolean granted(String permission) {

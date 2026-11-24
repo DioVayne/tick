@@ -10,10 +10,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
-import android.os.Build;
 import android.os.SystemClock;
-import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -22,9 +19,9 @@ import android.widget.Toast;
 
 /**
  * Testfeature "placecheck" (zie ARCHITECTURE.md, Testfeatures): een blok in "Tick op deze telefoon" met
- * 1. een proefmelding: 15 seconden na de knop een melding in het kanaal "locatie", via een wekker van Android, zodat
- *    je met een vergrendeld scherm ziet of een Tick-melding doorkomt; en
- * 2. uitleg per merk telefoon: waar je de batterijbeperking voor Tick uitzet, met een knop naar de app-instellingen.
+ * een proefmelding: 15 seconden na de knop een melding in het kanaal "locatie", via een wekker van Android, zodat je
+ * met een vergrendeld scherm ziet of een Tick-melding doorkomt. (De uitleg per merk staat sinds 1.15.5 voor iedereen
+ * in Battery.)
  * Het blok staat er alleen als de gekoppelde Tick "placecheck" in TEST_FEATURES heeft.
  */
 final class PlaceCheck {
@@ -77,22 +74,6 @@ final class PlaceCheck {
         TextView status = new TextView(a);
         status.setPadding(0, (int) (4 * d), 0, (int) (12 * d));
         box.addView(status);
-
-        TextView brandTitle = new TextView(a);
-        brandTitle.setText(a.getString(R.string.placecheck_brand_title, brandName()));
-        brandTitle.setTextSize(16);
-        brandTitle.setPadding(0, (int) (8 * d), 0, (int) (4 * d));
-        box.addView(brandTitle);
-
-        TextView steps = new TextView(a);
-        steps.setText(steps(PlaceCheckPlan.brand(Build.MANUFACTURER, Build.BRAND)));
-        box.addView(steps);
-
-        Button settings = new Button(a);
-        settings.setText(R.string.placecheck_open_settings);
-        settings.setOnClickListener(v -> a.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.fromParts("package", a.getPackageName(), null))));
-        box.addView(settings);
 
         return new PlaceCheck(a, box, status);
     }
@@ -170,24 +151,6 @@ final class PlaceCheck {
             KeyguardManager km = c.getSystemService(KeyguardManager.class);
             prefs(c).edit().putLong(FIRED, System.currentTimeMillis()).putBoolean(SHOWN, shown)
                     .putBoolean(LOCKED, km != null && km.isKeyguardLocked()).apply();
-        }
-    }
-
-    /** De naam van het merk zoals de telefoon hem noemt (eerste letter hoofdletter), of "Android". */
-    private static String brandName() {
-        String m = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.trim();
-        if (m.isEmpty()) return "Android";
-        return m.substring(0, 1).toUpperCase(java.util.Locale.ROOT) + m.substring(1);
-    }
-
-    private static int steps(PlaceCheckPlan.Brand brand) {
-        switch (brand) {
-            case XIAOMI: return R.string.placecheck_steps_xiaomi;
-            case SAMSUNG: return R.string.placecheck_steps_samsung;
-            case ONEPLUS: return R.string.placecheck_steps_oneplus;
-            case VIVO: return R.string.placecheck_steps_vivo;
-            case HUAWEI: return R.string.placecheck_steps_huawei;
-            default: return R.string.placecheck_steps_other;
         }
     }
 }
