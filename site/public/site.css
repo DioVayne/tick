@@ -738,3 +738,46 @@ table.www { width: 100%; border-collapse: collapse; font-size: 15px; line-height
   .adv-cards { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .adv-card { padding: 18px 16px; }
 }
+
+/* ---------- Home Assistant band: copy left, "when … → notification" picture right ---------- */
+.btn-line { color: var(--t); border: 2px solid var(--ln); }
+.btn-line:hover { border-color: var(--m); }
+.ha-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 48px; align-items: center; }
+.ha-copy { display: flex; flex-direction: column; gap: 18px; }
+.ha-eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: #0b8fc0; }
+.ha-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #18bcf2; font-size: 20px; line-height: 1; }
+.ha-copy h2 { font-size: 40px; line-height: 1.1; font-weight: 800; letter-spacing: -.8px; }
+.ha-intro { font-size: 18px; line-height: 1.6; }
+.ha-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 16px; line-height: 1.5; }
+.ha-facts li { position: relative; padding-left: 30px; }
+.ha-facts li::before { content: "✓"; position: absolute; left: 0; top: 1px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #18bcf2; color: #fff; font-size: 12px; font-weight: 800; }
+.ha-visual { display: flex; flex-direction: column; gap: 14px; padding: 28px; border-radius: 24px; background: linear-gradient(160deg, #e6f7fe, #f4fbff); box-shadow: 0 0 0 1px #cdeefc; }
+.ha-when { font-size: 14px; font-weight: 700; color: #0b8fc0; text-transform: uppercase; letter-spacing: .6px; }
+.ha-trigs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.ha-trigs li { padding: 8px 14px; border-radius: 999px; background: #ffffff; box-shadow: 0 0 0 1px #cdeefc; font-size: 14px; font-weight: 600; color: #1e293b; }
+.ha-trigs li.is-on { background: #18bcf2; color: #ffffff; box-shadow: 0 6px 16px rgba(24, 188, 242, .35); }
+.ha-notif { margin-top: 6px; padding: 14px 16px; border-radius: 18px; background: #ffffff; color: #1e293b; box-shadow: 0 12px 30px rgba(15, 23, 42, .12); display: flex; flex-direction: column; gap: 4px; }
+.ha-n-head { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; }
+.ha-n-title { font-size: 15px; font-weight: 700; line-height: 1.35; }
+.ha-n-text { font-size: 13px; color: #475569; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ha-visual { background: linear-gradient(160deg, #0f2a36, #13222b); box-shadow: 0 0 0 1px #1d4a5c; }
+  :root:not([data-theme="light"]) .ha-eyebrow, :root:not([data-theme="light"]) .ha-when { color: #5fd3fa; }
+}
+:root[data-theme="dark"] .ha-visual { background: linear-gradient(160deg, #0f2a36, #13222b); box-shadow: 0 0 0 1px #1d4a5c; }
+:root[data-theme="dark"] .ha-eyebrow, :root[data-theme="dark"] .ha-when { color: #5fd3fa; }
+
+/* "Onafhankelijk": the one GitHub-only feature, with its drawing */
+.adv-feature { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 16px; align-items: start; padding: 16px; border-radius: 14px; background: var(--g2); }
+.adv-feature img { width: 96px; height: auto; border-radius: 12px; box-shadow: 0 0 0 1px var(--ln); }
+.adv-feature-b { display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.55; }
+.adv-feature-t { font-weight: 700; font-size: 16px; }
+.adv-feature-w { color: var(--m); }
+@media (max-width: 900px) {
+  .ha-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .ha-copy h2 { font-size: 30px; }
+  .ha-intro { font-size: 17px; }
+  .ha-visual { padding: 20px; order: -1; }
+  .adv-feature { grid-template-columns: 72px minmax(0, 1fr); padding: 14px; }
+  .adv-feature img { width: 72px; }
+}

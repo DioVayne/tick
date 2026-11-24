@@ -28,7 +28,7 @@ const detailsIds = (text: string) => [...text.matchAll(/<details\b[^>]*\bid="([^
 const NL_TO_EN: Record<string, string> = {
   top: 'top', maker: 'maker', 'op-de-juiste-plek': 'in-the-right-place', 'samen-of-kopie': 'shared-or-copy',
   'oude-taken': 'old-tasks', functies: 'features', 'wat-werkt-waar': 'what-works-where', vergelijken: 'compare',
-  privacy: 'privacy', kost: 'cost', vragen: 'faq', starten: 'get-started', 'wie-zit-erachter': 'who-is-behind-it', gevorderden: 'advanced',
+  privacy: 'privacy', kost: 'cost', vragen: 'faq', starten: 'get-started', 'wie-zit-erachter': 'who-is-behind-it', gevorderden: 'advanced', 'slim-huis': 'smart-home',
   invoerkaart: 'entry-card', 'datum-uit-tekst': 'date-from-text', 'delen-naar-tick': 'share-to-tick', herinneringen: 'reminders', herhalen: 'repeating', vandaag: 'due-today', kalender: 'calendar',
   'agenda-koppelen': 'link-calendar', 'kies-in-je-agenda': 'pick-in-calendar', subtaken: 'subtasks', notities: 'notes', bijlagen: 'attachments', offline: 'offline',
   themas: 'themes', widget: 'widget', plekken: 'places', 'meerdere-plekken': 'more-places', rijmodus: 'driving-mode', 'op-tijd-onderweg': 'on-time-on-the-road',

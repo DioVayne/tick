@@ -671,7 +671,7 @@
 <p>In the Android app, under <strong>Tick on this phone</strong>, turn on <em>On time on the road</em>. While you drive or cycle, Tick makes arrival circles bigger. The notification then comes around the edge of the circle you set, and says <em>“Almost at …”</em>.</p>
 <p>How much bigger, Tick learns from your earlier notifications, separately for car and bike. A circle never grows so big that you're already inside it when you set off. When you get out or off, the circles go back to normal.</p>
 <p>Tick asks for the permission <strong>Physical activity</strong>, only to know <em>whether</em> you drive or cycle. It's not a fitness feature. Nothing about where you are or how you travel is sent.</p>
-<p>This is only in the Android app from GitHub, not in the Google Play version. Why is under <a href="#advanced">For advanced users</a>.</p>
+<p>This is only in the Android app from GitHub, not in the Google Play version. Why is under <a href="#advanced">Independent</a>.</p>
 </div></div>
 </details>
 
@@ -720,7 +720,7 @@
 <div class="android-b" data-edit="en-android-tekst" data-edit-label="Android-app: tekst (Engels)">
 <p>The free Android app is on Google Play. Install it, then create an account or log in. You get the same Tick as on <strong>app.ticktodo.nl</strong>, plus reminders at a place, the widget and quick add.</p>
 <p><a class="link-u" href="https://play.google.com/store/apps/details?id=nl.ticktodo.app">Get Tick on Google Play →</a></p>
-<p>Rather not use Google Play? See <a href="#advanced">For advanced users</a>.</p>
+<p>Rather not use Google Play? See <a href="#advanced">Independent</a>.</p>
 </div>
 </div>
 
@@ -766,7 +766,7 @@
 <p>On app.ticktodo.nl you share with up to 3 people; what others share with you doesn't count.</p>
 <p>Hosting and development do cost something. So there may be paid extras later. Tick doesn't need to make a profit: if it pays for itself, I'm happy.</p>
 <p>What's free when you sign up won't become paid without me telling you in advance. That's in the <a href="https://app.ticktodo.nl/terms">terms</a> too.</p>
-<p class="selfhost">Rather do it all yourself? Tick is open source and you can host it yourself, with no limit on the number of people. How is under <a href="#advanced">For advanced users</a>.</p>
+<p class="selfhost">Rather do it all yourself? Tick is open source and you can host it yourself, with no limit on the number of people. How is under <a href="#advanced">Independent</a>.</p>
 </div>
 </div>
 </section>
@@ -811,6 +811,45 @@
 </div>
 </section>
 
+<!-- 7b Home Assistant -->
+<section id="smart-home" class="band ha-band" aria-labelledby="ha-title">
+<div class="wrap ha-grid">
+<div class="ha-copy">
+<p class="ha-eyebrow"><span class="ha-mark" aria-hidden="true">🏠</span><span data-edit="en-ha-bovenregel" data-edit-label="Home Assistant: bovenregel (Engels)">Works with Home Assistant</span></p>
+<h2 id="ha-title" data-edit="en-ha-titel" data-edit-label="Home Assistant: titel (Engels)">Let your home remind you</h2>
+<p class="ha-intro" data-edit="en-ha-intro" data-edit-label="Home Assistant: intro (Engels)">Use Home Assistant? Connect it to Tick, and a task speaks up at a moment from your house: when Sam comes home, when the sun sets, when the washing machine is done. Not at three o'clock in a meeting.</p>
+<ul class="ha-facts" data-edit="en-ha-punten" data-edit-label="Home Assistant: punten (Engels)">
+<li>You make triggers once in Home Assistant, and pick them on a task in Tick</li>
+<li>One notification, also for everyone you share the task with</li>
+<li>One person in the house with Home Assistant is enough</li>
+<li>Tick never connects to your home: it only hears which trigger went off, and when</li>
+</ul>
+<div class="btns"><a class="btn btn-pin btn-small" href="#home-assistant">How it works →</a><a class="btn btn-line btn-small" href="https://github.com/DioVayne/tick/blob/main/docs/home-assistant.md">Install it (guide)</a></div>
+<details class="adv-more">
+<summary><span data-edit="en-ha-meer-kop" data-edit-label="Home Assistant: uitklapknop (Engels)">More connections: Claude and your own scripts</span></summary>
+<div class="adv-more-b" data-edit="en-ha-meer" data-edit-label="Home Assistant: uitgeklapte tekst (Engels)">
+<p><strong>Claude</strong> (Claude Code or Claude Desktop) can search, add and tick off your tasks. With the <strong>inbox API</strong> you add a task from a script, a shortcut or a mail rule. From Home Assistant too, for example when the washing machine is done.</p>
+<p>Each connection gets its own key, which you make and revoke under Settings › Advanced › Keys. It works on app.ticktodo.nl; no need to host it yourself. More under <a href="#integrations">Integrations</a>.</p>
+</div>
+</details>
+</div>
+<div class="ha-visual" aria-hidden="true">
+<p class="ha-when">When…</p>
+<ul class="ha-trigs">
+<li class="is-on">🚶 Sam comes home</li>
+<li>🌇 Sun sets</li>
+<li>💡 Bathroom light on</li>
+<li>🧺 Washing machine done</li>
+</ul>
+<div class="ha-notif">
+<p class="ha-n-head"><img src="/img/icon.svg" width="16" height="16" alt=""> Tick · now</p>
+<p class="ha-n-title">Ask about the school trip form</p>
+<p class="ha-n-text">🏠 Home Assistant: Sam comes home</p>
+</div>
+</div>
+</div>
+</section>
+
 <!-- 8 FAQ -->
 <section id="faq" class="band alt" aria-labelledby="faq-title">
 <div class="wrap grid">
@@ -830,7 +869,7 @@
 <details class="qa" id="faq-7" name="faq"><summary><span data-edit="en-faq-7-vraag" data-edit-label="Vraag 7: vraag (Engels)">Does the other person need an account?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-7-antwoord" data-edit-label="Vraag 7: antwoord (Engels)">At app.ticktodo.nl you share with an email address. If that address has no account yet, it gets an invitation by email, with a link to sign up. The invitation is then waiting for them. An invitation stays open for 30 days. You confirm your own email address before you can share.</p></details>
 <details class="qa" id="faq-8" name="faq"><summary><span data-edit="en-faq-8-vraag" data-edit-label="Vraag 8: vraag (Engels)">How many people can I share with?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-8-antwoord" data-edit-label="Vraag 8: antwoord (Engels)">On app.ticktodo.nl with up to 3 people, with as many tasks and lists as you like. What others share with you doesn't count. So you can always accept an invitation.</p></details>
 <details class="qa" id="faq-9" name="faq"><summary><span data-edit="en-faq-9-vraag" data-edit-label="Vraag 9: vraag (Engels)">What if there are more than 3 of us?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-9-antwoord" data-edit-label="Vraag 9: antwoord (Engels)">A shared list then has you plus 3 others: 4 in all. Everyone can also share with 3 others themselves, because what others share with you doesn't count. More people in one list isn't possible on app.ticktodo.nl. On a Tick you host yourself for your household, that limit doesn't apply.</p></details>
-<details class="qa" id="faq-10" name="faq"><summary><span data-edit="en-faq-10-vraag" data-edit-label="Vraag 10: vraag (Engels)">Is there an Android app?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-10-antwoord" data-edit-label="Vraag 10: antwoord (Engels)">Yes, free on Google Play: see <a href="#android">the Android app</a>. There's also a version outside Google Play; it's under <a href="#advanced">For advanced users</a>.</p></details>
+<details class="qa" id="faq-10" name="faq"><summary><span data-edit="en-faq-10-vraag" data-edit-label="Vraag 10: vraag (Engels)">Is there an Android app?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-10-antwoord" data-edit-label="Vraag 10: antwoord (Engels)">Yes, free on Google Play: see <a href="#android">the Android app</a>. There's also a version outside Google Play; it's under <a href="#advanced">Independent</a>.</p></details>
 <details class="qa" id="faq-11" name="faq"><summary><span data-edit="en-faq-11-vraag" data-edit-label="Vraag 11: vraag (Engels)">How reliable are notifications on an iPhone?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-11-antwoord" data-edit-label="Vraag 11: antwoord (Engels)">They work when Tick is on your home screen (iOS 16.4 or newer) and you allow notifications; in Safari itself you don't get them. Tick sends them the same way as to any browser; Apple does the delivering. A place reminder doesn't reach an iPhone. Want a safety net? Under <strong>Settings › Advanced</strong> you set a fallback webhook: if a notification isn't delivered within 15 minutes, Tick sends it there, for example to a chat app.</p></details>
 <details class="qa" id="faq-12" name="faq"><summary><span data-edit="en-faq-12-vraag" data-edit-label="Vraag 12: vraag (Engels)">I'm coming from an iPhone. Is Tick the same as Reminders?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-12-antwoord" data-edit-label="Vraag 12: antwoord (Engels)">Mostly. Lists, subtasks, reminders at a time and sharing are all there. A reminder at a place only comes in the Android app. Tick has no Siri and isn't built into your phone the way Reminders is built into an iPhone. On the other hand, Tick also works in your browser, on any device. And the Tickmanager helps you clear out old tasks instead of letting them sit there for months. How Tick compares to other apps is under <a href="#compare">Tick next to other apps</a>.</p></details>
 <details class="qa" id="faq-13" name="faq"><summary><span data-edit="en-faq-13-vraag" data-edit-label="Vraag 13: vraag (Engels)">I'm coming from Google Keep. Do my lists come along?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-13-antwoord" data-edit-label="Vraag 13: antwoord (Engels)">Not by themselves. Tick can only bring in tasks from TickTick and Todoist. A Keep list you type over, or you paste it into the description of one task; put <code>- [ ]</code> in front of a line and it becomes a box to tick off. Turning every pasted line into its own task isn't possible yet.</p></details>
@@ -844,52 +883,55 @@
 <details class="qa" id="faq-21" name="faq"><summary><span data-edit="en-faq-21-vraag" data-edit-label="Vraag 21: vraag (Engels)">Does Tick pick up a date from what I type?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-21-antwoord" data-edit-label="Vraag 21: antwoord (Engels)">Yes. Type <em>tomorrow 3pm</em>, <em>friday</em> or <em>in 2 hours</em> in the title and Tick suggests that reminder. Those words then leave the title. <strong>Ignore</strong> keeps your text as it is. This works in the app on the web, on Android and on the iPhone. Quick add and the widget in the Android app don't do it yet. More under <a href="#date-from-text">Date from your text</a>.</p></details>
 <details class="qa" id="faq-22" name="faq"><summary><span data-edit="en-faq-22-vraag" data-edit-label="Vraag 22: vraag (Engels)">Can Tick remind me at every supermarket?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-22-antwoord" data-edit-label="Vraag 22: antwoord (Engels)">No, on purpose. You choose up to 10 places per task yourself, for example the three supermarkets you go to most. That way Tick looks nothing up in the background and your location goes nowhere. See <a href="#more-places">More than one place</a>.</p></details>
 <details class="qa" id="faq-23" name="faq"><summary><span data-edit="en-faq-23-vraag" data-edit-label="Vraag 23: vraag (Engels)">How do I delete my account?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-23-antwoord" data-edit-label="Vraag 23: antwoord (Engels)">In the app: <strong>Settings › Account › Delete account</strong>. You confirm with your password. Then everything goes right away, except an anonymised record of abuse reports; backups are erased within 30 days. Can't log in anymore? See <a href="https://app.ticktodo.nl/delete-account">app.ticktodo.nl/delete-account</a>. Download a backup first if you want to keep your tasks.</p></details>
-<details class="qa" id="faq-24" name="faq"><summary><span data-edit="en-faq-24-vraag" data-edit-label="Vraag 24: vraag (Engels)">Can I host Tick myself?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-24-antwoord" data-edit-label="Vraag 24: antwoord (Engels)">Yes. The code is on <a href="https://github.com/DioVayne/tick">GitHub (DioVayne/tick)</a>, under the MIT licence. You put it on a free Cloudflare account; with Claude Code that takes about fifteen minutes. Then you can invite everyone in your household. Your own Tick is a separate server, though: you can only share with people on the same Tick. More under <a href="#advanced">For advanced users</a>.</p></details>
+<details class="qa" id="faq-24" name="faq"><summary><span data-edit="en-faq-24-vraag" data-edit-label="Vraag 24: vraag (Engels)">Can I host Tick myself?</span><span class="pm" aria-hidden="true"></span></summary><p data-edit="en-faq-24-antwoord" data-edit-label="Vraag 24: antwoord (Engels)">Yes. The code is on <a href="https://github.com/DioVayne/tick">GitHub (DioVayne/tick)</a>, under the MIT licence. You put it on a free Cloudflare account; with Claude Code that takes about fifteen minutes. Then you can invite everyone in your household. Your own Tick is a separate server, though: you can only share with people on the same Tick. More under <a href="#advanced">Independent</a>.</p></details>
 </div>
 </div>
 </section>
 
-<!-- 10 For advanced users -->
+<!-- 10 Independent -->
 <section id="advanced" class="band" aria-labelledby="gev-title">
 <div class="wrap">
 <div class="android adv">
 <div class="adv-head">
-<h2 id="gev-title" data-edit="en-gevorderden-titel" data-edit-label="Voor gevorderden: titel (Engels)">For advanced users</h2>
-<p class="adv-sub" data-edit="en-gevorderden-sub" data-edit-label="Voor gevorderden: regel onder de titel (Engels)">For those who want a bit more: the app outside Google Play, or a Tick of your own.</p>
+<h2 id="gev-title" data-edit="en-gevorderden-titel" data-edit-label="Onafhankelijk: titel (Engels)">Independent</h2>
+<p class="adv-sub" data-edit="en-gevorderden-sub" data-edit-label="Onafhankelijk: regel onder de titel (Engels)">Tick is open source. Use the Android app without Google Play, or run Tick entirely on your own server.</p>
 </div>
 <div class="adv-cards">
 <article class="adv-card">
-<div class="adv-top"><span class="adv-ico" aria-hidden="true">🤖</span><h3 data-edit="en-gev-github-titel" data-edit-label="Voor gevorderden: titel Android-app van GitHub (Engels)">Android app from GitHub</h3></div>
-<p data-edit="en-gev-github-intro" data-edit-label="Voor gevorderden: intro Android-app van GitHub (Engels)">The same app, outside Google Play. With two extras Google Play doesn't allow:</p>
-<ul class="adv-chips" data-edit="en-gev-github-extra" data-edit-label="Voor gevorderden: extra's Android-app van GitHub (Engels)">
-<li><span aria-hidden="true">🚲</span> On time on the road</li>
-<li><span aria-hidden="true">🔋</span> Turn off battery restrictions</li>
-</ul>
+<div class="adv-top"><span class="adv-ico" aria-hidden="true">📦</span><h3 data-edit="en-gev-github-titel" data-edit-label="Onafhankelijk: titel Zonder Google Play (Engels)">Without Google Play</h3></div>
+<p data-edit="en-gev-github-intro" data-edit-label="Onafhankelijk: intro Zonder Google Play (Engels)">The same Android app, straight from GitHub. No Play Store needed; the app tells you about new versions itself.</p>
+<div class="adv-feature">
+<img src="/img/onderweg-en.svg" width="480" height="1039" loading="lazy" decoding="async" alt="Drawing of a lock screen with a notification from Tick: Do the shopping, Almost at the supermarket. In the background someone cycles into a bigger circle around the place.">
+<div class="adv-feature-b" data-edit="en-gev-onderweg" data-edit-label="Onafhankelijk: uitleg Op tijd melden onderweg (Engels)">
+<p class="adv-feature-t"><span aria-hidden="true">🚲</span> Only in this app: on time on the road</p>
+<p>On a bike or in the car, you are often past a place before Android notices you are there. This app notices that you are cycling or driving, and lets the notification come earlier: <em>“Almost at the supermarket”</em>. So you don't have to turn back.</p>
+<p class="adv-feature-w">That needs the <em>Physical activity</em> permission, which falls under stricter rules on Google Play. On foot it makes no difference: then the Play app notifies you just as well.</p>
+</div>
+</div>
 <details class="adv-more">
-<summary><span data-edit="en-gev-github-meer-kop" data-edit-label="Voor gevorderden: uitklapknop Android-app van GitHub (Engels)">How to install it</span></summary>
-<div class="adv-more-b" data-edit="en-gev-github-meer" data-edit-label="Voor gevorderden: uitgeklapte tekst Android-app van GitHub (Engels)">
+<summary><span data-edit="en-gev-github-meer-kop" data-edit-label="Onafhankelijk: uitklapknop Zonder Google Play (Engels)">How to install it</span></summary>
+<div class="adv-more-b" data-edit="en-gev-github-meer" data-edit-label="Onafhankelijk: uitgeklapte tekst Zonder Google Play (Engels)">
 <ol>
 <li>On your phone, open <a href="https://github.com/DioVayne/tick/releases/latest/download/Tick.apk">Tick.apk</a> and open the file.</li>
 <li>Android asks whether you allow installing from your browser: say yes.</li>
-<li>Does the app ask for the address of your Tick? Enter <strong>app.ticktodo.nl</strong>.</li>
+<li>Enter the address of your Tick: <strong>app.ticktodo.nl</strong>, or your own address.</li>
 </ol>
-<p>Install one, not both, or you'll sometimes get notifications twice. The app tells you about new versions itself.</p>
-<p><em>On time on the road</em>: on a bike or in the car, a place reminder still comes in time. For that, your phone has to notice that you're cycling or driving, and Google Play has stricter rules for that.</p>
+<p>Choose Google Play or this app, not both: otherwise you'll sometimes get notifications twice.</p>
 </div>
 </details>
 <p class="adv-go"><a class="btn btn-pin btn-small" href="https://github.com/DioVayne/tick">Tick on GitHub →</a></p>
 </article>
 <article class="adv-card">
-<div class="adv-top"><span class="adv-ico" aria-hidden="true">🖥️</span><h3 data-edit="en-gev-hosten-titel" data-edit-label="Voor gevorderden: titel Zelf hosten (Engels)">Host it yourself</h3></div>
-<p data-edit="en-gev-hosten-intro" data-edit-label="Voor gevorderden: intro Zelf hosten (Engels)">Tick is open source (MIT). Run your own Tick, for your whole household.</p>
-<ul class="adv-chips" data-edit="en-gev-hosten-extra" data-edit-label="Voor gevorderden: kenmerken Zelf hosten (Engels)">
-<li><span aria-hidden="true">☁️</span> Free Cloudflare account</li>
-<li><span aria-hidden="true">⏱️</span> About 15 minutes with Claude Code</li>
-<li><span aria-hidden="true">👥</span> No limit on the number of people</li>
+<div class="adv-top"><span class="adv-ico" aria-hidden="true">🖥️</span><h3 data-edit="en-gev-hosten-titel" data-edit-label="Onafhankelijk: titel Je eigen server (Engels)">Your own server</h3></div>
+<p data-edit="en-gev-hosten-intro" data-edit-label="Onafhankelijk: intro Je eigen server (Engels)">Run your own Tick on a free Cloudflare account. Your to-do list is then with you, not with me.</p>
+<ul class="adv-chips" data-edit="en-gev-hosten-extra" data-edit-label="Onafhankelijk: kenmerken Je eigen server (Engels)">
+<li>🔓 Open source (MIT)</li>
+<li>⏱️ About 15 minutes with Claude Code</li>
+<li>👥 No limit on the number of people</li>
 </ul>
 <details class="adv-more">
-<summary><span data-edit="en-gev-hosten-meer-kop" data-edit-label="Voor gevorderden: uitklapknop Zelf hosten (Engels)">Good to know</span></summary>
-<div class="adv-more-b" data-edit="en-gev-hosten-meer" data-edit-label="Voor gevorderden: uitgeklapte tekst Zelf hosten (Engels)">
+<summary><span data-edit="en-gev-hosten-meer-kop" data-edit-label="Onafhankelijk: uitklapknop Je eigen server (Engels)">Good to know</span></summary>
+<div class="adv-more-b" data-edit="en-gev-hosten-meer" data-edit-label="Onafhankelijk: uitgeklapte tekst Je eigen server (Engels)">
 <p>Your own Tick is a separate server. <strong>You can only share with people on the same Tick</strong>, not with people on app.ticktodo.nl.</p>
 <p>New accounts come through an invitation link, you install updates yourself. Setting it up by hand takes a little longer than with Claude Code.</p>
 <p>Want your Tick to send email (forgot password, invitations)? Then you need an email service, for example Resend. It is free up to 100 emails a day. With more people on your Tick, you will soon pay a monthly fee.</p>
