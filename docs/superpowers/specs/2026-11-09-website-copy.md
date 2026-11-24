@@ -467,7 +467,7 @@ Gebruik je **Home Assistant** thuis? Dan kan een taak je een melding geven op ee
 
 De momenten (*triggers*) maak je één keer in Home Assistant, met de integratie Tick: een naam, wat Home Assistant in de gaten houdt en de toestand, eventueel met *pas na 5 minuten* of *alleen tussen 22:00 en 06:00*. In Tick tik je bij een taak op **Meld bij een Home Assistant-trigger** en kies je er een of meer.
 
-De eerste die afgaat, geeft één melding, aan jou en aan iedereen met wie de taak gedeeld is. Daarna staat er **Al gemeld · Opnieuw melden**, dus een lamp die twintig keer per dag aangaat, zeurt niet. Een herhalende taak wacht na elke keer weer op de trigger.
+De eerste die afgaat, geeft één melding, aan jou en aan iedereen met wie de taak gedeeld is. Daarna staat er **Al gemeld · Opnieuw melden**, dus een lamp die twintig keer per dag aangaat, zeurt niet. Een herhalende taak wacht na elk afvinken weer op de trigger.
 
 Maar één iemand in huis heeft Home Assistant nodig. Onder **Instellingen › Home Assistant** deel je je triggers met mensen met wie je al een lijst of taak deelt; zij kiezen ze dan bij hun eigen taken. Tick krijgt alleen de namen en wanneer een trigger afging, verder niets over je huis. De integratie zet je nu nog met de hand in Home Assistant; hoe dat gaat, staat in de handleiding op GitHub (`docs/home-assistant.md`).
 
@@ -1106,7 +1106,7 @@ Use **Home Assistant** at home? Then a task can notify you at a moment from your
 
 You make the moments (*triggers*) once in Home Assistant, with the Tick integration: a name, what Home Assistant watches and the state, optionally with *only after 5 minutes* or *only between 22:00 and 06:00*. In Tick you tap **Notify on a Home Assistant trigger** on a task and pick one or more.
 
-The first one that goes off sends one notification, to you and to everyone the task is shared with. After that it says **Already notified · Notify again**, so a light that goes on twenty times a day doesn't nag. A repeating task waits for the trigger again each time.
+The first one that goes off sends one notification, to you and to everyone the task is shared with. After that it says **Already notified · Notify again**, so a light that goes on twenty times a day doesn't nag. A repeating task waits for the trigger again each time you tick it off.
 
 Only one person in the house needs Home Assistant. Under **Settings › Home Assistant** you share your triggers with people you already share a list or task with; they then pick them on their own tasks. Tick only gets the names and when a trigger went off, nothing else about your home. For now you install the integration in Home Assistant by hand; how is in the guide on GitHub (`docs/home-assistant.md`).
 
