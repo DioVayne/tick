@@ -44,7 +44,7 @@ import { calendarApi, calendarOn, refreshStaleFeeds } from './calendar';
 import { firstFree, futureBusy } from './clash';
 import { testFeatures } from './features';
 import { demoAllowed, demoApi, demoGate, demoPages, purgeDemos } from './demo';
-import { haTriggerApi } from './hatrigger'; // testfeature hatrigger
+import { haTriggerApi } from './hatrigger';
 import { taskIcs } from '../public/ics.js';
 
 export type Env = {
@@ -343,7 +343,7 @@ app.route('/api', attachmentsApi);
 app.route('/api/background', backgroundApi);
 app.route('/api/calendar', calendarApi);
 app.route('/api/demo', demoApi);
-app.route('/api/hatrigger', haTriggerApi); // testfeature hatrigger (404 als hij uit staat)
+app.route('/api/hatrigger', haTriggerApi); // Home Assistant-triggers
 // De MCP-tools roepen deze app zelf aan (met dezelfde sleutel); pas bij een request, dus alle routes staan er dan.
 app.route('/mcp', mcpApi((req, env, ctx) => Promise.resolve(app.fetch(req, env, ctx))));
 

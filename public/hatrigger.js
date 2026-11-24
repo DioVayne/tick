@@ -1,11 +1,10 @@
-import CONFIG from './settings.js';
 import { request } from './api.js';
 import { t } from './i18n.js';
 import { icon } from './icons.js';
 import { el, fmt, toast } from './render.js';
 import { openMenu, step } from './steps.js';
 
-// Testfeature "hatrigger" (src/hatrigger.ts): bij een taak triggers uit Home Assistant kiezen ("Meld als Sam komt thuis").
+// Home Assistant-triggers (src/hatrigger.ts): bij een taak triggers uit Home Assistant kiezen ("Meld als Sam komt thuis").
 // De eerste die afgaat, geeft één melding; daarna "Al gemeld · Opnieuw melden", net als een plek. Alleen voor je eigen
 // hoofdtaak, en alleen online (de keuze gaat direct naar de server, niet via de outbox).
 
@@ -13,14 +12,12 @@ import { openMenu, step } from './steps.js';
 let data = { triggers: [], tasks: {} };
 let loading = null;
 
-export const haOn = () => !!CONFIG.testFeatures?.includes('hatrigger');
-
 /**
  * Haalt de triggers en koppelingen op (bij het openen van een taak); `done` loopt als er iets nieuws is.
  * @param {() => void} done
  */
 export function refreshHa(done) {
-  if (!haOn() || loading) return;
+  if (loading) return;
   loading = request('GET', '/api/hatrigger')
     .then((next) => { const changed = JSON.stringify(next) !== JSON.stringify(data); data = next; if (changed) done(); })
     .catch(() => {}) // offline of uit: de stap blijft zoals hij was
@@ -28,7 +25,7 @@ export function refreshHa(done) {
 }
 
 /** Wat de stap toont; verandert dit, dan tekent het paneel de tijdlijn opnieuw. @param {{ id: string }} task */
-export const haKey = (task) => (haOn() ? JSON.stringify([data.tasks[task.id] ?? null, data.triggers.map((x) => [x.id, x.name, x.last])]) : '');
+export const haKey = (task) => JSON.stringify([data.tasks[task.id] ?? null, data.triggers.map((x) => [x.id, x.name, x.last])]);
 
 /** Wacht de taak op een trigger? Nog niet gemeld, of een herhalende taak die sindsdien doorschoof (zoals de server). */
 const armed = (link, task) => !link.fired || (!!task.repeat?.at && task.repeat.at !== link.rep);
@@ -50,12 +47,12 @@ async function save(taskId, ids, done) {
 }
 
 /**
- * De stap in de tijdlijn van het detailpaneel, of null (testfeature uit, subtaak, niet je eigen taak, geen triggers).
+ * De stap in de tijdlijn van het detailpaneel, of null (subtaak, niet je eigen taak, geen triggers).
  * @param {any} task
  * @param {{ done: boolean, owner: boolean, opener: (kind: string, fn: (anchor: HTMLElement) => void) => ((anchor: HTMLElement) => void) | null, onChange: () => void }} o
  */
 export function haStep(task, { done, owner, opener, onChange }) {
-  if (!haOn() || task.parent_id || !owner) return null;
+  if (task.parent_id || !owner) return null;
   const link = data.tasks[task.id];
   const chosen = (link?.ids ?? []).map((id) => data.triggers.find((x) => x.id === id)).filter(Boolean);
   if (!chosen.length && (done || !data.triggers.length)) return null;

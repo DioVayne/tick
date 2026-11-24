@@ -5,8 +5,9 @@ import worker from '../src/index';
 import { BASE, callWith, createUser, INBOX, call } from './helpers';
 import { armed, cleanTriggers, stale, STALE_DAYS } from '../src/hatrigger';
 
-// Testfeature hatrigger: triggers uit Home Assistant bij een taak (src/hatrigger.ts).
-const on = { ...env, TEST_FEATURES: 'hatrigger' };
+// Home Assistant-triggers bij een taak (src/hatrigger.ts). Eerst testfeature "hatrigger", nu voor iedereen: zonder
+// TEST_FEATURES.
+const on = { ...env, TEST_FEATURES: '' };
 type User = Awaited<ReturnType<typeof createUser>>;
 type State = { triggers: { id: string; name: string; last: string | null }[]; tasks: Record<string, { ids: string[]; fired: string | null }> };
 
@@ -33,8 +34,8 @@ describe('hatrigger: triggers uit Home Assistant', () => {
     b = await createUser({ name: 'Bo' });
   });
 
-  it('bestaat niet zonder de testfeature', async () => {
-    expect((await callWith({ ...env, TEST_FEATURES: '' }, '/api/hatrigger', { cookie: a.cookie })).status).toBe(404);
+  it('staat aan zonder testfeature; een inbox-sleutel komt er niet in', async () => {
+    expect((await callWith({ ...env, TEST_FEATURES: '' }, '/api/hatrigger', { cookie: a.cookie })).status).toBe(200);
     expect((await call('/api/hatrigger', { auth: INBOX })).status).toBe(403); // een inbox-sleutel komt hier nooit
   });
 

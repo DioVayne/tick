@@ -21,6 +21,7 @@ How to use Tick, one page per topic. Installing Tick is in [SETUP.md](../SETUP.m
 | [Moving to another Tick](moving.md) | Taking your whole account to another Tick (to or from app.ticktodo.nl), what comes along, shared tasks |
 | [Terms of service](terms.md) | On an open Tick: the terms you agree to when you create an account, in English and Dutch |
 | [Privacy](privacy.md) | What Tick keeps about you, your location, the services it uses, and how to see, download or delete your data |
+| [Home Assistant triggers](home-assistant.md) | A notification when something happens at home (someone comes home, sunset, a light): setting up the integration, picking a trigger on a task, sharing triggers with your household |
 | [Integrations](integrations.md) | Claude (MCP), the inbox API for automations, Home Assistant, the fallback webhook |
 
 The app itself has a short **ⓘ Help** page in the sidebar: one sentence per button, grouped into Basics, Organising, Time (including places, and that only the Android app notifies you there), Together (sharing a list and Take it) and Getting it back, the keyboard shortcuts (on a computer), and a link to this guide.

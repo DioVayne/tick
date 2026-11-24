@@ -110,7 +110,7 @@ textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
 .step-when, .step-addcal { --c: var(--bell); }
 .step-repeat { --c: #7f77dd; }
 .step-place { --c: #1d9e75; }
-.step-hatrigger { --c: #18bcf2; } /* testfeature hatrigger (Home Assistant-blauw) */
+.step-hatrigger { --c: #18bcf2; } /* Home Assistant-triggers (Home Assistant-blauw) */
 .step-share, .step-watch, .step-copies { --c: #378add; }
 .step-subs { --c: #d85a30; }
 .step-file { --c: #d4537e; }
@@ -619,7 +619,7 @@ a.menu-item { display: block; text-decoration: none; }
 .when-agenda { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; margin: 0 2px 4px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--link); font-weight: 600; white-space: normal; }
 .when-agenda svg { flex: none; width: 18px; height: 18px; }
 .when-agenda small { flex-basis: 100%; padding-left: 26px; color: var(--muted); font-weight: 400; font-size: .8125rem; }
-/* testfeature hatrigger: een trigger in het menu, met "laatst …" eronder */
+/* Home Assistant-triggers: een trigger in het menu, met "laatst …" eronder */
 .ha-item { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; white-space: normal; }
 .ha-item svg { flex: none; width: 18px; height: 18px; color: #18bcf2; }
 .ha-person { display: flex; align-items: center; gap: 10px; min-height: 44px; }

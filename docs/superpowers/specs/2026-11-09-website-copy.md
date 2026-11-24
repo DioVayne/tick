@@ -458,6 +458,19 @@ Met **Backup terugzetten** zet je zo'n bestand weer terug. Tick laat eerst zien 
 
 Een back-up is ook je uitweg. Je taken zijn van jou, en je neemt ze mee als je wilt.
 
+### Home Assistant
+- **Anker:** `#home-assistant`
+- **Tegel:** 🏠 Home Assistant · Een melding als er thuis iets gebeurt: iemand komt thuis, de zon gaat onder.
+- **Schermafbeelding:** `nl-ha.webp` (taak met Meld als Sam komt thuis, menu met vier triggers)
+- **Lees meer:**
+Gebruik je **Home Assistant** thuis? Dan kan een taak je een melding geven op een moment uit je huis in plaats van op een tijd: *als Sam thuiskomt*, *als de zon ondergaat*, *als het badkamerlicht aangaat*. Zo hoor je over het formulier voor het schoolreisje als je dochter binnenkomt, niet om drie uur in een vergadering.
+
+De momenten (*triggers*) maak je één keer in Home Assistant, met de integratie Tick: een naam, wat Home Assistant in de gaten houdt en de toestand, eventueel met *pas na 5 minuten* of *alleen tussen 22:00 en 06:00*. In Tick tik je bij een taak op **Meld bij een Home Assistant-trigger** en kies je er een of meer.
+
+De eerste die afgaat, geeft één melding, aan jou en aan iedereen met wie de taak gedeeld is. Daarna staat er **Al gemeld · Opnieuw melden**, dus een lamp die twintig keer per dag aangaat, zeurt niet. Een herhalende taak wacht na elke keer weer op de trigger.
+
+Maar één iemand in huis heeft Home Assistant nodig. Onder **Instellingen › Home Assistant** deel je je triggers met mensen met wie je al een lijst of taak deelt; zij kiezen ze dan bij hun eigen taken. Tick krijgt alleen de namen en wanneer een trigger afging, verder niets over je huis. De integratie zet je nu nog met de hand in Home Assistant; hoe dat gaat, staat in de handleiding op GitHub (`docs/home-assistant.md`).
+
 ### Koppelingen
 - **Anker:** `#koppelingen`
 - **Tegel:** Koppelingen · Claude, Home Assistant en een inbox voor je eigen automatisering.
@@ -468,7 +481,7 @@ Voor wie graag knutselt, heeft Tick een paar ingangen.
 
 **Inbox-API:** met een *Inbox*-sleutel voeg je taken toe vanuit een snelkoppeling, een script of een mailregel. Met titel, notities, datum, lijst en herhaling. Zo'n sleutel kan alleen taken toevoegen, verder niets.
 
-**Home Assistant:** sensoren voor je open taken, die van vandaag en de te late, en acties om taken af te vinken, uit te stellen en toe te voegen. Alles in één pakketbestand.
+**Home Assistant:** een taak die je meldt als er thuis iets gebeurt (zie Home Assistant). En sensoren voor je open taken, die van vandaag en de te late, met acties om taken af te vinken, uit te stellen en toe te voegen, in één pakketbestand.
 
 **Reservewebhook:** kon een melding binnen 15 minuten niet worden bezorgd, dan kan Tick hem naar een webhook van jezelf sturen, bijvoorbeeld een chat-app.
 
@@ -1084,6 +1097,19 @@ With **Restore a backup** you put such a file back. Tick first shows what's in i
 
 A backup is also your way out. Your tasks are yours, and you take them with you if you want.
 
+### Home Assistant
+- **Anchor:** `#home-assistant`
+- **Tile:** 🏠 Home Assistant · A notification when something happens at home: someone comes home, the sun sets.
+- **Screenshot:** `en-ha.webp` (task with Notify when Sam comes home, menu with four triggers)
+- **Read more:**
+Use **Home Assistant** at home? Then a task can notify you at a moment from your house instead of at a time: *when Sam comes home*, *when the sun sets*, *when the bathroom light turns on*. So you hear about the school trip form when your daughter walks in, not at three o'clock in a meeting.
+
+You make the moments (*triggers*) once in Home Assistant, with the Tick integration: a name, what Home Assistant watches and the state, optionally with *only after 5 minutes* or *only between 22:00 and 06:00*. In Tick you tap **Notify on a Home Assistant trigger** on a task and pick one or more.
+
+The first one that goes off sends one notification, to you and to everyone the task is shared with. After that it says **Already notified · Notify again**, so a light that goes on twenty times a day doesn't nag. A repeating task waits for the trigger again each time.
+
+Only one person in the house needs Home Assistant. Under **Settings › Home Assistant** you share your triggers with people you already share a list or task with; they then pick them on their own tasks. Tick only gets the names and when a trigger went off, nothing else about your home. For now you install the integration in Home Assistant by hand; how is in the guide on GitHub (`docs/home-assistant.md`).
+
 ### Integrations
 - **Anchor:** `#integrations`
 - **Tile:** Integrations · Claude, Home Assistant and an inbox for your own automations.
@@ -1094,7 +1120,7 @@ For people who like to tinker, Tick has a few ways in.
 
 **Inbox API:** with an *Inbox* key you add tasks from a shortcut, a script or an email rule. With title, notes, date, list and repeat. Such a key can only add tasks, nothing else.
 
-**Home Assistant:** sensors for your open, today's and overdue tasks, and actions to complete, postpone and add tasks. All in one package file.
+**Home Assistant:** a task that notifies you when something happens at home (see Home Assistant). And sensors for your open, today's and overdue tasks, with actions to complete, postpone and add tasks, in one package file.
 
 **Fallback webhook:** when a notification couldn't be delivered within 15 minutes, Tick can send it to a webhook of your own, for example a chat app.
 

@@ -20,7 +20,7 @@ import { openReportDialog, reportableTask } from './report.js';
 import { fillShareBox, openShareDialog, shareNames } from './share.js';
 import { duringNote, openMenu, openWhenMenu, step } from './steps.js';
 import { googleCalendarUrl } from './ics.js';
-import { haKey, haStep, refreshHa } from './hatrigger.js'; // testfeature hatrigger
+import { haKey, haStep, refreshHa } from './hatrigger.js';
 
 // Detailpaneel (desktop) en taakscherm (mobiel): één opbouw per gekozen taak, daarna alleen bijwerken.
 // Zo overschrijft een verversing nooit het veld waarin je typt.
@@ -357,7 +357,7 @@ export function openWhenSoon(id) {
 
 function build(t, readOnly) {
   const id = t.id;
-  // testfeature hatrigger: de triggers uit Home Assistant ophalen; komt er iets nieuws, dan de tijdlijn opnieuw.
+  // De triggers uit Home Assistant ophalen; komt er iets nieuws, dan de tijdlijn opnieuw.
   refreshHa(() => { if (view?.id === id) { view.railKey = ''; drawRail(current(id) ?? t); } });
   if (view?.id !== id && !saving && !timers.size) saved = false;
   view?.editor?.destroy();
@@ -671,7 +671,7 @@ function drawRail(t) {
   // In een gedeelde lijst staan de leden bij de lijst; de eigenaar kan wel een kopie geven aan iemand anders.
   const shareShown = !t.parent_id && (list ? list.mine && !done : !!t.share || !done);
   const copies = t.copies && !t.parent_id ? copyHeading(t) : null;
-  const key = JSON.stringify([done, remindAt, past, t.repeat, loc, t.list, t.parent_id, watchable, !!t.watch, shareShown, names, owner, copies, haKey(t)]); // haKey: testfeature hatrigger
+  const key = JSON.stringify([done, remindAt, past, t.repeat, loc, t.list, t.parent_id, watchable, !!t.watch, shareShown, names, owner, copies, haKey(t)]); // haKey: Home Assistant-triggers
   if (v.railKey === key) return;
   v.railKey = key;
   // Na een keuze is de knop waarmee de kiezer openging vervangen: de focus gaat terug naar dezelfde stap.
@@ -702,7 +702,7 @@ function drawRail(t) {
       value: loc ? placeNames(loc) : null, note: loc ? (loc.more?.length ? tr('places.count', { n: String(loc.more.length + 1) }) : formatRadius(loc.radius)) : null, sub: v.locSub,
       open: opener('place', v.pickPlace), actions: done || !loc ? [] : [clear(v.clearLoc, tr('detail.remove_location'))],
     }),
-    // testfeature hatrigger: "Meld als <trigger uit Home Assistant>".
+    // Home Assistant-triggers: "Meld als <trigger uit Home Assistant>".
     haStep(t, { done, owner, opener, onChange: () => { if (view?.id === t.id) { view.railKey = ''; drawRail(current(t.id) ?? t); } } }),
     // Een subtaak volgt de lijst van de hoofdtaak: gewone tekst, geen knop.
     step({ kind: 'list', icon: 'folder', on: false, lead: tr('add.in'), value: t.list, note: t.parent_id ? tr('detail.follows_parent') : null, open: t.parent_id ? null : opener('list', v.pickList) }),

@@ -7,7 +7,7 @@ import { testFeature, testFeatures } from '../src/features';
 describe('testfeatures (TEST_FEATURES)', () => {
   it('onbekende namen zetten niets aan', () => {
     expect(testFeatures({})).toEqual([]);
-    expect(testFeatures({ TEST_FEATURES: ' freetime , quickdate, iets-anders' })).toEqual([]); // quickdate is nu gewoon aan
+    expect(testFeatures({ TEST_FEATURES: ' freetime , quickdate, hatrigger, iets-anders' })).toEqual([]); // quickdate en hatrigger zijn nu gewoon aan
     expect(testFeature({ TEST_FEATURES: 'freetime' }, 'freetime')).toBe(false);
   });
 

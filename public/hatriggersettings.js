@@ -2,7 +2,7 @@ import { request } from './api.js';
 import { t } from './i18n.js';
 import { el, toast } from './render.js';
 
-// Testfeature "hatrigger" (src/hatrigger.ts): het blok Home Assistant in Instellingen. Bovenaan de koppeling (laatst
+// Home Assistant-triggers (src/hatrigger.ts): het blok Home Assistant in Instellingen. Bovenaan de koppeling (laatst
 // gezien), dan "Deel al mijn triggers", dan per trigger met wie hij gedeeld is. Delen kan alleen met mensen met wie je
 // al een lijst of taak deelt; die zien de naam, niet wanneer hij laatst afging. De bouwstenen (row, note, btn, modal,
 // ago) komen uit settingsview.js, zodat het blok eruitziet als de andere.

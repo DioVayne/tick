@@ -1,20 +1,19 @@
 import { Hono } from 'hono';
 import type { AppEnv, Env } from './index';
 import { HttpError } from './errors';
-import { testFeature } from './features';
 import { sessionOnly } from './guards';
 import { userSettingStmt } from './prefs';
 import { inBackground, notifyUser, reminderPayload, type Locale } from './push';
 import { translate } from '../public/i18n.js';
 
 /**
- * Testfeature "hatrigger": triggers uit Home Assistant. De HA-integratie (home-assistant/custom_components/tick) stuurt
+ * Home Assistant-triggers (eerst testfeature "hatrigger", sinds 2026-11-24 voor iedereen). De HA-integratie (home-assistant/custom_components/tick) stuurt
  * het lijstje triggers ("Sam komt thuis", "Zon onder") met PUT /triggers en vuurt er een af met POST /fire. In het
  * taakpaneel kies je bij een taak een of meer triggers; de eerste die afgaat geeft één melding, net als een plek.
  * Daarna is de taak "gemeld" tot je op Opnieuw melden tikt, de triggers wijzigt, of een herhalende taak doorschuift.
  * In Instellingen → Home Assistant deel je triggers met mensen met wie je al een lijst of taak deelt.
  *
- * Geen migratie (regel voor testfeatures): alles staat in rijen van `user_settings`:
+ * Alles staat in rijen van `user_settings` (zo gebouwd als testfeature; geen tabel nodig, de lijsten zijn klein):
  * - `hatrigger:triggers`: [{ id, name, entity, last }] (HA schrijft het lijstje, `last` = laatst afgegaan);
  * - `hatrigger:tasks`: { taskId: { ids, fired, rep } } (`fired` = wanneer gemeld, `rep` = de keer van een herhalende taak);
  *   een gedeelde trigger staat erin als `<eigenaar>.<trigger>`;
@@ -24,7 +23,6 @@ import { translate } from '../public/i18n.js';
  *   langer dan STALE_DAYS geleden (integratie weg, sleutel ingetrokken), dan toont Tick de triggers niet meer; de rijen
  *   blijven staan, dus komt HA terug, dan is alles er weer.
  */
-export const HATRIGGER = 'hatrigger';
 const ROW_TRIGGERS = 'hatrigger:triggers';
 const ROW_TASKS = 'hatrigger:tasks';
 const ROW_SEEN = 'hatrigger:seen';
@@ -133,12 +131,8 @@ async function sharedWithMe(env: Env, me: string): Promise<SharedTrigger[]> {
 
 export const haTriggerApi = new Hono<AppEnv>();
 
-// Zonder de testfeature bestaat dit niet. Een sessie of een full-sleutel (de HA-integratie); inbox-sleutels komen hier
-// niet (de auth laat die alleen bij POST /api/inbox).
-haTriggerApi.use('*', async (c, next) => {
-  if (!testFeature(c.env, HATRIGGER)) throw new HttpError(404, 'err.not_found');
-  await next();
-});
+// Een sessie of een full-sleutel (de HA-integratie); inbox-sleutels komen hier niet (de auth laat die alleen bij
+// POST /api/inbox).
 
 // Een request met een full-sleutel is HA (of een ander script met die sleutel): onthoud dat hij er nog is.
 haTriggerApi.use('*', async (c, next) => {

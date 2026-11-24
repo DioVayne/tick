@@ -7,10 +7,10 @@ import type { Env } from './index';
 /**
  * De testfeatures die deze code kent. Een naam die hier niet staat, zet niets aan. "placecheck": proefmelding en uitleg per merk in de Android-app (PlaceCheck.java;
  * de app hoort het via /api/config). Eerder getest en verwijderd: "freetime" (migratie 0029 ruimt zijn instellingen op).
- * "hatrigger": triggers uit Home Assistant bij een taak kiezen (src/hatrigger.ts, public/hatrigger.js).
- * Eerder getest en een gewone functie geworden: "quickdate" (datum uit de tekst, public/quickdate.js).
+ * Eerder getest en een gewone functie geworden: "quickdate" (datum uit de tekst, public/quickdate.js) en "hatrigger"
+ * (Home Assistant-triggers, src/hatrigger.ts).
  */
-export const TEST_FEATURES: readonly string[] = ['placecheck', 'hatrigger'];
+export const TEST_FEATURES: readonly string[] = ['placecheck'];
 export type TestFeature = string;
 
 /** De testfeatures die op deze Tick aanstaan (alleen bekende namen, zonder dubbele). */

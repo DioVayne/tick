@@ -23,7 +23,9 @@ curl -X POST https://tick.example.com/api/inbox \
 The Dutch field names `titel`, `omschrijving` and `datum` work too.
 
 ## Home Assistant
-Sensors for your open, today's and overdue tasks, and actions to complete, postpone and add tasks, as one package file. See [home-assistant/README.md](../home-assistant/README.md).
+Two parts, which work side by side:
+- **Triggers:** a task notifies you when something happens at home (someone comes home, sunset, a light turns on). This uses the Tick integration for Home Assistant. See [Home Assistant triggers](home-assistant.md).
+- **Package:** sensors for your open, today's and overdue tasks, and actions to complete, postpone and add tasks, as one YAML file without a custom component. See [home-assistant/README.md](../home-assistant/README.md).
 
 ## Fallback webhook
 When a notification could not be delivered within 15 minutes, or you have no device with notifications, Tick can post it to a webhook of your own instead (for example to a chat app or Home Assistant). Set it under **⚙ Settings → Advanced → Fallback webhook** (`https://` only) and use *Send test* to check. Leave it empty to switch it off.
