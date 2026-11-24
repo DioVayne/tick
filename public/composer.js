@@ -12,6 +12,7 @@ import { inviteToTask, people } from './share.js';
 import { selectTask } from './detail.js';
 import { addSubtask, addTask, load, sharedOf, state } from './store.js';
 import { findDate } from './quickdate.js';
+import { haChoices, haNames, linkTriggers, pickTriggers, refreshHa } from './hatrigger.js';
 
 // De invoerkaart bovenaan de lijst. In rust de blauwe balk; na de eerste letter klapt eronder een tijdlijn open met per
 // eigenschap een zin ("Herinner me morgen 09:00", "Als ik aankom bij …", "In Inbox"). Een stap opent één kiezer (de
@@ -24,6 +25,7 @@ const blank = () => ({
   location: /** @type {any} */ (null),
   list: /** @type {string | null} */ (null), // null: de lijst waar je naar kijkt (of Inbox)
   share: /** @type {{ who: { to_user: string } | { to: string }, name: string } | null} */ (null),
+  ha: /** @type {string[]} */ ([]), // Home Assistant-triggers (hatrigger.js)
   description: '',
   subtasks: /** @type {string[]} */ ([]),
   files: /** @type {File[]} */ ([]),
@@ -47,7 +49,7 @@ const guess = (text = input.value) => {
 const defaultList = () => (!state.showDone && !state.showTrash && state.list) || 'Inbox';
 const listOf = () => v.list ?? defaultList();
 const remindIso = () => fromLocalInput(v.remind);
-const filled = () => !!(v.remind || v.repeat || v.location || v.list || v.share || v.description.trim() || v.subtasks.length || v.files.length);
+const filled = () => !!(v.remind || v.repeat || v.location || v.list || v.share || v.ha.length || v.description.trim() || v.subtasks.length || v.files.length);
 const isOpen = () => input.value !== '' || filled() || more || !!editing;
 
 export function initComposer() {
@@ -69,7 +71,8 @@ export function initComposer() {
     peekButton('share', 'users', t('add.share'), pickShare),
     peekButton('more', 'plus', t('add.more'), () => { more = true; done(); }));
   form.append(peekRow, el('div', { class: 'add-fold' }, el('div', {}, rail, moreButton)), fileInput);
-  form.addEventListener('focusin', () => { peek = true; sync(); });
+  // De Home Assistant-triggers ophalen, zodat hun stap er staat als je begint te typen.
+  form.addEventListener('focusin', () => { peek = true; sync(); refreshHa(draw); });
   // Weg uit de kaart (en geen kiezer open): de rij verdwijnt weer. Een kiezer staat buiten het formulier in body.
   form.addEventListener('focusout', () => setTimeout(() => {
     if (form.contains(document.activeElement) || document.querySelector('.menu, dialog[open], body.map-open')) return;
@@ -178,6 +181,8 @@ function draw() {
     step('when', 'bell', !!v.remind, t(v.remind ? 'add.when_set' : 'add.when'), v.remind ? fmt(remindIso()) : null, pickWhen, () => { v.remind = ''; }, null, duringNote(v.remind)),
     step('repeat', 'repeat', !!v.repeat, v.repeat ? '' : t('add.repeat'), v.repeat ? describeRule(v.repeat, remindIso() ?? new Date().toISOString()) : null, pickRepeat, () => { v.repeat = null; }),
     step('place', 'place', !!loc, loc ? t(loc.trigger === 'exit' ? 'add.leave' : 'add.arrive') : t('add.place'), loc ? placeShort(loc) : null, pickPlace, () => { v.location = null; }),
+    // Home Assistant-triggers: alleen als je er hebt (of er met je gedeeld zijn); opgeslagen na het aanmaken.
+    haChoices().length ? step('hatrigger', 'bolt', !!haNames(v.ha), t(haNames(v.ha) ? 'hatrigger.lead' : 'hatrigger.add'), haNames(v.ha), pickHa, () => { v.ha = []; }) : null,
     step('list', 'folder', list !== defaultList(), t('add.in'), list, pickList, v.list ? () => { v.list = null; } : null),
     // In een gedeelde lijst doet iedereen in de lijst al mee.
     sharedOf(list) ? null : step('share', 'users', !!v.share, t(v.share ? 'add.share_set' : 'add.share'), v.share?.name ?? null, pickShare, () => { v.share = null; }),
@@ -258,6 +263,11 @@ function pickList(anchor) {
   openListPicker(anchor, listOf(), (name) => { v.list = name === defaultList() ? null : name; done(); });
 }
 
+/** Home Assistant-triggers aan- en uitvinken; elke tik werkt de stap bij, Klaar of ernaast tikken gaat terug naar de titel. */
+function pickHa(anchor) {
+  pickTriggers(anchor, v.ha, (ids) => { v.ha = ids; draw(); }, back);
+}
+
 /** Menu met de andere accounts op deze Tick en een veld voor een naam of e-mailadres. Alleen online. */
 async function pickShare(anchor) {
   if (menuOpen()) { closeStepMenu(); return; }
@@ -293,17 +303,18 @@ function submit(open) {
   const parent = state.open.find((x) => x.id === id);
   if (parent) for (const s of card.subtasks) addSubtask(parent, s);
   reset();
-  if (card.share || card.files.length) afterCreate(id, card);
+  if (card.share || card.ha.length || card.files.length) afterCreate(id, card);
   if (open) {
     input.blur();
     selectTask(id);
   }
 }
 
-/** Delen en bijlagen: pas als de taak op de server staat. Lukt dat nu niet (offline), dan een melding: doe het later in de taak. */
+/** Delen, Home Assistant-triggers en bijlagen: pas als de taak op de server staat. Lukt dat nu niet (offline), dan een melding: doe het later in de taak. */
 async function afterCreate(id, card) {
   await load();
   if (state.offline || state.pending) { toast(t('add.later_offline')); return; }
   if (card.share) await inviteToTask(id, card.share.who);
+  if (card.ha.length) await linkTriggers(id, card.ha);
   if (card.files.length) await addFiles(id, card.files);
 }

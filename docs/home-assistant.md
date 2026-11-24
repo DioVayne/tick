@@ -4,7 +4,7 @@ If you use [Home Assistant](https://www.home-assistant.io/) at home, a task in T
 
 ## What it does
 
-- In the task panel, tap **Notify on a Home Assistant trigger** and pick one or more triggers. The task then reads **Notify when Sam comes home**.
+- When you add a task (below *Remind me at a place*), or later in the task panel, tap **Notify on a Home Assistant trigger** and pick one or more triggers. The task then reads **Notify when Sam comes home**.
 - The first chosen trigger that goes off sends **one** notification: the task's title, with *Home Assistant: Sam comes home* below it. It goes to you and to everyone the task is shared with.
 - After that the task shows **Already notified · Notify again**, so a light that goes on twenty times a day won't keep reminding you. Tap **Notify again** to wait for the next time.
 - A **repeating** task waits for the trigger again as soon as it moves on to its next time. Changing the task's triggers rearms it too.
