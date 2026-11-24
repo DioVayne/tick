@@ -843,21 +843,50 @@
 <section id="advanced" class="band" aria-labelledby="gev-title">
 <div class="wrap">
 <div class="android adv">
+<div class="adv-head">
 <h2 id="gev-title" data-edit="en-gevorderden-titel" data-edit-label="Voor gevorderden: titel (Engels)">For advanced users</h2>
-<div class="android-b" data-edit="en-gevorderden-tekst" data-edit-label="Voor gevorderden: tekst (Engels)">
-<p><strong>The Android app from GitHub.</strong> The same app, outside Google Play. It has two extras Google Play doesn't allow:</p>
-<ul>
-<li><em>On time on the road</em>: on a bike or in the car, a place reminder still comes in time. For that, your phone has to notice that you're driving or cycling, and Google Play has stricter rules for that.</li>
-<li>A button that turns off battery restrictions for Tick.</li>
+<p class="adv-sub" data-edit="en-gevorderden-sub" data-edit-label="Voor gevorderden: regel onder de titel (Engels)">For those who want a bit more: the app outside Google Play, or a Tick of your own.</p>
+</div>
+<div class="adv-cards">
+<article class="adv-card">
+<div class="adv-top"><span class="adv-ico" aria-hidden="true">🤖</span><h3 data-edit="en-gev-github-titel" data-edit-label="Voor gevorderden: titel Android-app van GitHub (Engels)">Android app from GitHub</h3></div>
+<p data-edit="en-gev-github-intro" data-edit-label="Voor gevorderden: intro Android-app van GitHub (Engels)">The same app, outside Google Play. With two extras Google Play doesn't allow:</p>
+<ul class="adv-chips" data-edit="en-gev-github-extra" data-edit-label="Voor gevorderden: extra's Android-app van GitHub (Engels)">
+<li><span aria-hidden="true">🚲</span> On time on the road</li>
+<li><span aria-hidden="true">🔋</span> Turn off battery restrictions</li>
 </ul>
-<p>Download the file on your phone and open it. Android asks whether you allow installing from your browser.</p>
-<p>Does the app ask for your Tick's address? Then enter <strong>app.ticktodo.nl</strong>. The app tells you about new versions itself.</p>
-<p>Install one of them, not both. Otherwise you may get notifications twice.</p>
-<p><a class="link-u" href="https://github.com/DioVayne/tick/releases/latest">Download the Android app on GitHub →</a></p>
-<p><strong>Self-hosting.</strong> Tick is open source (MIT). You can run your own Tick on a free Cloudflare account. It takes a bit of setup: about fifteen minutes with Claude Code, a little longer by hand.</p>
-<p>Your own Tick is a separate server. <strong>You can only share with people on the same Tick</strong>, not with people on app.ticktodo.nl. New accounts come through an invitation link, you install updates yourself.</p>
+<details class="adv-more">
+<summary><span data-edit="en-gev-github-meer-kop" data-edit-label="Voor gevorderden: uitklapknop Android-app van GitHub (Engels)">How to install it</span></summary>
+<div class="adv-more-b" data-edit="en-gev-github-meer" data-edit-label="Voor gevorderden: uitgeklapte tekst Android-app van GitHub (Engels)">
+<ol>
+<li>On your phone, open <a href="https://github.com/DioVayne/tick/releases/latest/download/Tick.apk">Tick.apk</a> and open the file.</li>
+<li>Android asks whether you allow installing from your browser: say yes.</li>
+<li>Does the app ask for the address of your Tick? Enter <strong>app.ticktodo.nl</strong>.</li>
+</ol>
+<p>Install one, not both, or you'll sometimes get notifications twice. The app tells you about new versions itself.</p>
+<p><em>On time on the road</em>: on a bike or in the car, a place reminder still comes in time. For that, your phone has to notice that you're cycling or driving, and Google Play has stricter rules for that.</p>
+</div>
+</details>
+<p class="adv-go"><a class="btn btn-pin btn-small" href="https://github.com/DioVayne/tick">Tick on GitHub →</a></p>
+</article>
+<article class="adv-card">
+<div class="adv-top"><span class="adv-ico" aria-hidden="true">🖥️</span><h3 data-edit="en-gev-hosten-titel" data-edit-label="Voor gevorderden: titel Zelf hosten (Engels)">Host it yourself</h3></div>
+<p data-edit="en-gev-hosten-intro" data-edit-label="Voor gevorderden: intro Zelf hosten (Engels)">Tick is open source (MIT). Run your own Tick, for your whole household.</p>
+<ul class="adv-chips" data-edit="en-gev-hosten-extra" data-edit-label="Voor gevorderden: kenmerken Zelf hosten (Engels)">
+<li><span aria-hidden="true">☁️</span> Free Cloudflare account</li>
+<li><span aria-hidden="true">⏱️</span> About 15 minutes with Claude Code</li>
+<li><span aria-hidden="true">👥</span> No limit on the number of people</li>
+</ul>
+<details class="adv-more">
+<summary><span data-edit="en-gev-hosten-meer-kop" data-edit-label="Voor gevorderden: uitklapknop Zelf hosten (Engels)">Good to know</span></summary>
+<div class="adv-more-b" data-edit="en-gev-hosten-meer" data-edit-label="Voor gevorderden: uitgeklapte tekst Zelf hosten (Engels)">
+<p>Your own Tick is a separate server. <strong>You can only share with people on the same Tick</strong>, not with people on app.ticktodo.nl.</p>
+<p>New accounts come through an invitation link, you install updates yourself. Setting it up by hand takes a little longer than with Claude Code.</p>
 <p>Want your Tick to send email (forgot password, invitations)? Then you need an email service, for example Resend. It is free up to 100 emails a day. With more people on your Tick, you will soon pay a monthly fee.</p>
-<p><a href="https://github.com/DioVayne/tick/blob/main/SETUP.md">How to set it up (SETUP.md)</a> · <a href="https://github.com/DioVayne/tick">Source code on GitHub</a></p>
+</div>
+</details>
+<p class="adv-go"><a class="btn btn-pin btn-small" href="https://github.com/DioVayne/tick/blob/main/SETUP.md">How to set it up →</a></p>
+</article>
 </div>
 </div>
 </div>

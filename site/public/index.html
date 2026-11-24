@@ -839,21 +839,50 @@
 <section id="gevorderden" class="band" aria-labelledby="gev-title">
 <div class="wrap">
 <div class="android adv">
+<div class="adv-head">
 <h2 id="gev-title" data-edit="gevorderden-titel" data-edit-label="Voor gevorderden: titel">Voor gevorderden</h2>
-<div class="android-b" data-edit="gevorderden-tekst" data-edit-label="Voor gevorderden: tekst">
-<p><strong>De Android-app van GitHub.</strong> Dezelfde app, buiten Google Play om. Hij heeft twee extra's die Google Play niet toestaat:</p>
-<ul>
-<li><em>Op tijd melden onderweg</em>: op de fiets of in de auto komt een melding op een plek toch op tijd. Daarvoor moet je telefoon merken dat je autorijdt of fietst, en dat valt bij Google Play onder strengere regels.</li>
-<li>Een knop die de batterijbeperking voor Tick uitzet.</li>
+<p class="adv-sub" data-edit="gevorderden-sub" data-edit-label="Voor gevorderden: regel onder de titel">Voor wie net iets meer wil: de app buiten Google Play om, of een eigen Tick.</p>
+</div>
+<div class="adv-cards">
+<article class="adv-card">
+<div class="adv-top"><span class="adv-ico" aria-hidden="true">🤖</span><h3 data-edit="gev-github-titel" data-edit-label="Voor gevorderden: titel Android-app van GitHub">Android-app van GitHub</h3></div>
+<p data-edit="gev-github-intro" data-edit-label="Voor gevorderden: intro Android-app van GitHub">Dezelfde app, buiten Google Play om. Met twee extra's die Google Play niet toestaat:</p>
+<ul class="adv-chips" data-edit="gev-github-extra" data-edit-label="Voor gevorderden: extra's Android-app van GitHub">
+<li><span aria-hidden="true">🚲</span> Op tijd melden onderweg</li>
+<li><span aria-hidden="true">🔋</span> Batterijbeperking uitzetten</li>
 </ul>
-<p>Download het bestand op je telefoon en open het. Android vraagt of je installeren vanuit je browser toestaat.</p>
-<p>Vraagt de app om het adres van je Tick? Vul dan <strong>app.ticktodo.nl</strong> in. Nieuwe versies meldt de app zelf.</p>
-<p>Installeer er één, niet allebei. Anders krijg je meldingen soms dubbel.</p>
-<p><a class="link-u" href="https://github.com/DioVayne/tick/releases/latest">Download de Android-app op GitHub →</a></p>
-<p><strong>Zelf hosten.</strong> Tick is open source (MIT). Je kunt je eigen Tick draaien op een gratis Cloudflare-account. Dat is wel wat installeerwerk: met Claude Code ongeveer een kwartier, met de hand iets langer.</p>
-<p>Een eigen Tick is een aparte server. <strong>Delen gaat alleen met mensen op dezelfde Tick</strong>, niet met mensen op app.ticktodo.nl. Nieuwe accounts maak je met een uitnodigingslink, updates installeer je zelf.</p>
+<details class="adv-more">
+<summary><span data-edit="gev-github-meer-kop" data-edit-label="Voor gevorderden: uitklapknop Android-app van GitHub">Zo installeer je hem</span></summary>
+<div class="adv-more-b" data-edit="gev-github-meer" data-edit-label="Voor gevorderden: uitgeklapte tekst Android-app van GitHub">
+<ol>
+<li>Open op je telefoon <a href="https://github.com/DioVayne/tick/releases/latest/download/Tick.apk">Tick.apk</a> en open het bestand.</li>
+<li>Android vraagt of je installeren vanuit je browser toestaat: zeg ja.</li>
+<li>Vraagt de app om het adres van je Tick? Vul <strong>app.ticktodo.nl</strong> in.</li>
+</ol>
+<p>Installeer er één, niet allebei, anders krijg je meldingen soms dubbel. Nieuwe versies meldt de app zelf.</p>
+<p><em>Op tijd melden onderweg</em>: op de fiets of in de auto komt een melding op een plek toch op tijd. Daarvoor moet je telefoon merken dat je fietst of autorijdt, en dat valt bij Google Play onder strengere regels.</p>
+</div>
+</details>
+<p class="adv-go"><a class="btn btn-pin btn-small" href="https://github.com/DioVayne/tick">Tick op GitHub →</a></p>
+</article>
+<article class="adv-card">
+<div class="adv-top"><span class="adv-ico" aria-hidden="true">🖥️</span><h3 data-edit="gev-hosten-titel" data-edit-label="Voor gevorderden: titel Zelf hosten">Zelf hosten</h3></div>
+<p data-edit="gev-hosten-intro" data-edit-label="Voor gevorderden: intro Zelf hosten">Tick is open source (MIT). Draai je eigen Tick, voor je hele huishouden.</p>
+<ul class="adv-chips" data-edit="gev-hosten-extra" data-edit-label="Voor gevorderden: kenmerken Zelf hosten">
+<li><span aria-hidden="true">☁️</span> Gratis Cloudflare-account</li>
+<li><span aria-hidden="true">⏱️</span> Met Claude Code ± een kwartier</li>
+<li><span aria-hidden="true">👥</span> Geen grens aan het aantal mensen</li>
+</ul>
+<details class="adv-more">
+<summary><span data-edit="gev-hosten-meer-kop" data-edit-label="Voor gevorderden: uitklapknop Zelf hosten">Goed om te weten</span></summary>
+<div class="adv-more-b" data-edit="gev-hosten-meer" data-edit-label="Voor gevorderden: uitgeklapte tekst Zelf hosten">
+<p>Een eigen Tick is een aparte server. <strong>Delen gaat alleen met mensen op dezelfde Tick</strong>, niet met mensen op app.ticktodo.nl.</p>
+<p>Nieuwe accounts maak je met een uitnodigingslink, updates installeer je zelf. Met de hand duurt het opzetten iets langer dan met Claude Code.</p>
 <p>Wil je dat jouw Tick mailt (wachtwoord kwijt, uitnodigingen)? Dan heb je een e-maildienst nodig, bijvoorbeeld Resend. Die is gratis tot 100 mails per dag. Met meer mensen op je Tick betaal je al snel een maandbedrag.</p>
-<p><a href="https://github.com/DioVayne/tick/blob/main/SETUP.md">Zo zet je hem op (SETUP.md)</a> · <a href="https://github.com/DioVayne/tick">Broncode op GitHub</a></p>
+</div>
+</details>
+<p class="adv-go"><a class="btn btn-pin btn-small" href="https://github.com/DioVayne/tick/blob/main/SETUP.md">Zo zet je hem op →</a></p>
+</article>
 </div>
 </div>
 </div>
