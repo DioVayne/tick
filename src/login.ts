@@ -164,6 +164,8 @@ ${items(['priv.what_account', 'priv.what_content', 'priv.what_devices', 'priv.wh
 <h2>${t('priv.calendar_title')}</h2>
 <p>${t('priv.calendar')}</p>` : ''}
 <p>${t('priv.calendar_add')}</p>
+<h2>${t('priv.ha_title')}</h2>
+<p>${t('priv.ha')}</p>
 <h2>${t('priv.not_title')}</h2>
 <p>${t('priv.not')}</p>
 <p>${t('priv.cookie')}</p>

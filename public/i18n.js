@@ -1451,6 +1451,8 @@ export const STRINGS = {
     'detail.add_cal_ics': 'Outlook, Apple or other (.ics file)',
     'priv.calendar_title': 'Linked calendars',
     'priv.calendar': 'If you link a calendar with its secret iCal address, Tick fetches it about once an hour and when you open the app. Of each appointment Tick keeps only the title and the start and end time, for the next 6 weeks; every fetch replaces the previous copy. Descriptions, locations and attendees are not read or kept. The address itself is stored encrypted and is never shown again or shared. Unlinking the calendar, or deleting your account, erases all of it at once. Calendar appointments are not part of the backup download.',
+    'priv.ha_title': 'Home Assistant',
+    'priv.ha': 'If you connect Home Assistant (with a key you make yourself), Tick keeps the names of your triggers, when each one last went off, which tasks wait for which trigger, with whom you share them, and when Home Assistant last checked in. When a trigger went off can show when someone came home; the people you share a trigger with see only its name, not when it went off. Tick gets nothing else from Home Assistant: no states, positions or history, and Tick never connects to your Home Assistant. Revoking the key stops it at once; deleting your account erases it all.',
     'priv.calendar_add': 'With "Add to calendar" › Google Calendar, your browser opens Google Calendar with the title and time of the task filled in; nothing is sent until you save it there.',
   },
   nl: {
@@ -2900,6 +2902,8 @@ export const STRINGS = {
     'detail.add_cal_ics': 'Outlook, Apple of andere (.ics-bestand)',
     'priv.calendar_title': "Gekoppelde agenda's",
     'priv.calendar': 'Koppel je een agenda met het geheime iCal-adres, dan haalt Tick die ongeveer elk uur op, en als je de app opent. Van elke afspraak bewaart Tick alleen de titel en de begin- en eindtijd, voor de komende 6 weken; elke keer ophalen vervangt de vorige kopie. Beschrijvingen, locaties en deelnemers worden niet gelezen of bewaard. Het adres zelf staat versleuteld opgeslagen en wordt nooit meer getoond of gedeeld. Ontkoppel je de agenda, of verwijder je je account, dan is alles meteen weg. Afspraken uit je agenda zitten niet in de back-up die je downloadt.',
+    'priv.ha_title': 'Home Assistant',
+    'priv.ha': 'Koppel je Home Assistant (met een sleutel die je zelf maakt), dan bewaart Tick de namen van je triggers, wanneer elke trigger het laatst afging, welke taken op welke trigger wachten, met wie je ze deelt en wanneer Home Assistant zich het laatst meldde. Wanneer een trigger afging, kan laten zien wanneer iemand thuiskwam; iemand met wie je een trigger deelt, ziet alleen de naam, niet wanneer hij afging. Verder krijgt Tick niets uit Home Assistant: geen toestanden, posities of geschiedenis, en Tick maakt nooit zelf verbinding met je Home Assistant. Intrekken van de sleutel stopt het meteen; je account verwijderen wist alles.',
     'priv.calendar_add': 'Met "Zet in je agenda" › Google Agenda opent je browser Google Agenda met de titel en tijd van de taak ingevuld; er gaat pas iets heen als je het daar opslaat.',
   },
 };

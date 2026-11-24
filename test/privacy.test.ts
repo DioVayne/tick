@@ -29,6 +29,9 @@ describe('openbare privacypagina', () => {
     expect(html).toContain(translate('nl', 'priv.calendar'));
     expect(translate('en', 'priv.calendar')).toMatch(/title and the start and end time.*6 weeks.*encrypted.*Unlinking/s);
     expect(privacyPage('nl', null)).not.toContain(translate('nl', 'priv.calendar_title'));
+    // Home Assistant-triggers staan altijd aan: wat Tick daarvan bewaart, staat er altijd.
+    expect(privacyPage('nl', null)).toContain(translate('nl', 'priv.ha'));
+    expect(translate('en', 'priv.ha')).toMatch(/names of your triggers.*came home.*never connects/s);
     expect(privacyPage('nl', null, undefined, [], false, true)).toContain(translate('nl', 'priv.calendar'));
   });
 
