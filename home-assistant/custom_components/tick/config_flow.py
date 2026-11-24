@@ -110,7 +110,12 @@ class TickConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_API_KEY): KEY_SELECTOR,
             }
         )
-        return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+        return self.async_show_form(
+            step_id="user",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"example_url": "https://tick.example.com"},
+        )
 
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Another address for this Tick (moved, or a new domain), and the key that goes with it."""

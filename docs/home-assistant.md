@@ -18,7 +18,12 @@ You get the notification wherever you turned on Tick notifications: the Android 
 You need a Home Assistant that can reach your Tick over the internet. Tick never connects to your Home Assistant, so you don't have to open it up from outside.
 
 1. **In Tick:** ⚙ Settings → Advanced → **Keys** → **+ New key**. Pick access **Full access** and name it, for example, "Home Assistant". Tick shows the key only once. The address of your Tick is at the top of Keys, with a Copy button.
-2. **In Home Assistant: install the integration.** Copy the folder [`home-assistant/custom_components/tick`](../home-assistant/custom_components/tick) from the Tick repository into the `custom_components` folder of your Home Assistant configuration, then restart Home Assistant. (Installing through HACS is coming.)
+2. **In Home Assistant: install the integration** from the Marketplace (Home Assistant 2026.11 or newer):
+   [![Open your Home Assistant and show the Tick integration in the Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=DioVayne&repository=tick-homeassistant&category=integration)
+   - Press the button above, or go to Settings → **Marketplace** → **Add from link** and enter `DioVayne/tick-homeassistant`. The first time, the Marketplace asks you to connect a GitHub account.
+   - Open **Tick** and choose **Install**.
+   - With an older Home Assistant and HACS: add `https://github.com/DioVayne/tick-homeassistant` under HACS → ⋮ → Custom repositories (type *Integration*), download **Tick** and restart.
+   - Without either: copy the folder [`custom_components/tick`](https://github.com/DioVayne/tick-homeassistant/tree/main/custom_components/tick) into the `custom_components` folder of your Home Assistant configuration and restart.
 3. Settings → Devices & services → **Add integration** → **Tick**. Paste the address and the key.
 4. On the Tick integration's page, choose **Add trigger**:
    - **Name in Tick:** how you want to read it in Tick, for example *Sam comes home*.

@@ -2,7 +2,7 @@
 
 There are two parts. Use either one, or both.
 
-- **The integration** ([`custom_components/tick`](custom_components/tick)): triggers. In Home Assistant you add named triggers ("Sam comes home", "Sunset"). In Tick you pick one on a task, and the first one that goes off sends one notification. You can share triggers with your household in Tick. Install: copy `custom_components/tick` into your `config/custom_components/`, restart, and add the integration **Tick** with your Tick's address and a key with full access. The whole story: [docs/home-assistant.md](../docs/home-assistant.md).
+- **The integration** ([`custom_components/tick`](custom_components/tick)): triggers. In Home Assistant you add named triggers ("Sam comes home", "Sunset"). In Tick you pick one on a task, and the first one that goes off sends one notification. You can share triggers with your household in Tick. Install it from the Home Assistant Marketplace (Add from link → `DioVayne/tick-homeassistant`) or HACS; the release copy lives in [DioVayne/tick-homeassistant](https://github.com/DioVayne/tick-homeassistant). Then add the integration **Tick** with your Tick's address and a key with full access. The whole story: [docs/home-assistant.md](../docs/home-assistant.md).
 - **The package** (below): read your tasks in Home Assistant and complete, postpone or add them from automations. No custom component: one package file with `rest_command` and trigger-based template sensors.
 
 ## The package

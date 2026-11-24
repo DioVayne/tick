@@ -9,7 +9,7 @@
           "api_key": "Sleutel"
         },
         "data_description": {
-          "url": "Bijvoorbeeld https://tick.voorbeeld.nl",
+          "url": "Bijvoorbeeld {example_url}",
           "api_key": "Begint met tick_. Tick toont hem maar één keer."
         }
       },

@@ -469,7 +469,7 @@ De momenten (*triggers*) maak je één keer in Home Assistant, met de integratie
 
 De eerste die afgaat, geeft één melding, aan jou en aan iedereen met wie de taak gedeeld is. Daarna staat er **Al gemeld · Opnieuw melden**, dus een lamp die twintig keer per dag aangaat, zeurt niet. Een herhalende taak wacht na elk afvinken weer op de trigger.
 
-Maar één iemand in huis heeft Home Assistant nodig. Onder **Instellingen › Home Assistant** deel je je triggers met mensen met wie je al een lijst of taak deelt; zij kiezen ze dan bij hun eigen taken. Tick krijgt alleen de namen en wanneer een trigger afging, verder niets over je huis. De integratie zet je nu nog met de hand in Home Assistant; hoe dat gaat, staat in de handleiding op GitHub (`docs/home-assistant.md`).
+Maar één iemand in huis heeft Home Assistant nodig. Onder **Instellingen › Home Assistant** deel je je triggers met mensen met wie je al een lijst of taak deelt; zij kiezen ze dan bij hun eigen taken. Tick krijgt alleen de namen en wanneer een trigger afging, verder niets over je huis. De integratie installeer je uit de Marketplace van Home Assistant; hoe dat gaat, staat in de handleiding op GitHub (`docs/home-assistant.md`).
 
 ### Koppelingen
 - **Anker:** `#koppelingen`
@@ -1108,7 +1108,7 @@ You make the moments (*triggers*) once in Home Assistant, with the Tick integrat
 
 The first one that goes off sends one notification, to you and to everyone the task is shared with. After that it says **Already notified · Notify again**, so a light that goes on twenty times a day doesn't nag. A repeating task waits for the trigger again each time you tick it off.
 
-Only one person in the house needs Home Assistant. Under **Settings › Home Assistant** you share your triggers with people you already share a list or task with; they then pick them on their own tasks. Tick only gets the names and when a trigger went off, nothing else about your home. For now you install the integration in Home Assistant by hand; how is in the guide on GitHub (`docs/home-assistant.md`).
+Only one person in the house needs Home Assistant. Under **Settings › Home Assistant** you share your triggers with people you already share a list or task with; they then pick them on their own tasks. Tick only gets the names and when a trigger went off, nothing else about your home. You install the integration from the Home Assistant Marketplace; how is in the guide on GitHub (`docs/home-assistant.md`).
 
 ### Integrations
 - **Anchor:** `#integrations`
