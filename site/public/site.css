@@ -55,7 +55,7 @@ h1, h2, h3, p, ul { margin: 0; }
 .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 24px; row-gap: 48px; }
 
 /* Type */
-h1 { font-size: 60px; line-height: 1.04; font-weight: 700; letter-spacing: -1.5px; }
+h1 { font-size: clamp(40px, 3.2vw + 22px, 60px); overflow-wrap: break-word; line-height: 1.04; font-weight: 700; letter-spacing: -1.5px; }
 h2, .h2 { font-size: 46px; line-height: 1.08; font-weight: 700; letter-spacing: -1px; }
 .kicker { font-size: 15px; font-weight: 600; color: var(--m); line-height: 1.4; }
 .dark .kicker { color: var(--pin); }
@@ -119,15 +119,14 @@ h2, .h2 { font-size: 46px; line-height: 1.08; font-weight: 700; letter-spacing: 
 .main-nav { display: flex; gap: 28px; flex: 1; font-size: 16px; flex-wrap: wrap; }
 .main-nav a, .lang, .head-login { text-decoration: none; color: var(--ink-soft); }
 .main-nav a:hover, .lang:hover, .head-login:hover { color: var(--ink); text-decoration: underline; text-decoration-color: var(--pin); text-decoration-thickness: 2px; text-underline-offset: 5px; }
-.lang, .head-login { font-size: 15px; font-weight: 600; padding: 10px 4px; }
+.lang, .head-login { font-size: 15px; font-weight: 600; padding: 0 6px; min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
 .head-cta { text-decoration: none; background: var(--pin); color: var(--slate); font-weight: 600; font-size: 15px; padding: 11px 20px; border-radius: 999px; white-space: nowrap; }
 .head-cta:hover { background: #fbbf24; }
-.lang { display: inline-flex; align-items: center; }
+.lang { gap: 8px; }
+.lang-code { font-size: 14px; font-weight: 700; letter-spacing: .5px; }
 .flag { display: block; border-radius: 3px; box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
-.head-feat { display: none; text-decoration: none; color: var(--ink-soft); font-size: 15px; font-weight: 600; padding: 10px 4px; }
-.head-feat:hover { color: var(--ink); }
 .hero-more { font-size: 16px; font-weight: 600; }
-.hero-more a { color: var(--pin); text-underline-offset: 4px; }
+.hero-more a { color: var(--pin); text-underline-offset: 4px; display: inline-flex; align-items: center; min-height: 44px; }
 
 /* ---------- Hero ---------- */
 .hero .wrap { padding-top: 56px; padding-bottom: 112px; }
@@ -167,9 +166,10 @@ h2, .h2 { font-size: 46px; line-height: 1.08; font-weight: 700; letter-spacing: 
 .tl-burst:nth-child(even) { background: var(--ink); width: 4px; height: 4px; margin: -2px 0 0 -2px; }
 @keyframes tl-burst { 0% { transform: rotate(var(--a)) translateY(0); opacity: 1; } 100% { transform: rotate(var(--a)) translateY(-26px); opacity: 0; } }
 
-/* Scroll reveal (site.js adds .reveal only below the fold, and only without reduced motion). */
-.reveal { opacity: 0; transform: translateY(22px); }
-.reveal.is-in { opacity: 1; transform: none; transition: opacity .7s ease-out, transform .7s cubic-bezier(.2, .8, .2, 1); transition-delay: var(--d, 0ms); }
+/* Scroll reveal (site.js adds .reveal only to whole sections below the fold, and only without reduced motion):
+   a short fade, no movement, no delay. */
+.reveal { opacity: 0; }
+.reveal.is-in { opacity: 1; transition: opacity .25s ease-out; }
 .hero-demo { grid-column: 7 / span 6; display: flex; flex-direction: column; gap: 14px; }
 .hero-demo .tdemo { --tdemo-max-width: 100%; --tdemo-radius: 28px; }
 .hero-demo .foot { font-size: 14px; line-height: 1.5; color: var(--s-muted); }
@@ -179,6 +179,7 @@ h2, .h2 { font-size: 46px; line-height: 1.08; font-weight: 700; letter-spacing: 
 /* ---------- Maker ---------- */
 .maker-left { grid-column: 1 / span 5; display: flex; flex-direction: column; gap: 40px; }
 .maker-shot { width: 260px; margin-left: 40px; transform: rotate(-4deg); }
+.maker-shot picture { display: block; }
 .maker-shot img, .shot img { display: block; width: 100%; border-radius: 28px; box-shadow: 0 0 0 1px var(--s-line), 0 18px 40px rgba(15, 23, 42, .25); }
 .maker-right { grid-column: 7 / span 6; display: flex; flex-direction: column; gap: 22px; font-size: 18px; line-height: 1.65; }
 .quote { font-size: 26px; line-height: 1.4; font-weight: 600; font-style: italic; letter-spacing: -.3px; }
@@ -332,8 +333,13 @@ button.box::after { content: ""; position: absolute; inset: -11px; } /* 44px tou
 .story { border-radius: 20px; background: var(--g2); box-shadow: 0 0 0 1px var(--ln); padding: 40px; margin-top: 16px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 24px; row-gap: 20px; }
 .story-h { grid-column: 1 / span 4; grid-row: 1; display: flex; flex-direction: column; gap: 10px; }
 .story-title { font-size: 30px; line-height: 1.15; font-weight: 700; letter-spacing: -.5px; }
-.story-anchor { font-size: 13px; color: var(--m); font-family: var(--mono); text-decoration: none; align-self: flex-start; }
-.story-anchor:hover { text-decoration: underline; }
+/* Link to the story: a small link icon with a 44px tap area (its name is in aria-label). */
+.story-anchor { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -8px 0 -8px -13px; border-radius: 50%; color: var(--m); align-self: flex-start; }
+.story-anchor:hover { color: var(--t); background: var(--chip); }
+/* "Close" under the story (site.js): closes it and goes back to its tile. */
+.story-close-row { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+.story-close { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 20px; border-radius: 999px; border: 2px solid var(--ln); background: transparent; font-size: 15px; font-weight: 700; }
+.story-close:hover { border-color: var(--m); }
 .story-b { grid-column: 5 / span 8; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 14px; font-size: 17px; line-height: 1.65; max-width: 680px; }
 /* A real screenshot from the app, under the title. */
 .story-shot { grid-column: 1 / span 4; grid-row: 2; margin: 8px 0 0; align-self: start; }
@@ -383,7 +389,10 @@ html.no-anchor { overflow-anchor: none; }
 .legend { list-style: none; padding: 0; margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; line-height: 1.4; color: var(--m); }
 .legend li { display: inline-flex; align-items: center; gap: 8px; }
 .legend li > span { gap: 0; }
+/* The hint shows only while the table is wider than its box (site.js). */
 .table-hint { display: none; }
+.table-hint.is-needed { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--m); }
+.table-hint.is-needed span { color: var(--t); }
 .table-wrap { position: relative; }
 .table-card { position: relative; /* keeps the absolutely placed .sr-only cells inside the scroll box */ overflow-x: auto; border-radius: 20px; background: var(--card); box-shadow: 0 0 0 1px var(--ln); }
 .table-card:focus-visible { outline: 2px solid var(--pin); outline-offset: 3px; }
@@ -494,25 +503,34 @@ table.www { width: 100%; border-collapse: collapse; font-size: 15px; line-height
 
 /* ---------- Narrow screens ---------- */
 @media (max-width: 1080px) {
-  .main-nav { display: none; }
-  /* Without the menu, "Functies" sits in the header, which stays at the top while you scroll. */
-  .head-feat { display: inline-block; }
+  /* The menu stays, as a row you can swipe sideways; the header stays at the top while you scroll. */
   .site-head { position: sticky; top: 0; z-index: 50; }
   html { scroll-padding-top: 80px; }
-  .site-head .bar { justify-content: space-between; }
-  .site-head .spacer { flex: 1; }
+  .site-head .bar { gap: 20px; }
+  .site-head .spacer { display: none; }
+  .main-nav { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; gap: 4px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .main-nav::-webkit-scrollbar { display: none; }
+  .main-nav a { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; white-space: nowrap; }
+  /* A soft fade on the right while there is more menu to swipe to (site.js). */
+  .main-nav.has-more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); }
 }
 @media (max-width: 900px) {
   body { font-size: 17px; }
   .wrap { padding: 72px 16px; }
   .grid { grid-template-columns: minmax(0, 1fr); row-gap: 32px; }
   .grid > * { grid-column: 1 / -1 !important; }
-  h1 { font-size: 40px; line-height: 1.06; letter-spacing: -1px; }
+  h1 { font-size: clamp(30px, 5vw + 18px, 40px); line-height: 1.08; letter-spacing: -1px; }
   h2, .h2 { font-size: 32px; line-height: 1.12; letter-spacing: -.6px; }
   .lead, .hero-copy .lead { font-size: 17px; }
   .small, .kicker, .hero-copy .eyebrow, .hero-fine { font-size: 14px; }
   .stack { gap: 18px; }
-  .site-head .bar { padding: 14px 16px; gap: 12px; }
+  /* Phone: logo, language and log in on the first row, the menu as a swipeable row under it. Two rows are too tall
+     to keep at the top, so the header scrolls away; "Back to top" (site.js) brings you back. */
+  .site-head { position: static; }
+  html { scroll-padding-top: 16px; }
+  .site-head .bar { padding: 8px 16px 4px; gap: 4px 8px; flex-wrap: wrap; }
+  .site-head .spacer { display: block; flex: 1; }
+  .main-nav { order: 5; flex: 1 0 100%; margin: 0 -16px; padding: 0 6px; font-size: 15px; }
   .logo { font-size: 20px; }
   .head-cta { display: none; }
   .hero .wrap { padding-top: 32px; padding-bottom: 72px; }
@@ -564,13 +582,14 @@ table.www { width: 100%; border-collapse: collapse; font-size: 15px; line-height
   .tm-art { height: 340px; }
   .tm-summary { left: 0; right: 0; bottom: 0; font-size: 13px; padding: 8px 12px; border-radius: 16px; }
   .feat-head { margin-bottom: 20px; }
-  .feats { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .tile { min-height: 0; padding: 14px 16px; border-radius: 14px; display: grid; grid-template-columns: 1fr auto; column-gap: 12px; row-gap: 3px; align-items: center; }
+  .feats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .tile { min-height: 0; padding: 14px 16px; border-radius: 14px; gap: 6px; }
   .feat[open] > .tile, .feat > .tile { min-height: 0; }
-  .tile-h { grid-column: 1; }
-  .tile h3 { font-size: 16px; }
-  .tile-line { grid-column: 1; font-size: 14px; line-height: 1.4; }
-  .more { grid-column: 2; grid-row: 1 / span 2; padding: 0; min-height: 0; font-size: 14px; }
+  .tile-h { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .tile h3 { font-size: 16px; overflow-wrap: break-word; hyphens: auto; }
+  .tile h3 .emoji, .feat[open] > .tile h3 .emoji { display: block; width: max-content; margin: 0 0 6px; font-size: 24px; line-height: 1.2; }
+  .tile-line { font-size: 14px; line-height: 1.4; }
+  .more { padding-top: 4px; min-height: 0; font-size: 14px; }
   .story { padding: 20px 16px; border-radius: 14px; grid-template-columns: minmax(0, 1fr); row-gap: 14px; }
   .story-h, .story-b, .story-shot { grid-column: 1; }
   .story-b { grid-row: 2; }
@@ -582,8 +601,6 @@ table.www { width: 100%; border-collapse: collapse; font-size: 15px; line-height
   .www-head p { font-size: 14px; }
   .table-card { border-radius: 16px; }
   .legend { font-size: 13px; gap: 6px 16px; }
-  .table-hint { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--m); }
-  .table-hint span { color: var(--t); }
   /* A soft fade on the right edge while there is more table to see. */
   .table-wrap::after { content: ""; position: absolute; top: 1px; right: 1px; bottom: 1px; width: 44px; border-radius: 0 16px 16px 0; background: linear-gradient(to right, transparent, var(--card)); pointer-events: none; opacity: 0; transition: opacity .2s; }
   .table-wrap.has-more::after { opacity: 1; }
@@ -616,11 +633,83 @@ table.www { width: 100%; border-collapse: collapse; font-size: 15px; line-height
   .foot-brand { grid-column: 1 / -1; }
   .foot-nav.c1, .foot-nav.c2, .foot-nav.c3 { grid-column: auto; }
   .foot-nav.c3 { grid-column: 1 / -1; }
+  .foot-nav { gap: 0; }
+  .foot-nav .fh { margin-bottom: 4px; }
   .doc h1 { font-size: 32px; }
   .lost .big { font-size: 72px; }
 }
 
+/* ---------- Phones (up to 600px) ---------- */
+@media (max-width: 600px) {
+  /* Feature tiles: two columns, only the emoji and the title. The whole tile opens the story. */
+  .tile { padding: 14px; }
+  .tile h3 { font-size: 15px; line-height: 1.3; }
+  .tile-line, .more { display: none; }
+  .tag { font-size: 10px; padding: 2px 7px; }
+  /* What works where fits the screen: short column heads (emoji + name), the mark above its note, and the
+     head row stays at the top of the screen while you scroll through the rows. */
+  .table-wrap.fit .table-card { overflow: visible; }
+  .table-wrap.fit table.www { min-width: 0; table-layout: fixed; }
+  .table-wrap.fit .www thead th { position: sticky; top: 0; z-index: 2; padding: 12px 8px; box-shadow: inset 0 -1px 0 var(--ln); }
+  .table-wrap.fit .www thead th small { display: none; }
+  .table-wrap.fit .www thead th .ci { margin-bottom: 4px; }
+  .table-wrap.fit .www thead th:first-child { z-index: 3; width: 34%; min-width: 0; padding-left: 12px; }
+  .table-wrap.fit .www tbody tr:not(.grp) > th { width: auto; min-width: 0; }
+  .table-wrap.fit .www th, .table-wrap.fit .www td { overflow-wrap: break-word; hyphens: auto; }
+  .table-wrap.fit .www td { padding: 11px 8px; }
+  .www td > .y, .www td > .p, .www td > .n { flex-direction: column; align-items: flex-start; gap: 4px; }
+  /* The card's rounded corners, now that it no longer clips its cells. */
+  .table-wrap.fit thead th:first-child { border-top-left-radius: 16px; }
+  .table-wrap.fit thead th:last-child { border-top-right-radius: 16px; }
+  .table-wrap.fit tbody tr:last-child > :first-child { border-bottom-left-radius: 16px; }
+  .table-wrap.fit tbody tr:last-child > :last-child { border-bottom-right-radius: 16px; }
+}
+/* Footer links: a full 44px row on touch screens. */
+@media (max-width: 900px), (pointer: coarse) {
+  .foot-nav a { display: flex; align-items: center; min-height: 44px; }
+}
+
+/* ---------- Back to top (site.js shows it after scrolling well down) ---------- */
+.to-top {
+  position: fixed; right: 16px; bottom: 16px; z-index: 40;
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 18px; border-radius: 999px;
+  background: var(--slate); color: var(--ink); font-size: 15px; font-weight: 600; line-height: 1.2; text-decoration: none;
+  box-shadow: 0 0 0 1px var(--s-line), 0 8px 24px rgba(15, 23, 42, .3);
+  opacity: 0; visibility: hidden; transform: translateY(8px);
+  transition: opacity .2s, transform .2s, visibility 0s .2s;
+}
+.to-top.is-shown { opacity: 1; visibility: visible; transform: none; transition: opacity .2s, transform .2s, visibility 0s; }
+.to-top:hover { background: var(--slate-deep); }
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* ---------- Site rewrite 2026-11-24: start routes, more features, who is behind it ---------- */
+.btn-small { padding: 10px 18px; font-size: 15px; }
+.start h2 { margin-bottom: 24px; }
+.routes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.route { border-radius: 16px; background: var(--card); box-shadow: 0 0 0 1px var(--ln); padding: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; line-height: 1.55; }
+.route h3 { font-size: 20px; line-height: 1.3; font-weight: 700; }
+.route h3 .emoji { margin-right: 8px; }
+.start-note { margin-top: 16px; font-size: 15px; line-height: 1.55; color: var(--m); }
+.feats-more { margin-top: 16px; }
+.feats-more > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 999px; border: 2px solid var(--ln); font-weight: 700; }
+.feats-more > summary::-webkit-details-marker { display: none; }
+.feats-more > summary::after { content: "↓"; }
+.feats-more[open] > summary::after { content: "↑"; }
+.feats-more[open] > summary { margin-bottom: 16px; }
+.who-left { grid-column: 1 / span 5; display: flex; flex-direction: column; gap: 20px; font-size: 18px; line-height: 1.65; }
+.who-left .note-wrap { margin-left: 40px; align-items: flex-start; }
+.who-left .note { max-width: 300px; }
+.who-right { grid-column: 7 / span 6; display: flex; flex-direction: column; gap: 18px; font-size: 18px; line-height: 1.65; }
+.www-notes { margin-top: 14px; font-size: 14px; line-height: 1.55; color: var(--m); }
+.android h2 { grid-column: 1 / span 4; font-size: 32px; line-height: 1.12; font-weight: 700; letter-spacing: -.5px; }
+.android-b ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 900px) {
+  .routes { grid-template-columns: minmax(0, 1fr); }
+  .who-left, .who-right { grid-column: 1 / -1; font-size: 17px; }
+  .who-left .note-wrap { margin-left: 24px; }
+  .android h2 { grid-column: 1; font-size: 26px; }
 }

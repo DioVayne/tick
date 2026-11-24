@@ -10,7 +10,8 @@ function openFromHash(scroll) {
   const el = document.getElementById(id);
   if (!el) return;
   const details = el.tagName === 'DETAILS' ? el : el.closest('details');
-  if (details && !details.open) details.open = true;
+  // A story under "More features" sits in a closed <details> of its own: open every parent too.
+  for (let d = details; d; d = d.parentElement?.closest('details')) if (!d.open) d.open = true;
   // A feature <details> has display: contents (no box of its own), so scroll to its tile.
   const target = el === details ? details.querySelector('summary') || el : el;
   // Instant: opening the story can close another one above it, which moves everything during a smooth scroll.
@@ -226,17 +227,62 @@ function mountShare(root) {
 }
 document.querySelectorAll('.share').forEach(mountShare);
 
-// ---------- What works where: the fade on the right says "there is more"; it goes once you reach the end ----------
-document.querySelectorAll('.table-wrap').forEach((wrap) => {
-  const box = wrap.querySelector('.table-card');
-  if (!box) return;
+// ---------- Tables and the phone menu: a fade on the right says "there is more"; it goes once you reach the end ----------
+// The hint above a table ("slide the table sideways") only shows while the table really is wider than its box.
+function edgeFade(box, marked, hint) {
   const update = () => {
-    const more = box.scrollWidth - box.clientWidth - box.scrollLeft > 4;
-    wrap.classList.toggle('has-more', more);
+    const over = box.scrollWidth - box.clientWidth > 4;
+    marked.classList.toggle('has-more', over && box.scrollWidth - box.clientWidth - box.scrollLeft > 4);
+    hint?.classList.toggle('is-needed', over);
   };
   box.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', update);
   update();
+}
+document.querySelectorAll('.table-wrap').forEach((wrap) => {
+  const box = wrap.querySelector('.table-card');
+  const prev = wrap.previousElementSibling;
+  if (box) edgeFade(box, wrap, prev?.matches('.table-hint') ? prev : null);
+});
+document.querySelectorAll('.main-nav').forEach((nav) => edgeFade(nav, nav, null));
+
+// ---------- Feature stories: a "Close" button under each story, back to its tile ----------
+// Its text is the tile's own "Close" label from the HTML, so it is in the page's language.
+document.querySelectorAll('details.feat').forEach((d) => {
+  const story = d.querySelector(':scope > .story');
+  const summary = d.querySelector(':scope > summary');
+  const label = summary?.querySelector('.cl')?.textContent.trim();
+  if (!story || !summary || !label) return;
+  const row = document.createElement('p');
+  row.className = 'story-close-row';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'story-close';
+  btn.textContent = label;
+  row.append(btn);
+  story.append(row);
+  btn.addEventListener('click', () => {
+    // First back to the tile, then close: the story shrinks below it, so the tile stays put.
+    summary.scrollIntoView({ block: 'start', behavior: 'instant' });
+    if (!reduceMotion.matches && 'animate' in Element.prototype) animateStory(d, false);
+    else d.open = false;
+    summary.focus({ preventScroll: true });
+  });
+});
+
+// ---------- Back to top: shows after scrolling well down ----------
+document.querySelectorAll('[data-to-top]').forEach((btn) => {
+  const update = () => btn.classList.toggle('is-shown', window.scrollY > window.innerHeight * 1.5);
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: reduceMotion.matches ? 'instant' : 'smooth' });
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    // Keyboard and screen reader users start again at the top too.
+    document.querySelector('.site-head .logo')?.focus({ preventScroll: true });
+  });
 });
 
 // ---------- Tickmanager: one old task at a time ----------
@@ -290,7 +336,8 @@ document.querySelectorAll('.tm').forEach(mountTickmanager);
 // The HTML has three buttons for a computer (and for no JS): the demo, an account in the browser, the app on Google Play.
 // On a phone there is one real way to start plus the demo, so the account button goes (you make it in the app, or
 // after the demo):
-// - iPhone/iPad: the demo stays first, the app button explains the home screen instead.
+// - iPhone/iPad: the demo stays first; the app button becomes "Put Tick on your iPhone" and jumps straight to the
+//   steps in "Get started" (#starten / #get-started), which link to app.ticktodo.nl.
 // - Android: the app from Google Play becomes the yellow button, the demo comes second.
 // iPadOS presents itself as a Mac, so a Mac with a touch screen counts as iOS too.
 const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
@@ -353,49 +400,31 @@ function mountTickline(root) {
 }
 document.querySelectorAll('[data-tickline]').forEach(mountTickline);
 
-// ---------- Scroll reveal: blocks below the fold slide up softly as they come into view ----------
-// Only what is not yet on screen gets hidden, so nothing visible ever blinks; without this file everything shows.
+// ---------- Scroll reveal: whole sections below the fold fade in quickly as they come into view ----------
+// Only sections (not tiles, table rows or questions), only what is not yet on screen, a short fade without movement.
+// A jump to an anchor never shows an empty page: with a #link at load nothing is hidden, and any jump within the
+// page shows everything at once. Without this file everything shows.
 function mountReveal() {
-  if (reduceMotion.matches || !('IntersectionObserver' in window)) return;
-  const items = [];
-  const add = (el, delay = 0) => {
-    // Elements with a transform of their own (tilted photos) keep it: leave them be.
-    if (!el || getComputedStyle(el).transform !== 'none') return;
-    if (el.getBoundingClientRect().top < window.innerHeight) return;
-    items.push([el, delay]);
-  };
-  document.querySelectorAll('main section.band:not(.hero) .wrap').forEach((wrap) => {
-    [...wrap.children].forEach((child) => {
-      if (child.matches('.feats')) {
-        // Tiles one after the other within their row.
-        const cols = getComputedStyle(child).gridTemplateColumns.split(' ').length || 1;
-        child.querySelectorAll(':scope > .feat > .tile').forEach((tile, i) => add(tile, (i % cols) * 70));
-      } else if (child.matches('.cards3')) {
-        [...child.children].forEach((card, i) => add(card, i * 90));
-      } else if (child.matches('.faq-list')) {
-        [...child.children].forEach((qa, i) => add(qa, Math.min(i, 6) * 40));
-      } else {
-        add(child);
-      }
-    });
-  });
+  if (reduceMotion.matches || !('IntersectionObserver' in window) || location.hash) return;
+  const items = [...document.querySelectorAll('main section.band:not(.hero) > .wrap')]
+    .filter((el) => el.getBoundingClientRect().top >= window.innerHeight);
   if (!items.length) return;
+  const done = (el) => el.classList.remove('reveal', 'is-in');
   const io = new IntersectionObserver((entries) => {
     entries.forEach((e) => {
       if (!e.isIntersecting) return;
       io.unobserve(e.target);
       const el = e.target;
       el.classList.add('is-in');
-      // Afterwards the element is itself again (its own hover and transitions).
-      const done = () => { el.classList.remove('reveal', 'is-in'); el.style.removeProperty('--d'); };
-      el.addEventListener('transitionend', (ev) => { if (ev.target === el && ev.propertyName === 'transform') done(); });
-      setTimeout(done, 1600);
+      el.addEventListener('transitionend', () => done(el), { once: true });
+      setTimeout(() => done(el), 600);
     });
-  }, { rootMargin: '0px 0px -8% 0px' });
-  items.forEach(([el, delay]) => {
-    el.classList.add('reveal');
-    if (delay) el.style.setProperty('--d', `${delay}ms`);
-    io.observe(el);
-  });
+  }, { rootMargin: '0px 0px -5% 0px' });
+  items.forEach((el) => { el.classList.add('reveal'); io.observe(el); });
+  const showAll = () => { io.disconnect(); items.forEach(done); };
+  window.addEventListener('hashchange', showAll, { once: true });
+  document.addEventListener('click', (e) => {
+    if (e.target.closest?.('a[href^="#"]')) showAll();
+  }, { capture: true, once: false });
 }
 mountReveal();

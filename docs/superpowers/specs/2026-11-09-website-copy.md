@@ -1351,3 +1351,82 @@ Agenda koppelen staat nu ook op app.ticktodo.nl aan (Data safety in Play bijgewe
 
 ## 2026-11-23: Agenda koppelen, verhaal en schermafbeelding
 Dio wilde een voorbeeld van hoe het werkt in plaats van de instellingen, en de privacy-angst wegnemen. Schermafbeelding nu de kiezer, `nl-pick-calendar.webp` / `en-pick-calendar.webp` (op verzoek van Dio, net als bij Kies in je agenda). Regel op de tegel: "Je afspraken naast je taken. Tick kijkt alleen mee." Het verhaal heeft drie vette kopjes: *Wat Tick wel en niet ziet* (titel, begin, eind; zes weken; geen omschrijving, locatie, deelnemers), *Tick kijkt alleen mee* (niets zetten, veranderen of wissen; niet gedeeld, geen reclame; elke ronde vervangt de vorige kopie), *Jij houdt de sleutel* (adres versleuteld, nooit getoond; ontkoppelen wist alles; niet in de back-up; Outlook *Kan zien wanneer ik bezet ben* geeft alleen bezette tijden). Daarna hoe je koppelt en Zet in je agenda. EN gelijk.
+
+---
+
+# Revisie 2026-11-24: nieuwe volgorde en teksten na vier reviews
+
+Na de beoordeling door vier reviewers is de site inhoudelijk herschreven. De volledige tekst staat in de HTML (`site/public/index.html` en `en/index.html`); hieronder de opbouw en de teksten die nieuw zijn of anders dan hierboven. Waar het hieronder anders staat, geldt dit.
+
+**Volgorde.** Hero → Zo begin je (#starten / #get-started) → kort makersblok (#maker) → Tick naast andere apps (#vergelijken / #compare) → Op de juiste plek → Samen of kopie → Tickmanager → Alle functies (tien tegels, de rest onder *Meer functies*) → Wat werkt waar → Wie zit erachter (#wie-zit-erachter / #who-is-behind-it) → Kost het iets? → Privacy → Vragen → Voor gevorderden (#gevorderden / #advanced, nu een eigen sectie) → footer. Menu: Functies · Vergelijken · Wat werkt waar · Kosten · Privacy · Vragen.
+
+**Hero.**
+- Kop: *Een to-do-lijst die je op het juiste moment herinnert. Ook samen.* / *A to-do list that reminds you at the right moment. Together, too.* Geen sterretje of voetnoot meer.
+- Afvinktaak 1: *📍 Bij de supermarkt (Android)* / *📍 At the supermarket (Android)*.
+- Intro: *Tick is een to-do-app voor je telefoon en je computer, voor jezelf en samen. Gratis, zonder reclame en zonder tracking.* / *Tick is a to-do app for your phone and your computer, for yourself and together. Free, with no ads and no tracking.*
+- Knoppen: hoofdknop *Probeer het meteen, zonder account* / *Try it now, no account needed*; kleiner *Account maken* / *Create an account* en *Google Play*. Op iPhone gaat de Play-knop naar #starten.
+- Springlinks: *Naar: alle 28 functies · vergelijken · kosten · vragen* / *Jump to: all 28 features · comparison · cost · questions*.
+- Demo-fietsnoot (voor iedereen waar): *Op de fiets ben je zo voorbij je cirkel. Kies voor een winkel op je route gerust een grotere cirkel, dan komt de melding op tijd.* EN-knop in de demo: *Tick off*.
+
+**Zo begin je.** Drie routes: Android (Google Play, account in de app), iPhone en iPad (Safari → Deel → Zet op beginscherm, iOS 16.4+), computer (app.ticktodo.nl; in Chrome of Edge als app te installeren). Regel eronder: *Op een iPhone werkt bijna alles. Alleen meldingen op een plek, de widget, snel toevoegen en delen vanuit andere apps naar Tick gaan niet.*
+
+**Maker.** Kop *Gemaakt door iemand die alles vergeet* / *Made by someone who forgets everything*. Inleiding *Mijn vriendin (ADD-powergirl) over Tick:* / *My girlfriend (ADD powergirl) about Tick:*, in beide talen het citaat over het pakket ophalen. Het groeilijstje en *Hoe het project escaleerde* staan nu bij Wie zit erachter.
+
+**Vergelijken.** *Waar Tick minder is* heeft er drie punten bij: geen prioriteiten, labels of filters; geen eigen app voor Windows of Mac (wel de web-app, te installeren in Chrome of Edge); geen koppeling met Outlook-taken of Teams (de Outlook-agenda kan Tick wel meelezen). Geen nieuwe tabelrijen: *Geen reclame* en *Proberen zonder account* niet toegevoegd, omdat de gegevens van de andere apps niet te controleren waren.
+
+**Op de juiste plek.** Geen GitHub-app meer: de punt *Op tijd melden onderweg* en de zin *Daarom maakt Tick de cirkel onderweg groter* zijn weg. Voetnoot zonder sterretje. EN: *Tick off marks the task done.*
+
+**Alle functies.** Eerst tien tegels: Herinneringen, Herhalen, Voor vandaag, Datum uit je tekst, Plekken, Gedeelde lijsten, Subtaken, Widget, Werkt offline, Kalender. De andere achttien onder *Meer functies (nog 18)*. Minder jargon:
+- Notities: markdown alleen tussen haakjes.
+- Foto's: *de verborgen gegevens* in plaats van EXIF.
+- Agenda koppelen: *het geheime adres van je agenda (het zogenoemde iCal-adres)* en *een bestand dat elke agenda-app opent* in plaats van .ics.
+- Offline: *dan blijft de nieuwste wijziging staan*.
+- Herhalen: de zin over de klok van je tijdzone is weg.
+- Thema's, Talen en Account: ingekort.
+- De tegel heet overal *Op tijd melden onderweg* (EN: *On time on the road*).
+- Importeren: *Instellingen › Gegevens › Taken uit een andere app halen*, *de meeste herhalingen*, *vastgezette taak*, *Laatste import ongedaan maken*.
+
+**Wat werkt waar.** Alleen de rijen die verschillen: herinneringen op tijd, datum uit je tekst, melding op een plek, meerdere plekken, rijmodus (iPhone nu ook *op een telefoon, met locatie*), widget, snel toevoegen en delen vanuit andere apps, updates. Intro: *Al het andere werkt overal … Een iPhone laat een web-app geen plekken bewaken en geen widget tonen; daarvoor is de Android-app er.* Voetnoot: 100 MB per account op app.ticktodo.nl, en zelf gehost geen mail zonder e-maildienst en delen alleen binnen dezelfde Tick.
+
+**Wie zit erachter.** Het groeilijstje, en drie korte stukken: Wie (Dio; op app.ticktodo.nl aangeboden door Dio Communicatieadvies), Hoe het betaald wordt (niet met reclame of gegevens, verwijzing naar Kosten), En als ik stop? (30 dagen vooraf, open source). De losse regel *Stoppen met Tick? Ben ik niet van plan.* is weg.
+
+**Kosten.**
+- Subregel: *Gratis, zonder reclame.* (geen *nu*).
+- De grens van 3 personen in één zin.
+- Betaalde extra's: zelfde inhoud, rustiger gezegd. Er is geen nieuwe belofte bij gekomen.
+- De alinea over Cloudflare, Resend en 100 mails per dag staat nu bij Voor gevorderden.
+
+**Privacy.**
+- Nieuwe alinea *Wat ik niet kan beloven*: niet end-to-end versleuteld; de beheerder van een Tick kan erbij; het beheerscherm toont alleen aantallen; alleen bij een melding van misbruik ziet de beheerder wat er gemeld is.
+- Bij Cloudflare: servers over de hele wereld, met een verwijzing naar de privacyverklaring.
+- Overal *meldingen van misbruik*.
+
+**Vragen (24).** Volgorde:
+1. Wat kost het?
+2. Werkt Tick op mijn iPhone? (samengevoegd met Apple Herinneringen en delen vanaf iPhone)
+3. Proberen zonder account (*een uur nadat je hem voor het laatst gebruikte, en uiterlijk drie uur na de start*, uit `src/demo.ts`)
+4. Nieuwe telefoon
+5. Wie zit erachter?
+6. Gedeeld en kopie (vier vragen samengevoegd)
+7. Account nodig
+8. Met hoeveel mensen
+9. Meer dan 3
+10. Android-app
+11. Betrouwbaarheid iPhone-meldingen
+12. Ik kom van een iPhone (gecorrigeerd: plek-meldingen alleen Android)
+13. Google Keep
+14. TickTick/Todoist
+15. Taken meenemen naar een andere app (JSON-back-up)
+16. Prioriteiten, labels, filters
+17. App voor Windows of Mac
+18. Werk of team
+19. Weet Tick waar ik ben?
+20. Kan de beheerder mijn taken lezen / waar staan ze?
+21. Datum uit je tekst
+22. Elke supermarkt
+23. Account verwijderen
+24. Zelf hosten
+
+Kantlijn: *Staat je vraag er niet bij? Mail dio@ticktodo.nl.*
+
+**Voor gevorderden.** De GitHub-app in korte stukken, met *valt bij Google Play onder strengere regels*. Daaronder zelf hosten en mail (Resend, 100 mails per dag gratis).
