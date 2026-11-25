@@ -6,12 +6,13 @@ If you use [Home Assistant](https://www.home-assistant.io/) at home, a task in T
 
 - When you add a task (below *Remind me at a place*), or later in the task panel, tap **Notify on a Home Assistant trigger** and pick one or more triggers. The task then reads **Notify when Sam comes home**.
 - The first chosen trigger that goes off sends **one** notification: the task's title, with *Home Assistant: Sam comes home* below it. It goes to you and to everyone the task is shared with.
-- After that the task shows **Already notified · Notify again**, so a light that goes on twenty times a day won't keep reminding you. Tap **Notify again** to wait for the next time.
+- After that the task shows when and by which trigger, for example **Notified Wed 25 Nov 18:42 · Sam comes home · Notify again**, so a light that goes on twenty times a day won't keep reminding you. Tap **Notify again** to wait for the next time.
+- If the notification couldn't be delivered anywhere (for example, all your devices turned notifications off), the task isn't marked as notified and waits for the next time the trigger goes off.
 - A **repeating** task waits for the trigger again as soon as it moves on to its next time. Changing the task's triggers rearms it too.
 - Tasks that are ticked off or in the trash don't notify.
 - Only your own tasks (not subtasks, and not tasks someone else shared with you) can have a trigger. You can still share a task that has a trigger, and the notification reaches everyone on it.
 
-You get the notification wherever you turned on Tick notifications: the Android app, a computer browser, or Tick on your iPhone's home screen. Like other reminders, it can be up to a minute late.
+You get the notification wherever you turned on Tick notifications: the Android app, a computer browser, or Tick on your iPhone's home screen. Like other reminders, it can be up to a minute late. If your phone is offline when the trigger goes off, the notification waits up to 6 hours and arrives as soon as the phone is back online; after that it's dropped, and the task still shows *Notified*, so tap **Notify again** if you missed it.
 
 ## Setting it up
 

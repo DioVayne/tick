@@ -22,6 +22,11 @@ export type Payload = {
   failed?: { offline: string; auth: string; server: string };
 };
 
+/** `ttl`: zo lang (seconden) bewaart de pushdienst de melding voor een telefoon die offline is; standaard 1 uur. */
+export type SendOptions = { ttl?: number };
+/** Standaard bewaartijd bij de pushdienst: een herinnering die uren te laat komt, heeft geen zin meer. */
+export const DEFAULT_TTL = 3600;
+
 /** Hoogstens zoveel push-abonnementen per persoon (de oudste vervallen); een mens heeft er een paar. */
 export const MAX_PUSH_SUBS = 20;
 /** Wachttijd per push of webhook: de cron loopt ze na elkaar af, dus één trage ontvanger mag hem niet ophouden. */
@@ -65,7 +70,7 @@ export function parseVapidKey(raw: string | undefined): JsonWebKey | null {
  * Verstuurt naar alle abonnementen van één gebruiker, elk in zijn eigen taal (zonder taal: defaultLocale).
  * Geeft het aantal geslaagd en het aantal abonnementen terug.
  */
-export async function sendToAll(env: Env, userId: string, make: (locale: Locale) => Payload, defaultLocale: Locale): Promise<{ ok: number; total: number }> {
+export async function sendToAll(env: Env, userId: string, make: (locale: Locale) => Payload, defaultLocale: Locale, opts: SendOptions = {}): Promise<{ ok: number; total: number }> {
   const subs = (await env.DB.prepare('SELECT endpoint,p256dh,auth,locale FROM push_subscriptions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?')
     .bind(userId, MAX_PUSH_SUBS).all<Sub>()).results;
   if (!subs.length) return { ok: 0, total: 0 };
@@ -85,7 +90,7 @@ export async function sendToAll(env: Env, userId: string, make: (locale: Locale)
       const { endpoint, headers, body } = await buildPushHTTPRequest({
         privateJWK,
         subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        message: { payload, adminContact: env.ADMIN_CONTACT, options: { urgency: 'high', ttl: 3600 } },
+        message: { payload, adminContact: env.ADMIN_CONTACT, options: { urgency: 'high', ttl: opts.ttl ?? DEFAULT_TTL } },
       });
       const res = await fetch(endpoint, { method: 'POST', headers, body, signal: AbortSignal.timeout(SEND_TIMEOUT_MS) });
       // Het antwoord zelf lezen we niet: een ontvanger kan er van alles in zetten.
@@ -114,13 +119,20 @@ export async function postWebhook(url: string, payload: Payload): Promise<boolea
  * Push naar één persoon in de taal van elk abonnement; zonder abonnement via zijn fallback-webhook. Voor meldingen
  * aan anderen (uitnodigingen, afvinken, een plek); `send` is te vervangen in tests.
  */
-export async function notifyUser(env: Env, userId: string, make: (locale: Locale) => Payload, defaultLocale: Locale, send: Sender = sendToAll): Promise<void> {
-  const { total } = await send(env, userId, make, defaultLocale);
-  if (total) return;
+export async function notifyUser(env: Env, userId: string, make: (locale: Locale) => Payload, defaultLocale: Locale, send: Sender = sendToAll, opts: SendOptions = {}): Promise<Delivery> {
+  const { ok, total } = await send(env, userId, make, defaultLocale, opts);
+  if (total) return ok ? 'ok' : 'failed';
   const user = await getUser(env.DB, userId);
   const hook = user && (await loadUserPrefs(env, user)).fallbackWebhook;
-  if (hook) await postWebhook(hook, { ...make(defaultLocale), actions: undefined });
+  if (!hook) return 'none';
+  return (await postWebhook(hook, { ...make(defaultLocale), actions: undefined })) ? 'ok' : 'failed';
 }
+
+/**
+ * Hoe een melding afliep: `ok` = minstens één apparaat (de pushdienst) of de webhook nam hem aan; `failed` = er was een
+ * adres maar niemand nam hem aan (abonnementen verlopen, webhook kapot); `none` = deze persoon heeft nergens meldingen aan.
+ */
+export type Delivery = 'ok' | 'failed' | 'none';
 
 /**
  * Een melding die het antwoord niet ophoudt: met waitUntil op de achtergrond (zonder executionCtx, zoals in sommige

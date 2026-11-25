@@ -3,7 +3,7 @@ import type { AppEnv, Env } from './index';
 import { HttpError } from './errors';
 import { sessionOnly } from './guards';
 import { userSettingStmt } from './prefs';
-import { inBackground, notifyUser, reminderPayload, type Locale } from './push';
+import { inBackground, notifyUser, reminderPayload, sendToAll, type Locale } from './push';
 import { translate } from '../public/i18n.js';
 
 /**
@@ -11,11 +11,14 @@ import { translate } from '../public/i18n.js';
  * het lijstje triggers ("Sam komt thuis", "Zon onder") met PUT /triggers en vuurt er een af met POST /fire. In het
  * taakpaneel kies je bij een taak een of meer triggers; de eerste die afgaat geeft één melding, net als een plek.
  * Daarna is de taak "gemeld" tot je op Opnieuw melden tikt, de triggers wijzigt, of een herhalende taak doorschuift.
+ * Nam niemand de melding aan (alle push-abonnementen verlopen, webhook kapot), dan zet Tick de taak weer klaar.
+ * De pushdienst bewaart een triggermelding HA_TTL lang voor een telefoon die offline is.
  * In Instellingen → Home Assistant deel je triggers met mensen met wie je al een lijst of taak deelt.
  *
  * Alles staat in rijen van `user_settings` (zo gebouwd als testfeature; geen tabel nodig, de lijsten zijn klein):
  * - `hatrigger:triggers`: [{ id, name, entity, last }] (HA schrijft het lijstje, `last` = laatst afgegaan);
- * - `hatrigger:tasks`: { taskId: { ids, fired, rep } } (`fired` = wanneer gemeld, `rep` = de keer van een herhalende taak);
+ * - `hatrigger:tasks`: { taskId: { ids, fired, rep, by } } (`fired` = wanneer gemeld, `rep` = de keer van een herhalende taak,
+ *   `by` = de trigger die meldde; het taakpaneel toont "Gemeld <tijd> · <trigger>");
  *   een gedeelde trigger staat erin als `<eigenaar>.<trigger>`;
  * - `hatrigger:share`: { all, per: { triggerId: [userId] } } met wie je je triggers deelt; de ontvanger ziet ze zonder
  *   "laatst afgegaan" (dat zou verraden wanneer iemand thuiskomt);
@@ -32,10 +35,12 @@ export const STALE_DAYS = 21;
 const SEEN_EVERY_MS = 60 * 60_000;
 export const MAX_TRIGGERS = 50;
 export const MAX_TASKS = 300;
+/** Zo lang (seconden) bewaart de pushdienst een triggermelding voor een telefoon die offline is: 6 uur (gewone herinneringen 1 uur). */
+export const HA_TTL = 6 * 3600;
 const MAX_NAME = 60;
 
 export type HaTrigger = { id: string; name: string; entity: string | null; last: string | null };
-export type HaTaskLink = { ids: string[]; fired: string | null; rep: string | null };
+export type HaTaskLink = { ids: string[]; fired: string | null; rep: string | null; by?: string | null };
 type Links = Record<string, HaTaskLink>;
 /** Per trigger met wie hij gedeeld is, of alles met iedereen (`all`). Los van het lijstje, dat HA telkens overschrijft. */
 export type HaShare = { all: boolean; per: Record<string, string[]> };
@@ -208,9 +213,21 @@ async function fireFor(env: Env, userId: string, linkId: string, now: string): P
     if (!armed(link, t.repeat_at)) continue;
     link.fired = now;
     link.rep = t.repeat_at;
+    link.by = linkId;
     fire.push(t);
   }
   return { save: writeLinks(env, userId, links), fire };
+}
+
+/** De melding kwam bij niemand aan: de taak staat weer klaar (alleen als hij nog op deze keer staat). */
+async function unfire(env: Env, userId: string, taskIds: string[], at: string): Promise<void> {
+  const links = await readLinks(env, userId);
+  let changed = false;
+  for (const id of taskIds) {
+    const l = links[id];
+    if (l?.fired === at) { l.fired = null; l.rep = null; l.by = null; changed = true; }
+  }
+  if (changed) await writeLinks(env, userId, links).run();
 }
 
 /**
@@ -247,9 +264,16 @@ haTriggerApi.post('/fire', async (c) => {
       body: translate(locale, 'hatrigger.push_body', { name: trigger.name }),
       tag: `hatrigger-${t.id}`,
     });
-    const sends = results.flatMap((r) => r.fire.flatMap((t) => [...new Set([r.who, ...shares.filter((s) => s.task_id === t.id).map((s) => s.to_user)])]
-      .map((who) => notifyUser(c.env, who, make(t), prefs.defaultLocale))));
-    await inBackground(c, Promise.all(sends), 'hatrigger');
+    // Per taak iedereen die hem krijgt. Nam niemand hem aan terwijl er wel een adres was, dan weer klaarzetten.
+    const sending = Promise.all(results.flatMap((r) => r.fire.map(async (t) => {
+      const to = [...new Set([r.who, ...shares.filter((s) => s.task_id === t.id).map((s) => s.to_user)])];
+      const got = await Promise.all(to.map((who) => notifyUser(c.env, who, make(t), prefs.defaultLocale, sendToAll, { ttl: HA_TTL })));
+      return { owner: r.who, taskId: t.id, lost: !got.includes('ok') && got.includes('failed') };
+    }))).then(async (done) => {
+      const lost = done.filter((x) => x.lost);
+      for (const owner of new Set(lost.map((x) => x.owner))) await unfire(c.env, owner, lost.filter((x) => x.owner === owner).map((x) => x.taskId), now);
+    });
+    await inBackground(c, sending, 'hatrigger');
   }
   return c.json({ trigger: trigger.name, notified: results[0].fire.map((t) => t.id), shared: fired.length - results[0].fire.length });
 });

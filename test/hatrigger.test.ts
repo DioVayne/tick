@@ -1,15 +1,16 @@
 import { env } from 'cloudflare:workers';
 import { createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index';
 import { BASE, callWith, createUser, INBOX, call } from './helpers';
-import { armed, cleanTriggers, stale, STALE_DAYS } from '../src/hatrigger';
+import { armed, cleanTriggers, HA_TTL, stale, STALE_DAYS } from '../src/hatrigger';
+import { notifyUser, type Sender } from '../src/push';
 
 // Home Assistant-triggers bij een taak (src/hatrigger.ts). Eerst testfeature "hatrigger", nu voor iedereen: zonder
 // TEST_FEATURES.
 const on = { ...env, TEST_FEATURES: '' };
 type User = Awaited<ReturnType<typeof createUser>>;
-type State = { triggers: { id: string; name: string; last: string | null }[]; tasks: Record<string, { ids: string[]; fired: string | null }> };
+type State = { triggers: { id: string; name: string; last: string | null }[]; tasks: Record<string, { ids: string[]; fired: string | null; by?: string | null }> };
 
 const req = (u: User, path: string, method = 'GET', json?: unknown) => callWith(on, path, { method, json, cookie: u.cookie });
 const state = async (u: User) => (await req(u, '/api/hatrigger')).json() as Promise<State>;
@@ -70,6 +71,7 @@ describe('hatrigger: triggers uit Home Assistant', () => {
     expect(first).toEqual({ trigger: 'Zon onder', notified: [id], shared: 0 });
     const s = await state(a);
     expect(s.tasks[id].fired).toBeTruthy();
+    expect(s.tasks[id].by).toBe('zon_onder'); // het taakpaneel toont "Gemeld … · Zon onder"
     expect(s.triggers.find((x) => x.id === 'zon_onder')!.last).toBeTruthy();
     // De andere trigger van dezelfde taak meldt niet nog eens.
     expect((await (await fire(a, 'sam_thuis')).json() as { notified: string[] }).notified).toEqual([]);
@@ -175,5 +177,34 @@ describe('hatrigger: triggers uit Home Assistant', () => {
     expect(armed({ ids: ['a'], fired: 'x', rep: '2026-11-23T08:00:00.000Z' }, '2026-11-23T08:00:00.000Z')).toBe(false);
     expect(armed({ ids: ['a'], fired: 'x', rep: '2026-11-23T08:00:00.000Z' }, '2026-11-24T08:00:00.000Z')).toBe(true);
     expect(armed({ ids: ['a'], fired: 'x', rep: null }, null)).toBe(false);
+  });
+});
+
+describe('hatrigger: aflevering', () => {
+  it('nam geen enkel apparaat de melding aan, dan staat de taak weer klaar', async () => {
+    const u = await createUser({ name: 'Dex' });
+    await req(u, '/api/hatrigger/triggers', 'PUT', { triggers: [{ id: 'sam_thuis', name: 'Sam komt thuis' }] });
+    const id = await task(u, 'Vraag naar huiswerk');
+    await req(u, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['sam_thuis'] });
+    // Een abonnement dat niet werkt (hier: geen VAPID-sleutel, dus geen enkele push gaat weg).
+    await env.DB.prepare('INSERT INTO push_subscriptions (endpoint,p256dh,auth,user_agent,created_at,user_id) VALUES (?,?,?,?,?,?)')
+      .bind(`https://push.example/${u.id}`, 'p', 'a', 'test', new Date().toISOString(), u.id).run();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const broken = { ...on, VAPID_PRIVATE_KEY: '' };
+    const res = await callWith(broken, '/api/hatrigger/fire', { method: 'POST', json: { id: 'sam_thuis' }, cookie: u.cookie });
+    error.mockRestore();
+    expect(((await res.json()) as { notified: string[] }).notified).toEqual([id]);
+    expect((await state(u)).tasks[id]).toMatchObject({ fired: null, by: null });
+  });
+
+  it('notifyUser zegt hoe het afliep en geeft de bewaartijd door', async () => {
+    const u = await createUser({ name: 'Eef' });
+    const seen: unknown[] = [];
+    const send = (ok: number, total: number): Sender => async (_e, _u, _m, _l, opts) => { seen.push(opts); return { ok, total }; };
+    const make = () => ({ title: 'T', body: 'B' });
+    expect(await notifyUser(env, u.id, make, 'en', send(1, 2), { ttl: HA_TTL })).toBe('ok');
+    expect(await notifyUser(env, u.id, make, 'en', send(0, 2))).toBe('failed');
+    expect(await notifyUser(env, u.id, make, 'en', send(0, 0))).toBe('none'); // geen apparaat en geen webhook
+    expect(seen[0]).toEqual({ ttl: 6 * 3600 });
   });
 });

@@ -8,7 +8,7 @@ import { openMenu, step } from './steps.js';
 // De eerste die afgaat, geeft één melding; daarna "Al gemeld · Opnieuw melden", net als een plek. Alleen voor je eigen
 // hoofdtaak, en alleen online (de keuze gaat direct naar de server, niet via de outbox).
 
-/** @type {{ triggers: { id: string, name: string, entity: string | null, last: string | null }[], tasks: Record<string, { ids: string[], fired: string | null, rep: string | null }> }} */
+/** @type {{ triggers: { id: string, name: string, entity: string | null, last: string | null }[], tasks: Record<string, { ids: string[], fired: string | null, rep: string | null, by?: string | null }> }} */
 let data = { triggers: [], tasks: {} };
 let loading = null;
 /** @type {Set<() => void>} */
@@ -99,6 +99,17 @@ export const haNames = (ids, triggers = data.triggers) => {
 export const linkTriggers = (taskId, ids) => save(taskId, ids.filter((id) => data.triggers.some((x) => x.id === id)));
 
 /**
+ * "Gemeld wo 25 nov 18:42 · Sam komt thuis". Zonder tijd (oudere gegevens) "Al gemeld"; een trigger die er niet meer is
+ * laat de naam weg.
+ * @param {{ fired: string | null, by?: string | null }} link
+ */
+export function firedText(link) {
+  if (!link.fired) return t('detail.already_notified');
+  const name = data.triggers.find((x) => x.id === link.by)?.name;
+  return name ? t('hatrigger.notified_by', { when: fmt(link.fired), name }) : t('hatrigger.notified', { when: fmt(link.fired) });
+}
+
+/**
  * De stap in de tijdlijn van het detailpaneel, of null (subtaak, niet je eigen taak, geen triggers).
  * @param {any} task
  * @param {{ done: boolean, owner: boolean, opener: (kind: string, fn: (anchor: HTMLElement) => void) => ((anchor: HTMLElement) => void) | null, onChange: () => void }} o
@@ -112,9 +123,10 @@ export function haStep(task, { done, owner, opener, onChange }) {
   // Elke tik slaat meteen op (ook als je daarna naast het menu tikt); Klaar sluit alleen.
   const pick = (anchor) => pickTriggers(anchor, link?.ids ?? [], (ids) => save(task.id, ids, onChange));
 
-  // Al gemeld: een regel eronder met "Opnieuw melden" (zelfde triggers opnieuw opslaan zet hem klaar).
+  // Al gemeld: een regel eronder met wanneer en door welke trigger, en "Opnieuw melden" (zelfde triggers opnieuw
+  // opslaan zet hem klaar).
   const fired = !!link && chosen.length > 0 && !armed(link, task);
-  const sub = fired && !done ? el('div', { class: 'loc-sub' }, el('span', {}, t('detail.already_notified'), ' · ',
+  const sub = fired && !done ? el('div', { class: 'loc-sub' }, el('span', {}, firedText(link), ' · ',
     el('button', { class: 'linkbtn', type: 'button', onclick: () => save(task.id, link.ids, onChange) }, t('detail.rearm_location')))) : null;
 
   return step({
