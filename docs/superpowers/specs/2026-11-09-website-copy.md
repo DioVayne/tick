@@ -1387,9 +1387,9 @@ Na de beoordeling door vier reviewers is de site inhoudelijk herschreven. De vol
 **Volgorde.** Hero → Zo begin je (#starten / #get-started) → kort makersblok (#maker) → Tick naast andere apps (#vergelijken / #compare) → Op de juiste plek → Samen of kopie → Tickmanager → Alle functies (tien tegels, de rest onder *Meer functies*) → Wat werkt waar → Wie zit erachter (#wie-zit-erachter / #who-is-behind-it) → Kost het iets? → Privacy → Vragen → Voor gevorderden (#gevorderden / #advanced, nu een eigen sectie) → footer. Menu: Functies · Vergelijken · Wat werkt waar · Kosten · Privacy · Vragen.
 
 **Hero.**
-- Kop: *Een to-do-lijst die je op het juiste moment herinnert. Ook samen.* / *A to-do list that reminds you at the right moment. Together, too.* Geen sterretje of voetnoot meer.
+- Kop (2026-11-25, concreter dan "op het juiste moment"): *Herinnert je bij de winkel. Niet pas thuis.* / *Reminds you at the shop. Not once you're home.* Geen sterretje of voetnoot meer.
 - Afvinktaak 1: *📍 Bij de supermarkt (Android)* / *📍 At the supermarket (Android)*.
-- Intro: *Tick is een to-do-app voor je telefoon en je computer, voor jezelf en samen. Gratis, zonder reclame en zonder tracking.* / *Tick is a to-do app for your phone and your computer, for yourself and together. Free, with no ads and no tracking.*
+- Intro: *Tick is een to-do-lijst die afgaat op de juiste plek of tijd, voor jou en je huisgenoten. Gratis, zonder reclame en zonder tracking.* / *Tick is a to-do list that goes off at the right place or time, for you and your housemates. Free, with no ads and no tracking.*
 - Knoppen: hoofdknop *Probeer het meteen, zonder account* / *Try it now, no account needed*; kleiner *Account maken* / *Create an account* en *Google Play*. Op iPhone gaat de Play-knop naar #starten.
 - Springlinks: *Naar: alle 28 functies · vergelijken · kosten · vragen* / *Jump to: all 28 features · comparison · cost · questions*.
 - Demo-fietsnoot (voor iedereen waar): *Op de fiets ben je zo voorbij je cirkel. Kies voor een winkel op je route gerust een grotere cirkel, dan komt de melding op tijd.* EN-knop in de demo: *Tick off*.
