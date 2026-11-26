@@ -67,21 +67,44 @@ export function parseVapidKey(raw: string | undefined): JsonWebKey | null {
 }
 
 /**
- * Verstuurt naar alle abonnementen van één gebruiker, elk in zijn eigen taal (zonder taal: defaultLocale).
- * Geeft het aantal geslaagd en het aantal abonnementen terug.
+ * Zoveel verzendingen tegelijk (abonnementen van één persoon, of taken in een ronde). Een Worker heeft er hoogstens zes
+ * tegelijk open; meer wachten alleen. Zo kost een onbereikbare pushdienst niet de wachttijd keer het aantal.
  */
-export async function sendToAll(env: Env, userId: string, make: (locale: Locale) => Payload, defaultLocale: Locale, opts: SendOptions = {}): Promise<{ ok: number; total: number }> {
-  const subs = (await env.DB.prepare('SELECT endpoint,p256dh,auth,locale FROM push_subscriptions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?')
-    .bind(userId, MAX_PUSH_SUBS).all<Sub>()).results;
-  if (!subs.length) return { ok: 0, total: 0 };
+export const SEND_CONCURRENCY = 6;
+
+/** Voert `fn` uit voor elk item, hoogstens `limit` tegelijk; de volgorde van de uitkomsten is die van `items`. */
+export async function inParallel<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const lane = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane));
+  return out;
+}
+
+const subsOf = async (env: Env, userId: string) => (await env.DB.prepare('SELECT endpoint,p256dh,auth,locale FROM push_subscriptions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?')
+  .bind(userId, MAX_PUSH_SUBS).all<Sub>()).results;
+
+/**
+ * Verstuurt naar alle abonnementen van één gebruiker, elk in zijn eigen taal (zonder taal: defaultLocale), tot
+ * SEND_CONCURRENCY tegelijk. Geeft het aantal geslaagd en het aantal abonnementen terug. `subs` (van pushRound): de
+ * abonnementen al gelezen; een verlopen abonnement gaat er dan ook uit.
+ */
+export async function sendToAll(env: Env, userId: string, make: (locale: Locale) => Payload, defaultLocale: Locale, opts: SendOptions = {}, subs?: Sub[]): Promise<{ ok: number; total: number }> {
+  const list = subs ?? await subsOf(env, userId);
+  if (!list.length) return { ok: 0, total: 0 };
+  const total = list.length;
   const privateJWK = parseVapidKey(env.VAPID_PRIVATE_KEY);
   if (!privateJWK) {
     // Eén duidelijke melding in plaats van een JSON-fout per abonnement.
     console.error('push: VAPID_PRIVATE_KEY is geen geldige JWK (JSON-object); er gaat geen push uit');
-    return { ok: 0, total: subs.length };
+    return { ok: 0, total };
   }
-  let ok = 0;
-  for (const s of subs) {
+  const sent = await inParallel([...list], SEND_CONCURRENCY, async (s) => {
     const locale = s.locale === 'nl' || s.locale === 'en' ? s.locale : defaultLocale;
     const made = make(locale);
     // Met knoppen ook de tekst voor als zo'n knop mislukt, in dezelfde taal.
@@ -95,15 +118,32 @@ export async function sendToAll(env: Env, userId: string, make: (locale: Locale)
       const res = await fetch(endpoint, { method: 'POST', headers, body, signal: AbortSignal.timeout(SEND_TIMEOUT_MS) });
       // Het antwoord zelf lezen we niet: een ontvanger kan er van alles in zetten.
       await res.body?.cancel().catch(() => {});
-      if (res.ok) ok++;
-      else if (res.status === 404 || res.status === 410) {
+      if (res.ok) return true;
+      if (res.status === 404 || res.status === 410) {
         await env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(s.endpoint).run();
+        // De rest van de ronde niet meer naar dit adres (een tweede melding tegelijk kan hem al weggehaald hebben).
+        const i = subs ? subs.indexOf(s) : -1;
+        if (i >= 0) subs!.splice(i, 1);
       } else console.warn('push', res.status);
     } catch (e) {
       console.warn('push error', (e as Error).message);
     }
-  }
-  return { ok, total: subs.length };
+    return false;
+  });
+  return { ok: sent.filter(Boolean).length, total };
+}
+
+/**
+ * Een Sender voor één ronde (de cron): leest de abonnementen van elke persoon maar één keer, ook als hij meer meldingen
+ * krijgt, en tegelijk vragen geeft één query. Alleen voor binnen één ronde: een nieuw abonnement telt pas de volgende.
+ */
+export function pushRound(): Sender {
+  const cache = new Map<string, Promise<Sub[]>>();
+  return (env, userId, make, defaultLocale, opts = {}) => {
+    let subs = cache.get(userId);
+    if (!subs) cache.set(userId, (subs = subsOf(env, userId)));
+    return subs.then((list) => sendToAll(env, userId, make, defaultLocale, opts, list));
+  };
 }
 
 /** Post de melding als JSON naar een webhook; true bij een 2xx-antwoord. */
@@ -177,21 +217,24 @@ export type Sender = typeof sendToAll;
  * persoon voor welke remind_at hij klaar is (bezorgd, of opgegeven na het retry-venster); `notified` gaat pas op 1
  * als iedereen klaar is. Een nieuwe remind_at (snoozen, doorschuiven, wijzigen) telt vanzelf als nog niet gemeld.
  */
-export async function runReminders(env: Env, install: InstallPrefs, send: Sender = sendToAll): Promise<void> {
+export async function runReminders(env: Env, install: InstallPrefs, send: Sender = pushRound()): Promise<void> {
   const due = (await env.DB.prepare(
     'SELECT id,user_id,parent_id,title,description,remind_at,repeat_at FROM tasks WHERE done = 0 AND notified = 0 AND deleted_at IS NULL AND remind_at IS NOT NULL AND remind_at <= ?',
   ).bind(new Date().toISOString()).all<{ id: string; user_id: string; parent_id: string | null; title: string; description: string; remind_at: string; repeat_at: string | null }>()).results;
 
-  // Per gebruiker één keer lezen per run; null = de gebruiker bestaat niet meer.
-  const people = new Map<string, UserPrefs | null>();
-  const prefsOf = async (userId: string) => {
-    if (!people.has(userId)) {
-      const user = await getUser(env.DB, userId);
-      people.set(userId, user ? await loadUserPrefs(env, user) : null);
+  // Per gebruiker één keer lezen per run (ook als twee taken tegelijk naar hem vragen); null = de gebruiker bestaat niet meer.
+  const people = new Map<string, Promise<UserPrefs | null>>();
+  const prefsOf = (userId: string) => {
+    let p = people.get(userId);
+    if (!p) {
+      p = getUser(env.DB, userId).then((user) => (user ? loadUserPrefs(env, user) : null));
+      people.set(userId, p);
     }
-    return people.get(userId)!;
+    return p;
   };
-  for (const t of due) {
+  // Taken tegelijk (elke taak is van zichzelf: eigen rijen in reminder_sent, eigen notified), zodat één trage
+  // ontvanger de rest niet ophoudt. Per taak gaan de ontvangers wel na elkaar.
+  await inParallel(due, SEND_CONCURRENCY, async (t) => {
     const { results: rows } = await env.DB.prepare(
       "SELECT ? AS user_id UNION SELECT to_user FROM task_shares WHERE task_id = ? AND status = 'accepted'",
     ).bind(t.user_id, t.parent_id ?? t.id).all<{ user_id: string }>(); // deelrijen hangen aan de hoofdtaak
@@ -221,5 +264,5 @@ export async function runReminders(env: Env, install: InstallPrefs, send: Sender
       } else pending++;
     }
     if (!pending) await env.DB.prepare('UPDATE tasks SET notified = 1 WHERE id = ? AND remind_at = ?').bind(t.id, t.remind_at).run();
-  }
+  });
 }

@@ -1,6 +1,6 @@
 import type { Env } from './index';
 import { loadUserPrefs, userSettingStmt, type InstallPrefs } from './prefs';
-import { overduePayload, postWebhook, sendToAll, type Sender } from './push';
+import { overduePayload, postWebhook, pushRound, type Sender } from './push';
 import { inZone, type Zone } from './time';
 import { zonedParts, zonedToUtc } from '../public/repeat.js';
 
@@ -43,7 +43,7 @@ type Row = { id: string; title: string; description: string; repeat_at: string |
  * begin van vandaag in zijn zone. `overdue_day` onthoudt de dag; ook zonder verlopen taken, zodat de query eens per
  * dag draait. Er is geen tweede poging: morgen komt de volgende ronde.
  */
-export async function runOverdue(env: Env, install: InstallPrefs, send: Sender = sendToAll, now = Date.now()): Promise<void> {
+export async function runOverdue(env: Env, install: InstallPrefs, send: Sender = pushRound(), now = Date.now()): Promise<void> {
   // Eén query voor iedereen (draait elke minuut); wie aan de beurt is, bepalen we hier in het geheugen.
   const { results } = await env.DB.prepare(
     `SELECT u.id, u.role, s.key, s.value FROM users u LEFT JOIN user_settings s ON s.user_id = u.id AND s.key IN (${OVERDUE_KEYS.map(() => '?').join(', ')}) ORDER BY u.id`,
