@@ -46,7 +46,8 @@ describe('migratie naar accounts', () => {
       expect((await db.prepare(`SELECT DISTINCT user_id FROM ${t}`).all()).results).toEqual([{ user_id: ADMIN }]);
     expect(await counts(db)).toEqual({ tasks: 2, places: 1, push_subscriptions: 1, api_keys: 1, pair_codes: 1, devices: 2 });
     expect(await db.prepare("SELECT parent_id FROM tasks WHERE id = 'kind'").first()).toEqual({ parent_id: 'ouder' });
-    expect(Object.fromEntries((await db.prepare('SELECT key, value FROM user_settings WHERE user_id = ?').bind(ADMIN).all<{ key: string; value: string }>()).results.map((r) => [r.key, r.value])))
+    // overdue_next (migratie 0037): '' = de dagelijkse ronde kijkt meteen.
+    expect(Object.fromEntries((await db.prepare("SELECT key, value FROM user_settings WHERE user_id = ? AND key != 'overdue_next'").bind(ADMIN).all<{ key: string; value: string }>()).results.map((r) => [r.key, r.value])))
       .toEqual({ timezone: 'Europe/London', reminder_time: '08:30', week_start: 'sun', fallback_webhook: 'https://hook.example/x' });
     expect(await db.prepare("SELECT value FROM settings WHERE key = 'default_locale'").first()).toEqual({ value: 'nl' });
     expect(await db.prepare("SELECT value FROM settings WHERE key = 'env_api_token_off'").first()).toEqual({ value: '1' });
