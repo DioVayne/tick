@@ -259,10 +259,10 @@ function sh(cmd, cwd, env) {
 
 function prepareCopy(main, wt, files) {
   for (const f of ['wrangler.jsonc', '.dev.vars']) if (fs.existsSync(path.join(main, f))) fs.copyFileSync(path.join(main, f), path.join(wt, f));
-  if (process.env.TICK_LAND_CHECKS) return null;
-  if (files.includes('package-lock.json') || files.includes('package.json')) return 'npm ci';
-  if (!fs.existsSync(NODE_MODULES)) throw new Fail(`no node_modules at ${NODE_MODULES}: run npm ci in C:\\dev\\tick first`);
-  fs.symlinkSync(NODE_MODULES, path.join(wt, 'node_modules'), 'junction');
+  const override = !!process.env.TICK_LAND_CHECKS;
+  if (!override && files.includes('package-lock.json')) return 'npm ci'; // other dependencies than C:\dev\tick has
+  if (fs.existsSync(NODE_MODULES)) fs.symlinkSync(NODE_MODULES, path.join(wt, 'node_modules'), 'junction');
+  else if (!override) throw new Fail(`no node_modules at ${NODE_MODULES}: run npm ci in C:\\dev\\tick first`);
   return null;
 }
 
