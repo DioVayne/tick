@@ -24,8 +24,13 @@ Use the skill `setup-tick` (`.claude/skills/setup-tick/SKILL.md`); it follows [S
   - NL and EN can drift apart through the CMS (an edit to one language only); the tests can't see that.
 - **Google Play:** after every change, say which Play step it needs (no release / Play Console only / new build / build + Play Console), using [store/google-play/README.md](store/google-play/README.md). A new Android permission or a new kind of data always means Play Console work: tell the owner the exact steps.
 - **Verify:** `npm run typecheck` and `npm test` must pass. For UI changes also check the app in the browser with `npm run dev`.
-- **GitHub:** the repo is public. When a change is finished and verified, commit it on `main` and push to `origin`. Never commit `wrangler.jsonc`, secrets, keys or personal data.
+- **GitHub:** the repo is public. Never commit `wrangler.jsonc`, secrets, keys or personal data.
+  0. **Builder for the Manager** (your task has a `Q-n`, you work in a worktree under `C:\dev\wt\`): commit on your own branch, run `node tools/ideas.mjs ready --title "…" --note "…"` in your worktree, end with `READY Q-n` and stop. Never merge, push or land yourself; the Manager does that.
+  1. Otherwise, when a change is finished and verified, commit it on `main` and push to `origin`.
 - **Deploy:** `npm run db:migrate`, then `npm run deploy`, then check with `npx wrangler deployments list`.
+
+## Manager
+New ideas go to the **Manager** (a chat started with the skill `manager`, `.claude/skills/manager/SKILL.md`): it keeps the queue (`tools/ideas.mjs`), starts builders and is the only one that lands work on `main`, with `tools/land.mjs` (rebase, the checks the change needs, fast-forward `main`, push; the Stop-hook then deploys). Builders build in their own worktree under `C:\dev\wt\` on `feature/…` or `fix/…`, commit, report `READY Q-n` and stop; they never land. `land.mjs` refuses a branch that is in the queue unless the Manager runs it. How it works: "Manager" in `ARCHITECTURE.md`.
 
 ## Test features
 The owner can ask for a feature to be a **test feature** first: it only runs on Ticks that list its name in `TEST_FEATURES` (`wrangler.jsonc`), so on their own Tick and not for everyone. How it works and which ones exist: "Test features" in `ARCHITECTURE.md`. For a test feature:

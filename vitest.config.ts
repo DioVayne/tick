@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-plugin';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 // Dezelfde migraties als productie; test/setup.ts past ze toe op de lokale D1.
 const migrations = await readD1Migrations(fileURLToPath(new URL('./migrations', import.meta.url)));
@@ -48,6 +48,8 @@ export default defineConfig({
   ],
   test: {
     setupFiles: ['./test/setup.ts'],
+    // tools/ (the Manager's queue and landing scripts) runs in plain Node: npm run test:tools.
+    exclude: [...configDefaults.exclude, 'tools/**'],
     // Alle testbestanden draaien tegelijk, elk met een eigen Miniflare; op een drukke machine duurt een zware test
     // (gedeelde lijsten, delen) dan ruim boven de 30 s zonder dat er iets mis is. Een ruime limiet kost niets zolang
     // tests slagen; minder workers wel (twee keer zo lang voor de hele suite).
