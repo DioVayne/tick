@@ -197,6 +197,33 @@ describe('hatrigger: aflevering', () => {
     expect((await state(u)).tasks[id]).toMatchObject({ fired: null, by: null });
   });
 
+  it('dezelfde trigger twee keer tegelijk: één melding', async () => {
+    const u = await createUser({ name: 'Fen' });
+    await req(u, '/api/hatrigger/triggers', 'PUT', { triggers: [{ id: 'sam_thuis', name: 'Sam komt thuis' }] });
+    const ids = [await task(u, 'Een'), await task(u, 'Twee'), await task(u, 'Drie')];
+    for (const id of ids) await req(u, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['sam_thuis'] });
+    const both = await Promise.all([fire(u, 'sam_thuis'), fire(u, 'sam_thuis'), fire(u, 'sam_thuis')]);
+    const notified = (await Promise.all(both.map((r) => r.json() as Promise<{ notified: string[] }>))).flatMap((r) => r.notified);
+    expect(notified.sort()).toEqual([...ids].sort()); // elke taak precies één keer
+  });
+
+  it('twee triggers tegelijk voor verschillende taken: beide blijven gemeld', async () => {
+    const u = await createUser({ name: 'Gijs' });
+    await req(u, '/api/hatrigger/triggers', 'PUT', { triggers: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }] });
+    const ta = await task(u, 'Taak A');
+    const tb = await task(u, 'Taak B');
+    await req(u, `/api/hatrigger/tasks/${ta}`, 'PUT', { ids: ['a'] });
+    await req(u, `/api/hatrigger/tasks/${tb}`, 'PUT', { ids: ['b'] });
+    await Promise.all([fire(u, 'a'), fire(u, 'b')]);
+    const s = await state(u);
+    expect(s.tasks[ta]).toMatchObject({ ids: ['a'], by: 'a' });
+    expect(s.tasks[tb]).toMatchObject({ ids: ['b'], by: 'b' });
+    expect(s.tasks[ta].fired && s.tasks[tb].fired).toBeTruthy();
+    // En dus geen tweede melding.
+    const again = await Promise.all([fire(u, 'a'), fire(u, 'b')]);
+    for (const r of again) expect(((await r.json()) as { notified: string[] }).notified).toEqual([]);
+  });
+
   it('notifyUser zegt hoe het afliep en geeft de bewaartijd door', async () => {
     const u = await createUser({ name: 'Eef' });
     const seen: unknown[] = [];

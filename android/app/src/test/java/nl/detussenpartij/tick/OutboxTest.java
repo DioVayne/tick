@@ -63,6 +63,21 @@ public class OutboxTest {
     }
 
     @Test
+    public void ongedaanNaEenPogingZonderAntwoordStuurtEenReopen() {
+        // Het verzoek ging weg maar het antwoord kwam niet aan (geen verbinding of time-out): de server kan hem al
+        // verwerkt hebben. Lokaal wissen zou de taak op de server afgevinkt laten.
+        for (Outbox.Outcome o : new Outbox.Outcome[] {Outbox.Outcome.OFFLINE, Outbox.Outcome.RETRY}) {
+            JSONArray ops = new JSONArray();
+            JSONObject op = done("a", T);
+            Outbox.add(ops, op);
+            Outbox.markSending(ops, op.optString("k"), true);
+            Outbox.settle(ops, op.optString("k"), o, T + 1);
+            assertFalse(o.name(), Outbox.cancelDone(ops, "a", T)); // dan moet er een reopen achteraan
+            assertEquals(1, ops.length()); // het afvinken blijft staan, de reopen komt erna
+        }
+    }
+
+    @Test
     public void ongedaanVanEenAndereTikHaaltNietsWeg() {
         JSONArray ops = new JSONArray();
         Outbox.add(ops, done("a", T));

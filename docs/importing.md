@@ -13,7 +13,7 @@ Importing the same file again adds nothing twice: tasks that are already there a
 
 ## Undo
 
-After an import, **Settings → Data** shows **Undo last import** with the app, the date and the number of tasks. **Undo** moves exactly those tasks to the [trash](tasks-and-lists.md) (plus subtasks you added under them since). Tasks you already had, or made yourself, stay. From the trash you can still bring a task back. Only the last import can be undone.
+After an import, **Settings → Data** shows **Undo last import** with the app, the date and the number of tasks. **Undo** moves exactly those tasks to the [trash](tasks-and-lists.md) (plus subtasks you added under them since). Tasks you already had, or made yourself, stay. Tasks that went into a shared list are undone too, as long as you're still in that list; if you left it, Tick tells you how many stayed. From the trash you can still bring a task back. Only the last import can be undone.
 
 ## TickTick
 

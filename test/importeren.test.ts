@@ -4,7 +4,7 @@ import { rruleToTick, stableId } from '../public/importkit.js';
 import { tickTickRows } from '../public/ticktick.js';
 import { projectName, todoistDate, todoistRows } from '../public/todoist.js';
 import { setDefaultTime, setTimeZone } from '../public/repeat.js';
-import { ADMIN_ID, call, json, session } from './helpers';
+import { ADMIN_ID, call, callAs, createUser, json, session } from './helpers';
 
 const NOW = Date.parse('2026-11-18T12:00:00Z'); // woensdag
 
@@ -156,7 +156,7 @@ describe('Importeren via de API en ongedaan maken', () => {
     const last = (await json<any>(await get('/api/import/last'))).last;
     expect(last).toMatchObject({ source: 'todoist', added: 7, id: rows[0].import_id });
 
-    expect(await json<any>(await post('/api/import/undo'))).toEqual({ removed: 8 });
+    expect(await json<any>(await post('/api/import/undo'))).toEqual({ removed: 8, left: 0 });
     const left = await env.DB.prepare("SELECT count(*) AS n FROM tasks WHERE (id LIKE 'td%') AND deleted_at IS NULL").first<{ n: number }>();
     expect(left!.n).toBe(0);
     expect(await env.DB.prepare("SELECT deleted_at FROM tasks WHERE id = 'imp-eigen'").first()).toEqual({ deleted_at: null });
@@ -168,5 +168,53 @@ describe('Importeren via de API en ongedaan maken', () => {
     expect((await post('/api/import/todoist', { files: [{ name: 'x.csv', text: 'a,b\n1,2' }] })).status).toBe(400);
     expect((await post('/api/import/todoist', { files: [] })).status).toBe(400);
     expect((await post('/api/import/todoist', 'geen json')).status).toBe(400);
+  });
+});
+
+describe('Import ongedaan maken in een gedeelde lijst', () => {
+  /** De beheerder deelt een lijst met `u`; `u` accepteert. */
+  async function sharedWith(u: { id: string; cookie: string }) {
+    const name = `Klus ${crypto.randomUUID().slice(0, 6)}`;
+    const res = await call('/api/lists', { method: 'POST', json: { name } });
+    expect(res.status).toBeLessThan(300);
+    const share = await call('/api/shared-lists', { method: 'POST', json: { name, to_user: u.id } });
+    expect(share.status).toBe(201);
+    const id = (await json<{ list_id: string }>(share)).list_id;
+    expect((await callAs(u.cookie, `/api/shared-lists/${id}/accept`, { method: 'POST', json: {} })).status).toBe(200);
+    return { name, id };
+  }
+  const importInto = async (u: { cookie: string }, list: string) =>
+    json<any>(await callAs(u.cookie, '/api/import/todoist', { method: 'POST', json: { files: [{ name: `${list} [9].csv`, text: WERK }] } }));
+  const openOf = async (importId: string) =>
+    (await env.DB.prepare('SELECT count(*) AS n FROM tasks WHERE import_id = ? AND deleted_at IS NULL').bind(importId).first<{ n: number }>())!.n;
+  const importIdOf = async (u: { id: string }) =>
+    JSON.parse((await env.DB.prepare("SELECT value FROM user_settings WHERE user_id = ? AND key = 'import_last'").bind(u.id).first<{ value: string }>())!.value).id as string;
+
+  it('taken die nu van de lijsteigenaar zijn, gaan ook naar de prullenbak', async () => {
+    const b = await createUser({ name: 'Sanne' });
+    const { name } = await sharedWith(b);
+    expect(await importInto(b, name)).toMatchObject({ added: 7 });
+    const importId = await importIdOf(b);
+    // In de gedeelde lijst: van de eigenaar.
+    const owners = (await env.DB.prepare('SELECT DISTINCT user_id FROM tasks WHERE import_id = ?').bind(importId).all<{ user_id: string }>()).results;
+    expect(owners.map((o) => o.user_id)).toContain(ADMIN_ID);
+    // Een eigen taak van de eigenaar in dezelfde lijst blijft staan.
+    const own = await json<{ id: string }>(await call('/api/tasks', { method: 'POST', json: { title: 'Van de eigenaar', list: name } }));
+    const res = await json<any>(await callAs(b.cookie, '/api/import/undo', { method: 'POST' }));
+    expect(res).toEqual({ removed: 7, left: 0 });
+    expect(await openOf(importId)).toBe(0);
+    expect(await env.DB.prepare('SELECT deleted_at FROM tasks WHERE id = ?').bind(own.id).first()).toEqual({ deleted_at: null });
+  });
+
+  it('niet meer in de lijst: die taken blijven staan, en het antwoord zegt hoeveel', async () => {
+    const b = await createUser({ name: 'Alex' });
+    const { name, id } = await sharedWith(b);
+    await importInto(b, name);
+    const importId = await importIdOf(b);
+    await env.DB.prepare('DELETE FROM list_members WHERE list_id = ? AND user_id = ?').bind(id, b.id).run();
+    const res = await json<any>(await callAs(b.cookie, '/api/import/undo', { method: 'POST' }));
+    expect(res.left).toBeGreaterThan(0);
+    expect(res.removed + res.left).toBe(7);
+    expect(await openOf(importId)).toBe(res.left);
   });
 });

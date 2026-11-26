@@ -139,7 +139,7 @@ export function importRows(h) {
     if (!yes) return;
     try {
       const r = await request('POST', '/api/import/undo');
-      toast(t('import.undo_done', { count: h.fmtNum(r.removed) }), 'ok');
+      toast(r.left ? t('import.undo_left', { count: h.fmtNum(r.removed), left: h.fmtNum(r.left) }) : t('import.undo_done', { count: h.fmtNum(r.removed) }), r.left ? undefined : 'ok');
       load();
     } catch (e) { toast(t('import.failed', { reason: h.offlineText(e) })); }
     refresh();

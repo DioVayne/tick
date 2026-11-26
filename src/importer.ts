@@ -72,19 +72,31 @@ importerApi.post('/todoist', async (c) => {
 /** De laatste import die nog ongedaan gemaakt kan worden, of null. */
 importerApi.get('/last', async (c) => c.json({ last: await lastImport(c.env.DB, c.get('auth').userId) }));
 
-/** De laatste import ongedaan maken: zijn taken naar de prullenbak. */
+/**
+ * De laatste import ongedaan maken: zijn taken naar de prullenbak, met de subtaken die je er later onder maakte.
+ * Ook taken die in een gedeelde lijst belandden (attachImported: daar zijn ze van de eigenaar van de lijst), zolang je
+ * nog in die lijst zit; nooit taken van een andere import. Wat daarna nog over is (een lijst die je verliet), noemt
+ * `left`; de import is dan toch afgerond, want opnieuw proberen haalt die taken ook niet weg.
+ */
 importerApi.post('/undo', async (c) => {
   const db = c.env.DB;
   const userId = c.get('auth').userId;
   const last = await lastImport(db, userId);
   if (!last) throw new HttpError(404, 'err.import_none');
   const ts = new Date().toISOString();
-  const [res] = await db.batch([
-    db.prepare('UPDATE tasks SET deleted_at = ?1, updated_at = ?1 WHERE user_id = ?2 AND deleted_at IS NULL AND (import_id = ?3 OR ' +
-      'parent_id IN (SELECT id FROM tasks WHERE user_id = ?2 AND import_id = ?3))').bind(ts, userId, last.id),
+  const [res, rest] = await db.batch([
+    db.prepare(
+      `WITH mine(id) AS (
+         SELECT t.id FROM tasks t LEFT JOIN tasks p ON p.id = t.parent_id
+         WHERE t.import_id = ?3 AND (t.user_id = ?2 OR COALESCE(p.shared_list, t.shared_list) IN
+           (SELECT list_id FROM list_members WHERE user_id = ?2 AND status = 'accepted')))
+       UPDATE tasks SET deleted_at = ?1, updated_at = ?1
+       WHERE deleted_at IS NULL AND (id IN (SELECT id FROM mine) OR parent_id IN (SELECT id FROM mine))`,
+    ).bind(ts, userId, last.id),
+    db.prepare('SELECT count(*) AS n FROM tasks WHERE import_id = ? AND deleted_at IS NULL').bind(last.id),
     userSettingStmt(db, userId, LAST, null),
   ]);
-  return c.json({ removed: res.meta.changes });
+  return c.json({ removed: res.meta.changes, left: (rest.results[0] as { n: number }).n });
 });
 
 async function lastImport(db: D1Database, userId: string): Promise<Last | null> {

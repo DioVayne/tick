@@ -78,13 +78,15 @@ final class Outbox {
 
     /**
      * Ongedaan maken van een afvinktik die nog niet weg is: haalt hem uit de wachtrij en geeft true; dan hoeft de server
-     * niets te horen. False als hij al verstuurd is of nu onderweg is: dan moet er een reopen achteraan.
+     * niets te horen. False als hij al verstuurd is, nu onderweg is, of al eens geprobeerd zonder antwoord (`tries`: geen
+     * verbinding, time-out of serverfout; de server kan hem dan toch verwerkt hebben): dan moet er een reopen achteraan.
+     * Het afvinken blijft dan in de wachtrij staan en gaat eerst; de reopen met hetzelfde actie-id draait het terug.
      */
     static boolean cancelDone(JSONArray ops, String id, long tickedAt) {
         for (int i = ops.length() - 1; i >= 0; i--) {
             JSONObject o = ops.optJSONObject(i);
             if (o == null || !DONE.equals(o.optString("op")) || !id.equals(o.optString("id"))) continue;
-            if (o.optLong("at") != tickedAt || o.optBoolean("sending")) return false;
+            if (o.optLong("at") != tickedAt || o.optBoolean("sending") || o.optInt("tries") > 0) return false;
             ops.remove(i);
             return true;
         }

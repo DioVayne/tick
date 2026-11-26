@@ -15,11 +15,14 @@ import { translate } from '../public/i18n.js';
  * De pushdienst bewaart een triggermelding HA_TTL lang voor een telefoon die offline is.
  * In Instellingen → Home Assistant deel je triggers met mensen met wie je al een lijst of taak deelt.
  *
- * Alles staat in rijen van `user_settings` (zo gebouwd als testfeature; geen tabel nodig, de lijsten zijn klein):
+ * Bijna alles staat in rijen van `user_settings` (zo gebouwd als testfeature; de lijsten zijn klein), behalve "gemeld":
  * - `hatrigger:triggers`: [{ id, name, entity, last }] (HA schrijft het lijstje, `last` = laatst afgegaan);
- * - `hatrigger:tasks`: { taskId: { ids, fired, rep, by } } (`fired` = wanneer gemeld, `rep` = de keer van een herhalende taak,
- *   `by` = de trigger die meldde; het taakpaneel toont "Gemeld <tijd> · <trigger>");
- *   een gedeelde trigger staat erin als `<eigenaar>.<trigger>`;
+ * - `hatrigger:tasks`: { taskId: { ids } }, de gekozen triggers per taak; een gedeelde trigger staat erin als
+ *   `<eigenaar>.<trigger>`. Bijwerken per taak met json_set/json_remove, zodat twee verzoeken elkaar niet overschrijven;
+ * - "gemeld" staat per taak in de tabel `hatrigger_fired` (migratie 0035): `fired` = wanneer, `rep` = de keer van een
+ *   herhalende taak, `fired_by` = de trigger die meldde (het taakpaneel toont "Gemeld <tijd> · <trigger>"). POST /fire
+ *   claimt een taak in één SQL-stap; alleen wie de rij krijgt, stuurt de melding. Twee triggers tegelijk melden dus
+ *   nooit dubbel. Kwam de melding nergens aan, dan gaat de rij weer weg;
  * - `hatrigger:share`: { all, per: { triggerId: [userId] } } met wie je je triggers deelt; de ontvanger ziet ze zonder
  *   "laatst afgegaan" (dat zou verraden wanneer iemand thuiskomt);
  * - `hatrigger:seen`: wanneer HA (een full-sleutel) laatst iets liet horen. De integratie meldt zich elke 6 uur. Is dat
@@ -52,10 +55,46 @@ async function readRow<T>(env: Env, userId: string, key: string, empty: T): Prom
   try { return JSON.parse(row.value) as T; } catch { return empty; }
 }
 const readTriggers = (env: Env, userId: string) => readRow<HaTrigger[]>(env, userId, ROW_TRIGGERS, []);
-const readLinks = (env: Env, userId: string) => readRow<Links>(env, userId, ROW_TASKS, {});
+const readIds = (env: Env, userId: string) => readRow<Record<string, { ids: string[] }>>(env, userId, ROW_TASKS, {});
 const readShare = (env: Env, userId: string) => readRow<HaShare>(env, userId, ROW_SHARE, { all: false, per: {} });
 const writeTriggers = (env: Env, userId: string, list: HaTrigger[]) => userSettingStmt(env.DB, userId, ROW_TRIGGERS, list.length ? JSON.stringify(list) : null);
-const writeLinks = (env: Env, userId: string, links: Links) => userSettingStmt(env.DB, userId, ROW_TASKS, Object.keys(links).length ? JSON.stringify(links) : null);
+
+/** De keuzes per taak met hun meldstand uit `hatrigger_fired`. */
+async function readLinks(env: Env, userId: string): Promise<Links> {
+  const [stored, fired] = await Promise.all([
+    readIds(env, userId),
+    env.DB.prepare('SELECT task_id, fired, rep, fired_by FROM hatrigger_fired WHERE user_id = ?')
+      .bind(userId).all<{ task_id: string; fired: string; rep: string | null; fired_by: string | null }>(),
+  ]);
+  const out: Links = {};
+  for (const [id, l] of Object.entries(stored)) if (Array.isArray(l?.ids)) out[id] = { ids: l.ids, fired: null, rep: null, by: null };
+  for (const f of fired.results) if (out[f.task_id]) Object.assign(out[f.task_id], { fired: f.fired, rep: f.rep, by: f.fired_by });
+  return out;
+}
+
+/** De keuze bij één taak zetten (`ids`) of weghalen (null), zonder de andere taken te lezen en terug te schrijven. */
+function linkStmt(env: Env, userId: string, taskId: string, ids: string[] | null): D1PreparedStatement {
+  if (!ids) {
+    return env.DB.prepare(`UPDATE user_settings SET value = json_remove(value, '$."' || ?3 || '"') WHERE user_id = ?1 AND key = ?2 AND json_valid(value)`)
+      .bind(userId, ROW_TASKS, taskId);
+  }
+  return env.DB.prepare(
+    `INSERT INTO user_settings (user_id, key, value) VALUES (?1, ?2, json_object(?3, json_object('ids', json(?4))))
+     ON CONFLICT(user_id, key) DO UPDATE SET value = json_set(CASE WHEN json_valid(value) THEN value ELSE '{}' END, '$."' || ?3 || '"', json_object('ids', json(?4)))`,
+  ).bind(userId, ROW_TASKS, taskId, JSON.stringify(ids));
+}
+
+/**
+ * Claimt een taak als gemeld, in één stap: lukt alleen als hij nog klaarstond (geen rij, of een herhalende taak die
+ * sinds `rep` doorschoof; zie `armed`). Geeft een rij terug als dit verzoek hem kreeg. Een taak die intussen definitief
+ * weg is, wordt niet geclaimd.
+ */
+const claimStmt = (env: Env, userId: string, taskId: string, at: string, rep: string | null, by: string) => env.DB.prepare(
+  `INSERT INTO hatrigger_fired (task_id, user_id, fired, rep, fired_by) SELECT ?1, ?2, ?3, ?4, ?5 FROM tasks WHERE id = ?1
+   ON CONFLICT(task_id) DO UPDATE SET user_id = excluded.user_id, fired = excluded.fired, rep = excluded.rep, fired_by = excluded.fired_by
+   WHERE excluded.rep IS NOT NULL AND excluded.rep IS NOT hatrigger_fired.rep
+   RETURNING task_id`,
+).bind(taskId, userId, at, rep, by);
 
 const validId = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(v);
 /** Een eigen trigger, of een gedeelde als `<eigenaar>.<trigger>`. */
@@ -183,51 +222,45 @@ haTriggerApi.put('/tasks/:id', async (c) => {
   const task = await c.env.DB.prepare('SELECT id, repeat_at FROM tasks WHERE id = ? AND user_id = ? AND parent_id IS NULL AND deleted_at IS NULL')
     .bind(taskId, userId).first<{ id: string; repeat_at: string | null }>();
   if (!task) throw new HttpError(404, 'err.not_found');
-  const [triggers, shared, links] = await Promise.all([readTriggers(c.env, userId), sharedWithMe(c.env, userId), readLinks(c.env, userId)]);
+  const [triggers, shared, links] = await Promise.all([readTriggers(c.env, userId), sharedWithMe(c.env, userId), readIds(c.env, userId)]);
   const known = new Set([...triggers.map((t) => t.id), ...shared.map((t) => t.id)]);
   const ids = [...new Set(body.ids as string[])].filter((id) => known.has(id));
-  if (ids.length) {
-    if (!links[taskId] && Object.keys(links).length >= MAX_TASKS) throw new HttpError(400, 'err.hatrigger_too_many', { max: MAX_TASKS });
-    links[taskId] = { ids, fired: null, rep: null };
-  } else delete links[taskId];
-  await writeLinks(c.env, userId, links).run();
-  return c.json({ task: taskId, link: links[taskId] ?? null });
+  if (ids.length && !links[taskId] && Object.keys(links).length >= MAX_TASKS) throw new HttpError(400, 'err.hatrigger_too_many', { max: MAX_TASKS });
+  // Altijd weer klaar: de meldstand van deze taak gaat weg.
+  await c.env.DB.batch([linkStmt(c.env, userId, taskId, ids.length ? ids : null), c.env.DB.prepare('DELETE FROM hatrigger_fired WHERE task_id = ?').bind(taskId)]);
+  return c.json({ task: taskId, link: ids.length ? { ids, fired: null, rep: null, by: null } : null });
 });
 
 type FireRow = { id: string; title: string; description: string; done: number; deleted_at: string | null; repeat_at: string | null };
 
-/** Eén persoon: elke open taak die op `linkId` wacht en nog klaarstaat, wordt gemeld. Geeft het opslaan en die taken. */
-async function fireFor(env: Env, userId: string, linkId: string, now: string): Promise<{ save: D1PreparedStatement | null; fire: FireRow[] }> {
+/**
+ * Eén persoon: elke open taak die op `linkId` wacht en nog klaarstaat, wordt geclaimd (claimStmt, in één batch). Geeft
+ * alleen de taken die dit verzoek kreeg: een ander verzoek dat tegelijk loopt, krijgt ze niet ook.
+ */
+async function fireFor(env: Env, userId: string, linkId: string, now: string): Promise<FireRow[]> {
   const links = await readLinks(env, userId);
   const candidates = Object.entries(links).filter(([, l]) => l.ids.includes(linkId)).map(([taskId]) => taskId);
-  if (!candidates.length) return { save: null, fire: [] };
+  if (!candidates.length) return [];
   const rows = (await env.DB.prepare('SELECT id, title, description, done, deleted_at, repeat_at FROM tasks WHERE user_id = ? AND id IN (SELECT value FROM json_each(?))')
     .bind(userId, JSON.stringify(candidates)).all<FireRow>()).results;
   const byId = new Map(rows.map((r) => [r.id, r]));
-  const fire: FireRow[] = [];
+  const stmts: D1PreparedStatement[] = [];
+  const claimed: (FireRow | null)[] = [];
   for (const taskId of candidates) {
     const t = byId.get(taskId);
-    if (!t) { delete links[taskId]; continue; } // definitief weg
-    if (t.done || t.deleted_at) continue;
-    const link = links[taskId];
-    if (!armed(link, t.repeat_at)) continue;
-    link.fired = now;
-    link.rep = t.repeat_at;
-    link.by = linkId;
-    fire.push(t);
+    if (!t) { stmts.push(linkStmt(env, userId, taskId, null)); claimed.push(null); continue; } // definitief weg (of niet meer van mij)
+    if (t.done || t.deleted_at || !armed(links[taskId], t.repeat_at)) continue;
+    stmts.push(claimStmt(env, userId, taskId, now, t.repeat_at, linkId));
+    claimed.push(t);
   }
-  return { save: writeLinks(env, userId, links), fire };
+  if (!stmts.length) return [];
+  const res = await env.DB.batch<{ task_id: string }>(stmts);
+  return claimed.flatMap((t, i) => (t && res[i].results.length ? [t] : []));
 }
 
 /** De melding kwam bij niemand aan: de taak staat weer klaar (alleen als hij nog op deze keer staat). */
-async function unfire(env: Env, userId: string, taskIds: string[], at: string): Promise<void> {
-  const links = await readLinks(env, userId);
-  let changed = false;
-  for (const id of taskIds) {
-    const l = links[id];
-    if (l?.fired === at) { l.fired = null; l.rep = null; l.by = null; changed = true; }
-  }
-  if (changed) await writeLinks(env, userId, links).run();
+async function unfire(env: Env, taskIds: string[], at: string): Promise<void> {
+  if (taskIds.length) await env.DB.batch(taskIds.map((id) => env.DB.prepare('DELETE FROM hatrigger_fired WHERE task_id = ? AND fired = ?').bind(id, at)));
 }
 
 /**
@@ -248,10 +281,10 @@ haTriggerApi.post('/fire', async (c) => {
   const others = share.all || Object.keys(share.per).length
     ? recipients(share, id, new Set((await partners(c.env, userId)).map((p) => p.id))) : [];
   const results = await Promise.all([
-    fireFor(c.env, userId, id, now).then((r) => ({ who: userId, ...r })),
-    ...others.map((who) => fireFor(c.env, who, sharedId(userId, id), now).then((r) => ({ who, ...r }))),
+    fireFor(c.env, userId, id, now).then((fire) => ({ who: userId, fire })),
+    ...others.map((who) => fireFor(c.env, who, sharedId(userId, id), now).then((fire) => ({ who, fire }))),
   ]);
-  await c.env.DB.batch([writeTriggers(c.env, userId, triggers), ...results.flatMap((r) => (r.save ? [r.save] : []))]);
+  await writeTriggers(c.env, userId, triggers).run();
 
   const fired = results.flatMap((r) => r.fire);
   if (fired.length) {
@@ -268,11 +301,8 @@ haTriggerApi.post('/fire', async (c) => {
     const sending = Promise.all(results.flatMap((r) => r.fire.map(async (t) => {
       const to = [...new Set([r.who, ...shares.filter((s) => s.task_id === t.id).map((s) => s.to_user)])];
       const got = await Promise.all(to.map((who) => notifyUser(c.env, who, make(t), prefs.defaultLocale, sendToAll, { ttl: HA_TTL })));
-      return { owner: r.who, taskId: t.id, lost: !got.includes('ok') && got.includes('failed') };
-    }))).then(async (done) => {
-      const lost = done.filter((x) => x.lost);
-      for (const owner of new Set(lost.map((x) => x.owner))) await unfire(c.env, owner, lost.filter((x) => x.owner === owner).map((x) => x.taskId), now);
-    });
+      return { taskId: t.id, lost: !got.includes('ok') && got.includes('failed') };
+    }))).then((done) => unfire(c.env, done.filter((x) => x.lost).map((x) => x.taskId), now));
     await inBackground(c, sending, 'hatrigger');
   }
   return c.json({ trigger: trigger.name, notified: results[0].fire.map((t) => t.id), shared: fired.length - results[0].fire.length });
