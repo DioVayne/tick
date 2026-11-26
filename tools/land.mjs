@@ -13,6 +13,7 @@
 //
 // Test hooks (env): TICK_WT_ROOT (default C:\dev\wt), TICK_NODE_MODULES (default C:\dev\tick\node_modules),
 // TICK_LAND_CHECKS (a command that replaces the computed checks), TICK_LAND_WAIT_MS.
+// TICK_TEST_WORKERS: vitest workers during a landing (default 2; see testWorkers).
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -266,20 +267,34 @@ function prepareCopy(main, wt, files) {
   return null;
 }
 
+/**
+ * Vitest workers for a landing: every worker starts its own workerd runtime, and with the default count a machine
+ * with little free memory fails ("The Workers runtime failed to start", "heap out of memory"). TICK_TEST_WORKERS
+ * overrides the default of 2.
+ */
+export function testWorkers(env = process.env) {
+  const n = Number(env.TICK_TEST_WORKERS);
+  return Number.isInteger(n) && n > 0 ? n : 2;
+}
+
+/** The commands for checks `c` (from pickChecks; `c.vitest` only lists files that exist). */
+export function checkSteps(c, workers = testWorkers()) {
+  const w = `--maxWorkers=${workers}`;
+  if (c.full) return [['typecheck', 'npm run typecheck'], ['full test run', `npx vitest run ${w}`], ['tools tests', 'npm run test:tools']];
+  const steps = [];
+  if (c.typecheck) steps.push(['typecheck', 'npm run typecheck']);
+  if (c.vitest.length) steps.push(['tests', `npx vitest related ${c.vitest.map((f) => `"${f}"`).join(' ')} --run --passWithNoTests ${w}`]);
+  if (c.tools) steps.push(['tools tests', 'npm run test:tools']);
+  return steps;
+}
+
 /** Runs the checks in the worktree; MANAGER is never passed on. Returns null when they pass, else a reason. */
 function runChecks(wt, c, install) {
   const env = { ...process.env };
   delete env.MANAGER;
   if (process.env.TICK_LAND_CHECKS) return sh(process.env.TICK_LAND_CHECKS, wt, env).ok ? null : 'checks failed';
   if (install) { const r = sh(install, wt, env); if (!r.ok) return `npm ci failed: ${r.hint}`; }
-  const steps = [];
-  if (c.full) steps.push(['typecheck', 'npm run typecheck'], ['full test run', 'npm test']);
-  else {
-    if (c.typecheck) steps.push(['typecheck', 'npm run typecheck']);
-    const existing = c.vitest.filter((f) => fs.existsSync(path.join(wt, f)));
-    if (existing.length) steps.push(['tests', `npx vitest related ${existing.map((f) => `"${f}"`).join(' ')} --run --passWithNoTests`]);
-    if (c.tools) steps.push(['tools tests', 'npm run test:tools']);
-  }
+  const steps = checkSteps({ ...c, vitest: c.vitest.filter((f) => fs.existsSync(path.join(wt, f))) });
   for (const [name, cmd] of steps) {
     const r = sh(cmd, wt, env);
     if (!r.ok) return `${name} failed${r.hint ? ` (${r.hint})` : ''}`;

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { FULL_EVERY, mergeNews, pickChecks } from '../land.mjs';
+import { FULL_EVERY, checkSteps, mergeNews, pickChecks, testWorkers } from '../land.mjs';
 import { branch, git, ideas, makeRepo, onMain, tool } from './helpers.mjs';
 
 // The checks in these repos: passes only when MANAGER was stripped from the environment.
@@ -170,4 +170,15 @@ test('mergeNews refuses when the branch removed a sentence', () => {
   assert.equal(mergeNews(base, ours, theirs), null);
   const withWhen = NEWS([`  { date: '2026-11-25', items: ['news.a', 'news.b', { key: 'news.d', when: (c) => !!c.x }] },`]);
   assert.match(mergeNews(base, ours, withWhen), /items: \['news\.a', 'news\.b', \{ key: 'news\.d', when: \(c\) => !!c\.x \}\]/);
+});
+
+test('checks: vitest runs with few workers (default 2, TICK_TEST_WORKERS overrides)', () => {
+  assert.equal(testWorkers({}), 2);
+  assert.equal(testWorkers({ TICK_TEST_WORKERS: '3' }), 3);
+  assert.equal(testWorkers({ TICK_TEST_WORKERS: 'x' }), 2);
+  assert.equal(testWorkers({ TICK_TEST_WORKERS: '0' }), 2);
+  const full = checkSteps({ full: true, vitest: [] }, 2).map(([, cmd]) => cmd);
+  assert.deepEqual(full, ['npm run typecheck', 'npx vitest run --maxWorkers=2', 'npm run test:tools']);
+  const some = checkSteps({ full: false, typecheck: true, tools: false, vitest: ['src/a.ts'] }, 3).map(([, cmd]) => cmd);
+  assert.deepEqual(some, ['npm run typecheck', 'npx vitest related "src/a.ts" --run --passWithNoTests --maxWorkers=3']);
 });
