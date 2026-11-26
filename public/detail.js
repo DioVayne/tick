@@ -687,8 +687,9 @@ function drawRail(t) {
     done && !remindAt ? null : step({
       kind: 'when', icon: 'bell', on: !!remindAt, past, lead: tr(remindAt ? 'add.when_set' : 'add.when'), value: remindAt ? fmt(remindAt) : null,
       note: remindAt && !done && !past ? duringNote(remindAt) : null,
-      open: opener('when', v.pickWhen),
-      actions: done || !remindAt ? [] : [{ label: tr('push.snooze'), run: v.snoozeRemind }, clear(v.clearRemind, tr('detail.remove_reminder'))],
+      open: opener('when', v.pickWhen), stack: true,
+      // Wissen rechts in de rij; "Over 1 uur" op een eigen regel eronder, zodat de datum de ruimte houdt.
+      actions: done || !remindAt ? [] : [clear(v.clearRemind, tr('detail.remove_reminder')), { label: tr('push.snooze'), run: v.snoozeRemind, line: true }],
     }),
     done || !remindAt ? null : step({ kind: 'addcal', icon: 'calendar', on: false, lead: tr('detail.add_cal'), open: opener('addcal', v.addToCalendar) }),
     // Een subtaak herhaalt niet; afgerond alleen als er een ritme was.

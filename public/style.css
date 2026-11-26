@@ -131,6 +131,12 @@ button.step-head:focus-visible { background: var(--hover); }
 .step-txt small { font-size: .8125rem; }
 .step-act { flex: none; min-height: 44px; padding: 4px 8px; border-radius: 8px; background: transparent; color: var(--muted); font-size: .875rem; }
 .step-act:hover, .step-act:focus-visible { color: var(--text); background: var(--hover); }
+/* Vaste opbouw (stack): de vaste woorden boven, de gekozen waarde eronder. Een actie met een eigen regel (.step-line) staat
+   onder de zin, met de tekst recht onder die van de zin (de knop heeft 8 px binnenrand). */
+.step.stack .step-txt { white-space: normal; }
+.step.stack .step-val { display: block; }
+.step.stack:has(> .step-line) .step-txt { padding-bottom: 0; }
+.step-line { display: flex; margin-top: -6px; padding: 0 0 4px 32px; }
 .step-body { margin: 2px 0 10px 40px; }
 #add .step-input { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; font-size: .9375rem; }
 #add .step-input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
@@ -151,9 +157,8 @@ ul.tasks { list-style: none; margin: 0; padding: 0; display: grid; grid-template
    vinkje van het greepje en de lettergrootte afhangt. */
 :root { --ind: 24px; }
 ul.sub { --bx: 28px; --up: 6px; --ly: 50%; --branch: color-mix(in srgb, var(--muted) 30%, var(--fill)); position: relative; margin: 0; padding: 0 0 2px var(--ind); gap: 0; }
-/* Elke taak een eigen vlak, heel licht verlopend met een dun lichtrandje bovenaan; subtaken liggen in het vlak van hun hoofdtaak */
-li.task { border-radius: 12px; background: linear-gradient(color-mix(in srgb, var(--fill), #fff 3%), color-mix(in srgb, var(--fill), #000 3%));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
+/* Elke taak een eigen vlak, effen in de vulkleur; subtaken liggen in het vlak van hun hoofdtaak */
+li.task { border-radius: 12px; background: var(--fill); }
 ul.sub > li.task { background: transparent; box-shadow: none; }
 ul.sub::before { content: ""; position: absolute; pointer-events: none; left: calc(var(--bx) - .5px); top: calc(-1 * var(--up)); height: calc(var(--ly) - 6px); border-left: 1px solid var(--branch); }
 ul.sub > li.task > .row { position: relative; padding-block: calc(var(--row-pad) / 2); }
@@ -171,9 +176,9 @@ ul.sub textarea.title-edit { padding: 4.9px 2px; }
 li.task:has(> .row:hover) { background: color-mix(in srgb, var(--fill), var(--text) 5%); }
 /* De hele taak opent hem (render.js, openFromRow), ook de metaregel; vinkje, titelveld en greepje houden hun eigen cursor */
 li.task.opens { cursor: pointer; }
-/* De gekozen taak: een dun accentrandje met een zachte gloed */
+/* De gekozen taak: een zachte accenttint met een scherp randje van 1 px (geen gloed eromheen) */
 li.task.sel, li.task.sel:has(> .row:hover) { background: color-mix(in srgb, var(--fill), var(--accent) 8%);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 22%, transparent); }
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
 li.task.sortable-chosen { background: var(--card); box-shadow: 0 6px 18px var(--shadow); }
 li.task.sortable-ghost { opacity: .4; }
 /* Vegen (swipe.js): de taak schuift over een gekleurde laag; links rood (verwijderen), rechts blauw (lijst) */
@@ -232,6 +237,8 @@ textarea.title-edit { display: block; min-width: 0; min-height: 0; margin: 0; bo
 /* Informatie (tijd, wie, omschrijving) blijft grijs; alleen wat te laat is of een actie vraagt krijgt kleur. */
 .meta { font-size: .75rem; color: var(--muted); display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; padding: 0 10px 6px 60px; margin-top: -6px; overflow-wrap: anywhere; }
 .meta > * { min-width: 0; }
+/* Op de telefoon een tikje groter (13 px), zodat datum en plek goed leesbaar zijn */
+@media (max-width: 1023.98px) { .meta, .meta .claim { font-size: .8125rem; } }
 .meta .ico.sm { margin-right: 3px; }
 .meta .ico.sm + .ico.sm { margin: 0 0 0 4px; } /* het ritme achter de datum */
 .subcount { flex: none; font-size: .75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -430,9 +437,9 @@ body.settings-open #btn-search, body.settings-open #search, body.calendar-open #
 #side .item .count { color: var(--muted); font-size: .8125rem; }
 #side .ico { stroke: var(--muted); }
 #side .dot { flex: none; width: 9px; height: 9px; margin: 0 4.5px; border-radius: 50%; background: var(--dot, var(--muted)); }
-/* De gekozen lijst: hetzelfde accentrandje met gloed als een gekozen taak */
+/* De gekozen lijst: dezelfde tint en hetzelfde randje als een gekozen taak */
 #side .item.on, #side .item[aria-pressed="true"] { background: color-mix(in srgb, var(--side-blk), var(--accent) 12%); color: var(--text); font-weight: 500;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 20%, transparent); }
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
 #side .item.on .ico, #side .item[aria-pressed="true"] .ico { stroke: var(--accent); }
 /* Tickmanager: het bliksem-icoon blijft oranje, ook als het item gemarkeerd is. */
 #side .mgr-ico, #side .item.on .mgr-ico { color: var(--manager); stroke: currentColor; }
@@ -467,7 +474,8 @@ body.settings-open #btn-search, body.settings-open #search, body.calendar-open #
   /* De titel staat ook op desktop boven de lijst; het menuknopje is hier niet nodig */
   #app { display: grid; grid-template-columns: 220px minmax(0, 1fr) 5px var(--panel-w, 380px); grid-template-rows: auto minmax(0, 1fr); height: 100dvh; }
   #side { grid-column: 1; grid-row: 1 / -1; }
-  #topbar { grid-column: 2; grid-row: 1; max-width: none; margin: 0; padding: 16px 20px 4px; }
+  /* Zijrand gelijk aan #main (16 px): titel, zoekknop en kaarten staan op één lijn */
+  #topbar { grid-column: 2; grid-row: 1; max-width: none; margin: 0; padding: 16px 16px 4px; }
   #btn-menu { display: none; }
   #main { grid-column: 2; grid-row: 2; max-width: none; margin: 0; width: 100%; padding: 4px 16px 24px; overflow-y: auto; }
   #resizer { grid-column: 3; grid-row: 1 / -1; display: block; background: linear-gradient(var(--line), var(--line)) center / 1px 100% no-repeat; cursor: col-resize; touch-action: none; }
@@ -542,6 +550,8 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 @media (pointer: coarse) {
   #detail .share-list .step-act, #detail .dfoot button.danger { min-height: 44px; }
 }
+/* Met een muis mag de knop op de eigen regel lager: de rij wordt dan minder hoog */
+@media (pointer: fine) { .step-line .step-act { min-height: 32px; } }
 @media all {
   #detail { --dpx: 18px; --inset: color-mix(in srgb, var(--card) 50%, var(--side)); --tile: color-mix(in srgb, var(--muted) 18%, var(--card)); background: var(--side); }
   #detail .dhead { margin: 0 calc(-1 * var(--dpx)); padding: 14px var(--dpx); background: var(--bg); border-bottom: 1px solid var(--line); }
@@ -556,6 +566,7 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
   #detail .step-head { gap: 14px; min-height: 50px; padding: 0 14px 0 12px; border-radius: 0; }
   #detail .step-dot { width: 32px; height: 32px; border: 0; border-radius: 9px; background: var(--tile); }
   #detail .step-dot .ico { width: 18px; height: 18px; }
+  #detail .step-line { padding: 0 0 6px 50px; } /* 12 + 32 (stip) + 14 (tussenruimte) − 8 (binnenrand knop) */
   #detail .step.on .step-dot { background: color-mix(in srgb, var(--c) 20%, var(--card)); }
   #detail .step-share.on .step-row, #detail .step-share.on .step-hint { background: color-mix(in srgb, var(--accent) 8%, var(--card)); }
   #detail .step-share .step-body, #detail .step-copies .step-body { margin: 0; }
@@ -570,7 +581,7 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
   #detail .avatar.me { background: var(--tile); color: var(--muted); }
   #detail .dcopies { padding: 4px 14px 12px 58px; }
   #detail .dsect { margin-top: 22px; padding-top: 0; border-top: 0; }
-  #detail .dsect > h3 { margin: 0 0 8px 4px; color: var(--muted); font-size: .71875rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+  #detail .dsect > h3 { margin: 0 0 8px 4px; color: var(--muted); font-size: .75rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
   #detail .dsect > h3::before { display: none; }
   #detail .dcard:focus-within { border-color: var(--accent); }
   #detail .dcard > .desc { padding: 8px 16px; border-radius: 0; background: transparent; }
@@ -873,14 +884,35 @@ body.manager-open #main > :not(#manager):not(#net) { display: none; }
 
 /* ---------- Kalender (calendarview.js): maandraster en agenda ---------- */
 body.calendar-open #main > :not(#calendar):not(#net) { display: none; }
-#calendar { display: grid; gap: 12px; padding: 2px 0 24px; }
+#calendar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 2px 0 24px; } /* minmax: lange titels in de agenda krijgen "…" in plaats van het scherm te verbreden */
 .cal-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .cal-heading { flex: 1 1 10rem; margin: 0 4px; font-size: 1.0625rem; font-weight: 600; }
 /* Alleen de eerste letter: capitalize gaf "Dinsdag 20 Oktober". Kop en dag zijn blokken (de kop als flex-item), dus ::first-letter werkt. */
 .cal-heading::first-letter, .cal-day::first-letter { text-transform: uppercase; }
-.cal-nav, .cal-mode { min-height: 36px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); }
-.cal-modes { display: flex; gap: 4px; }
-.cal-mode[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.cal-nav { min-height: 36px; min-width: 36px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); }
+.cal-nav:not(.cal-today) { display: grid; place-items: center; padding: 0; font-size: 1.125rem; line-height: 1; }
+/* Maand / Agenda: één schakelaar, net als de keuzes in Instellingen (.set-seg) */
+.cal-modes { display: inline-flex; gap: 2px; margin-left: auto; padding: 3px; border: 1px solid color-mix(in srgb, var(--muted) 45%, transparent); border-radius: 10px; background: var(--fill); }
+.cal-mode { min-height: 30px; padding: 4px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--text); font-size: .875rem; white-space: nowrap; }
+.cal-mode:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.cal-mode[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); font-weight: 600; box-shadow: 0 1px 2px var(--shadow); }
+/* Met een vinger: pijlen, Vandaag en de schakelaar 44 px hoog (de pijlen ook 44 px breed); het pijltje zelf blijft klein */
+@media (pointer: coarse) {
+  .cal-nav { min-height: 44px; min-width: 44px; }
+  .cal-mode { min-height: 36px; }
+}
+/* Smal: de maand op een eigen regel bovenaan, daaronder bladeren en Vandaag links, de schakelaar rechts */
+@media (max-width: 600px) {
+  .cal-bar { gap: 4px; }
+  .cal-heading { flex-basis: 100%; order: -1; margin: 0 4px 4px; }
+  .cal-today { padding: 4px 10px; }
+  .cal-mode { padding: 4px 10px; }
+}
+/* 320 px: alles op de tweede regel past nog naast elkaar */
+@media (max-width: 359.98px) {
+  .cal-today { padding: 4px 8px; font-size: .875rem; }
+  .cal-mode { padding: 4px 8px; font-size: .8125rem; }
+}
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .cal-wd { padding: 4px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted); font-size: .75rem; text-align: center; }
 .cal-cell { display: flex; flex-direction: column; gap: 2px; min-height: 5.5rem; padding: 2px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--card); min-width: 0; }
@@ -890,7 +922,7 @@ body.calendar-open #main > :not(#calendar):not(#net) { display: none; }
 .cal-chip { display: block; width: 100%; padding: 1px 4px; overflow: hidden; border-radius: 4px; background: var(--fill); color: var(--text); font-size: .6875rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .cal-chip .cal-time { display: none; }
 .cal-more { padding: 0 4px; background: transparent; color: var(--link); font-size: .6875rem; text-align: left; }
-.cal-agenda { display: grid; gap: 4px; }
+.cal-agenda { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
 .cal-day { margin: 12px 0 2px; font-size: .9375rem; font-weight: 600; }
 .cal-day.today { color: var(--accent); }
 .cal-day.overdue { color: var(--danger); }
@@ -1091,7 +1123,7 @@ html[data-bg] #detail { background-color: color-mix(in srgb, var(--bg) 93%, tran
 
 /* Retro: ronde vormen; de bovenbalk is doorzichtig, zodat alleen het afgeronde takendeel een vlak is. */
 html[data-palette="retro"] button, html[data-palette="retro"] input, html[data-palette="retro"] textarea, html[data-palette="retro"] select,
-html[data-palette="retro"] .set-seg, html[data-palette="retro"] #side .item, html[data-palette="retro"] #side-lists .rename-input { border-radius: 18px; }
+html[data-palette="retro"] .set-seg, html[data-palette="retro"] .cal-modes, html[data-palette="retro"] #side .item, html[data-palette="retro"] #side-lists .rename-input { border-radius: 18px; }
 html[data-palette="retro"] .check { border-radius: 50%; border-width: 2px; }
 html[data-palette="retro"] .set-list, html[data-palette="retro"] #main { border-radius: 18px; }
 html[data-palette="retro"] #topbar { background: transparent; }

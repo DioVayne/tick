@@ -14,16 +14,20 @@ import { openAgendaPicker } from './agendapick.js';
 /**
  * Eén stap: stip met icoon, een zin (vaste woorden en de gekozen waarde, vet in de kleur) en rechts acties zoals Wissen.
  * Zonder `open` is de zin gewone tekst (alleen-lezen, of een subtaak die de lijst van de ouder volgt).
+ * `stack`: de gekozen waarde op een eigen regel onder de vaste woorden ("Herinner me" / "vr 27 nov, 17:30"), zodat een lange
+ * datum niet midden in de zin afbreekt. Een actie met `line` staat op een eigen regel onder de zin (zoals "Over 1 uur").
  * @param {{
  *   kind: string, icon: Parameters<typeof icon>[0], on: boolean, lead: string, value?: string | null, note?: string | null,
- *   open?: ((anchor: HTMLElement) => void) | null, actions?: ({ label: string, title?: string, run: () => void } | null)[],
- *   sub?: HTMLElement | null, body?: HTMLElement | null, past?: boolean, pressed?: boolean, expanded?: boolean,
+ *   open?: ((anchor: HTMLElement) => void) | null, actions?: ({ label: string, title?: string, run: () => void, line?: boolean } | null)[],
+ *   sub?: HTMLElement | null, body?: HTMLElement | null, past?: boolean, pressed?: boolean, expanded?: boolean, stack?: boolean,
  * }} s
  */
 export function step(s) {
   const content = [
     el('span', { class: 'step-dot' }, icon(s.icon)),
-    el('span', { class: 'step-txt' }, s.lead, s.lead && s.value ? ' ' : '', s.value ? el('b', {}, s.value) : null, s.note ? el('small', {}, ' · ' + s.note) : null),
+    s.stack && s.value
+      ? el('span', { class: 'step-txt' }, s.lead, ' ', el('span', { class: 'step-val' }, el('b', {}, s.value), s.note ? el('small', {}, ' · ' + s.note) : null))
+      : el('span', { class: 'step-txt' }, s.lead, s.lead && s.value ? ' ' : '', s.value ? el('b', {}, s.value) : null, s.note ? el('small', {}, ' · ' + s.note) : null),
   ];
   const head = s.open
     ? el('button', {
@@ -31,9 +35,12 @@ export function step(s) {
       'aria-expanded': s.expanded == null ? false : String(s.expanded), 'aria-pressed': s.pressed == null ? false : String(s.pressed),
     }, ...content)
     : el('div', { class: 'step-head' }, ...content);
-  const actions = (s.actions ?? []).filter(Boolean).map((a) => el('button', { type: 'button', class: 'step-act', title: a.title ?? false, onclick: a.run }, a.label));
-  return el('div', { class: `step step-${s.kind}` + (s.on ? ' on' : '') + (s.past ? ' past' : '') },
-    el('div', { class: 'step-row' }, head, ...actions), s.sub ?? null, s.body ?? null);
+  const button = (a) => el('button', { type: 'button', class: 'step-act', title: a.title ?? false, onclick: a.run }, a.label);
+  const all = /** @type {{ label: string, title?: string, run: () => void, line?: boolean }[]} */ ((s.actions ?? []).filter(Boolean));
+  const below = all.filter((a) => a.line);
+  return el('div', { class: `step step-${s.kind}` + (s.on ? ' on' : '') + (s.past ? ' past' : '') + (s.stack ? ' stack' : '') },
+    el('div', { class: 'step-row' }, head, ...all.filter((a) => !a.line).map(button)),
+    below.length ? el('div', { class: 'step-line' }, ...below.map(button)) : null, s.sub ?? null, s.body ?? null);
 }
 
 let closeMenu = null;
