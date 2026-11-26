@@ -46,9 +46,37 @@ export const claimedByOther = (t) => {
 const inSharedList = (t) => !!(t.shared_list ?? (t.parent_id ? find(t.parent_id)?.shared_list : null));
 
 // Ook sharedDone: een taak die een ander in een gedeelde lijst afvinkte, staat alleen daar (heropenen vanuit het blok Afgevinkt).
-const find = (id) => state.open.find((t) => t.id === id) ?? state.done.find((t) => t.id === id) ?? state.sharedDone.find((t) => t.id === id);
+const find = (id) => (index ? index.byId.get(id)
+  : state.open.find((t) => t.id === id) ?? state.done.find((t) => t.id === id) ?? state.sharedDone.find((t) => t.id === id));
 
-export const lists = () => mergeLists(state.serverLists, state.open.concat(state.done), state.extraLists);
+/**
+ * Opzoektabellen voor de duur van één render (zie indexed): taak op id, open subtaken per hoofdtaak en de lijsten. Zonder
+ * zoekt elke rij opnieuw door alle taken; bij 1.000 taken is dat zo'n miljoen stappen per render. Alleen geldig zolang
+ * er niets aan de taken verandert, dus alleen rond code die niets wijzigt (render).
+ * @type {{ byId: Map<string, any>, kids: Map<string, any[]>, lists: ReturnType<typeof mergeLists> | null } | null}
+ */
+let index = null;
+
+/** Draait `fn` met de opzoektabellen; een geneste aanroep gebruikt die van de buitenste. */
+export function indexed(fn) {
+  if (index) return fn();
+  const byId = new Map();
+  // Dezelfde voorrang als find: open, dan Afgerond, dan sharedDone; binnen een array de eerste.
+  for (const arr of [state.open, state.done, state.sharedDone]) for (const t of arr) if (!byId.has(t.id)) byId.set(t.id, t);
+  const kids = new Map();
+  for (const t of state.open) if (t.parent_id) (kids.get(t.parent_id) ?? kids.set(t.parent_id, []).get(t.parent_id)).push(t);
+  index = { byId, kids, lists: null };
+  try { return fn(); } finally { index = null; }
+}
+
+/** De open subtaken (in state.open) van hoofdtaak `id`, in de volgorde van state.open. */
+export const openKids = (id) => (index ? index.kids.get(id) ?? [] : state.open.filter((k) => k.parent_id === id));
+
+/** Een taak op id (open, Afgerond of sharedDone), of undefined. */
+export const taskById = (id) => find(id);
+
+const mergedLists = () => mergeLists(state.serverLists, state.open.concat(state.done), state.extraLists);
+export const lists = () => (index ? (index.lists ??= mergedLists()) : mergedLists());
 export const listNames = () => lists().map((l) => l.name);
 /** De `shared` van lijst `name` (eigenaar, leden, meldingen), of null voor een gewone lijst. */
 export const sharedOf = (name) => lists().find((l) => l.name === name)?.shared ?? null;

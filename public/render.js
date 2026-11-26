@@ -7,7 +7,7 @@ import { dateLocale, t, t as tr } from './i18n.js'; // tr waar t al een taak is
 import { plainText } from './markdown.js';
 import { toHash } from './route.js';
 import { listPill, renderSidebar } from './sidebar.js';
-import { UNDO_MS, claimedByOther, listNames, lists, sharedOf, state, toggleDone, update } from './store.js';
+import { UNDO_MS, claimedByOther, indexed, listNames, lists, openKids, sharedOf, state, taskById, toggleDone, update } from './store.js';
 import { renderTrash, shareLabel, shareNames } from './trash.js';
 import { renderInvites } from './share.js';
 import { claimControl, doneBlock } from './sharedlist.js';
@@ -189,7 +189,7 @@ export function openFromRow(li, id) {
  */
 function subCount(t) {
   if (t.parent_id) return null;
-  const kids = state.open.filter((k) => k.parent_id === t.id);
+  const kids = openKids(t.id);
   const base = t.sub_done ?? 0;
   const total = base + kids.length;
   if (!total) return null;
@@ -205,7 +205,7 @@ function taskItem(t, children) {
   openFromRow(li, t.id);
   // Op naam van een ander (in een gedeelde lijst): alleen die vinkt hem af.
   const locked = claimedByOther(t);
-  const lockedBy = locked ? (t.claimed_by ?? state.open.find((p) => p.id === t.parent_id)?.claimed_by) : null;
+  const lockedBy = locked ? (t.claimed_by ?? taskById(t.parent_id)?.claimed_by) : null;
   const row = el('div', { class: 'row' },
     done || state.query.trim() ? null : el('span', { class: 'grip', 'aria-hidden': 'true', title: tr('render.drag'), 'aria-label': tr('render.drag') }, '⋮⋮'),
     el('button', {
@@ -302,21 +302,27 @@ const pinnedOf = (t) => !!t?.pinned && !t.parent_id;
  * laatste subtaak, met een takje naar het vinkje van elke subtaak. Waar die staan hangt af van het greepje en de lettergrootte, dus we meten ze.
  */
 function alignBranches(root) {
-  for (const ul of root.querySelectorAll('ul.sub')) {
+  // Eerst alles meten, dan pas schrijven: een stijl zetten tussen twee metingen laat de browser de hele lijst opnieuw
+  // opmaken (bij 150 hoofdtaken met subtaken ruim 3 seconden). De lijnen zijn absoluut geplaatst (style.css), dus
+  // het schrijven verschuift niets aan wat er gemeten is.
+  /** @type {[HTMLElement, string, string][]} */
+  const writes = [];
+  for (const ul of /** @type {NodeListOf<HTMLElement>} */ (root.querySelectorAll('ul.sub'))) {
     const mark = ul.parentElement.querySelector(':scope > .row > .check');
     if (!mark) continue;
     const u = ul.getBoundingClientRect(), m = mark.getBoundingClientRect();
     const bx = m.left + m.width / 2 - u.left;
-    ul.style.setProperty('--bx', bx + 'px');
-    ul.style.setProperty('--up', Math.max(0, u.top - m.bottom - 3) + 'px');
-    const rows = [...ul.querySelectorAll(':scope > li > .row')];
+    const up = Math.max(0, u.top - m.bottom - 3);
+    writes.push([ul, '--bx', bx + 'px'], [ul, '--up', up + 'px']);
+    const rows = /** @type {HTMLElement[]} */ ([...ul.querySelectorAll(':scope > li > .row')]);
     for (const row of rows) {
       const c = row.querySelector(':scope > .check')?.getBoundingClientRect();
-      if (c) row.style.setProperty('--ew', Math.max(4, c.left - u.left - bx - 2) + 'px');
+      if (c) writes.push([row, '--ew', Math.max(4, c.left - u.left - bx - 2) + 'px']);
     }
     const last = rows.at(-1)?.getBoundingClientRect();
-    if (last) ul.style.setProperty('--ly', Math.max(0, (last.top + last.bottom) / 2 - u.top + Number.parseFloat(ul.style.getPropertyValue('--up'))) + 'px');
+    if (last) writes.push([ul, '--ly', Math.max(0, (last.top + last.bottom) / 2 - u.top + up) + 'px']);
   }
+  for (const [e, prop, value] of writes) e.style.setProperty(prop, value);
 }
 
 /** Open taken, plus net afgevinkte die tijdens de ongedaan-maken-periode zichtbaar blijven. */
@@ -326,7 +332,12 @@ function openTasks() {
   return shown.sort((a, b) => Number(pinnedOf(b)) - Number(pinnedOf(a)) || a.position - b.position);
 }
 
+// Met opzoektabellen (store.indexed): subtaken, taken op id en de lijsten één keer per render in plaats van per rij.
 export function render() {
+  indexed(renderNow);
+}
+
+function renderNow() {
   renderNet();
   renderSidebar();
   renderDetail(); // eerst: kan de keuze wissen als de taak elders verwijderd is

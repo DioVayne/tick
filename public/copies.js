@@ -2,7 +2,7 @@ import { icon } from './icons.js';
 import { t } from './i18n.js';
 import { countTasks } from './markdown.js';
 import { el, fmt } from './render.js';
-import { state } from './store.js';
+import { openKids, state } from './store.js';
 
 // Kopiegroep: van de andere exemplaren zie je alleen naam, klaar en voortgang. Nooit getallen, alleen een balkje of ✓.
 
@@ -63,7 +63,7 @@ export function copyPills(task) {
  */
 function ownProgress(task, self) {
   const n = countTasks(task.description ?? '');
-  const open = state.open.filter((x) => x.parent_id === task.id && !x.done && !state.justDone.has(x.id)).length;
+  const open = openKids(task.id).filter((x) => !x.done && !state.justDone.has(x.id)).length;
   const total = Math.max(self?.total ?? 0, open);
   const done = n.done + total - open;
   return n.total + total ? done / (n.total + total) : null;
