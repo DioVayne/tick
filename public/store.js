@@ -260,7 +260,55 @@ async function mutate(op) {
     const place = !!op.body.location;
     listeners.reminder.forEach((fn) => fn({ place }));
   }
-  return load();
+  return load(partsFor(op));
+}
+
+// ---------- wat een ronde ophaalt ----------
+// Een volledige ronde (openen, terug in Tick, verversen) haalt alles. Na een eigen wijziging alleen wat die raakt: de
+// uitnodigingen niet (die haalt de lichte poll elke twee minuten, en elke volledige ronde), en bij een "lichte" wijziging
+// ook de taken niet: dan geeft het antwoord van de server op de wijziging de taak zoals hij nu is.
+
+/** Velden waarvan een wijziging niets anders raakt dan de taak zelf (geen subtaken, volgorde, lijsten of afvinken). */
+const LIGHT_FIELDS = new Set(['title', 'description', 'pinned', 'claimed', 'watch', 'location_notified', 'remind_at', 'location']);
+
+/** Of het antwoord van de server op deze wijziging genoeg is (geen nieuwe takenlijst nodig). */
+export function lightOp(op) {
+  if (op.type === 'reviewed' || op.type === 'create') return true;
+  return op.type === 'update' && Object.keys(op.body).every((k) => LIGHT_FIELDS.has(k));
+}
+
+/** @typedef {{ tasks: boolean, lists: boolean, sharedDone: boolean, invites: boolean }} Parts */
+/** @type {Parts} */
+const ALL = { tasks: true, lists: true, sharedDone: true, invites: true };
+
+/** Wat een ronde na deze wijziging moet ophalen. */
+function partsFor(op) {
+  if (!lightOp(op)) return { tasks: true, lists: true, sharedDone: true, invites: false };
+  // Een nieuwe taak in een lijst die de server nog niet teruggaf: de lijsten, voor de vaste id van die lijst.
+  const newList = op.type === 'create' && !op.body.parent_id && !state.serverLists.some((l) => l.name === op.body.list);
+  return { tasks: false, lists: newList, sharedDone: false, invites: false };
+}
+
+/** @param {Parts | null} a @param {Parts} b */
+const joinParts = (a, b) => (a ? { tasks: a.tasks || b.tasks, lists: a.lists || b.lists, sharedDone: a.sharedDone || b.sharedDone, invites: a.invites || b.invites } : b);
+
+/**
+ * De antwoorden van de server op wat de outbox in de lopende ronde verstuurde (op volgorde), en of er iets misging
+ * (geweigerd, opzij gezet, niet verstuurd): dan is alleen een volledige takenlijst betrouwbaar.
+ */
+let answered = /** @type {{ op: any, res: any }[]} */ ([]);
+let answerTrouble = false;
+
+/**
+ * Zet het antwoord van de server op een verstuurde wijziging in de lokale taak: wat de server zelf invulde (positie,
+ * tijden, ritme, wie hem heeft) staat dan meteen goed, zonder de hele lijst op te halen.
+ */
+function applyAnswer(op, res) {
+  if (!res || typeof res !== 'object' || typeof res.id !== 'string') return;
+  if (op.type !== 'create' && op.type !== 'update') return;
+  const t = find(res.id);
+  if (t) Object.assign(t, res);
+  else if (op.type === 'create' && !res.done && !res.deleted_at) state.open.push(res);
 }
 
 /** Lokaal toepassen en in de outbox zetten. Resolvet zodra de wijziging veilig in IndexedDB staat (nog niet verstuurd). */
@@ -364,9 +412,10 @@ async function drainOutbox(flags) {
   for (let ops = await db.outboxAll(); ops.length; ops = await db.outboxAll()) {
     for (const op of ops) {
       try {
-        await sendOp(op, device);
+        answered.push({ op, res: await sendOp(op, device) });
         serverOkAt = Date.now();
       } catch (e) {
+        answerTrouble = true;
         if (e instanceof Offline) {
           state.offline = true;
           return false;
@@ -400,17 +449,27 @@ async function drainOutbox(flags) {
 
 let loading = null; // de ronde die nu loopt
 let again = null; // de ene ronde daarna, voor iedereen die intussen om een load vroeg
+let wanted = /** @type {Parts | null} */ (null); // wat de volgende ronde ophaalt: alles wat de aanvragers samen willen
 
 /**
  * Eerst de outbox versturen, dan de lijst van de server halen. Offline blijft de lokale lijst staan.
  * Loopt er al een ronde, dan volgt er na afloop precies één nieuwe: snel na elkaar afvinken of typen geeft zo niet
  * per wijziging een volledige ronde. Wie wacht, krijgt de stand van na zijn aanvraag.
+ * @param {Parts} [parts] wat er opgehaald moet worden; zonder: alles (na een eigen wijziging: zie partsFor)
  */
-export function load() {
-  if (!loading) return (loading = loadOnce().finally(() => { loading = null; }));
+export function load(parts = ALL) {
+  wanted = joinParts(wanted, parts);
+  if (!loading) return startLoad();
   // Ook na een mislukte ronde: anders blijft `again` op die fout staan en volgt er nooit meer een ronde.
-  again ??= loading.catch(() => {}).then(() => { again = null; return load(); });
+  // Startte intussen al een ronde (die nam `wanted` mee), dan is dat de ronde voor deze aanvragers.
+  again ??= loading.catch(() => {}).then(() => { again = null; return loading ?? (wanted ? startLoad() : undefined); });
   return again;
+}
+
+function startLoad() {
+  const parts = wanted ?? ALL;
+  wanted = null;
+  return (loading = loadOnce(parts).finally(() => { loading = null; }));
 }
 
 /**
@@ -434,9 +493,40 @@ export async function refreshInvites() {
 /** Een fout bij lijsten of uitnodigingen houdt de taken niet tegen (dan null: de oude stand blijft); offline wel. */
 const soft = (p) => p.catch((e) => { if (e instanceof Offline) throw e; return null; });
 
-async function loadOnce() {
+/**
+ * Een ronde zonder nieuwe takenlijst, na alleen lichte wijzigingen die allemaal goed aankwamen: de antwoorden van de
+ * server gaan in de lokale taken, en alleen als dat nodig is de lijsten. Geeft false als het toch niet kan (dan haalt
+ * de ronde alles wat `parts` vraagt, met de takenlijst erbij).
+ * @param {Parts} parts @param {boolean} drained
+ */
+async function lightRound(parts, drained) {
+  if (parts.tasks || !drained || answerTrouble || !answered.every(({ op }) => lightOp(op))) return false;
+  for (const { op, res } of answered) applyAnswer(op, res);
+  const owned = await ownerReady;
+  if (parts.lists) {
+    try {
+      state.serverLists = await request('GET', '/api/lists');
+      if (owned) db.kvSet('lists', state.serverLists).catch(() => {});
+    } catch (e) {
+      if (e instanceof Offline) state.offline = true; // de wijzigingen zelf staan al op de server
+    }
+  }
+  // De lokale kopie volgt, zodat Tick offline opent met wat de server nu heeft. Alleen met een lege outbox: anders
+  // past init de wachtende wijzigingen er nog eens overheen (twee keer doorschuiven van een herhaling).
+  if (owned && !(await db.outboxAll().catch(() => [1])).length) db.kvSet('open', state.open.filter((t) => !t.done)).catch(() => {});
+  changed();
+  return true;
+}
+
+/** @param {Parts} parts */
+async function loadOnce(parts) {
+  answered = [];
+  answerTrouble = false;
   // Een fout in de outbox (IndexedDB) houdt het ophalen van de server niet tegen; de wijzigingen blijven erin staan.
-  await sync().catch((e) => report(tr('store.save_failed', { reason: e.message })));
+  const drained = await sync().catch((e) => { report(tr('store.save_failed', { reason: e.message })); return false; });
+  if (await lightRound(parts, drained === true)) return;
+  // Ging er iets mis met een wijziging, dan ook alles wat die geraakt kan hebben (zoals een zware wijziging).
+  if (!parts.tasks) parts = joinParts(parts, { tasks: true, lists: true, sharedDone: true, invites: false });
   try {
     // Alles tegelijk: elk verzoek is een ronde over het netwerk. Afgeronde taken laden we maar tot 200, dus daarin zoekt de server.
     const q = state.query.trim();
@@ -445,11 +535,11 @@ async function loadOnce() {
     const [open, done, serverLists, invites, hits, sharedDone, listInvites] = await Promise.all([
       request('GET', '/api/tasks'),
       state.showDone ? request('GET', '/api/tasks?done=1&limit=200' + (q ? '&q=' + encodeURIComponent(q) : '')) : null,
-      soft(request('GET', '/api/lists')),
-      soft(request('GET', '/api/shares/incoming')),
+      parts.lists ? soft(request('GET', '/api/lists')) : null,
+      parts.invites ? soft(request('GET', '/api/shares/incoming')) : null,
       hitQ ? soft(request('GET', '/api/tasks?done=1&limit=50&q=' + encodeURIComponent(hitQ))) : null,
-      soft(request('GET', '/api/tasks?shared_done=1')),
-      soft(request('GET', '/api/shared-lists/incoming')),
+      parts.sharedDone ? soft(request('GET', '/api/tasks?shared_done=1')) : null,
+      parts.invites ? soft(request('GET', '/api/shared-lists/incoming')) : null,
     ]);
     serverOkAt = Date.now(); // de server antwoordde (GET /api/tasks gaf 2xx)
     const owned = await ownerReady; // false: de lokale gegevens kunnen van een ander zijn, dan niet lezen of schrijven

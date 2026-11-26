@@ -191,14 +191,48 @@ describe('store: verversen', () => {
   };
   afterEach(() => vi.restoreAllMocks());
 
-  it('drie snelle wijzigingen geven hoogstens twee keer GET /api/tasks, en alle PATCHes gaan mee', async () => {
+  it('drie snelle zware wijzigingen geven hoogstens twee keer GET /api/tasks, en alle PATCHes gaan mee', async () => {
     await db.clearAll(); await ensureOwner('user-load');
     state.open = ['l1', 'l2', 'l3'].map((id, i) => ({ id, title: id, list: 'Inbox', parent_id: null, position: i, done: false, done_at: null })) as any;
     const { calls } = fakeServer(20);
-    await Promise.all(['l1', 'l2', 'l3'].map((id) => update(id, { title: id + '!' })));
+    await Promise.all(['l1', 'l2', 'l3'].map((id) => update(id, { list: 'Werk' })));
     expect(calls.filter((c) => c === 'GET /api/tasks')).toHaveLength(2);
     expect(calls.filter((c) => c.startsWith('PATCH'))).toHaveLength(3);
+    // Na een eigen wijziging niet de uitnodigingen (die haalt de poll en elke volledige ronde).
+    expect(calls.filter((c) => c.includes('/incoming'))).toEqual([]);
     expect(await db.outboxAll()).toEqual([]);
+  });
+
+  it('een lichte wijziging (titel) haalt geen takenlijst op: het antwoord van de server gaat in de taak', async () => {
+    await db.clearAll(); await ensureOwner('user-load');
+    state.open = [{ id: 'k1', title: 'oud', list: 'Inbox', parent_id: null, position: 0, done: false, done_at: null, updated_at: 'x' }] as any;
+    const calls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any, opts: any) => {
+      calls.push(`${opts?.method ?? 'GET'} ${String(input)}`);
+      // De server zet de titel zoals hij hem bewaarde en vult zelf updated_at in.
+      const body = opts?.method === 'PATCH' ? { ...(state.open[0] as any), title: 'nieuw (server)', updated_at: 'y' } : [];
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    await Promise.all([update('k1', { title: 'nieuw' }), update('k1', { pinned: true })]);
+    expect(calls.filter((c) => c.startsWith('GET'))).toEqual([]);
+    expect(calls.filter((c) => c.startsWith('PATCH'))).toHaveLength(2);
+    expect(state.open[0]).toMatchObject({ title: 'nieuw (server)', updated_at: 'y' });
+    // De lokale kopie volgt (voor offline openen).
+    expect((await db.kvGet('open'))[0]).toMatchObject({ title: 'nieuw (server)' });
+  });
+
+  it('mislukt een lichte wijziging, dan toch de hele takenlijst', async () => {
+    await db.clearAll(); await ensureOwner('user-load');
+    state.open = [{ id: 'k2', title: 'oud', list: 'Inbox', parent_id: null, position: 0, done: false, done_at: null }] as any;
+    const calls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any, opts: any) => {
+      calls.push(`${opts?.method ?? 'GET'} ${String(input)}`);
+      if (opts?.method === 'PATCH') return new Response(JSON.stringify({ error: 'nee' }), { status: 400, headers: { 'content-type': 'application/json' } });
+      return new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    await update('k2', { title: 'nieuw' });
+    expect(calls).toContain('GET /api/tasks');
+    expect(state.open).toEqual([]); // de stand van de server
   });
 
   it('een mislukte ronde houdt de volgende rondes niet tegen', async () => {
