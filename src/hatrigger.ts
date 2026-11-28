@@ -5,6 +5,7 @@ import { sessionOnly } from './guards';
 import { userSettingStmt } from './prefs';
 import { inBackground, notifyUser, reminderPayload, sendToAll, type Locale } from './push';
 import { translate } from '../public/i18n.js';
+import { clearHeldStmt, holdEarly, on as condAllOn } from './condall'; // testfeature condall
 
 /**
  * Home Assistant-triggers (eerst testfeature "hatrigger", sinds 2026-11-24 voor iedereen). De HA-integratie (home-assistant/custom_components/tick) stuurt
@@ -227,22 +228,28 @@ haTriggerApi.put('/tasks/:id', async (c) => {
   const ids = [...new Set(body.ids as string[])].filter((id) => known.has(id));
   if (ids.length && !links[taskId] && Object.keys(links).length >= MAX_TASKS) throw new HttpError(400, 'err.hatrigger_too_many', { max: MAX_TASKS });
   // Altijd weer klaar: de meldstand van deze taak gaat weg.
-  await c.env.DB.batch([linkStmt(c.env, userId, taskId, ids.length ? ids : null), c.env.DB.prepare('DELETE FROM hatrigger_fired WHERE task_id = ?').bind(taskId)]);
+  await c.env.DB.batch([linkStmt(c.env, userId, taskId, ids.length ? ids : null), c.env.DB.prepare('DELETE FROM hatrigger_fired WHERE task_id = ?').bind(taskId),
+    ...(condAllOn(c.env) ? [clearHeldStmt(c.env, userId, taskId)] : [])]); // testfeature condall: een onthouden trigger vergeten
   return c.json({ task: taskId, link: ids.length ? { ids, fired: null, rep: null, by: null } : null });
 });
 
-type FireRow = { id: string; title: string; description: string; done: number; deleted_at: string | null; repeat_at: string | null };
+type FireRow = { id: string; title: string; description: string; done: number; deleted_at: string | null; repeat_at: string | null; remind_at?: string | null; loc_lat?: number | null };
 
 /**
  * Eén persoon: elke open taak die op `linkId` wacht en nog klaarstaat, wordt geclaimd (claimStmt, in één batch). Geeft
  * alleen de taken die dit verzoek kreeg: een ander verzoek dat tegelijk loopt, krijgt ze niet ook.
  */
-async function fireFor(env: Env, userId: string, linkId: string, now: string): Promise<FireRow[]> {
+async function fireFor(env: Env, userId: string, linkId: string, now: string, name = ''): Promise<FireRow[]> {
   const links = await readLinks(env, userId);
   const candidates = Object.entries(links).filter(([, l]) => l.ids.includes(linkId)).map(([taskId]) => taskId);
   if (!candidates.length) return [];
-  const rows = (await env.DB.prepare('SELECT id, title, description, done, deleted_at, repeat_at FROM tasks WHERE user_id = ? AND id IN (SELECT value FROM json_each(?))')
+  const rows = (await env.DB.prepare('SELECT id, title, description, done, deleted_at, repeat_at, remind_at, loc_lat FROM tasks WHERE user_id = ? AND id IN (SELECT value FROM json_each(?))')
     .bind(userId, JSON.stringify(candidates)).all<FireRow>()).results;
+  // testfeature condall: met "Pas als alles klopt" en de tijd nog niet daar, onthouden in plaats van melden.
+  const early = condAllOn(env)
+    ? await holdEarly(env, userId, rows.filter((r) => !r.done && !r.deleted_at && armed(links[r.id], r.repeat_at)), linkId, name, now)
+    : new Set<string>();
+  for (const id of early) candidates.splice(candidates.indexOf(id), 1); // condall
   const byId = new Map(rows.map((r) => [r.id, r]));
   const stmts: D1PreparedStatement[] = [];
   const claimed: (FireRow | null)[] = [];
@@ -281,8 +288,8 @@ haTriggerApi.post('/fire', async (c) => {
   const others = share.all || Object.keys(share.per).length
     ? recipients(share, id, new Set((await partners(c.env, userId)).map((p) => p.id))) : [];
   const results = await Promise.all([
-    fireFor(c.env, userId, id, now).then((fire) => ({ who: userId, fire })),
-    ...others.map((who) => fireFor(c.env, who, sharedId(userId, id), now).then((fire) => ({ who, fire }))),
+    fireFor(c.env, userId, id, now, trigger.name).then((fire) => ({ who: userId, fire })), // trigger.name: voor condall
+    ...others.map((who) => fireFor(c.env, who, sharedId(userId, id), now, trigger.name).then((fire) => ({ who, fire }))),
   ]);
   await writeTriggers(c.env, userId, triggers).run();
 

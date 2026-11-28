@@ -513,6 +513,26 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 /* Al gemeld: een regel onder de plek, ingesprongen tot de zin erboven; alleen "Opnieuw melden" is een knop. */
 .loc-sub { display: flex; align-items: center; min-height: 44px; margin: -10px 0 0 40px; color: var(--muted); font-size: .8125rem; }
 .loc-sub .linkbtn { min-height: 44px; }
+/* testfeature condall (public/condall.js): het verbindingswoord "of"/"én" op de lijn tussen twee voorwaarden, recht onder
+   de stippen (12 px rand + 16 px = midden van de stip), zodat de rij niet hoger wordt; de uitlegzin eronder; het venster. */
+.condall-step { position: relative; }
+.condall-conn { position: absolute; z-index: 3; left: 28px; top: 0; translate: -50% -50%; min-height: 0; padding: 1px 8px; border: 1px solid color-mix(in srgb, var(--link) 35%, var(--line)); border-radius: 999px;
+  background: var(--card); color: var(--link); font-size: .75rem; line-height: 16px; font-weight: 500; }
+.condall-conn::before { content: ""; position: absolute; inset: -14px -10px; } /* tikvlak van 44 px hoog */
+.condall-conn.and { background: color-mix(in srgb, var(--link) 13%, var(--card)); border-color: color-mix(in srgb, var(--link) 55%, transparent); font-weight: 650; }
+.condall-conn:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+#detail .rgroup > .condall-sum { border-top: 1px solid var(--line); }
+#detail .rgroup > .condall-sum + .step { border-top: 1px solid var(--line); }
+.condall-sum { display: flex; gap: 10px; padding: 9px 14px 10px 18px; background: var(--inset, var(--fill)); color: var(--muted); font-size: .8125rem; line-height: 1.4; }
+.condall-sum .ico { flex: none; width: 15px; height: 15px; margin-top: 1px; color: var(--bell); }
+.condall-dialog > div[role="radiogroup"] { margin: 0 0 12px; }
+.condall-opt { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.condall-opt:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--card)); }
+.condall-opt.off { opacity: .55; cursor: default; }
+.condall-opt input { flex: none; width: 20px; height: 20px; min-height: 0; margin: 1px 0 0; padding: 0; accent-color: var(--accent); }
+.condall-opt > span { display: grid; gap: 2px; }
+.condall-opt > span > span { color: var(--muted); font-size: .875rem; line-height: 1.4; }
+.dialog p.condall-need { margin: -4px 0 12px; font-size: .8125rem; }
 .linkbtn { min-height: 28px; padding: 4px 2px; border: 0; background: none; color: var(--link, var(--accent)); font: inherit; cursor: pointer; }
 .linkbtn:hover { text-decoration: underline; }
 .loc-done { display: inline-block; padding: 6px 0; color: var(--ok); animation: loc-done 2s forwards; }

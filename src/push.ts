@@ -2,6 +2,8 @@ import { buildPushHTTPRequest } from '@pushforge/builder';
 import type { Env } from './index';
 import { loadUserPrefs, type InstallPrefs, type UserPrefs } from './prefs';
 import { getUser } from './users';
+import { testFeature } from './features'; // testfeature condall
+import { gateReminders } from './condall'; // testfeature condall
 import { translate } from '../public/i18n.js';
 
 type Sub = { endpoint: string; p256dh: string; auth: string; locale: string | null };
@@ -218,9 +220,14 @@ export type Sender = typeof sendToAll;
  * als iedereen klaar is. Een nieuwe remind_at (snoozen, doorschuiven, wijzigen) telt vanzelf als nog niet gemeld.
  */
 export async function runReminders(env: Env, install: InstallPrefs, send: Sender = pushRound()): Promise<void> {
-  const due = (await env.DB.prepare(
+  let due = (await env.DB.prepare(
     'SELECT id,user_id,parent_id,title,description,remind_at,repeat_at FROM tasks WHERE done = 0 AND notified = 0 AND deleted_at IS NULL AND remind_at IS NOT NULL AND remind_at <= ?',
   ).bind(new Date().toISOString()).all<{ id: string; user_id: string; parent_id: string | null; title: string; description: string; remind_at: string; repeat_at: string | null }>()).results;
+  // testfeature condall: met "Pas als alles klopt" is de tijd een poort, geen eigen melding (src/condall.ts).
+  if (testFeature(env, 'condall')) {
+    const gated = await gateReminders(env, due, install.defaultLocale, send);
+    due = due.filter((t) => !gated.has(t.id));
+  }
 
   // Per gebruiker één keer lezen per run (ook als twee taken tegelijk naar hem vragen); null = de gebruiker bestaat niet meer.
   const people = new Map<string, Promise<UserPrefs | null>>();

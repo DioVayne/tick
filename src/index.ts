@@ -45,6 +45,7 @@ import { firstFree, futureBusy } from './clash';
 import { testFeatures } from './features';
 import { demoAllowed, demoApi, demoGate, demoPages, purgeDemos } from './demo';
 import { haTriggerApi } from './hatrigger';
+import { condAllApi, markConditions, on as condAllOn } from './condall'; // testfeature condall
 import { taskIcs } from '../public/ics.js';
 
 export type Env = {
@@ -344,6 +345,7 @@ app.route('/api/background', backgroundApi);
 app.route('/api/calendar', calendarApi);
 app.route('/api/demo', demoApi);
 app.route('/api/hatrigger', haTriggerApi); // Home Assistant-triggers
+app.route('/api/condall', condAllApi); // testfeature condall (404 als hij uit staat)
 // De MCP-tools roepen deze app zelf aan (met dezelfde sleutel); pas bij een request, dus alle routes staan er dan.
 app.route('/mcp', mcpApi((req, env, ctx) => Promise.resolve(app.fetch(req, env, ctx))));
 
@@ -823,6 +825,7 @@ app.get('/api/tasks', async (c) => {
   // Sorteren na overlay: een deelnemer heeft zijn eigen positie in zijn deelrij.
   const rows = await visibleTasks(db, userId, `t.done = 0 AND t.deleted_at IS NULL${search.sql}`, search.binds);
   const out = present(rows, userId, ...await extras(c.env, userId, rows)).sort(byPin);
+  if (condAllOn(c.env)) await markConditions(c.env, out); // testfeature condall: conditions "all" voor de Android-app
   return c.json(out);
 });
 

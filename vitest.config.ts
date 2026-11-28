@@ -40,7 +40,7 @@ export default defineConfig({
           MAIL_FROM: '',
           CALENDAR_FEEDS: 'true',
           // De testfeatures staan in de tests aan (src/features.ts): zet hier hun namen neer.
-          TEST_FEATURES: 'placecheck',
+          TEST_FEATURES: 'placecheck,condall',
           TEST_MIGRATIONS: migrations,
         },
       },

@@ -42,6 +42,8 @@ final class GeoPlan {
         final boolean exit;
         /** "car" of "bike" als de cirkel onderweg vergroot is, anders "". */
         final String mode;
+        /** testfeature condall: een aankomst na de poort van "Pas als alles klopt", met initial trigger (je bent er al). */
+        boolean initial;
 
         Fence(String id, String title, String name, String key, double lat, double lng, float radius, boolean exit, String mode) {
             this(id, 0, title, name, key, lat, lng, radius, exit, mode);
@@ -153,6 +155,11 @@ final class GeoPlan {
      * latere taak met minder plekken er nog wel bij. roadRadii is per geofence (Fence.fid).
      */
     static Plan plan(JSONArray tasks, JSONObject fired, int max, Map<String, Float> roadRadii, String mode) {
+        return plan(tasks, fired, max, roadRadii, mode, System.currentTimeMillis());
+    }
+
+    /** Zie plan; now is voor de testfeature condall (de poort van "Pas als alles klopt"). */
+    static Plan plan(JSONArray tasks, JSONObject fired, int max, Map<String, Float> roadRadii, String mode, long now) {
         Plan p = new Plan();
         List<Fence> out = p.fences;
         for (int i = 0; i < tasks.length(); i++) {
@@ -160,6 +167,7 @@ final class GeoPlan {
             if (t == null || t.optBoolean("done") || t.optBoolean("location_notified")) continue;
             JSONObject loc = t.optJSONObject("location");
             if (loc == null) continue;
+            if (CondAll.waiting(t, now)) continue; // testfeature condall: de plek pas na de tijd bewaken
             String id = t.optString("id");
             String key = key(loc);
             if (id.isEmpty() || key.equals(fired.optString(id, null))) continue;
@@ -174,8 +182,10 @@ final class GeoPlan {
                 float radius = (float) pl.optDouble("radius");
                 Float road = exit ? null : roadRadii.get(fid(id, idx));
                 boolean bigger = road != null && road > radius && mode != null && !mode.isEmpty();
-                out.add(new Fence(id, idx, t.optString("title"), pl.optString("name"), key, pl.optDouble("lat"),
-                        pl.optDouble("lng"), bigger ? road : radius, exit, bigger ? mode : ""));
+                Fence f = new Fence(id, idx, t.optString("title"), pl.optString("name"), key, pl.optDouble("lat"),
+                        pl.optDouble("lng"), bigger ? road : radius, exit, bigger ? mode : "");
+                f.initial = !exit && CondAll.open(t, now); // testfeature condall
+                out.add(f);
             }
         }
         return p;
@@ -299,7 +309,7 @@ final class GeoPlan {
         }
         for (Fence f : fences) {
             if (registered.contains(requestId(f))) continue;
-            if (!f.exit && f.mode.isEmpty() && wasRoad.contains(f.id)) d.addArrived.add(f);
+            if (!f.exit && f.mode.isEmpty() && wasRoad.contains(f.id) || f.initial) d.addArrived.add(f); // f.initial: testfeature condall
             else d.add.add(f);
         }
         return d;

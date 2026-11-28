@@ -95,6 +95,8 @@ export const haNames = (ids, triggers = data.triggers) => {
   const names = ids.map((id) => triggers.find((x) => x.id === id)?.name).filter(Boolean);
   return names.length ? names.join(t('hatrigger.or')) : null;
 };
+/** testfeature condall: de namen van de gekozen triggers van een taak, of null. @param {string} taskId */
+export const haLinkedNames = (taskId) => haNames(data.tasks[taskId]?.ids ?? []);
 /** @param {string} taskId @param {string[]} ids */
 export const linkTriggers = (taskId, ids) => save(taskId, ids.filter((id) => data.triggers.some((x) => x.id === id)));
 

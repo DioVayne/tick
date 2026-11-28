@@ -20,6 +20,8 @@ final class NotifyDecision {
         AL_AFGEGAAN,
         /** Aankomst bij een vertrek-plek of andersom. */
         ANDERE_RICHTING,
+        /** testfeature condall: "Pas als alles klopt" en de tijd is er nog niet. */
+        TE_VROEG,
     }
 
     /**
@@ -28,10 +30,16 @@ final class NotifyDecision {
      * fired: taak-id -> key van een plek die al afging. pending: taken die net in de widget afgevinkt zijn.
      */
     static Result decide(JSONArray tasks, String id, String fenceKey, boolean exitEvent, JSONObject fired, JSONObject pending) {
+        return decide(tasks, id, fenceKey, exitEvent, fired, pending, System.currentTimeMillis());
+    }
+
+    /** Zie decide; now is voor de testfeature condall. */
+    static Result decide(JSONArray tasks, String id, String fenceKey, boolean exitEvent, JSONObject fired, JSONObject pending, long now) {
         JSONObject task = find(tasks, id);
         if (task == null) return Result.GEEN_TAAK;
         if (task.optBoolean("done") || pending.has(id)) return Result.AF;
         if (task.optBoolean("location_notified")) return Result.AL_GEMELD;
+        if (CondAll.waiting(task, now)) return Result.TE_VROEG; // testfeature condall
         JSONObject loc = task.optJSONObject("location");
         if (loc == null) return Result.ANDERE_PLEK;
         String key = GeoPlan.key(loc);

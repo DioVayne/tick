@@ -6,11 +6,11 @@ import type { Env } from './index';
 
 /**
  * De testfeatures die deze code kent. Een naam die hier niet staat, zet niets aan. "placecheck": proefmelding en uitleg per merk in de Android-app (PlaceCheck.java;
- * de app hoort het via /api/config). Eerder getest en verwijderd: "freetime" (migratie 0029 ruimt zijn instellingen op).
+ * de app hoort het via /api/config). "condall": condities combineren met "Pas als alles klopt" (src/condall.ts). Eerder getest en verwijderd: "freetime" (migratie 0029 ruimt zijn instellingen op).
  * Eerder getest en een gewone functie geworden: "quickdate" (datum uit de tekst, public/quickdate.js) en "hatrigger"
  * (Home Assistant-triggers, src/hatrigger.ts).
  */
-export const TEST_FEATURES: readonly string[] = ['placecheck'];
+export const TEST_FEATURES: readonly string[] = ['placecheck', 'condall'];
 export type TestFeature = string;
 
 /** De testfeatures die op deze Tick aanstaan (alleen bekende namen, zonder dubbele). */

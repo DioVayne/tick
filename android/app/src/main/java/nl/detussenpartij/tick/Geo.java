@@ -63,6 +63,7 @@ final class Geo {
             Prefs.setGeoSig(app, null);
             return;
         }
+        CondAllAlarm.schedule(app, tasks); // testfeature condall: wekker op de eerstvolgende poort
         // Onderweg (auto of fiets) zijn aankomstcirkels groter; zie Road.
         final List<GeoPlan.Fence> fences = GeoPlan.select(tasks, Prefs.locFired(app), GeoPlan.MAX, Road.radii(app), Road.activeMode(app));
         final String sig = GeoPlan.signature(fences);
@@ -80,7 +81,11 @@ final class Geo {
             return;
         }
         final String reason = force ? why : GeoLog.Why.START;
-        client.removeGeofences(pi).addOnCompleteListener(r -> add(app, client, pi, fences, new ArrayList<>(), sig, ids, reason));
+        // testfeature condall: een aankomst na de poort van "Pas als alles klopt" ook hier met initial trigger.
+        final List<GeoPlan.Fence> plain = new ArrayList<>();
+        final List<GeoPlan.Fence> initial = new ArrayList<>();
+        for (GeoPlan.Fence f : fences) (f.initial ? initial : plain).add(f);
+        client.removeGeofences(pi).addOnCompleteListener(r -> add(app, client, pi, plain, initial, sig, ids, reason));
     }
 
     /**

@@ -198,6 +198,11 @@
             android:name=".ActivityReceiver"
             android:exported="false" />
 
+        <!-- testfeature condall: wekker op de tijd van een taak met "Pas als alles klopt" (CondAllAlarm) -->
+        <receiver
+            android:name=".CondAllAlarm"
+            android:exported="false" />
+
         <!-- testfeature placecheck: de proefmelding in "Tick op deze telefoon" -->
         <receiver
             android:name=".PlaceCheck$Receiver"
