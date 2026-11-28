@@ -692,8 +692,8 @@ function drawRail(t) {
       kind: 'when', icon: 'bell', on: !!remindAt, past, lead: tr(remindAt ? (cond?.all ? 'condall.from' : 'add.when_set') : 'add.when'), value: remindAt ? fmt(remindAt) : null,
       note: remindAt && !done && !past ? duringNote(remindAt) : null,
       open: opener('when', v.pickWhen), stack: true,
-      // Wissen rechts in de rij; "Over 1 uur" op een eigen regel eronder, zodat de datum de ruimte houdt.
-      actions: done || !remindAt ? [] : [clear(v.clearRemind, tr('detail.remove_reminder')), cond?.all ? null : { label: tr('push.snooze'), run: v.snoozeRemind, line: true }],
+      // Wissen rechts in de rij; "Herinner me over 1 uur" alleen als de tijd voorbij is, op een eigen regel eronder (een knop, geen info).
+      actions: done || !remindAt ? [] : [clear(v.clearRemind, tr('detail.remove_reminder')), cond?.all || !past ? null : { label: tr('detail.snooze_hour'), run: v.snoozeRemind, line: true }],
     }),
     done || !remindAt ? null : step({ kind: 'addcal', icon: 'calendar', on: false, lead: tr('detail.add_cal'), open: opener('addcal', v.addToCalendar) }),
     // Een subtaak herhaalt niet; afgerond alleen als er een ritme was.

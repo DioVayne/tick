@@ -109,6 +109,8 @@ export async function setAll(task, all, done) {
 export function condState(task, { done, owner, remindAt }) {
   if (!condAllOn() || task.parent_id || !owner || done) return null;
   const ha = haLinkedNames(task.id);
+  // Tijd + plek + trigger: niets te kiezen (altijd "elk apart"), wel een grijs "of" met uitleg waarom (explainMixed).
+  if (remindAt && task.location && ha) return { kind: /** @type {'mixed'} */ ('mixed'), all: false, blocked: true, held: null, summary: '' };
   const kind = comboOf(task, remindAt, ha);
   if (!kind) return null;
   const all = isAll(task.id);
@@ -130,11 +132,12 @@ export function condState(task, { done, owner, remindAt }) {
 export function chooseMode(task, st, remindAt, done) {
   const when = fmt(remindAt);
   const ha = haLinkedNames(task.id);
+  const kind = /** @type {'place' | 'ha'} */ (st.kind);
   const option = (all, title) => {
     const input = /** @type {HTMLInputElement} */ (el('input', { type: 'radio', name: 'condall-mode', value: all ? 'all' : 'each', checked: all === st.all,
       disabled: all && st.blocked && !st.all }));
     return el('label', { class: 'condall-opt' + (input.disabled ? ' off' : '') }, input,
-      el('span', {}, el('b', {}, title), el('span', {}, summary(st.kind, all, when, task.location, ha) + (all ? ' ' + t('condall.from_note') : ''))));
+      el('span', {}, el('b', {}, title), el('span', {}, summary(kind, all, when, task.location, ha) + (all ? ' ' + t('condall.from_note') : ''))));
   };
   let settled = false;
   // Na het venster terug naar het verbindingswoord (na opslaan is dat een nieuw knopje: de tijdlijn is opnieuw getekend).
@@ -166,6 +169,32 @@ export function chooseMode(task, st, remindAt, done) {
 }
 
 /**
+ * Het venster na een tik op het grijze "of" (tijd + plek + trigger): alleen de uitleg waarom "Alles tegelijk" niet kan, en
+ * Oké. Geen keuzes: een uitgeschakelde keuze zou suggereren dat er iets te regelen valt.
+ */
+function explainMixed() {
+  const back = () => /** @type {HTMLElement | null} */ (document.querySelector('#detail .condall-conn'))?.focus({ preventScroll: true });
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    if (dialog.open) dialog.close();
+    dialog.remove();
+    back();
+  };
+  const dialog = /** @type {HTMLDialogElement} */ (el('dialog', { class: 'dialog condall-dialog', 'aria-labelledby': 'condall-title' },
+    el('h2', { id: 'condall-title' }, t('condall.dialog_title')),
+    el('p', {}, t('condall.mixed_text')),
+    el('div', { class: 'dialog-buttons' }, el('button', { type: 'button', onclick: close }, t('condall.ok')))));
+  dialog.addEventListener('click', (e) => { if (e.target === dialog) close(); });
+  dialog.addEventListener('keydown', (e) => { if (e.key === 'Escape') e.stopPropagation(); });
+  dialog.addEventListener('close', close); // Esc
+  document.body.append(dialog);
+  dialog.showModal();
+  /** @type {HTMLElement | null} */ (dialog.querySelector('button'))?.focus();
+}
+
+/**
  * De tijdlijn van het detailpaneel met en/of (marked "condall" in public/detail.js): het verbindingswoord "of" / "én" op
  * de lijn boven elke voorwaarde van een andere soort dan de tijd, de uitlegzin direct onder de voorwaarden, en de
  * stappen die geen voorwaarde zijn (Herhalen, Zet in je agenda, een lege stap van de andere soort) daaronder, zodat de keten niet breekt. Zonder `st` blijft
@@ -179,6 +208,19 @@ export function chooseMode(task, st, remindAt, done) {
 export function chain(props, task, st, { remindAt, onChange }) {
   if (!st || !remindAt) return props;
   const is = (s, kind) => s.classList.contains(`step-${kind}`);
+  if (st.kind === 'mixed') {
+    // Tijd + plek + trigger: één grijs "of" tussen de tijd en de eerste voorwaarde; Agenda en Herhalen eronder.
+    const conds = props.filter((s) => (is(s, 'place') || is(s, 'hatrigger')) && s.classList.contains('on'));
+    if (!props.some((s) => is(s, 'when')) || !conds.length) return props;
+    conds[0].classList.add('condall-step');
+    conds[0].prepend(el('button', {
+      type: 'button', class: 'condall-conn off', 'aria-haspopup': 'dialog', 'aria-label': t('condall.conn_mixed_label'), onclick: explainMixed,
+    }, t('condall.or')));
+    const moved = props.filter((s) => is(s, 'addcal') || is(s, 'repeat'));
+    const rest = props.filter((s) => !moved.includes(s));
+    const last = rest.indexOf(conds[conds.length - 1]);
+    return [...rest.slice(0, last + 1), ...moved, ...rest.slice(last + 1)];
+  }
   const condKind = st.kind === 'place' ? 'place' : 'hatrigger';
   const when = props.find((s) => is(s, 'when'));
   const conds = props.filter((s) => is(s, condKind));

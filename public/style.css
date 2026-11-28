@@ -513,17 +513,25 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 /* Al gemeld: een regel onder de plek, ingesprongen tot de zin erboven; alleen "Opnieuw melden" is een knop. */
 .loc-sub { display: flex; align-items: center; min-height: 44px; margin: -10px 0 0 40px; color: var(--muted); font-size: .8125rem; }
 .loc-sub .linkbtn { min-height: 44px; }
-/* testfeature condall (public/condall.js): het verbindingswoord "of"/"én" op de lijn tussen twee voorwaarden, recht onder
-   de stippen (12 px rand + 16 px = midden van de stip), zodat de rij niet hoger wordt; de uitlegzin eronder; het venster. */
-.condall-step { position: relative; }
-.condall-conn { position: absolute; z-index: 3; left: 28px; top: 0; translate: -50% -50%; min-height: 0; padding: 1px 8px; border: 1px solid color-mix(in srgb, var(--link) 35%, var(--line)); border-radius: 999px;
-  background: var(--card); color: var(--link); font-size: .75rem; line-height: 16px; font-weight: 500; }
-.condall-conn::before { content: ""; position: absolute; inset: -14px -10px; } /* tikvlak van 44 px hoog */
+/* testfeature condall (public/condall.js): het verbindingswoord "of"/"én" tussen de tijd en een voorwaarde, in een eigen
+   strook boven de voorwaarde (--cg hoog), midden onder de stippen (12 px rand + 16 px = midden van de stip), op een kort
+   lijntje naar de stip; de uitlegzin eronder; het venster. Grijs ("off"): tijd + plek + trigger, alleen uitleg. */
+.condall-step { --cg: 26px; position: relative; padding-top: var(--cg); }
+#detail .rgroup > .step + .step.condall-step { border-top: 0; }
+.condall-step::before { content: ""; position: absolute; left: 27px; top: 0; height: calc(var(--cg) + 9px); width: 2px; border-radius: 1px; background: color-mix(in srgb, var(--muted) 35%, transparent); }
+/* De stip boven in de rij (niet midden), zodat het lijntje er ook bij een zin over twee regels precies op uitkomt. */
+.condall-step > .step-row > .step-head { align-items: flex-start; }
+.condall-step > .step-row > .step-head > .step-txt { align-self: center; }
+.condall-step > .step-row .step-dot { margin-top: 9px; }
+.condall-conn { position: absolute; z-index: 3; left: 28px; top: calc(var(--cg) / 2); translate: -50% -50%; min-height: 0; padding: 1px 9px; border: 1px solid color-mix(in srgb, var(--link) 35%, var(--line)); border-radius: 999px;
+  background: var(--card); color: var(--link); font-size: .75rem; line-height: 16px; font-weight: 500; white-space: nowrap; }
+.condall-conn::before { content: ""; position: absolute; inset: -12px -6px; } /* tikvlak van 44 px hoog, over de lege strook */
 .condall-conn.and { background: color-mix(in srgb, var(--link) 13%, var(--card)); border-color: color-mix(in srgb, var(--link) 55%, transparent); font-weight: 650; }
+.condall-conn.off { color: var(--muted); border-color: color-mix(in srgb, var(--muted) 40%, transparent); }
 .condall-conn:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 #detail .rgroup > .condall-sum { border-top: 1px solid var(--line); }
 #detail .rgroup > .condall-sum + .step { border-top: 1px solid var(--line); }
-.condall-sum { display: flex; gap: 10px; padding: 9px 14px 10px 18px; background: var(--inset, var(--fill)); color: var(--muted); font-size: .8125rem; line-height: 1.4; }
+.condall-sum { display: flex; gap: 12px; padding: 12px 16px 13px 21px; background: var(--inset, var(--fill)); color: var(--muted); font-size: .8125rem; line-height: 1.45; }
 .condall-sum .ico { flex: none; width: 15px; height: 15px; margin-top: 1px; color: var(--bell); }
 .condall-dialog > div[role="radiogroup"] { margin: 0 0 12px; }
 .condall-opt { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
