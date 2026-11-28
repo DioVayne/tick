@@ -12,7 +12,8 @@
 // Any failure prints one "STOPPED: <reason>" line, exits 1 and leaves main as it was.
 //
 // Test hooks (env): TICK_WT_ROOT (default C:\dev\wt), TICK_NODE_MODULES (default C:\dev\tick\node_modules),
-// TICK_LAND_CHECKS (a command that replaces the computed checks), TICK_LAND_WAIT_MS.
+// TICK_LAND_CHECKS (a command that replaces the computed checks), TICK_LAND_WAIT_MS,
+// TICK_LAND_STEP (a command run in place of each computed step, with that step's command in TICK_LAND_STEP_CMD).
 // TICK_TEST_WORKERS: vitest workers during a landing (default 2; see testWorkers).
 
 import { spawnSync } from 'node:child_process';
@@ -277,13 +278,13 @@ export function testWorkers(env = process.env) {
   return Number.isInteger(n) && n > 0 ? n : 2;
 }
 
-/** The commands for checks `c` (from pickChecks; `c.vitest` only lists files that exist). */
+/** The commands for checks `c` (from pickChecks, or `{ full: true }` from --full-check; `c.vitest` only lists files that exist). */
 export function checkSteps(c, workers = testWorkers()) {
   const w = `--maxWorkers=${workers}`;
   if (c.full) return [['typecheck', 'npm run typecheck'], ['full test run', `npx vitest run ${w}`], ['tools tests', 'npm run test:tools']];
   const steps = [];
   if (c.typecheck) steps.push(['typecheck', 'npm run typecheck']);
-  if (c.vitest.length) steps.push(['tests', `npx vitest related ${c.vitest.map((f) => `"${f}"`).join(' ')} --run --passWithNoTests ${w}`]);
+  if (c.vitest?.length) steps.push(['tests', `npx vitest related ${c.vitest.map((f) => `"${f}"`).join(' ')} --run --passWithNoTests ${w}`]);
   if (c.tools) steps.push(['tools tests', 'npm run test:tools']);
   return steps;
 }
@@ -294,9 +295,10 @@ function runChecks(wt, c, install) {
   delete env.MANAGER;
   if (process.env.TICK_LAND_CHECKS) return sh(process.env.TICK_LAND_CHECKS, wt, env).ok ? null : 'checks failed';
   if (install) { const r = sh(install, wt, env); if (!r.ok) return `npm ci failed: ${r.hint}`; }
-  const steps = checkSteps({ ...c, vitest: c.vitest.filter((f) => fs.existsSync(path.join(wt, f))) });
+  // --full-check passes { full: true } without a vitest list.
+  const steps = checkSteps({ ...c, vitest: (c.vitest || []).filter((f) => fs.existsSync(path.join(wt, f))) });
   for (const [name, cmd] of steps) {
-    const r = sh(cmd, wt, env);
+    const r = process.env.TICK_LAND_STEP ? sh(process.env.TICK_LAND_STEP, wt, { ...env, TICK_LAND_STEP_CMD: cmd }) : sh(cmd, wt, env);
     if (!r.ok) return `${name} failed${r.hint ? ` (${r.hint})` : ''}`;
   }
   return null;

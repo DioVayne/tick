@@ -182,3 +182,43 @@ test('checks: vitest runs with few workers (default 2, TICK_TEST_WORKERS overrid
   const some = checkSteps({ full: false, typecheck: true, tools: false, vitest: ['src/a.ts'] }, 3).map(([, cmd]) => cmd);
   assert.deepEqual(some, ['npm run typecheck', 'npx vitest related "src/a.ts" --run --passWithNoTests --maxWorkers=3']);
 });
+
+// --full-check through the real step list (not TICK_LAND_CHECKS): each step is replaced by a command that logs it.
+const LOG_STEP = "require('fs').appendFileSync(process.env.STEP_LOG, process.env.TICK_LAND_STEP_CMD + String.fromCharCode(10))";
+const STEP_ECHO = `"${process.execPath}" -e "${LOG_STEP}; process.exit(process.env.MANAGER ? 3 : 0)"`;
+const STEP_FAIL_VITEST = `"${process.execPath}" -e "${LOG_STEP}; process.exit(/vitest/.test(process.env.TICK_LAND_STEP_CMD) ? 1 : 0)"`;
+function fullCheckEnv(env, step) {
+  const nm = path.join(env.dir, 'fake_node_modules');
+  fs.mkdirSync(nm, { recursive: true });
+  fs.writeFileSync(path.join(nm, 'keep.txt'), 'x');
+  return { TICK_LAND_CHECKS: '', TICK_LAND_STEP: step, STEP_LOG: path.join(env.dir, 'steps.log'), TICK_NODE_MODULES: nm, TICK_TEST_WORKERS: '' };
+}
+const stepsRun = (env) => (fs.existsSync(path.join(env.dir, 'steps.log')) ? fs.readFileSync(path.join(env.dir, 'steps.log'), 'utf8').split(String.fromCharCode(10)).map((l) => l.trim()).filter(Boolean) : []);
+
+test('--full-check runs typecheck, the full vitest run with 2 workers and the tools tests on main, then FULL OK', () => {
+  const env = makeRepo();
+  const r = land(env, ['--full-check'], fullCheckEnv(env, STEP_ECHO));
+  assert.equal(r.code, 0, r.out);
+  assert.deepEqual(stepsRun(env), ['npm run typecheck', 'npx vitest run --maxWorkers=2', 'npm run test:tools']);
+  assert.equal(r.out.split('\n').pop(), `FULL OK ${head(env.repo).slice(0, 7)}`);
+  assert.equal(queue(env).lastGoodFull.commit, head(env.repo));
+  assert.ok(fs.existsSync(path.join(env.dir, 'fake_node_modules', 'keep.txt')), 'node_modules link removed, not its target');
+});
+
+test('--full-check: a failing step prints STOPPED and exits 1', () => {
+  const env = makeRepo();
+  const r = land(env, ['--full-check'], fullCheckEnv(env, STEP_FAIL_VITEST));
+  assert.equal(r.code, 1, r.out);
+  const last = r.out.split('\n').pop();
+  assert.match(last, /^STOPPED: full test run failed/);
+  assert.doesNotMatch(last, /unexpected error/);
+  assert.deepEqual(stepsRun(env), ['npm run typecheck', 'npx vitest run --maxWorkers=2']);
+});
+
+test('an unexpected error also prints STOPPED and exits 1', () => {
+  const env = makeRepo();
+  fs.writeFileSync(path.join(env.repo, '.git', 'tick-ideas.json'), '{ not json');
+  const r = land(env, ['--full-check'], fullCheckEnv(env, STEP_ECHO));
+  assert.equal(r.code, 1, r.out);
+  assert.match(r.out.split('\n').pop(), /^STOPPED: /);
+});
