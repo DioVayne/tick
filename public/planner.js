@@ -103,6 +103,52 @@ export function freeFrom(at, busy) {
   return null;
 }
 
+const QUARTER_MS = 15 * 60_000;
+
+/**
+ * De minuten (ms / 60 000) waarop andere open taken al een herinnering hebben: voor de snelkeuzes van het
+ * herinneringsmenu (steps.js). Afgevinkte, verwijderde en de taak zelf (`selfId`) tellen niet mee. `tasks` is wat de
+ * app al geladen heeft (je eigen taken en die met je gedeeld zijn).
+ * @param {{ id?: string, remind_at?: string | null, done?: unknown, deleted_at?: string | null }[]} tasks
+ * @param {string | null | undefined} [selfId]
+ * @returns {Set<number>}
+ */
+export function takenMinutes(tasks, selfId) {
+  /** @type {Set<number>} */
+  const out = new Set();
+  for (const x of tasks) {
+    if (!x.remind_at || x.done || x.deleted_at || (selfId && x.id === selfId)) continue;
+    const ms = Date.parse(x.remind_at);
+    if (Number.isFinite(ms)) out.add(Math.floor(ms / 60_000));
+  }
+  return out;
+}
+
+/**
+ * Een snelkeuze die niet op een andere taak valt: hoort `at` (dezelfde minuut) al bij de herinnering van een andere
+ * taak, dan een kwartier verder, zoals freeFrom na een afspraak op een kwartier verder gaat. Met een agenda (`busy`)
+ * ook nooit op een afspraak. Blijft op dezelfde dag (in de ingestelde zone); lukt dat niet, dan null.
+ * @param {number} at
+ * @param {Set<number>} taken uit takenMinutes
+ * @param {Busy[] | null | undefined} busy
+ * @returns {number | null}
+ */
+export function freeOfTasks(at, taken, busy) {
+  const day = (/** @type {number} */ ms) => { const p = zonedParts(ms); return `${p.y}-${p.m}-${p.d}`; };
+  const start = day(at);
+  for (let guard = 0; guard < 200; guard++) {
+    if (busy) {
+      const free = freeFrom(at, busy);
+      if (free == null) return null;
+      at = free;
+    }
+    if (!taken.has(Math.floor(at / 60_000))) return at;
+    at = Math.floor(at / QUARTER_MS) * QUARTER_MS + QUARTER_MS;
+    if (day(at) !== start) return null;
+  }
+  return null;
+}
+
 /**
  * "vandaag 14:30", "morgen 09:00" of "za 14 nov. 10:00", in de ingestelde zone.
  * @param {number} ms

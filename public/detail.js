@@ -390,7 +390,7 @@ function build(t, readOnly) {
       setPending(id, 'remind_at', fromLocalInput(value));
       flushSoon();
       render(); // de stap en Herhalen meteen bijwerken, niet pas na het opslaan
-    }, { note: task.repeat ? tr('dp.only_this_time') : undefined, onDismiss: backTo(anchor) }); // het ritme (repeat_at) blijft staan
+    }, { note: task.repeat ? tr('dp.only_this_time') : undefined, onDismiss: backTo(anchor), self: id }); // het ritme (repeat_at) blijft staan
   };
   // Zet in je agenda: Google Agenda (een link) of een .ics-bestand voor Outlook, Apple en de rest; 30 minuten vanaf de herinnering.
   const addToCalendar = (anchor) => {

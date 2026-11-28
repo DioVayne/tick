@@ -3,7 +3,8 @@ import { icon } from './icons.js';
 import { el, fromLocalInput, toLocalInput } from './render.js';
 import { openDatePicker } from './datepicker.js';
 import { showMenu } from './popover.js';
-import { busyAt, freeFrom, quickWhen, whenText } from './planner.js';
+import { busyAt, freeOfTasks, quickWhen, takenMinutes, whenText } from './planner.js';
+import { state } from './store.js';
 import { busyNow } from './agenda.js';
 import { openAgendaPicker } from './agendapick.js';
 
@@ -97,24 +98,27 @@ export const closeStepMenu = () => closeMenu?.();
 /**
  * Herinnering kiezen: bovenaan "Kies dag en tijd" (opent de volledige datumkiezer, zonder de snelknoppen die hier al
  * staan), daaronder als hulp hooguit drie snelkeuzes (vandaag, morgen, volgende week). Met een gekoppelde agenda vallen
- * die nooit op een afspraak en staat eronder dat ze op je agenda gebaseerd zijn.
+ * die nooit op een afspraak en staat eronder dat ze op je agenda gebaseerd zijn. Een snelkeuze valt ook nooit op de
+ * herinnering van een andere open taak (dezelfde minuut): dan schuift hij een kwartier op. Zelf kiezen mag wel.
  * `current` en de waarde voor `set` zijn 'YYYY-MM-DDTHH:MM' zoals de datumkiezer; leeg (of null) is wissen.
  * @param {HTMLElement} anchor
  * @param {string} current
  * @param {(value: string) => void} set
- * @param {{ note?: string, onDismiss?: () => void }} [opts]
+ * @param {{ note?: string, onDismiss?: () => void, self?: string | null }} [opts] self: de taak zelf (telt niet als bezet)
  */
-export function openWhenMenu(anchor, current, set, { note, onDismiss } = {}) {
+export function openWhenMenu(anchor, current, set, { note, onDismiss, self } = {}) {
   // Alles in de ingestelde zone (wandklok), niet met de klok van het apparaat.
   const now = Date.now();
   const quick = quickWhen(now);
   // Met een gekoppelde agenda schuift elke snelkeuze naar het eerste vrije moment die dag (of valt weg als de dag vol
-  // zit): een voorstel valt nooit op een afspraak. Zonder agenda: de vaste tijden.
+  // zit): een voorstel valt nooit op een afspraak. Zonder agenda: de vaste tijden. En nooit op een tijd die al bij een
+  // andere open taak hoort (uit wat de app al geladen heeft: je eigen taken en die met je gedeeld zijn).
   const busy = busyNow();
+  const taken = takenMinutes(state.open, self);
   const values = [quick.today, quick.tomorrow, quick.nextWeek].map((value) => {
     const iso = value ? fromLocalInput(value) : null;
-    if (!iso || !busy) return value;
-    const at = freeFrom(Date.parse(iso), busy);
+    if (!iso || (!busy && !taken.size)) return value;
+    const at = freeOfTasks(Date.parse(iso), taken, busy);
     return at == null ? null : toLocalInput(new Date(at).toISOString());
   }).filter((v) => !!v);
   const label = (value) => {

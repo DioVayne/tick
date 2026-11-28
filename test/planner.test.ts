@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { busyAt, calendarSlots, freeFrom, suggest } from '../public/planner.js';
+import { busyAt, calendarSlots, freeFrom, freeOfTasks, suggest, takenMinutes } from '../public/planner.js';
 import { setDefaultTime, setTimeZone } from '../public/repeat.js';
 
 const reset = () => {
@@ -113,5 +113,59 @@ describe('freeFrom: snelkeuzes van het herinneringsmenu vallen nooit op een afsp
   it('een afspraak van een hele dag blokkeert niets', () => {
     const busy = [ev('2026-11-13T00:00:00Z', '2026-11-14T00:00:00Z', true)];
     expect(freeFrom(at('2026-11-13T08:00:00Z'), busy)).toBe(at('2026-11-13T08:00:00Z'));
+  });
+});
+
+describe('freeOfTasks: snelkeuzes vallen niet op de herinnering van een andere taak', () => {
+  const at = (s: string) => Date.parse(s);
+  const task = (id: string, remind_at: string | null, extra: Record<string, unknown> = {}) => ({ id, title: id, remind_at, done: false, ...extra });
+  const ev = (start: string, end: string) => ({ start: at(start), end: at(end), title: 'Overleg', allDay: false });
+
+  it('takenMinutes: open taken met een herinnering, niet de taak zelf, niet afgevinkt of verwijderd', () => {
+    const taken = takenMinutes([
+      task('sam', '2026-11-29T08:00:00.000Z'),
+      task('alex', '2026-11-29T09:00:00.000Z'),
+      task('sanne', '2026-11-29T10:00:00.000Z', { done: true }),
+      task('weg', '2026-11-29T11:00:00.000Z', { deleted_at: '2026-11-28T10:00:00Z' }),
+      task('leeg', null),
+    ], 'alex');
+    expect([...taken]).toEqual([at('2026-11-29T08:00:00Z') / 60_000]);
+  });
+
+  it('vrij: blijft staan', () => {
+    const taken = takenMinutes([task('sam', '2026-11-29T08:05:00.000Z')]);
+    expect(freeOfTasks(at('2026-11-29T08:00:00Z'), taken, null)).toBe(at('2026-11-29T08:00:00Z'));
+  });
+
+  it('morgen 09:00 al bezet door een andere taak: 09:15', () => {
+    const taken = takenMinutes([task('sam', '2026-11-29T08:00:00.000Z')]); // 09:00 in Amsterdam
+    expect(freeOfTasks(at('2026-11-29T08:00:00Z'), taken, null)).toBe(at('2026-11-29T08:15:00Z'));
+  });
+
+  it('de eigen herinnering telt niet als bezet', () => {
+    const taken = takenMinutes([task('sam', '2026-11-29T08:00:00.000Z')], 'sam');
+    expect(freeOfTasks(at('2026-11-29T08:00:00Z'), taken, null)).toBe(at('2026-11-29T08:00:00Z'));
+  });
+
+  it('meerdere taken achter elkaar: voorbij allemaal', () => {
+    const taken = takenMinutes([task('sam', '2026-11-29T08:00:00.000Z'), task('alex', '2026-11-29T08:15:00.000Z')]);
+    expect(freeOfTasks(at('2026-11-29T08:00:00Z'), taken, null)).toBe(at('2026-11-29T08:30:00Z'));
+  });
+
+  it('met een agenda: na de afspraak, en dan ook niet op een andere taak', () => {
+    const busy = [ev('2026-11-29T08:00:00Z', '2026-11-29T08:40:00Z')]; // afspraak tot 09:40, dan 09:45
+    const taken = takenMinutes([task('sanne', '2026-11-29T08:45:00.000Z')]); // 09:45 al bezet: 10:00
+    expect(freeOfTasks(at('2026-11-29T08:00:00Z'), taken, busy)).toBe(at('2026-11-29T09:00:00Z'));
+  });
+
+  it('een taak schuift het voorstel niet op een afspraak', () => {
+    const busy = [ev('2026-11-29T08:15:00Z', '2026-11-29T09:00:00Z')];
+    const taken = takenMinutes([task('sam', '2026-11-29T07:45:00.000Z')]); // 08:45 bezet; 09:00 raakt de afspraak (09:15-10:00)
+    expect(freeOfTasks(at('2026-11-29T07:45:00Z'), taken, busy)).toBe(at('2026-11-29T09:00:00Z'));
+  });
+
+  it('niet voorbij middernacht: null (de snelkeuze valt weg)', () => {
+    const taken = takenMinutes([task('sam', '2026-11-29T22:45:00.000Z')]); // 23:45 in Amsterdam
+    expect(freeOfTasks(at('2026-11-29T22:45:00Z'), taken, null)).toBeNull();
   });
 });
