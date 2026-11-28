@@ -136,7 +136,17 @@ button.step-head:focus-visible { background: var(--hover); }
 .step.stack .step-txt { white-space: normal; }
 .step.stack .step-val { display: block; }
 .step.stack:has(> .step-line) .step-txt { padding-bottom: 0; }
-.step-line { display: flex; margin-top: -6px; padding: 0 0 4px 32px; }
+.step-line { display: flex; margin-top: -6px; padding: 0 0 4px 40px; }
+/* De actie op een eigen regel ("Herinner me over 1 uur") is een echte knop: een rustige pil in de kleur van de stap, met de
+   linkerrand recht onder de tekst van de zin. De knop zelf blijft 44 px hoog (touch); alleen de pil is zichtbaar. */
+.step-act.step-pill { display: flex; align-items: center; min-width: 0; max-width: 100%; padding: 0; background: transparent; text-align: left; }
+.step-pill:hover, .step-pill:focus-visible { background: transparent; }
+.step-pill:focus-visible { outline: none; }
+.step-pill-in { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 3px 12px 3px 10px; border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); border-radius: 999px;
+  background: color-mix(in srgb, var(--c) 10%, var(--card)); color: color-mix(in srgb, var(--c) 60%, var(--text)); font-weight: 500; line-height: 1.25; transition: background .15s, border-color .15s; }
+.step-pill:hover .step-pill-in, .step-pill:focus-visible .step-pill-in { border-color: var(--c); background: color-mix(in srgb, var(--c) 20%, var(--card)); }
+.step-pill:active .step-pill-in { background: color-mix(in srgb, var(--c) 28%, var(--card)); }
+.step-pill:focus-visible .step-pill-in { outline: 2px solid var(--accent); outline-offset: 2px; }
 .step-body { margin: 2px 0 10px 40px; }
 #add .step-input { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; font-size: .9375rem; }
 #add .step-input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
@@ -579,7 +589,7 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
   #detail .share-list .step-act, #detail .dfoot button.danger { min-height: 44px; }
 }
 /* Met een muis mag de knop op de eigen regel lager: de rij wordt dan minder hoog */
-@media (pointer: fine) { .step-line .step-act { min-height: 32px; } }
+@media (pointer: fine) { .step-line .step-act { min-height: 36px; } .step-pill-in { min-height: 28px; } }
 @media all {
   #detail { --dpx: 18px; --inset: color-mix(in srgb, var(--card) 50%, var(--side)); --tile: color-mix(in srgb, var(--muted) 18%, var(--card)); background: var(--side); }
   #detail .dhead { margin: 0 calc(-1 * var(--dpx)); padding: 14px var(--dpx); background: var(--bg); border-bottom: 1px solid var(--line); }
@@ -594,7 +604,7 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
   #detail .step-head { gap: 14px; min-height: 50px; padding: 0 14px 0 12px; border-radius: 0; }
   #detail .step-dot { width: 32px; height: 32px; border: 0; border-radius: 9px; background: var(--tile); }
   #detail .step-dot .ico { width: 18px; height: 18px; }
-  #detail .step-line { padding: 0 0 6px 50px; } /* 12 + 32 (stip) + 14 (tussenruimte) − 8 (binnenrand knop) */
+  #detail .step-line { padding: 0 0 8px 58px; } /* 12 + 32 (stip) + 14 (tussenruimte): de pil begint onder de tekst */
   #detail .step.on .step-dot { background: color-mix(in srgb, var(--c) 20%, var(--card)); }
   #detail .step-share.on .step-row, #detail .step-share.on .step-hint { background: color-mix(in srgb, var(--accent) 8%, var(--card)); }
   #detail .step-share .step-body, #detail .step-copies .step-body { margin: 0; }

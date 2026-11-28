@@ -15,10 +15,11 @@ import { openAgendaPicker } from './agendapick.js';
  * Eén stap: stip met icoon, een zin (vaste woorden en de gekozen waarde, vet in de kleur) en rechts acties zoals Wissen.
  * Zonder `open` is de zin gewone tekst (alleen-lezen, of een subtaak die de lijst van de ouder volgt).
  * `stack`: de gekozen waarde op een eigen regel onder de vaste woorden ("Herinner me" / "vr 27 nov, 17:30"), zodat een lange
- * datum niet midden in de zin afbreekt. Een actie met `line` staat op een eigen regel onder de zin (zoals "Over 1 uur").
+ * datum niet midden in de zin afbreekt. Een actie met `line` staat op een eigen regel onder de zin (zoals "Herinner me over 1 uur"),
+ * als een echte knop (een pil, met `icon` ervoor), niet als stille tekst zoals Wissen.
  * @param {{
  *   kind: string, icon: Parameters<typeof icon>[0], on: boolean, lead: string, value?: string | null, note?: string | null,
- *   open?: ((anchor: HTMLElement) => void) | null, actions?: ({ label: string, title?: string, run: () => void, line?: boolean } | null)[],
+ *   open?: ((anchor: HTMLElement) => void) | null, actions?: ({ label: string, title?: string, run: () => void, line?: boolean, icon?: Parameters<typeof icon>[0] } | null)[],
  *   sub?: HTMLElement | null, body?: HTMLElement | null, past?: boolean, pressed?: boolean, expanded?: boolean, stack?: boolean,
  * }} s
  */
@@ -36,11 +37,14 @@ export function step(s) {
     }, ...content)
     : el('div', { class: 'step-head' }, ...content);
   const button = (a) => el('button', { type: 'button', class: 'step-act', title: a.title ?? false, onclick: a.run }, a.label);
-  const all = /** @type {{ label: string, title?: string, run: () => void, line?: boolean }[]} */ ((s.actions ?? []).filter(Boolean));
+  // De knop is 44 px hoog (touch, zie style.css); de pil erin is het zichtbare deel.
+  const pill = (a) => el('button', { type: 'button', class: 'step-act step-pill', title: a.title ?? false, onclick: a.run },
+    el('span', { class: 'step-pill-in' }, a.icon ? icon(a.icon, 'sm') : null, a.label));
+  const all = /** @type {{ label: string, title?: string, run: () => void, line?: boolean, icon?: Parameters<typeof icon>[0] }[]} */ ((s.actions ?? []).filter(Boolean));
   const below = all.filter((a) => a.line);
   return el('div', { class: `step step-${s.kind}` + (s.on ? ' on' : '') + (s.past ? ' past' : '') + (s.stack ? ' stack' : '') },
     el('div', { class: 'step-row' }, head, ...all.filter((a) => !a.line).map(button)),
-    below.length ? el('div', { class: 'step-line' }, ...below.map(button)) : null, s.sub ?? null, s.body ?? null);
+    below.length ? el('div', { class: 'step-line' }, ...below.map(pill)) : null, s.sub ?? null, s.body ?? null);
 }
 
 let closeMenu = null;
