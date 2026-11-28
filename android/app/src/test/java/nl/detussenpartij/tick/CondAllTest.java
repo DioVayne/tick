@@ -91,4 +91,73 @@ public class CondAllTest {
         assertEquals(Instant.parse(LATER).toEpochMilli(), CondAll.next(tasks, NOW));
         assertEquals(-1, CondAll.next(new JSONArray().put(taak("c", LATER, null, "enter")), NOW));
     }
+
+    // ---------- plek + trigger (1.15.8): "trigger_at" in de taak ----------
+
+    private static JSONObject metTrigger(String id, String remindAt, String triggerAt, String trigger) throws Exception {
+        return taak(id, remindAt, "all", trigger).put("trigger_at", triggerAt == null ? JSONObject.NULL : triggerAt);
+    }
+
+    @Test
+    public void triggerNogNietAfgegaanHoudtDePoortDicht() throws Exception {
+        JSONObject t = metTrigger("a", EARLIER, null, "enter"); // tijd voorbij, trigger nog niet
+        assertTrue(CondAll.withTrigger(t));
+        assertTrue(CondAll.waiting(t, NOW));
+        assertFalse(CondAll.open(t, NOW));
+        assertEquals(0, fences(new JSONArray().put(t)).size());
+        // Geen wekker op "nooit": de sync brengt de trigger.
+        assertEquals(-1, CondAll.next(new JSONArray().put(t), NOW));
+        String key = GeoPlan.key(t.getJSONObject("location"));
+        assertEquals(NotifyDecision.Result.TE_VROEG, NotifyDecision.decide(new JSONArray().put(t), "a", key, false, new JSONObject(), new JSONObject(), NOW));
+    }
+
+    @Test
+    public void tijdEnTriggerVoorbijAankomstMetInitialTrigger() throws Exception {
+        JSONObject t = metTrigger("a", EARLIER, "2026-11-28T15:30:00.000Z", "enter");
+        assertTrue(CondAll.open(t, NOW));
+        List<GeoPlan.Fence> f = fences(new JSONArray().put(t));
+        assertEquals(1, f.size());
+        assertTrue(f.get(0).initial); // al op de plek telt ook
+        String key = GeoPlan.key(t.getJSONObject("location"));
+        assertEquals(NotifyDecision.Result.MELDEN, NotifyDecision.decide(new JSONArray().put(t), "a", key, false, new JSONObject(), new JSONObject(), NOW));
+    }
+
+    @Test
+    public void vertrekAlleenNaTijdEnTrigger() throws Exception {
+        JSONObject t = metTrigger("a", EARLIER, "2026-11-28T15:30:00.000Z", "exit");
+        List<GeoPlan.Fence> f = fences(new JSONArray().put(t));
+        assertEquals(1, f.size());
+        assertFalse(f.get(0).initial); // alleen een echt vertrek daarna
+    }
+
+    @Test
+    public void triggerAfgegaanMaarTijdNogNiet() throws Exception {
+        JSONObject t = metTrigger("a", LATER, "2026-11-28T15:30:00.000Z", "enter");
+        assertTrue(CondAll.waiting(t, NOW));
+        assertEquals(0, fences(new JSONArray().put(t)).size());
+        // De wekker op de tijd zet de geofence daarna.
+        assertEquals(Instant.parse(LATER).toEpochMilli(), CondAll.next(new JSONArray().put(t), NOW));
+    }
+
+    @Test
+    public void plekEnTriggerZonderTijd() throws Exception {
+        JSONObject wacht = metTrigger("a", null, null, "enter");
+        assertTrue(CondAll.waiting(wacht, NOW));
+        JSONObject klaar = metTrigger("b", null, EARLIER, "enter");
+        assertEquals(Instant.parse(EARLIER).toEpochMilli(), CondAll.gate(klaar));
+        assertTrue(CondAll.open(klaar, NOW));
+        List<GeoPlan.Fence> f = fences(new JSONArray().put(wacht).put(klaar));
+        assertEquals(1, f.size());
+        assertEquals("b", f.get(0).id);
+        assertTrue(f.get(0).initial);
+    }
+
+    @Test
+    public void zonderTriggerVeldZoalsVoorheen() throws Exception {
+        JSONObject t = taak("a", EARLIER, "all", "enter");
+        assertFalse(CondAll.withTrigger(t));
+        assertEquals(Instant.parse(EARLIER).toEpochMilli(), CondAll.gate(t));
+        JSONObject kapot = metTrigger("b", EARLIER, "onzin", "enter");
+        assertTrue(CondAll.waiting(kapot, NOW)); // onleesbare trigger: niet melden
+    }
 }

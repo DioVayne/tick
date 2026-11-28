@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { callWith, createUser } from './helpers';
 import { loadInstallPrefs } from '../src/prefs';
 import { runReminders, type Sender } from '../src/push';
-import { combo, MIN_APP, versionAtLeast } from '../src/condall';
+import { combo, MIN_APP, MIN_APP_BOTH, versionAtLeast } from '../src/condall';
 
 // Testfeature "condall" (src/condall.ts): "Pas als alles klopt" voor tijd + plek en tijd + Home Assistant-trigger.
 type User = Awaited<ReturnType<typeof createUser>>;
@@ -17,7 +17,7 @@ async function task(u: User, extra: Record<string, unknown>) {
 }
 const setAll = (u: User, id: string, all: boolean) => req(u, `/api/condall/tasks/${id}`, 'PUT', { all });
 const listed = async (u: User, id: string) =>
-  ((await (await req(u, '/api/tasks')).json()) as { id: string; conditions?: string }[]).find((t) => t.id === id)!;
+  ((await (await req(u, '/api/tasks')).json()) as { id: string; conditions?: string; trigger_at?: string | null }[]).find((t) => t.id === id)!;
 const row = (id: string) => env.DB.prepare('SELECT notified, loc_notified FROM tasks WHERE id = ?').bind(id).first<{ notified: number; loc_notified: number }>();
 /** De herinnering laten verlopen (de API weigert een tijd in het verleden niet, maar zo is het duidelijk). */
 const due = (id: string) => env.DB.prepare('UPDATE tasks SET remind_at = ?, notified = 0 WHERE id = ?').bind(minutes(-1), id).run();
@@ -42,12 +42,14 @@ describe('condall: regels', () => {
     expect(versionAtLeast('onzin', '1.15.7')).toBe(false);
   });
 
-  it('alleen tijd + plek of tijd + trigger; nooit plek + trigger', () => {
+  it('tijd + plek, tijd + trigger, en plek + trigger (met of zonder tijd)', () => {
     expect(combo({ remind_at: 'x', loc_lat: 1 }, false)).toBe('place');
     expect(combo({ remind_at: 'x', loc_lat: null }, true)).toBe('ha');
-    expect(combo({ remind_at: 'x', loc_lat: 1 }, true)).toBeNull();
-    expect(combo({ remind_at: null, loc_lat: 1 }, true)).toBeNull();
+    expect(combo({ remind_at: 'x', loc_lat: 1 }, true)).toBe('both');
+    expect(combo({ remind_at: null, loc_lat: 1 }, true)).toBe('both');
     expect(combo({ remind_at: 'x', loc_lat: null }, false)).toBeNull();
+    expect(combo({ remind_at: null, loc_lat: 1 }, false)).toBeNull();
+    expect(combo({ remind_at: null, loc_lat: null }, true)).toBeNull();
   });
 });
 
@@ -84,6 +86,12 @@ describe('condall: API en meldingen', () => {
     expect(await app()).toBe(false);
     await env.DB.prepare('UPDATE devices SET app_version = ? WHERE key_id = ?').bind(MIN_APP, key).run();
     expect(await app()).toBe(true);
+    // Plek + trigger vraagt 1.15.8.
+    const both = async () => ((await (await req(a, '/api/condall')).json()) as { appBoth: boolean }).appBoth;
+    expect(await both()).toBe(false);
+    await env.DB.prepare('UPDATE devices SET app_version = ? WHERE key_id = ?').bind(MIN_APP_BOTH, key).run();
+    expect(await both()).toBe(true);
+    expect(await app()).toBe(true);
   });
 
   it('GET /api/tasks: conditions "all" alleen bij tijd + plek in de stand alles', async () => {
@@ -118,16 +126,95 @@ describe('condall: API en meldingen', () => {
     expect(calls.filter((c) => c.taskId === id).map((c) => c.userId)).toEqual([a.id]);
   });
 
-  it('plek + trigger samen: geldt als "Elke apart"', async () => {
+  it('tijd + plek + trigger, "Elke apart": zoals altijd (tijdmelding, trigger meldt)', async () => {
     await req(a, '/api/hatrigger/triggers', 'PUT', { triggers: [{ id: 'post', name: 'Post bezorgd' }, { id: 'was', name: 'Wasmachine klaar' }] });
     const id = await task(a, { remind_at: minutes(60), location: PLACE });
     await req(a, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['post'] });
-    await setAll(a, id, true);
-    expect((await listed(a, id)).conditions).toBeUndefined();
+    const t = await listed(a, id);
+    expect(t.conditions).toBeUndefined();
+    expect('trigger_at' in t).toBe(false);
+    expect(((await (await req(a, '/api/hatrigger/fire', 'POST', { id: 'post' })).json()) as { notified: string[] }).notified).toContain(id);
     await due(id);
     const { send, calls } = fakeSender();
     await runReminders(env, await loadInstallPrefs(env), send);
     expect(calls.filter((c) => c.taskId === id)).toHaveLength(1);
+  });
+
+  it('tijd + plek + trigger, "alles": de server onthoudt de trigger en meldt niets; de telefoon krijgt trigger_at', async () => {
+    const id = await task(a, { title: 'Bij iGene', remind_at: minutes(60), location: PLACE });
+    await req(a, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['post'] });
+    await setAll(a, id, true);
+    let t = await listed(a, id);
+    expect(t.conditions).toBe('all');
+    expect(t.trigger_at).toBeNull();
+    // Trigger vóór de tijd: onthouden, geen melding.
+    expect(((await (await req(a, '/api/hatrigger/fire', 'POST', { id: 'post' })).json()) as { notified: string[] }).notified).not.toContain(id);
+    t = await listed(a, id);
+    const first = t.trigger_at;
+    expect(typeof first).toBe('string');
+    // Nog een keer afgaan: de eerste telt.
+    await req(a, '/api/hatrigger/fire', 'POST', { id: 'post' });
+    expect((await listed(a, id)).trigger_at).toBe(first);
+    // Op de tijd: geen tijdmelding en geen triggermelding; de trigger blijft onthouden voor de telefoon.
+    await due(id);
+    const { send, calls } = fakeSender();
+    await runReminders(env, await loadInstallPrefs(env), send);
+    expect(calls.filter((c) => c.taskId === id)).toEqual([]);
+    expect((await row(id))!.notified).toBe(1);
+    expect((await listed(a, id)).trigger_at).toBe(first);
+    // Na de tijd afgaan: ook niets (de telefoon meldt bij de plek).
+    expect(((await (await req(a, '/api/hatrigger/fire', 'POST', { id: 'post' })).json()) as { notified: string[] }).notified).not.toContain(id);
+  });
+
+  it('tijd + plek + trigger, "alles": trigger pas na de tijd wordt ook onthouden', async () => {
+    const id = await task(a, { title: 'Bij iGene 2', remind_at: minutes(60), location: PLACE });
+    await req(a, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['post'] });
+    await setAll(a, id, true);
+    await due(id);
+    const { send, calls } = fakeSender();
+    await runReminders(env, await loadInstallPrefs(env), send);
+    expect(calls.filter((c) => c.taskId === id)).toEqual([]);
+    expect(((await (await req(a, '/api/hatrigger/fire', 'POST', { id: 'post' })).json()) as { notified: string[] }).notified).not.toContain(id);
+    expect(typeof (await listed(a, id)).trigger_at).toBe('string');
+  });
+
+  it('plek + trigger zonder tijd, "alles": werkt ook', async () => {
+    const id = await task(a, { title: 'Pakketje', location: PLACE });
+    await req(a, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['post'] });
+    await setAll(a, id, true);
+    expect((await listed(a, id)).trigger_at).toBeNull();
+    expect(((await (await req(a, '/api/hatrigger/fire', 'POST', { id: 'post' })).json()) as { notified: string[] }).notified).not.toContain(id);
+    expect(typeof (await listed(a, id)).trigger_at).toBe('string');
+  });
+
+  it('plek + trigger: een trigger van een vorige keer (herhalen) telt niet en wordt overschreven', async () => {
+    const id = await task(a, { title: 'Wekelijks', location: PLACE });
+    await req(a, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['post'] });
+    await setAll(a, id, true);
+    // Een onthouden trigger van een andere keer (andere rep) dan de huidige (geen herhaling: rep null).
+    const old = { by: 'post', name: 'Post bezorgd', rep: '2026-01-01T00:00:00.000Z', at: '2026-01-01T08:00:00.000Z' };
+    await env.DB.prepare('UPDATE user_settings SET value = json_set(value, ?, json(?)) WHERE user_id = ? AND key = ?')
+      .bind(`$."${id}"`, JSON.stringify(old), a.id, 'condall:held').run();
+    if (!(await env.DB.prepare("SELECT 1 FROM user_settings WHERE user_id = ? AND key = 'condall:held'").bind(a.id).first())) {
+      await env.DB.prepare("INSERT INTO user_settings (user_id, key, value) VALUES (?, 'condall:held', json_object(?, json(?)))").bind(a.id, id, JSON.stringify(old)).run();
+    }
+    expect((await listed(a, id)).trigger_at).toBeNull();
+    await req(a, '/api/hatrigger/fire', 'POST', { id: 'post' });
+    const at = (await listed(a, id)).trigger_at;
+    expect(typeof at).toBe('string');
+    expect(at).not.toBe(old.at);
+  });
+
+  it('plek + trigger: de keuze wijzigen of de triggers wijzigen vergeet de trigger', async () => {
+    const id = await task(a, { title: 'Opnieuw', remind_at: minutes(60), location: PLACE });
+    await req(a, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['post'] });
+    await setAll(a, id, true);
+    await req(a, '/api/hatrigger/fire', 'POST', { id: 'post' });
+    await req(a, `/api/hatrigger/tasks/${id}`, 'PUT', { ids: ['post'] });
+    expect((await listed(a, id)).trigger_at).toBeNull();
+    await req(a, '/api/hatrigger/fire', 'POST', { id: 'post' });
+    await setAll(a, id, false);
+    expect('trigger_at' in (await listed(a, id))).toBe(false);
   });
 
   it('tijd + trigger: een trigger vóór de tijd wacht, en meldt op de tijd', async () => {

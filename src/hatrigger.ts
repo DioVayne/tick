@@ -245,7 +245,7 @@ async function fireFor(env: Env, userId: string, linkId: string, now: string, na
   if (!candidates.length) return [];
   const rows = (await env.DB.prepare('SELECT id, title, description, done, deleted_at, repeat_at, remind_at, loc_lat FROM tasks WHERE user_id = ? AND id IN (SELECT value FROM json_each(?))')
     .bind(userId, JSON.stringify(candidates)).all<FireRow>()).results;
-  // testfeature condall: met "Pas als alles klopt" en de tijd nog niet daar, onthouden in plaats van melden.
+  // testfeature condall: met "Pas als alles klopt" onthouden in plaats van melden (de tijd is er nog niet, of er is een plek: dan meldt de telefoon).
   const early = condAllOn(env)
     ? await holdEarly(env, userId, rows.filter((r) => !r.done && !r.deleted_at && armed(links[r.id], r.repeat_at)), linkId, name, now)
     : new Set<string>();

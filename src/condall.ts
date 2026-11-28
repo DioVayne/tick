@@ -17,7 +17,12 @@ import { translate } from '../public/i18n.js';
  *   De server stuurt de telefoon `conditions: "all"` in GET /api/tasks, en stuurt zelf geen tijdmelding.
  * - Tijd + trigger beslist de server: een trigger vóór de tijd wordt onthouden (`condall:held`) en op de tijd gestuurd
  *   door de cron; een trigger na de tijd meldt meteen (gewoon hatrigger).
- * - Plek + trigger samen kan niet (Tick weet niet waar je bent): dan geldt "Elke apart", ook als de keuze er nog staat.
+ * - Plek + trigger (met of zonder tijd; Q-9, app ≥ MIN_APP_BOTH) beslist de telefoon, want alleen die weet waar je
+ *   bent. De server onthoudt de trigger (`condall:held`, elke keer, ook na de tijd) en stuurt zelf niets; in
+ *   GET /api/tasks krijgt de taak `conditions: "all"` en `trigger_at` (wanneer de trigger afging, of null). De app
+ *   bewaakt de plek pas vanaf de laatste van tijd en trigger (aankomen: "je bent er al" telt; vertrekken: alleen een
+ *   echt vertrek daarna). De server kan de app niet wekken (er is geen stille push): de app hoort van de trigger bij de
+ *   volgende sync (elke ~15 minuten, of meteen als je de app opent).
  *
  * Opslag zonder migratie, in `user_settings` van de eigenaar van de taak:
  * - `condall:tasks`: { taskId: true } voor de taken met "Pas als alles klopt";
@@ -31,6 +36,11 @@ export const MAX_TASKS = 300;
  * een plek is "Pas als alles klopt" pas te kiezen met zo'n telefoon.
  */
 export const MIN_APP = '1.15.7';
+/** Vanaf deze versie kent de app `trigger_at` (plek + trigger samen); een oudere app zou de trigger negeren. */
+export const MIN_APP_BOTH = '1.15.8';
+
+/** De soort combinatie: tijd + plek, tijd + trigger, of plek + trigger (met of zonder tijd). */
+export type Kind = 'place' | 'ha' | 'both';
 
 type Held = { by: string; name: string; rep: string | null; at: string };
 
@@ -51,11 +61,12 @@ export function versionAtLeast(version: string | null | undefined, min: string):
 }
 
 /**
- * Mag deze taak "alles" zijn? Alleen tijd + plek of tijd + trigger (niet plek + trigger, ook niet met een tijd erbij).
- * Geeft de soort die met de tijd samengaat, of null.
+ * Mag deze taak "alles" zijn, en welke combinatie is het? Tijd + plek ('place'), tijd + trigger ('ha'), of plek +
+ * trigger, met of zonder tijd ('both'). Eén soort alleen: null.
  */
-export function combo(t: { remind_at: string | null; loc_lat?: number | null; location?: unknown }, hasHa: boolean): 'place' | 'ha' | null {
+export function combo(t: { remind_at: string | null; loc_lat?: number | null; location?: unknown }, hasHa: boolean): Kind | null {
   const place = t.location !== undefined ? !!t.location : t.loc_lat != null;
+  if (place && hasHa) return 'both';
   if (!t.remind_at || place === hasHa) return null;
   return place ? 'place' : 'ha';
 }
@@ -83,8 +94,8 @@ const haOf = (links: Map<string, Record<string, { ids?: unknown }>>, owner: stri
 
 /** Per taak de soort waarmee "alles" echt geldt (keuze aan, en een toegestane combinatie). */
 async function effective(env: Env, tasks: { id: string; user_id: string; parent_id: string | null; remind_at: string | null; loc_lat?: number | null; location?: unknown }[]) {
-  const out = new Map<string, 'place' | 'ha'>();
-  const top = tasks.filter((t) => !t.parent_id && t.remind_at);
+  const out = new Map<string, Kind>();
+  const top = tasks.filter((t) => !t.parent_id && (t.remind_at || (t.location !== undefined ? !!t.location : t.loc_lat != null)));
   if (!top.length) return out;
   const owners = top.map((t) => t.user_id);
   const [flags, links] = await Promise.all([rowsOf<boolean>(env, ROW_TASKS, owners), rowsOf<{ ids?: unknown }>(env, 'hatrigger:tasks', owners)]);
@@ -96,13 +107,25 @@ async function effective(env: Env, tasks: { id: string; user_id: string; parent_
   return out;
 }
 
+/** De onthouden trigger van deze keer van de taak (`rep` = repeat_at), of null: een vorige keer telt niet meer. */
+const heldNow = (h: Held | undefined, rep: string | null | undefined) => (h && (h.rep ?? null) === (rep ?? null) ? h : null);
+
 /**
- * GET /api/tasks (marked "condall" in src/index.ts): `conditions: "all"` bij taken met tijd + plek in de stand "alles",
- * zodat de Android-app de plek pas na de tijd bewaakt.
+ * GET /api/tasks (marked "condall" in src/index.ts): `conditions: "all"` bij taken met een plek in de stand "alles",
+ * zodat de Android-app de plek pas na de tijd bewaakt; met een trigger erbij ook `trigger_at` (wanneer hij deze keer
+ * afging, of null), zodat de app de plek pas daarna bewaakt.
  */
-export async function markConditions<T extends { id: string; user_id: string; parent_id: string | null; remind_at: string | null; location: unknown }>(env: Env, tasks: T[]): Promise<void> {
+export async function markConditions<T extends { id: string; user_id: string; parent_id: string | null; remind_at: string | null; location: unknown; repeat?: { at: string } | null }>(env: Env, tasks: T[]): Promise<void> {
   const eff = await effective(env, tasks);
-  for (const t of tasks) if (eff.get(t.id) === 'place') (t as T & { conditions?: string }).conditions = 'all';
+  const both = tasks.filter((t) => eff.get(t.id) === 'both');
+  const held = both.length ? await rowsOf<Held>(env, ROW_HELD, both.map((t) => t.user_id)) : new Map<string, Record<string, Held>>();
+  for (const t of tasks) {
+    const kind = eff.get(t.id);
+    if (kind !== 'place' && kind !== 'both') continue;
+    const out = t as T & { conditions?: string; trigger_at?: string | null };
+    out.conditions = 'all';
+    if (kind === 'both') out.trigger_at = heldNow(held.get(t.user_id)?.[t.id], t.repeat?.at)?.at ?? null;
+  }
 }
 
 /**
@@ -122,8 +145,8 @@ export async function gateReminders(env: Env, due: { id: string; user_id: string
   const now = new Date().toISOString();
   for (const t of due) {
     if (!eff.has(t.id)) continue;
-    const h = held.get(t.user_id)?.[t.id];
-    if (eff.get(t.id) === 'ha' && h && (h.rep ?? null) === (t.repeat_at ?? null)) {
+    const h = heldNow(held.get(t.user_id)?.[t.id], t.repeat_at);
+    if (eff.get(t.id) === 'ha' && h) {
       // Claimen zoals hatrigger (één keer, ook als een tweede cron tegelijk loopt): wie de rij krijgt, stuurt.
       const claim = await env.DB.prepare(
         `INSERT INTO hatrigger_fired (task_id, user_id, fired, rep, fired_by) VALUES (?1, ?2, ?3, ?4, ?5)
@@ -139,29 +162,33 @@ export async function gateReminders(env: Env, due: { id: string; user_id: string
           .map((who) => notifyUser(env, who, make, defaultLocale, send, { ttl: HA_TTL })));
       }
     }
+    // Met een plek erbij ('both') blijft de trigger onthouden: de telefoon wacht er nog op.
     await env.DB.batch([
       env.DB.prepare('UPDATE tasks SET notified = 1 WHERE id = ? AND remind_at = ?').bind(t.id, t.remind_at),
-      clearHeldStmt(env, t.user_id, t.id),
+      ...(eff.get(t.id) === 'both' ? [] : [clearHeldStmt(env, t.user_id, t.id)]),
     ]);
   }
   return new Set(eff.keys());
 }
 
 /**
- * POST /api/hatrigger/fire (marked "condall" in src/hatrigger.ts): taken in de stand "alles" waarvan de tijd nog niet
- * daar is, onthouden de trigger (de eerste telt) in plaats van te melden. Geeft hun id's; die slaat fire over.
+ * POST /api/hatrigger/fire (marked "condall" in src/hatrigger.ts): taken in de stand "alles" onthouden de trigger in
+ * plaats van te melden: tijd + trigger als de tijd nog niet daar is (de cron meldt op de tijd), plek + trigger altijd
+ * (de telefoon meldt, zie markConditions). De eerste keer telt; een onthouden trigger van een vorige keer van een
+ * herhalende taak (andere `rep`) wordt overschreven. Geeft hun id's; die slaat fire over.
  */
 export async function holdEarly(env: Env, userId: string, rows: { id: string; remind_at?: string | null; loc_lat?: number | null; repeat_at: string | null }[],
   linkId: string, name: string, now: string): Promise<Set<string>> {
-  const early = rows.filter((r) => r.remind_at && r.remind_at > now);
-  if (!early.length) return new Set();
-  const eff = await effective(env, early.map((r) => ({ ...r, user_id: userId, parent_id: null, remind_at: r.remind_at ?? null })));
-  const hold = early.filter((r) => eff.get(r.id) === 'ha');
+  if (!rows.length) return new Set();
+  const eff = await effective(env, rows.map((r) => ({ ...r, user_id: userId, parent_id: null, remind_at: r.remind_at ?? null })));
+  const hold = rows.filter((r) => eff.get(r.id) === 'both' || (eff.get(r.id) === 'ha' && !!r.remind_at && r.remind_at > now));
   if (!hold.length) return new Set();
   await env.DB.batch(hold.map((r) => env.DB.prepare(
     `INSERT INTO user_settings (user_id, key, value) VALUES (?1, ?2, json_object(?3, json(?4)))
-     ON CONFLICT(user_id, key) DO UPDATE SET value = json_insert(CASE WHEN json_valid(value) THEN value ELSE '{}' END, '$."' || ?3 || '"', json(?4))`,
-  ).bind(userId, ROW_HELD, r.id, JSON.stringify({ by: linkId, name, rep: r.repeat_at, at: now } satisfies Held))));
+     ON CONFLICT(user_id, key) DO UPDATE SET value = CASE
+       WHEN json_valid(value) AND json_type(value, '$."' || ?3 || '"') IS NOT NULL AND json_extract(value, '$."' || ?3 || '".rep') IS ?5 THEN value
+       ELSE json_set(CASE WHEN json_valid(value) THEN value ELSE '{}' END, '$."' || ?3 || '"', json(?4)) END`,
+  ).bind(userId, ROW_HELD, r.id, JSON.stringify({ by: linkId, name, rep: r.repeat_at, at: now } satisfies Held), r.repeat_at)));
   return new Set(hold.map((r) => r.id));
 }
 
@@ -179,21 +206,28 @@ condAllApi.use('*', async (c, next) => {
   await next();
 });
 
-/** Heeft deze persoon een Android-telefoon met een app die het kan (laatst gemelde versie)? */
-async function appReady(env: Env, userId: string): Promise<boolean> {
+/** De laatst gemelde app-versies van de Android-telefoons van deze persoon. */
+async function appVersions(env: Env, userId: string): Promise<(string | null)[]> {
   const { results } = await env.DB.prepare(
     "SELECT d.app_version FROM devices d JOIN api_keys k ON k.id = d.key_id WHERE k.kind = 'full' AND k.user_id = ?",
   ).bind(userId).all<{ app_version: string | null }>();
-  return results.some((r) => versionAtLeast(r.app_version, MIN_APP));
+  return results.map((r) => r.app_version);
 }
 
-/** De taken in de stand "alles" (van mij), wat Tick onthield, en of mijn telefoon het kan. */
+/**
+ * De taken in de stand "alles" (van mij), wat Tick onthield (met `rep`: de PWA toont een vorige keer niet), en of mijn
+ * telefoon het kan: `app` voor tijd + plek, `appBoth` voor plek + trigger.
+ */
 condAllApi.get('/', async (c) => {
   const userId = c.get('auth').userId;
-  const [flags, held, app] = await Promise.all([rowsOf<boolean>(c.env, ROW_TASKS, [userId]), rowsOf<Held>(c.env, ROW_HELD, [userId]), appReady(c.env, userId)]);
+  const [flags, held, versions] = await Promise.all([rowsOf<boolean>(c.env, ROW_TASKS, [userId]), rowsOf<Held>(c.env, ROW_HELD, [userId]), appVersions(c.env, userId)]);
   const tasks = Object.entries(flags.get(userId) ?? {}).filter(([, v]) => v === true).map(([id]) => id);
-  const waiting = Object.fromEntries(Object.entries(held.get(userId) ?? {}).map(([id, h]) => [id, { name: h.name, at: h.at }]));
-  return c.json({ tasks, held: waiting, app, minApp: MIN_APP });
+  const waiting = Object.fromEntries(Object.entries(held.get(userId) ?? {}).map(([id, h]) => [id, { name: h.name, at: h.at, rep: h.rep ?? null }]));
+  return c.json({
+    tasks, held: waiting,
+    app: versions.some((v) => versionAtLeast(v, MIN_APP)), appBoth: versions.some((v) => versionAtLeast(v, MIN_APP_BOTH)),
+    minApp: MIN_APP, minAppBoth: MIN_APP_BOTH,
+  });
 });
 
 /**

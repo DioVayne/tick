@@ -525,7 +525,7 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
 .loc-sub .linkbtn { min-height: 44px; }
 /* testfeature condall (public/condall.js): het verbindingswoord "of"/"én" tussen de tijd en een voorwaarde, in een eigen
    strook boven de voorwaarde (--cg hoog), midden onder de stippen (12 px rand + 16 px = midden van de stip), op een kort
-   lijntje naar de stip; de uitlegzin eronder; het venster. Grijs ("off"): tijd + plek + trigger, alleen uitleg. */
+   lijntje naar de stip (bij tijd + plek + trigger twee); de uitlegzin eronder; het venster. */
 .condall-step { --cg: 26px; position: relative; padding-top: var(--cg); }
 #detail .rgroup > .step + .step.condall-step { border-top: 0; }
 .condall-step::before { content: ""; position: absolute; left: 27px; top: 0; height: calc(var(--cg) + 9px); width: 2px; border-radius: 1px; background: color-mix(in srgb, var(--muted) 35%, transparent); }
@@ -537,7 +537,6 @@ textarea.dt:disabled { color: var(--muted); text-decoration: line-through; }
   background: var(--card); color: var(--link); font-size: .75rem; line-height: 16px; font-weight: 500; white-space: nowrap; }
 .condall-conn::before { content: ""; position: absolute; inset: -12px -6px; } /* tikvlak van 44 px hoog, over de lege strook */
 .condall-conn.and { background: color-mix(in srgb, var(--link) 13%, var(--card)); border-color: color-mix(in srgb, var(--link) 55%, transparent); font-weight: 650; }
-.condall-conn.off { color: var(--muted); border-color: color-mix(in srgb, var(--muted) 40%, transparent); }
 .condall-conn:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 #detail .rgroup > .condall-sum { border-top: 1px solid var(--line); }
 #detail .rgroup > .condall-sum + .step { border-top: 1px solid var(--line); }

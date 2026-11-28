@@ -6,16 +6,19 @@ import { icon } from './icons.js';
 import { placesOf, wakeAndroidApp } from './places.js';
 import { haLinkedNames } from './hatrigger.js';
 
-// Testfeature "condall" (src/condall.ts): bij een taak met een tijd én een plek, of een tijd én een Home
-// Assistant-trigger, kiest de eigenaar "Elke apart" (zoals altijd) of "Pas als alles klopt" (één melding: pas als het
+// Testfeature "condall" (src/condall.ts): bij een taak met voorwaarden van twee of drie soorten (tijd, plek, Home
+// Assistant-trigger) kiest de eigenaar "Elke apart" (zoals altijd) of "Pas als alles klopt" (één melding: pas als het
 // laatste gebeurt terwijl de rest klopt; de tijd wordt "vanaf"). Hier alleen de stand en de zin wat er gebeurt; de
 // bediening (verbindingswoord "of"/"én" tussen de stappen, een venster, en de uitlegzin) staat onderaan. Alleen online (de keuze gaat direct
 // naar de server, niet via de outbox), zoals de Home Assistant-stap.
 
 export const condAllOn = () => Array.isArray(CONFIG.testFeatures) && CONFIG.testFeatures.includes('condall');
 
-/** @type {{ tasks: string[], held: Record<string, { name: string, at: string }>, app: boolean }} */
-let data = { tasks: [], held: {}, app: false };
+/**
+ * `app`: een telefoon kent tijd + plek (≥ 1.15.7); `appBoth`: ook plek + trigger (≥ 1.15.8).
+ * @type {{ tasks: string[], held: Record<string, { name: string, at: string, rep?: string | null }>, app: boolean, appBoth?: boolean }}
+ */
+let data = { tasks: [], held: {}, app: false, appBoth: false };
 let loading = null;
 /** @type {Set<() => void>} */
 const waiting = new Set();
@@ -39,19 +42,26 @@ export function refreshCond(done) {
 }
 
 /**
- * Welke soort met de tijd samengaat: 'place' of 'ha', of null (geen tijd, maar één soort, of plek én trigger samen:
- * dat kan Tick niet, want Tick weet niet waar je bent). Zelfde regel als `combo` in src/condall.ts.
+ * Welke combinatie: 'place' (tijd + plek), 'ha' (tijd + trigger), 'both' (plek + trigger, met of zonder tijd), of null
+ * (maar één soort). Zelfde regel als `combo` in src/condall.ts.
  * @param {{ location?: any }} task @param {string | null} remindAt @param {string | null} ha
- * @returns {'place' | 'ha' | null}
+ * @returns {'place' | 'ha' | 'both' | null}
  */
 export function comboOf(task, remindAt, ha) {
   const place = !!task.location;
+  if (place && ha) return 'both';
   if (!remindAt || place === !!ha) return null;
   return place ? 'place' : 'ha';
 }
 
-/** Wat de stand toont; verandert dit, dan tekent het paneel de tijdlijn opnieuw. @param {{ id: string }} task */
-export const condKey = (task) => (condAllOn() ? JSON.stringify([data.tasks.includes(task.id), data.held[task.id] ?? null, data.app]) : '');
+/** De onthouden trigger van deze keer van de taak (een vorige keer van een herhalende taak telt niet). @param {any} task */
+function heldFor(task) {
+  const h = data.held[task.id];
+  return h && (h.rep ?? null) === (task.repeat?.at ?? null) ? h : null;
+}
+
+/** Wat de stand toont; verandert dit, dan tekent het paneel de tijdlijn opnieuw. @param {any} task */
+export const condKey = (task) => (condAllOn() ? JSON.stringify([data.tasks.includes(task.id), heldFor(task), data.app, !!data.appBoth]) : '');
 
 /** "AH Centrum" of "AH Centrum of een van de 2 andere plekken". @param {any} loc */
 function placeText(loc) {
@@ -60,17 +70,20 @@ function placeText(loc) {
 }
 
 /**
- * De zin wat Tick gaat doen.
- * @param {'place' | 'ha'} kind @param {boolean} all @param {string} when @param {any} loc @param {string | null} ha
+ * De zin wat Tick gaat doen. `when` is null bij plek + trigger zonder tijd.
+ * @param {'place' | 'ha' | 'both'} kind @param {boolean} all @param {string | null} when @param {any} loc @param {string | null} ha
  */
 export function summary(kind, all, when, loc, ha) {
+  const trigger = ha ?? '';
+  if (kind === 'ha') return t(all ? 'condall.sum_all_ha' : 'condall.sum_each_ha', { when: when ?? '', trigger });
+  const exit = loc.trigger === 'exit';
+  const place = placeText(loc);
   if (kind === 'place') {
-    const exit = loc.trigger === 'exit';
-    const place = placeText(loc);
-    if (all) return t(exit ? 'condall.sum_all_leave' : 'condall.sum_all_arrive', { when, place });
-    return t(exit ? 'condall.sum_each_leave' : 'condall.sum_each_arrive', { when, place });
+    if (all) return t(exit ? 'condall.sum_all_leave' : 'condall.sum_all_arrive', { when: when ?? '', place });
+    return t(exit ? 'condall.sum_each_leave' : 'condall.sum_each_arrive', { when: when ?? '', place });
   }
-  return t(all ? 'condall.sum_all_ha' : 'condall.sum_each_ha', { when, trigger: ha ?? '' });
+  const key = `condall.sum_${all ? 'all' : 'each'}_both_${exit ? 'leave' : 'arrive'}${when ? '' : '_any'}`;
+  return t(key, { when: when ?? '', place, trigger });
 }
 
 /** Staat deze taak op "Pas als alles klopt"? @param {string} taskId */
@@ -88,7 +101,7 @@ export async function setAll(task, all, done) {
     if (all) data.tasks.push(task.id);
     delete data.held[task.id];
     done();
-    // De telefoon moet het meteen weten: de plek pas na de tijd bewaken (of weer meteen).
+    // De telefoon moet het meteen weten: de plek pas na de tijd (en de trigger) bewaken, of weer meteen.
     if (task.location) wakeAndroidApp(null);
   } catch (e) {
     toast(/** @type {Error} */ (e).message, 'error');
@@ -98,10 +111,10 @@ export async function setAll(task, all, done) {
 
 /**
  * Wat de bediening nodig heeft voor een taak, of null als er niets te kiezen valt (testfeature uit, subtaak, niet je
- * eigen taak, afgerond, of geen combinatie die samen kan).
- * - `blocked`: met een plek beslist de telefoon; zonder Android-app die het kent is "alles" niet te kiezen
- *   (`condall.need_app`), wel terug te zetten;
- * - `held`: een trigger die vóór de tijd afging en op de tijd meldt (`condall.held`);
+ * eigen taak, afgerond, of maar één soort voorwaarde).
+ * - `blocked`: met een plek beslist de telefoon; zonder Android-app die het kent (1.15.7 voor tijd + plek, 1.15.8 voor
+ *   plek + trigger) is "alles" niet te kiezen (`condall.need_app`), wel terug te zetten;
+ * - `held`: een trigger die al afging en wacht op de tijd (tijd + trigger) of op de plek (plek + trigger);
  * - `summary`: de zin wat er gebeurt.
  * @param {any} task
  * @param {{ done: boolean, owner: boolean, remindAt: string | null }} o
@@ -109,16 +122,14 @@ export async function setAll(task, all, done) {
 export function condState(task, { done, owner, remindAt }) {
   if (!condAllOn() || task.parent_id || !owner || done) return null;
   const ha = haLinkedNames(task.id);
-  // Tijd + plek + trigger: niets te kiezen (altijd "elk apart"), wel een grijs "of" met uitleg waarom (explainMixed).
-  if (remindAt && task.location && ha) return { kind: /** @type {'mixed'} */ ('mixed'), all: false, blocked: true, held: null, summary: '' };
   const kind = comboOf(task, remindAt, ha);
   if (!kind) return null;
   const all = isAll(task.id);
   return {
     kind, all,
-    blocked: kind === 'place' && !data.app,
-    held: all && kind === 'ha' ? data.held[task.id] ?? null : null,
-    summary: summary(kind, all, fmt(/** @type {string} */ (remindAt)), task.location, ha),
+    blocked: kind === 'place' ? !data.app : kind === 'both' ? !data.appBoth : false,
+    held: all && kind !== 'place' ? heldFor(task) : null,
+    summary: summary(kind, all, remindAt ? fmt(remindAt) : null, task.location, ha),
   };
 }
 
@@ -127,17 +138,18 @@ export function condState(task, { done, owner, remindAt }) {
 /**
  * Het venster na een tik op een verbindingswoord: "Wanneer wil je een melding?" met de twee keuzes, elk met de zin voor
  * deze taak. Klaar slaat op (geldt voor alle verbindingswoorden van de taak), Annuleren/Esc laat alles staan.
- * @param {any} task @param {NonNullable<ReturnType<typeof condState>>} st @param {string} remindAt @param {() => void} done
+ * @param {any} task @param {NonNullable<ReturnType<typeof condState>>} st @param {string | null} remindAt @param {() => void} done
  */
 export function chooseMode(task, st, remindAt, done) {
-  const when = fmt(remindAt);
+  const when = remindAt ? fmt(remindAt) : null;
   const ha = haLinkedNames(task.id);
-  const kind = /** @type {'place' | 'ha'} */ (st.kind);
+  // Bij "alles": de tijd wordt "vanaf"; met plek + trigger hoort de telefoon pas bij de volgende sync van de trigger.
+  const notes = [when ? t('condall.from_note') : '', st.kind === 'both' ? t('condall.both_note') : ''].filter(Boolean).join(' ');
   const option = (all, title) => {
     const input = /** @type {HTMLInputElement} */ (el('input', { type: 'radio', name: 'condall-mode', value: all ? 'all' : 'each', checked: all === st.all,
       disabled: all && st.blocked && !st.all }));
     return el('label', { class: 'condall-opt' + (input.disabled ? ' off' : '') }, input,
-      el('span', {}, el('b', {}, title), el('span', {}, summary(kind, all, when, task.location, ha) + (all ? ' ' + t('condall.from_note') : ''))));
+      el('span', {}, el('b', {}, title), el('span', {}, summary(st.kind, all, when, task.location, ha) + (all && notes ? ' ' + notes : ''))));
   };
   let settled = false;
   // Na het venster terug naar het verbindingswoord (na opslaan is dat een nieuw knopje: de tijdlijn is opnieuw getekend).
@@ -169,35 +181,10 @@ export function chooseMode(task, st, remindAt, done) {
 }
 
 /**
- * Het venster na een tik op het grijze "of" (tijd + plek + trigger): alleen de uitleg waarom "Alles tegelijk" niet kan, en
- * Oké. Geen keuzes: een uitgeschakelde keuze zou suggereren dat er iets te regelen valt.
- */
-function explainMixed() {
-  const back = () => /** @type {HTMLElement | null} */ (document.querySelector('#detail .condall-conn'))?.focus({ preventScroll: true });
-  let closed = false;
-  const close = () => {
-    if (closed) return;
-    closed = true;
-    if (dialog.open) dialog.close();
-    dialog.remove();
-    back();
-  };
-  const dialog = /** @type {HTMLDialogElement} */ (el('dialog', { class: 'dialog condall-dialog', 'aria-labelledby': 'condall-title' },
-    el('h2', { id: 'condall-title' }, t('condall.dialog_title')),
-    el('p', {}, t('condall.mixed_text')),
-    el('div', { class: 'dialog-buttons' }, el('button', { type: 'button', onclick: close }, t('condall.ok')))));
-  dialog.addEventListener('click', (e) => { if (e.target === dialog) close(); });
-  dialog.addEventListener('keydown', (e) => { if (e.key === 'Escape') e.stopPropagation(); });
-  dialog.addEventListener('close', close); // Esc
-  document.body.append(dialog);
-  dialog.showModal();
-  /** @type {HTMLElement | null} */ (dialog.querySelector('button'))?.focus();
-}
-
-/**
  * De tijdlijn van het detailpaneel met en/of (marked "condall" in public/detail.js): het verbindingswoord "of" / "én" op
- * de lijn boven elke voorwaarde van een andere soort dan de tijd, de uitlegzin direct onder de voorwaarden, en de
- * stappen die geen voorwaarde zijn (Herhalen, Zet in je agenda, een lege stap van de andere soort) daaronder, zodat de keten niet breekt. Zonder `st` blijft
+ * de lijn boven elke voorwaarde die op een andere volgt (tijd → plek, tijd → trigger, en bij alle drie tijd → plek →
+ * trigger: twee woordjes, altijd hetzelfde woord), de uitlegzin direct onder de voorwaarden, en de stappen die geen
+ * voorwaarde zijn (Herhalen, Zet in je agenda, een lege stap) daaronder, zodat de keten niet breekt. Zonder `st` blijft
  * alles zoals het was.
  * @param {HTMLElement[]} props de stappen, in de volgorde van detail.js
  * @param {any} task
@@ -206,38 +193,30 @@ function explainMixed() {
  * @returns {HTMLElement[]}
  */
 export function chain(props, task, st, { remindAt, onChange }) {
-  if (!st || !remindAt) return props;
+  if (!st || !remindAt && st.kind !== 'both') return props;
   const is = (s, kind) => s.classList.contains(`step-${kind}`);
-  if (st.kind === 'mixed') {
-    // Tijd + plek + trigger: één grijs "of" tussen de tijd en de eerste voorwaarde; Agenda en Herhalen eronder.
-    const conds = props.filter((s) => (is(s, 'place') || is(s, 'hatrigger')) && s.classList.contains('on'));
-    if (!props.some((s) => is(s, 'when')) || !conds.length) return props;
-    conds[0].classList.add('condall-step');
-    conds[0].prepend(el('button', {
-      type: 'button', class: 'condall-conn off', 'aria-haspopup': 'dialog', 'aria-label': t('condall.conn_mixed_label'), onclick: explainMixed,
-    }, t('condall.or')));
-    const moved = props.filter((s) => is(s, 'addcal') || is(s, 'repeat'));
-    const rest = props.filter((s) => !moved.includes(s));
-    const last = rest.indexOf(conds[conds.length - 1]);
-    return [...rest.slice(0, last + 1), ...moved, ...rest.slice(last + 1)];
-  }
-  const condKind = st.kind === 'place' ? 'place' : 'hatrigger';
-  const when = props.find((s) => is(s, 'when'));
-  const conds = props.filter((s) => is(s, condKind));
-  if (!when || !conds.length) return props;
+  const on = (s) => s.classList.contains('on');
+  const when = remindAt ? props.find((s) => is(s, 'when')) : null;
+  const conds = st.kind === 'place' ? props.filter((s) => is(s, 'place'))
+    : st.kind === 'ha' ? props.filter((s) => is(s, 'hatrigger'))
+      : props.filter((s) => (is(s, 'place') || is(s, 'hatrigger')) && on(s));
+  if (remindAt && !when || !conds.length) return props;
+  // Zonder tijd (plek + trigger) staat er niets boven de eerste voorwaarde: daar geen woordje.
+  const linked = when ? conds : conds.slice(1);
+  if (!linked.length) return props;
   const word = t(st.all ? 'condall.and' : 'condall.or');
-  for (const s of conds) {
+  for (const s of linked) {
     s.classList.add('condall-step');
     s.prepend(el('button', {
       type: 'button', class: 'condall-conn' + (st.all ? ' and' : ''), 'aria-haspopup': 'dialog',
       'aria-label': t('condall.conn_label', { word }), onclick: () => chooseMode(task, st, remindAt, onChange),
     }, word));
   }
-  const sum = el('div', { class: 'condall-sum' }, icon('bell'), el('span', {}, st.summary,
-    st.held ? ' ' + t('condall.held', { trigger: st.held.name, at: fmt(st.held.at) }) : ''));
-  // Ook de lege stap van de andere soort ("Herinner me bij een plek" naast een trigger, of andersom): geen voorwaarde.
-  const other = st.kind === 'place' ? 'hatrigger' : 'place';
-  const moved = props.filter((s) => is(s, 'addcal') || is(s, 'repeat') || is(s, other) && !s.classList.contains('on'));
+  const held = st.held ? ' ' + t(st.kind === 'both' ? 'condall.held_place' : 'condall.held', { trigger: st.held.name, at: fmt(st.held.at) }) : '';
+  const sum = el('div', { class: 'condall-sum' }, icon('bell'), el('span', {}, st.summary, held));
+  // Ook een lege stap ("Herinner me bij een plek" naast een trigger, of andersom, of een lege tijd): geen voorwaarde.
+  const empty = (s) => !on(s) && (is(s, 'place') || is(s, 'hatrigger') || is(s, 'when'));
+  const moved = props.filter((s) => is(s, 'addcal') || is(s, 'repeat') || empty(s));
   const rest = props.filter((s) => !moved.includes(s));
   const last = rest.indexOf(conds[conds.length - 1]);
   return [...rest.slice(0, last + 1), sum, ...moved, ...rest.slice(last + 1)];
